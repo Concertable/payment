@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
 using FluentResults;
 using Microsoft.Extensions.Logging;
