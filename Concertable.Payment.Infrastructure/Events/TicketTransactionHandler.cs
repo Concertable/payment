@@ -1,3 +1,5 @@
+using Concertable.Payment.Application.DTOs;
+
 namespace Concertable.Payment.Infrastructure.Events;
 
 internal class TicketTransactionHandler : ITransactionHandler

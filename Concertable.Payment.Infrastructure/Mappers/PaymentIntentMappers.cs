@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.DTOs;
 using FluentResults;
 using Stripe;
 

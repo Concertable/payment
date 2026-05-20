@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Shared.Exceptions;
 using Microsoft.Extensions.Configuration;
