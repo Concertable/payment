@@ -1,0 +1,63 @@
+using System.Globalization;
+using Concertable.Payment.Client;
+using FluentResults;
+using Grpc.Core;
+using Proto = Concertable.Payment.Grpc;
+
+namespace Concertable.Payment.Client.Adapters;
+
+internal sealed class CustomerPaymentClient : ICustomerPaymentClient
+{
+    private readonly Proto.CustomerPayment.CustomerPaymentClient client;
+
+    public CustomerPaymentClient(Proto.CustomerPayment.CustomerPaymentClient client)
+    {
+        this.client = client;
+    }
+
+    public async Task<Result<PaymentResponse>> PayAsync(
+        Guid payerId,
+        Guid payeeId,
+        decimal amount,
+        IDictionary<string, string> metadata,
+        string paymentMethodId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var request = new Proto.CustomerPayRequest
+            {
+                PayerId = payerId.ToString(),
+                PayeeId = payeeId.ToString(),
+                Amount = amount.ToString(CultureInfo.InvariantCulture),
+                PaymentMethodId = paymentMethodId
+            };
+            request.Metadata.Add(metadata);
+            var response = await this.client.PayAsync(request, cancellationToken: ct);
+            return Result.Ok(MapPaymentResponse(response));
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            return Result.Fail(ex.Status.Detail);
+        }
+    }
+
+    public async Task<CheckoutSession> CreatePaymentSessionAsync(
+        Guid payerId,
+        IDictionary<string, string> metadata,
+        CancellationToken ct = default)
+    {
+        var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString() };
+        request.Metadata.Add(metadata);
+        var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
+        return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+    }
+
+    private static PaymentResponse MapPaymentResponse(Proto.PaymentResponse r) =>
+        new()
+        {
+            RequiresAction = r.RequiresAction,
+            ClientSecret = string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret,
+            TransactionId = string.IsNullOrEmpty(r.TransactionId) ? null : r.TransactionId
+        };
+}

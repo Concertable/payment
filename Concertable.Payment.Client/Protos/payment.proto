@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package payment;
+
+option csharp_namespace = "Concertable.Payment.Grpc";
+
+enum PaymentSessionType {
+  ON_SESSION = 0;
+  OFF_SESSION = 1;
+}
+
+enum EscrowStatusType {
+  ESCROW_PENDING = 0;
+  ESCROW_HELD = 1;
+  ESCROW_RELEASED = 2;
+  ESCROW_REFUNDED = 3;
+  ESCROW_DISPUTED = 4;
+  ESCROW_FAILED = 5;
+}
+
+message PaymentResponse {
+  bool requires_action = 1;
+  string client_secret = 2;
+  string transaction_id = 3;
+}
+
+message CheckoutSessionResponse {
+  string client_secret = 1;
+  string customer_session = 2;
+  string customer_id = 3;
+}
+
+message EscrowResponse {
+  int32 escrow_id = 1;
+  string charge_id = 2;
+  EscrowStatusType status = 3;
+  string client_secret = 4;
+}
+
+message TransferResponse {
+  string transfer_id = 1;
+}
+
+service ManagerPayment {
+  rpc Pay(ManagerPayRequest) returns (PaymentResponse);
+  rpc CreateSetupSession(CreateSetupSessionRequest) returns (CheckoutSessionResponse);
+  rpc CreateVerifySession(CreateVerifySessionRequest) returns (CheckoutSessionResponse);
+  rpc CreateHoldSession(CreateHoldSessionRequest) returns (CheckoutSessionResponse);
+  rpc FindHeldIntent(FindHeldIntentRequest) returns (FindHeldIntentResponse);
+}
+
+message ManagerPayRequest {
+  string payer_id = 1;
+  string payee_id = 2;
+  string amount = 3;
+  string payment_method_id = 4;
+  PaymentSessionType session = 5;
+  int32 booking_id = 6;
+}
+
+message CreateSetupSessionRequest {
+  string payer_id = 1;
+  map<string, string> metadata = 2;
+}
+
+message CreateVerifySessionRequest {
+  string payer_id = 1;
+  map<string, string> metadata = 2;
+}
+
+message CreateHoldSessionRequest {
+  string payer_id = 1;
+  string amount = 2;
+  map<string, string> metadata = 3;
+}
+
+message FindHeldIntentRequest {
+  string payer_id = 1;
+  int32 application_id = 2;
+}
+
+message FindHeldIntentResponse {
+  string payment_intent_id = 1;
+}
+
+service CustomerPayment {
+  rpc Pay(CustomerPayRequest) returns (PaymentResponse);
+  rpc CreatePaymentSession(CreatePaymentSessionRequest) returns (CheckoutSessionResponse);
+}
+
+message CustomerPayRequest {
+  string payer_id = 1;
+  string payee_id = 2;
+  string amount = 3;
+  map<string, string> metadata = 4;
+  string payment_method_id = 5;
+}
+
+message CreatePaymentSessionRequest {
+  string payer_id = 1;
+  map<string, string> metadata = 2;
+}
+
+service Escrow {
+  rpc Deposit(DepositRequest) returns (EscrowResponse);
+  rpc Capture(CaptureRequest) returns (EscrowResponse);
+  rpc ReleaseByBookingId(ReleaseByBookingIdRequest) returns (ReleaseByBookingIdResponse);
+}
+
+message DepositRequest {
+  string payer_id = 1;
+  string payee_id = 2;
+  string amount = 3;
+  string payment_method_id = 4;
+  PaymentSessionType session = 5;
+  int32 booking_id = 6;
+}
+
+message CaptureRequest {
+  string payer_id = 1;
+  string payee_id = 2;
+  string amount = 3;
+  string payment_intent_id = 4;
+  int32 booking_id = 5;
+}
+
+message ReleaseByBookingIdRequest {
+  int32 booking_id = 1;
+}
+
+message ReleaseByBookingIdResponse {
+  TransferResponse transfer = 1;
+}

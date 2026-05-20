@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
+  <Project Path="Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
+  <Project Path="Concertable.Payment.Application/Concertable.Payment.Application.csproj" />
+  <Project Path="Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj" />
+  <Project Path="Concertable.Payment.Domain/Concertable.Payment.Domain.csproj" />
+  <Project Path="Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
+  </Folder>
+</Solution>

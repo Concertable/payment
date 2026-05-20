@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Contract\Concertable.Contract.Contracts\Concertable.Contract.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\User\Concertable.User.Contracts\Concertable.User.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\Concertable.Contracts\Concertable.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Application\Concertable.DataAccess.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentResults" Version="4.0.0" />
+    <PackageReference Include="FluentValidation" Version="11.11.0" />
+    <PackageReference Include="Stripe.net" Version="47.3.0" />
+  </ItemGroup>
+
+</Project>
