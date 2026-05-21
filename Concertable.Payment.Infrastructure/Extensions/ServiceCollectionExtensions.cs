@@ -84,7 +84,7 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IStripeHoldClient, FakeStripeHoldClient>();
             services.AddKeyedScoped<IStripePaymentIntentClient, FakeStripePaymentIntentClient>(PaymentSession.OnSession);
             services.AddKeyedScoped<IStripePaymentIntentClient, FakeStripePaymentIntentClient>(PaymentSession.OffSession);
-            services.AddScoped<IStripeTransferClient, StripeTransferClient>();
+            services.AddScoped<IStripeTransferClient, FakeStripeTransferClient>();
             services.AddScoped<IWebhookService, FakeWebhookService>();
         }
 
