@@ -4,8 +4,8 @@
 [assembly: InternalsVisibleTo("Concertable.Payment.Api")]
 // TEMPORARY: legacy hosts still consume Payment internals until Steps 7/8/12 retire them.
 // Concertable.Infrastructure entry retired Step 10 (legacy payment service files all deleted).
-[assembly: InternalsVisibleTo("Concertable.Web")]
-[assembly: InternalsVisibleTo("Concertable.Workers")]
+[assembly: InternalsVisibleTo("Concertable.B2B.Web")]
+[assembly: InternalsVisibleTo("Concertable.B2B.Workers")]
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]
 [assembly: InternalsVisibleTo("Concertable.Payment.UnitTests")]
 [assembly: InternalsVisibleTo("Concertable.E2ETests.Api")]
