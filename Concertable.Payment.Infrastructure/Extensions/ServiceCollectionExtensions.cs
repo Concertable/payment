@@ -127,12 +127,6 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddPaymentDevSeeder(this IServiceCollection services)
-    {
-        services.AddScoped<IDevSeeder, PaymentDevSeeder>();
-        return services;
-    }
-
     public static IServiceCollection AddPaymentTestSeeder(this IServiceCollection services)
     {
         services.AddScoped<ITestSeeder, PaymentTestSeeder>();

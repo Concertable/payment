@@ -23,7 +23,6 @@ services.AddScoped<AuditInterceptor>();
 services.AddScoped<DomainEventDispatchInterceptor>();
 services.AddAuthorizationModule();
 services.AddPaymentInfrastructure(builder.Configuration);
-services.AddPaymentDevSeeder();
 
 services.AddAzureServiceBusTransport(
     opts =>
