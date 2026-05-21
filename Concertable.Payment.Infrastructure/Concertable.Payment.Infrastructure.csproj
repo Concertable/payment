@@ -30,8 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
-    <ProjectReference Include="..\..\Modules\Contract\Concertable.Contract.Contracts\Concertable.Contract.Contracts.csproj" />
-    <ProjectReference Include="..\..\Modules\User\Concertable.User.Contracts\Concertable.User.Contracts.csproj" />
+    <ProjectReference Include="..\..\Concertable.B2B\Modules\Contract\Concertable.Contract.Contracts\Concertable.Contract.Contracts.csproj" />
     <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Seeding\Concertable.Seeding\Concertable.Seeding.csproj" />
     <!-- TEMPORARY: legacy entity/enum types until Step 2 of Payment refactor. -->

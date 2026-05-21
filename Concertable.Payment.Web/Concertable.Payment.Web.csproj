@@ -24,7 +24,7 @@
     <ProjectReference Include="..\..\Concertable.ServiceDefaults\Concertable.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
-    <ProjectReference Include="..\..\Modules\Authorization\Concertable.Authorization.Infrastructure\Concertable.Authorization.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Concertable.B2B\Modules\Authorization\Concertable.Authorization.Infrastructure\Concertable.Authorization.Infrastructure.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Api\Concertable.Payment.Api.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" />
