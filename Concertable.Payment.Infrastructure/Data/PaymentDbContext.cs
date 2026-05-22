@@ -16,8 +16,8 @@ internal class PaymentDbContext(
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema(Schema.Name);
-
         provider.Configure(modelBuilder);
     }
 }
