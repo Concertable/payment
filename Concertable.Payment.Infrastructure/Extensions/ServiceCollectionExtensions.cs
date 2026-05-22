@@ -1,6 +1,6 @@
 using Concertable.DataAccess;
 using Concertable.Seeding;
-using Concertable.User.Contracts.Events;
+using Concertable.Auth.Contracts.Events;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.DataAccess.Infrastructure;
@@ -110,9 +110,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEscrowService, EscrowService>();
 
         // Integration event handlers
-        services.AddScoped<IIntegrationEventHandler<CustomerRegisteredEvent>, CustomerRegisteredHandler>();
-        services.AddScoped<IIntegrationEventHandler<VenueManagerRegisteredEvent>, ManagerRegisteredHandler>();
-        services.AddScoped<IIntegrationEventHandler<ArtistManagerRegisteredEvent>, ManagerRegisteredHandler>();
+        services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
+        services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, ManagerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentFailedEvent>, PaymentFailureDispatcher>();
         services.AddScoped<ITransactionHandlerFactory, TransactionHandlerFactory>();

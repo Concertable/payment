@@ -1,21 +1,18 @@
-using Concertable.User.Contracts.Events;
+using Concertable.Auth.Contracts;
+using Concertable.Auth.Contracts.Events;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Shared;
 
 namespace Concertable.Payment.Infrastructure.Handlers;
 
 internal class ManagerRegisteredHandler(IStripeAccountClient stripeAccountClient)
-    : IIntegrationEventHandler<VenueManagerRegisteredEvent>,
-      IIntegrationEventHandler<ArtistManagerRegisteredEvent>
+    : IIntegrationEventHandler<CredentialRegisteredEvent>
 {
-    public async Task HandleAsync(VenueManagerRegisteredEvent e, MessageEnvelope envelope, CancellationToken ct = default)
+    public async Task HandleAsync(CredentialRegisteredEvent e, MessageEnvelope envelope, CancellationToken ct = default)
     {
-        await stripeAccountClient.ProvisionCustomerAsync(e.UserId, e.Email, ct);
-        await stripeAccountClient.ProvisionConnectAccountAsync(e.UserId, e.Email, ct);
-    }
+        if (e.ClientId is not (ClientIds.VenueWeb or ClientIds.VenueMobile or ClientIds.ArtistWeb or ClientIds.ArtistMobile))
+            return;
 
-    public async Task HandleAsync(ArtistManagerRegisteredEvent e, MessageEnvelope envelope, CancellationToken ct = default)
-    {
         await stripeAccountClient.ProvisionCustomerAsync(e.UserId, e.Email, ct);
         await stripeAccountClient.ProvisionConnectAccountAsync(e.UserId, e.Email, ct);
     }

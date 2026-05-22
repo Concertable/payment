@@ -7,7 +7,7 @@ using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Shared.Infrastructure.Extensions;
-using Concertable.User.Contracts.Events;
+using Concertable.Auth.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -32,9 +32,7 @@ services.AddAzureServiceBusTransport(
         opts.ServiceName = "concertable-payment";
     },
     reg => reg
-        .SubscribeTo<CustomerRegisteredEvent>()
-        .SubscribeTo<VenueManagerRegisteredEvent>()
-        .SubscribeTo<ArtistManagerRegisteredEvent>()
+        .SubscribeTo<CredentialRegisteredEvent>()
         .SubscribeTo<PaymentSucceededEvent>()
         .SubscribeTo<PaymentFailedEvent>());
 
