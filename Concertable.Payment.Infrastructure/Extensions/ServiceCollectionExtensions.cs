@@ -132,4 +132,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITestSeeder, PaymentTestSeeder>();
         return services;
     }
+
+    public static async Task MigratePaymentDatabaseAsync(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
+    }
 }

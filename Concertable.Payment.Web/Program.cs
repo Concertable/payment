@@ -1,7 +1,9 @@
 using Concertable.Authorization.Infrastructure.Extensions;
 using Concertable.DataAccess.Infrastructure;
+using Concertable.Messaging.Application;
 using Concertable.Messaging.AzureServiceBus;
 using Concertable.Messaging.Infrastructure.Extensions;
+using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Shared.Infrastructure.Extensions;
@@ -39,7 +41,11 @@ services.AddAzureServiceBusTransport(
         opts.ConnectionString = builder.Configuration.GetConnectionString("asb") ?? "";
         opts.ServiceName = "concertable-payment";
     },
-    _ => { });
+    reg =>
+    {
+        reg.Publishes<PaymentSucceededEvent>();
+        reg.Publishes<PaymentFailedEvent>();
+    });
 services.AddDirectBusKeyed("webhook");
 services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
 
