@@ -1,4 +1,4 @@
-﻿using Concertable.Authorization.Contracts;
+﻿using Concertable.Shared.Infrastructure.Identity;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;

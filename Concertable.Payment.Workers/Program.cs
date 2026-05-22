@@ -1,4 +1,3 @@
-using Concertable.Authorization.Infrastructure.Extensions;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.Messaging.Application;
 using Concertable.Messaging.AzureServiceBus;
@@ -23,7 +22,7 @@ services.AddSingleton(TimeProvider.System);
 services.AddSharedInfrastructure(builder.Configuration);
 services.AddScoped<AuditInterceptor>();
 services.AddScoped<DomainEventDispatchInterceptor>();
-services.AddAuthorizationModule();
+services.AddCurrentUser();
 services.AddPaymentInfrastructure(builder.Configuration);
 
 services.AddAzureServiceBusTransport(

@@ -5,7 +5,7 @@ global using Concertable.Payment.Domain.Events;
 global using Concertable.Payment.Application.Interfaces;
 global using Concertable.Payment.Application.Interfaces.Webhook;
 global using Concertable.Payment.Application.Mappers;
-global using Concertable.Authorization.Contracts;
+global using Concertable.Shared.Infrastructure.Identity;
 global using Concertable.User.Contracts;
 global using Concertable.Payment.Infrastructure.Repositories;
 global using Concertable.Payment.Infrastructure.Validators;
