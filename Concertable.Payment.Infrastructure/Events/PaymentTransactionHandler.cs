@@ -1,3 +1,4 @@
+using Concertable.Messaging.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;

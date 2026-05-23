@@ -1,6 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Infrastructure.Settings;
-using Concertable.Shared.Exceptions;
+using Concertable.Kernel.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Stripe;

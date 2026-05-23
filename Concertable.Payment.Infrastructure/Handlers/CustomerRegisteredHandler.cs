@@ -1,7 +1,7 @@
 using Concertable.Auth.Contracts;
 using Concertable.Auth.Contracts.Events;
+using Concertable.Messaging.Contracts;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Shared;
 
 namespace Concertable.Payment.Infrastructure.Handlers;
 

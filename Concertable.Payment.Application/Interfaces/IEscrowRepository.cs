@@ -1,4 +1,4 @@
-using Concertable.DataAccess;
+using Concertable.DataAccess.Application;
 
 namespace Concertable.Payment.Application.Interfaces;
 

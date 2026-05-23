@@ -3,8 +3,6 @@ using Concertable.Seeding;
 using Concertable.Auth.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.DataAccess.Infrastructure;
-using Concertable.DataAccess.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Data.Seeders;
 using Concertable.Payment.Infrastructure.Events;
@@ -17,6 +15,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.Messaging.Contracts;
 
 namespace Concertable.Payment.Infrastructure.Extensions;
 

@@ -1,5 +1,5 @@
+using Concertable.Contracts;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Shared;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Concertable.Payment.Api.Controllers;

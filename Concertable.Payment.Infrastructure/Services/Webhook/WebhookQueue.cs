@@ -1,5 +1,5 @@
+using Concertable.Contracts;
 using Concertable.Payment.Application.Interfaces.Webhook;
-using Concertable.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using Stripe;
 

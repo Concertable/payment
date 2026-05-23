@@ -1,5 +1,4 @@
-using Concertable.Messaging;
-using Concertable.Shared;
+using Concertable.Messaging.Contracts;
 
 namespace Concertable.Payment.Domain.Events;
 

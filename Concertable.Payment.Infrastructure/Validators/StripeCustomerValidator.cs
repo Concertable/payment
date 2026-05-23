@@ -1,3 +1,5 @@
+using Concertable.Kernel.Identity;
+
 namespace Concertable.Payment.Infrastructure.Validators;
 
 internal class StripeCustomerValidator : IStripeValidationStrategy

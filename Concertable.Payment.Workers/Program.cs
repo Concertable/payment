@@ -1,14 +1,15 @@
-using Concertable.DataAccess.Infrastructure;
-using Concertable.Messaging.Application;
-using Concertable.Messaging.AzureServiceBus;
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Infrastructure.Extensions;
-using Concertable.Shared.Infrastructure.Extensions;
 using Concertable.Auth.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
+using Concertable.ServiceDefaults;
+using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.Messaging.Application.Extensions;
+using Concertable.Messaging.AzureServiceBus.Extensions;
+using Concertable.Kernel.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
 

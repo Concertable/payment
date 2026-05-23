@@ -7,6 +7,7 @@
 [assembly: InternalsVisibleTo("Concertable.B2B.Web")]
 [assembly: InternalsVisibleTo("Concertable.B2B.Workers")]
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]
+[assembly: InternalsVisibleTo("Concertable.Testing.Integration.B2B")]
 [assembly: InternalsVisibleTo("Concertable.Payment.UnitTests")]
 [assembly: InternalsVisibleTo("Concertable.E2ETests.Api")]
 [assembly: InternalsVisibleTo("Concertable.Workers.UnitTests")]

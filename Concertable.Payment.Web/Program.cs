@@ -1,15 +1,16 @@
-using Concertable.DataAccess.Infrastructure;
-using Concertable.Messaging.Application;
-using Concertable.Messaging.AzureServiceBus;
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
-using Concertable.Shared.Infrastructure.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Concertable.ServiceDefaults;
+using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.Messaging.Application.Extensions;
+using Concertable.Messaging.AzureServiceBus.Extensions;
+using Concertable.Kernel.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

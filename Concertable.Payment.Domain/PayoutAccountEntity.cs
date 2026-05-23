@@ -1,3 +1,5 @@
+using Concertable.Kernel;
+
 namespace Concertable.Payment.Domain;
 
 public class PayoutAccountEntity : IIdEntity

@@ -1,3 +1,4 @@
+using Concertable.Kernel;
 using Concertable.Payment.Infrastructure.Data;
 
 namespace Concertable.Payment.Infrastructure.Repositories;

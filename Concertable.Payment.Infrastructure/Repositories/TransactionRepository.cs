@@ -1,7 +1,7 @@
 using Concertable.Payment.Infrastructure.Data;
-using Concertable.Shared;
 using Concertable.DataAccess.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Concertable.Contracts;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 

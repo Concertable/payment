@@ -1,3 +1,5 @@
+using Concertable.Contracts;
+
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ITransactionService

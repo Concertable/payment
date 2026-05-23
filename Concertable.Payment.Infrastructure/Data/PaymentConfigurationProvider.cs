@@ -1,4 +1,4 @@
-using Concertable.DataAccess.Infrastructure;
+using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Data.Configurations;
 using Microsoft.EntityFrameworkCore;
 

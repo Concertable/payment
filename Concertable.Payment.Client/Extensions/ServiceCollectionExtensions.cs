@@ -1,5 +1,5 @@
+using Concertable.Kernel.Auth;
 using Concertable.Payment.Client.Adapters;
-using Concertable.Shared.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Proto = Concertable.Payment.Grpc;

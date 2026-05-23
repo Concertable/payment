@@ -1,5 +1,5 @@
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Shared.Exceptions;
+using Concertable.Kernel.Exceptions;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
