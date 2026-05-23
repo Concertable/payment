@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Contract\Concertable.Contract.Contracts\Concertable.Contract.Contracts.csproj" />
+    <ProjectReference Include="..\..\Concertable.B2B\Modules\Contract\Concertable.B2B.Contract.Contracts\Concertable.B2B.Contract.Contracts.csproj" />
     <ProjectReference Include="..\..\Shared\Concertable.Contracts\Concertable.Contracts.csproj" />
     <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
     <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Application\Concertable.DataAccess.Application.csproj" />

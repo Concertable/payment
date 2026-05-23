@@ -1,6 +1,6 @@
 using Concertable.Contracts;
 using Concertable.Kernel.Identity;
-using Concertable.User.Contracts;
+using Concertable.B2B.User.Contracts;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
