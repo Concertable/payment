@@ -14,7 +14,7 @@
 // Concert.Infrastructure uses IStripeValidator + IStripeValidationFactory in
 // OpportunityService/ApplicationService for pre-create/pre-apply Stripe eligibility checks.
 // TEMPORARY until eligibility routes through a Payment.Contracts facade.
-[assembly: InternalsVisibleTo("Concertable.Concert.Infrastructure")]
+[assembly: InternalsVisibleTo("Concertable.B2B.Concert.Infrastructure")]
 // Concert integration tests reference ITransaction via fixture round-trips.
-[assembly: InternalsVisibleTo("Concertable.Concert.IntegrationTests")]
+[assembly: InternalsVisibleTo("Concertable.B2B.Concert.IntegrationTests")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
