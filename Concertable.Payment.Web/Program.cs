@@ -75,6 +75,9 @@ app.MapPaymentGrpcServices();
 app.MapControllers();
 app.MapDefaultEndpoints();
 
+if (!app.Environment.IsProduction())
+    await app.Services.MigratePaymentDatabaseAsync();
+
 app.Run();
 
 public partial class Program { }

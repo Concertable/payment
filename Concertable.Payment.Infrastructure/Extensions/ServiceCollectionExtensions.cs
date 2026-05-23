@@ -1,6 +1,7 @@
 using Concertable.DataAccess;
 using Concertable.Seeding;
 using Concertable.Auth.Contracts.Events;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.DataAccess.Infrastructure;
@@ -135,6 +136,8 @@ public static class ServiceCollectionExtensions
     public static async Task MigratePaymentDatabaseAsync(this IServiceProvider services)
     {
         using var scope = services.CreateScope();
-        await scope.ServiceProvider.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
+        var sp = scope.ServiceProvider;
+        await sp.GetRequiredService<OutboxDbContext>().Database.MigrateAsync();
+        await sp.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
     }
 }
