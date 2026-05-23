@@ -5,9 +5,15 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Infrastructure.Handlers;
 
-internal class CustomerRegisteredHandler(IStripeAccountClient stripeAccountClient)
-    : IIntegrationEventHandler<CredentialRegisteredEvent>
+internal class CustomerRegisteredHandler : IIntegrationEventHandler<CredentialRegisteredEvent>
 {
+    private readonly IStripeAccountClient stripeAccountClient;
+
+    public CustomerRegisteredHandler(IStripeAccountClient stripeAccountClient)
+    {
+        this.stripeAccountClient = stripeAccountClient;
+    }
+
     public Task HandleAsync(CredentialRegisteredEvent e, MessageEnvelope envelope, CancellationToken ct = default)
     {
         if (e.ClientId is not ClientIds.CustomerWeb and not ClientIds.CustomerMobile)
