@@ -150,15 +150,13 @@ internal class EscrowService : IEscrowService
         var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
         if (escrow is null)
         {
-            logger.LogWarning("No escrow found for booking {BookingId}; nothing to release", bookingId);
+            logger.NoEscrowFoundForBooking(bookingId);
             return Result.Ok<TransferResponse?>(null);
         }
 
         if (escrow.Status != EscrowStatus.Held)
         {
-            logger.LogWarning(
-                "Escrow {EscrowId} for booking {BookingId} is {Status}, not Held; skipping release",
-                escrow.Id, bookingId, escrow.Status);
+            logger.EscrowNotHeldSkippingRelease(escrow.Id, bookingId, escrow.Status);
             return Result.Ok<TransferResponse?>(null);
         }
 

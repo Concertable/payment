@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Mappers;
 using FluentResults;
 using Microsoft.Extensions.Logging;
@@ -57,28 +58,20 @@ internal class StripePaymentIntentClient : IStripePaymentIntentClient
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(options);
 
             if (paymentIntent.Status == "succeeded")
-                logger.LogInformation(
-                    "Stripe payment intent {IntentId} succeeded: {AmountPence} pence to {Destination}",
-                    paymentIntent.Id, paymentIntent.Amount, options.TransferData.Destination);
+                logger.StripePaymentIntentSucceeded(paymentIntent.Id, paymentIntent.Amount, options.TransferData.Destination);
             else
-                logger.LogWarning(
-                    "Stripe payment intent {IntentId} returned non-succeeded status {Status}: {AmountPence} pence to {Destination}",
-                    paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.TransferData.Destination);
+                logger.StripePaymentIntentNonSucceeded(paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.TransferData.Destination);
 
             return paymentIntent.ToPaymentResult();
         }
         catch (StripeException ex)
         {
-            logger.LogError(ex,
-                "Stripe charge failed for {AmountPence} pence to {Destination}: {StripeCode}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code);
+            logger.StripeChargeFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Payment processing failed for {AmountPence} pence to {Destination}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId);
+            logger.PaymentProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
@@ -111,28 +104,20 @@ internal class StripePaymentIntentClient : IStripePaymentIntentClient
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(options);
 
             if (paymentIntent.Status == "succeeded")
-                logger.LogInformation(
-                    "Stripe escrow hold {IntentId} succeeded: {AmountPence} pence held in platform balance on behalf of {Destination}",
-                    paymentIntent.Id, paymentIntent.Amount, options.OnBehalfOf);
+                logger.StripeEscrowHoldSucceeded(paymentIntent.Id, paymentIntent.Amount, options.OnBehalfOf);
             else
-                logger.LogWarning(
-                    "Stripe escrow hold {IntentId} returned non-succeeded status {Status}: {AmountPence} pence on behalf of {Destination}",
-                    paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.OnBehalfOf);
+                logger.StripeEscrowHoldNonSucceeded(paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.OnBehalfOf);
 
             return paymentIntent.ToPaymentResult();
         }
         catch (StripeException ex)
         {
-            logger.LogError(ex,
-                "Stripe hold failed for {AmountPence} pence on behalf of {Destination}: {StripeCode}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code);
+            logger.StripeHoldFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Hold processing failed for {AmountPence} pence on behalf of {Destination}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId);
+            logger.HoldProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }

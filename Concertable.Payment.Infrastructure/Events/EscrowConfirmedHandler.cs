@@ -1,3 +1,4 @@
+using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
@@ -18,25 +19,19 @@ internal class EscrowConfirmedHandler : ITransactionHandler
         var escrow = await escrowRepository.GetByChargeIdAsync(@event.TransactionId, ct);
         if (escrow is null)
         {
-            logger.LogWarning(
-                "No escrow found for charge {ChargeId}; ignoring PaymentSucceededEvent",
-                @event.TransactionId);
+            logger.NoEscrowFoundForPaymentSucceeded(@event.TransactionId);
             return;
         }
 
         if (escrow.Status != EscrowStatus.Pending)
         {
-            logger.LogInformation(
-                "Escrow {EscrowId} already in status {Status}; skipping confirm",
-                escrow.Id, escrow.Status);
+            logger.EscrowAlreadyConfirmedStatus(escrow.Id, escrow.Status);
             return;
         }
 
         escrow.Confirm();
         await escrowRepository.SaveChangesAsync();
 
-        logger.LogInformation(
-            "Escrow {EscrowId} confirmed (Pending -> Held) for charge {ChargeId}",
-            escrow.Id, escrow.ChargeId);
+        logger.EscrowConfirmed(escrow.Id, escrow.ChargeId);
     }
 }

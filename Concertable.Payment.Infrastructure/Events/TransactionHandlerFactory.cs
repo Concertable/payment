@@ -1,3 +1,4 @@
+using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -21,9 +22,7 @@ internal class TransactionHandlerFactory : ITransactionHandlerFactory
         var handler = serviceProvider.GetKeyedService<ITransactionHandler>(type);
         if (handler is null)
         {
-            logger.LogError(
-                "No ITransactionHandler is registered for transaction type {TransactionType}. Check ServiceCollectionExtensions for AddKeyedScoped registrations.",
-                type);
+            logger.NoTransactionHandlerRegistered(type);
             throw new InvalidOperationException(
                 $"No ITransactionHandler registered for transaction type '{type}'.");
         }

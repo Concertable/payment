@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
 using Microsoft.Extensions.Logging;
@@ -50,9 +51,7 @@ internal sealed class PaymentManager : IPaymentManager
         }
         .Merge(r.Metadata);
 
-        logger.LogInformation(
-            "Charging {PayerId} {Amount} GBP -> {PayeeId} (stripe {DestinationStripeId}) for {Purpose}",
-            r.PayerId, r.Amount, r.PayeeId, destinationStripeId, r.Metadata["type"]);
+        logger.ChargingPayment(r.PayerId, r.Amount, r.PayeeId, destinationStripeId, r.Metadata["type"]);
 
         return await intentClientFactory.Create(r.Session).ChargeAsync(new StripeChargeOptions
         {
@@ -86,9 +85,7 @@ internal sealed class PaymentManager : IPaymentManager
         }
         .Merge(r.Metadata);
 
-        logger.LogInformation(
-            "Holding {Amount} GBP from {PayerId} on behalf of {PayeeId} (stripe {DestinationStripeId}) for {Purpose}",
-            r.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata["type"]);
+        logger.HoldingPayment(r.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata["type"]);
 
         return await intentClientFactory.Create(r.Session).HoldAsync(new StripeHoldOptions
         {
@@ -116,9 +113,7 @@ internal sealed class PaymentManager : IPaymentManager
         }
         .Merge(r.Metadata);
 
-        logger.LogInformation(
-            "Releasing {Amount} GBP from platform balance to {PayeeId} (stripe {DestinationStripeId}) from charge {ChargeId}",
-            r.Amount, r.PayeeId, destinationStripeId, r.ChargeId);
+        logger.ReleasingPayment(r.Amount, r.PayeeId, destinationStripeId, r.ChargeId);
 
         return await transferClient.ReleaseAsync(new StripeReleaseOptions
         {
@@ -137,9 +132,7 @@ internal sealed class PaymentManager : IPaymentManager
         }
         .Merge(r.Metadata);
 
-        logger.LogInformation(
-            "Refunding {Amount} GBP for payment intent {IntentId}{TransferReversal}",
-            r.Amount, r.PaymentIntentId, string.IsNullOrEmpty(r.TransferId) ? string.Empty : $" (reversing transfer {r.TransferId})");
+        logger.RefundingPayment(r.Amount, r.PaymentIntentId, string.IsNullOrEmpty(r.TransferId) ? string.Empty : $" (reversing transfer {r.TransferId})");
 
         return await transferClient.RefundAsync(new StripeRefundOptions
         {
@@ -155,25 +148,19 @@ internal sealed class PaymentManager : IPaymentManager
     {
         try
         {
-            logger.LogInformation(
-                "Capturing PaymentIntent {PaymentIntentId} for {Purpose}",
-                r.PaymentIntentId, r.Metadata["type"]);
+            logger.CapturingPaymentIntent(r.PaymentIntentId, r.Metadata["type"]);
 
             await stripeHoldClient.CaptureAsync(r.PaymentIntentId, r.Metadata, ct);
             return Result.Ok();
         }
         catch (StripeException ex)
         {
-            logger.LogError(ex,
-                "Stripe capture failed for PaymentIntent {PaymentIntentId}: {StripeCode}",
-                r.PaymentIntentId, ex.StripeError?.Code);
+            logger.StripeCaptureFailedForPaymentIntent(r.PaymentIntentId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Capture failed for PaymentIntent {PaymentIntentId}",
-                r.PaymentIntentId);
+            logger.CaptureFailedForPaymentIntent(r.PaymentIntentId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }

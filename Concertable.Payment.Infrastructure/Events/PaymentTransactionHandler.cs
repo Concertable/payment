@@ -1,4 +1,5 @@
 using Concertable.Messaging.Contracts;
+using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
@@ -19,9 +20,7 @@ internal class PaymentTransactionHandler : IIntegrationEventHandler<PaymentSucce
     public async Task HandleAsync(PaymentSucceededEvent @event, MessageEnvelope envelope, CancellationToken ct)
     {
         var type = @event.Metadata.GetValueOrDefault("type", string.Empty);
-        logger.LogInformation(
-            "Dispatching PaymentSucceededEvent for transaction {TransactionId} to handler for type {TransactionType}",
-            @event.TransactionId, type);
+        logger.DispatchingPaymentSucceededEvent(@event.TransactionId, type);
 
         var handler = handlerFactory.Create(type);
         await handler.HandleAsync(@event, ct);

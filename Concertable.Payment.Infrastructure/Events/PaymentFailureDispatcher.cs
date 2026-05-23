@@ -1,4 +1,5 @@
 using Concertable.Messaging.Contracts;
+using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
@@ -23,15 +24,11 @@ internal class PaymentFailureDispatcher : IIntegrationEventHandler<PaymentFailed
 
         if (handler is null)
         {
-            logger.LogWarning(
-                "No IPaymentFailureHandler registered for transaction type {TransactionType}; ignoring failure for {TransactionId}",
-                type, @event.TransactionId);
+            logger.NoPaymentFailureHandlerRegistered(type, @event.TransactionId);
             return;
         }
 
-        logger.LogInformation(
-            "Dispatching PaymentFailedEvent for transaction {TransactionId} (code {Code}) to handler for type {TransactionType}",
-            @event.TransactionId, @event.FailureCode, type);
+        logger.DispatchingPaymentFailedEvent(@event.TransactionId, @event.FailureCode, type);
 
         await handler.HandleAsync(@event, ct);
     }

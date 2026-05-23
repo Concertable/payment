@@ -1,3 +1,4 @@
+using Concertable.Payment.Api;
 using Concertable.Payment.Application.Interfaces.Webhook;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ internal class WebhookController : ControllerBase
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
 
-        logger.LogInformation("[WebhookController] webhook received bytes={Bytes}", json.Length);
+        logger.WebhookReceived(json.Length);
 
         try
         {

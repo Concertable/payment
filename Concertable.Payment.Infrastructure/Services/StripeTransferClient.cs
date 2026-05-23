@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -33,24 +34,18 @@ internal class StripeTransferClient : IStripeTransferClient
                 Metadata = opts.Metadata
             });
 
-            logger.LogInformation(
-                "Stripe escrow release {TransferId} succeeded: {AmountPence} pence to {Destination} from charge {ChargeId}",
-                transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
+            logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
 
             return Result.Ok(new TransferResponse(transfer.Id));
         }
         catch (StripeException ex)
         {
-            logger.LogError(ex,
-                "Stripe release failed for {AmountPence} pence to {Destination} from charge {ChargeId}: {StripeCode}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code);
+            logger.StripeReleaseFailed((long)(opts.Amount * 100), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Release processing failed for {AmountPence} pence to {Destination}",
-                (long)(opts.Amount * 100), opts.DestinationStripeId);
+            logger.ReleaseProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
@@ -67,9 +62,7 @@ internal class StripeTransferClient : IStripeTransferClient
                     Metadata = opts.Metadata
                 });
 
-                logger.LogInformation(
-                    "Stripe transfer reversal succeeded for transfer {TransferId}: {AmountPence} pence",
-                    opts.TransferId, (long)(opts.Amount * 100));
+                logger.StripeTransferReversalSucceeded(opts.TransferId, (long)(opts.Amount * 100));
             }
 
             var refund = await stripeClient.CreateRefundAsync(new RefundCreateOptions
@@ -80,24 +73,18 @@ internal class StripeTransferClient : IStripeTransferClient
                 Metadata = opts.Metadata
             });
 
-            logger.LogInformation(
-                "Stripe refund {RefundId} succeeded for payment intent {IntentId}: {AmountPence} pence",
-                refund.Id, opts.PaymentIntentId, refund.Amount);
+            logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);
 
             return Result.Ok(new RefundResponse(refund.Id));
         }
         catch (StripeException ex)
         {
-            logger.LogError(ex,
-                "Stripe refund failed for payment intent {IntentId}: {StripeCode}",
-                opts.PaymentIntentId, ex.StripeError?.Code);
+            logger.StripeRefundFailed(opts.PaymentIntentId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Refund processing failed for payment intent {IntentId}",
-                opts.PaymentIntentId);
+            logger.RefundProcessingFailed(opts.PaymentIntentId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
