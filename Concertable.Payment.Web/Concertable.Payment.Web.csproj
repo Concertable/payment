@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Infrastructure\Concertable.Messaging.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Seeding\Concertable.Seeding\Concertable.Seeding.csproj" />
   </ItemGroup>
 
 </Project>

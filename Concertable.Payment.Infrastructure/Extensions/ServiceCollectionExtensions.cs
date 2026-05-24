@@ -1,5 +1,6 @@
 using Concertable.DataAccess;
 using Concertable.Seeding;
+using Concertable.Seeding.Extensions;
 using Concertable.Auth.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
@@ -28,7 +29,8 @@ public static class ServiceCollectionExtensions
             opts.UseSqlServer(configuration.GetConnectionString("PaymentDb"))
                 .AddInterceptors(
                     sp.GetRequiredService<AuditInterceptor>(),
-                    sp.GetRequiredService<DomainEventDispatchInterceptor>()));
+                    sp.GetRequiredService<DomainEventDispatchInterceptor>())
+                .UseSeedingSupport(sp));
 
         services.AddSingleton<PaymentConfigurationProvider>();
         services.AddSingleton<IEntityTypeConfigurationProvider>(sp => sp.GetRequiredService<PaymentConfigurationProvider>());

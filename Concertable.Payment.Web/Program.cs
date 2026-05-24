@@ -11,6 +11,7 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
+using Concertable.Seeding.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,7 @@ services.AddSingleton(TimeProvider.System);
 services.AddSharedInfrastructure(builder.Configuration);
 services.AddScoped<AuditInterceptor>();
 services.AddScoped<DomainEventDispatchInterceptor>();
+services.AddSeedingInfrastructure();
 services.AddCurrentUser();
 services.AddPaymentInfrastructure(builder.Configuration);
 
