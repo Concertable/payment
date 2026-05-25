@@ -1,4 +1,5 @@
 using System.Globalization;
+using Concertable.Kernel.Exceptions;
 using Concertable.Payment.Client;
 using FluentResults;
 using Grpc.Core;
@@ -47,10 +48,17 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString() };
-        request.Metadata.Add(metadata);
-        var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
-        return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+        try
+        {
+            var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString() };
+            request.Metadata.Add(metadata);
+            var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
+            return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
+        {
+            throw new NotFoundException(ex.Status.Detail);
+        }
     }
 
     private static PaymentResponse MapPaymentResponse(Proto.PaymentResponse r) =>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Concertable.Kernel.Exceptions;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
@@ -32,17 +33,24 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
 
     public override async Task<CheckoutSessionResponse> CreatePaymentSession(CreatePaymentSessionRequest request, ServerCallContext context)
     {
-        var session = await customerPaymentService.CreatePaymentSessionAsync(
-            Guid.Parse(request.PayerId),
-            request.Metadata,
-            context.CancellationToken);
-
-        return new CheckoutSessionResponse
+        try
         {
-            ClientSecret = session.ClientSecret,
-            CustomerSession = session.CustomerSession,
-            CustomerId = session.CustomerId
-        };
+            var session = await customerPaymentService.CreatePaymentSessionAsync(
+                Guid.Parse(request.PayerId),
+                request.Metadata,
+                context.CancellationToken);
+
+            return new CheckoutSessionResponse
+            {
+                ClientSecret = session.ClientSecret,
+                CustomerSession = session.CustomerSession,
+                CustomerId = session.CustomerId
+            };
+        }
+        catch (NotFoundException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+        }
     }
 
     private static PaymentResponse MapPaymentResponse(Application.DTOs.PaymentResponse r) =>

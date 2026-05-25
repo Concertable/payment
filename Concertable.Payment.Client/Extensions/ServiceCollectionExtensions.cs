@@ -10,7 +10,8 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddPaymentClient(this IServiceCollection services, IConfiguration configuration)
     {
-        var address = configuration["services__payment-web__https__0"] ?? "https://payment";
+        var address = configuration["services:payment-web:https:0"]
+            ?? throw new InvalidOperationException("Payment service address (services:payment-web:https:0) is not configured.");
 
         services.AddGrpcClient<Proto.ManagerPayment.ManagerPaymentClient>(o => o.Address = new Uri(address))
             .AddCallCredentials(async (_, metadata, sp) =>
