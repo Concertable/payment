@@ -28,6 +28,7 @@ var services = builder.Services;
 services.AddScoped<IKeyedServiceProvider>(sp => (IKeyedServiceProvider)sp);
 services.AddSingleton(TimeProvider.System);
 services.AddSharedInfrastructure(builder.Configuration);
+services.AddQueueHostedService();
 services.AddScoped<AuditInterceptor>();
 services.AddScoped<DomainEventDispatchInterceptor>();
 services.AddSeedingInfrastructure();
