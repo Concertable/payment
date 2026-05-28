@@ -3,43 +3,13 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
+/// <summary>
+/// Dev-mode stub used when UseRealStripe=false. Skips all real Stripe API calls so you can
+/// exercise business logic (checkout flows, escrow, etc.) without a live Stripe account.
+/// Never used in E2E — E2EStripeAccountClient handles that.
+/// </summary>
 internal class FakeStripeAccountClient : IStripeAccountClient
 {
-    private static readonly Dictionary<Guid, string> hardcodedCustomerIds = new()
-    {
-        [new Guid("c0000000-0000-0000-0000-000000000001")] = "cus_UIIy9Gbwfr3uAP",
-        [new Guid("a1000000-0000-0000-0000-000000000001")] = "cus_UIIy5mCilBtJbR",
-        [new Guid("a1000000-0000-0000-0000-000000000002")] = "cus_UIIy5415r69RmJ",
-        [new Guid("b1000000-0000-0000-0000-000000000001")] = "cus_UIIymKfHijbNVO",
-        [new Guid("b1000000-0000-0000-0000-000000000002")] = "cus_UIJ1qfgxYu624Q",
-    };
-
-    private static readonly Dictionary<Guid, string> hardcodedAccountIds = new()
-    {
-        [new Guid("a1000000-0000-0000-0000-000000000001")] = "acct_1TJiMePysoXmht10",
-        [new Guid("a1000000-0000-0000-0000-000000000002")] = "acct_1TJiMoPupFslP2qz",
-        [new Guid("b1000000-0000-0000-0000-000000000001")] = "acct_1TJiMjLxk4aCq1Ui",
-        [new Guid("b1000000-0000-0000-0000-000000000002")] = "acct_1TJiPJLLwGSDilbV",
-    };
-
-    private static string ResolveCustomerId(Guid userId)
-    {
-        if (hardcodedCustomerIds.TryGetValue(userId, out var id)) return id;
-        var s = userId.ToString("N");
-        if (s.StartsWith("a1")) return $"cus_dev_artist_{int.Parse(s[20..])}";
-        if (s.StartsWith("b1")) return $"cus_dev_venue_{int.Parse(s[20..])}";
-        return $"cus_fake_{userId:N}";
-    }
-
-    private static string ResolveAccountId(Guid userId)
-    {
-        if (hardcodedAccountIds.TryGetValue(userId, out var id)) return id;
-        var s = userId.ToString("N");
-        if (s.StartsWith("a1")) return $"acct_dev_artist_{int.Parse(s[20..])}";
-        if (s.StartsWith("b1")) return $"acct_dev_venue_{int.Parse(s[20..])}";
-        return $"acct_fake_{userId:N}";
-    }
-
     private readonly IPayoutAccountRepository payoutAccountRepository;
 
     public FakeStripeAccountClient(IPayoutAccountRepository payoutAccountRepository)
@@ -50,7 +20,7 @@ internal class FakeStripeAccountClient : IStripeAccountClient
     public async Task ProvisionCustomerAsync(Guid userId, string email, CancellationToken ct = default)
     {
         var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
-        account.LinkCustomer(ResolveCustomerId(userId));
+        account.LinkCustomer($"cus_fake_{userId:N}");
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
         await payoutAccountRepository.SaveChangesAsync(ct);
@@ -59,16 +29,16 @@ internal class FakeStripeAccountClient : IStripeAccountClient
     public async Task ProvisionConnectAccountAsync(Guid userId, string email, CancellationToken ct = default)
     {
         var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
-        account.LinkAccount(ResolveAccountId(userId));
+        account.LinkAccount($"acct_fake_{userId:N}");
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
         await payoutAccountRepository.SaveChangesAsync(ct);
     }
 
-    public Task<string> GetOnboardingLinkAsync(string stripeId) =>
+    public Task<string> GetOnboardingLinkAsync(string stripeAccountId) =>
         Task.FromResult("https://fake-stripe-onboarding.local");
 
-    public Task<PayoutAccountStatus> GetAccountStatusAsync(string stripeId) =>
+    public Task<PayoutAccountStatus> GetAccountStatusAsync(string stripeAccountId) =>
         Task.FromResult(PayoutAccountStatus.Verified);
 
     public Task<string> CreateSetupIntentAsync(string? stripeCustomerId) =>

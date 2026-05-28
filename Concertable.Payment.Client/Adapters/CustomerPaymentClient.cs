@@ -18,7 +18,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
 
     public async Task<Result<PaymentResponse>> PayAsync(
         Guid payerId,
-        Guid payeeId,
+        int concertId,
         decimal amount,
         IDictionary<string, string> metadata,
         string paymentMethodId,
@@ -29,7 +29,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
             var request = new Proto.CustomerPayRequest
             {
                 PayerId = payerId.ToString(),
-                PayeeId = payeeId.ToString(),
+                ConcertId = concertId,
                 Amount = amount.ToString(CultureInfo.InvariantCulture),
                 PaymentMethodId = paymentMethodId
             };
@@ -45,12 +45,13 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
 
     public async Task<CheckoutSession> CreatePaymentSessionAsync(
         Guid payerId,
+        int concertId,
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         try
         {
-            var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString() };
+            var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString(), ConcertId = concertId };
             request.Metadata.Add(metadata);
             var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
             return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);

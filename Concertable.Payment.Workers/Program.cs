@@ -3,7 +3,9 @@ using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Infrastructure.Extensions;
+using Concertable.Payment.Seeding;
 using Concertable.Auth.Contracts.Events;
+using Concertable.B2B.Concert.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
 using Concertable.ServiceDefaults;
 using Concertable.DataAccess.Infrastructure.Data;
@@ -28,6 +30,9 @@ services.AddSeedingInfrastructure();
 services.AddCurrentUser();
 services.AddPaymentInfrastructure(builder.Configuration);
 
+if (builder.Environment.EnvironmentName == "E2E")
+    services.UseE2EStripeClient();
+
 services.AddAzureServiceBusTransport(
     opts =>
     {
@@ -35,6 +40,7 @@ services.AddAzureServiceBusTransport(
         opts.ServiceName = "concertable-payment";
     },
     reg => reg
+        .SubscribeTo<ConcertChangedEvent>()
         .SubscribeTo<CredentialRegisteredEvent>()
         .SubscribeTo<PaymentSucceededEvent>()
         .SubscribeTo<PaymentFailedEvent>());

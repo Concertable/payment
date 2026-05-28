@@ -13,6 +13,7 @@ internal class PaymentDbContext(
     public DbSet<StripeEventEntity> StripeEvents => Set<StripeEventEntity>();
     public DbSet<PayoutAccountEntity> PayoutAccounts => Set<PayoutAccountEntity>();
     public DbSet<EscrowEntity> Escrows => Set<EscrowEntity>();
+    public DbSet<ConcertPayeeEntity> ConcertPayees => Set<ConcertPayeeEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

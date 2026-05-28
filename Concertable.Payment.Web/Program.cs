@@ -2,6 +2,8 @@ using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
+using Concertable.Payment.Infrastructure.Grpc;
+using Concertable.Payment.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +25,18 @@ builder.WebHost.ConfigureKestrel(opts =>
     opts.ConfigureEndpointDefaults(e => e.Protocols = HttpProtocols.Http1AndHttp2);
 });
 
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials()
+              .WithOrigins(corsOrigins);
+    });
+});
+
 var services = builder.Services;
 
 services.AddScoped<IKeyedServiceProvider>(sp => (IKeyedServiceProvider)sp);
@@ -35,7 +49,11 @@ services.AddSeedingInfrastructure();
 services.AddCurrentUser();
 services.AddPaymentInfrastructure(builder.Configuration);
 
-services.AddGrpc();
+if (builder.Environment.EnvironmentName == "E2E")
+    services.UseE2EStripeClient();
+
+services.AddScoped<GrpcExceptionInterceptor>();
+services.AddGrpc(options => options.Interceptors.Add<GrpcExceptionInterceptor>());
 services.AddPaymentControllers();
 
 services.AddAzureServiceBusTransport(
@@ -57,11 +75,11 @@ services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         opts.MapInboundClaims = false;
         opts.Authority = builder.Configuration["Auth:Authority"] ?? builder.Configuration["services__auth__https__0"];
-        opts.Audience = "concertable.payment.api";
         opts.TokenValidationParameters = new TokenValidationParameters
         {
             ClockSkew = TimeSpan.Zero,
-            ValidateIssuer = !builder.Environment.IsDevelopment()
+            ValidateIssuer = !builder.Environment.IsDevelopment(),
+            ValidAudiences = ["concertable.payment.api", "concertable.b2b.api", "concertable.customer.api"]
         };
     });
 
@@ -72,6 +90,7 @@ services.AddAuthorization(opts =>
 
 var app = builder.Build();
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

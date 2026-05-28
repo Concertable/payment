@@ -1,11 +1,13 @@
 ﻿using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Concertable.Kernel.Identity;
 
 namespace Concertable.Payment.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 internal class StripeAccountController : ControllerBase
@@ -54,16 +56,14 @@ internal class StripeAccountController : ControllerBase
     [HttpPost("setup-intent")]
     public async Task<ActionResult<string>> CreateSetupIntent()
     {
-        if (currentUser.Id is null)
-            return Ok(await stripeAccountClient.CreateSetupIntentAsync(null));
-
         var userId = currentUser.GetId();
         var account = await payoutAccountRepository.GetByUserIdAsync(userId);
-        var stripeCustomerId = account?.StripeCustomerId;
 
+        if (account is null) return Unauthorized();
+
+        var stripeCustomerId = account.StripeCustomerId;
         if (string.IsNullOrWhiteSpace(stripeCustomerId))
         {
-            if (account is null) return Unauthorized();
             await stripeAccountClient.ProvisionCustomerAsync(userId, account.Email);
             account = await payoutAccountRepository.GetByUserIdAsync(userId);
             stripeCustomerId = account?.StripeCustomerId

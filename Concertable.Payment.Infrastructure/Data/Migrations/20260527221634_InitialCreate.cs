@@ -15,6 +15,19 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 name: "payment");
 
             migrationBuilder.CreateTable(
+                name: "ConcertPayees",
+                schema: "payment",
+                columns: table => new
+                {
+                    ConcertId = table.Column<int>(type: "int", nullable: false),
+                    PayeeUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConcertPayees", x => x.ConcertId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Escrows",
                 schema: "payment",
                 columns: table => new
@@ -158,6 +171,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ConcertPayees",
+                schema: "payment");
+
             migrationBuilder.DropTable(
                 name: "Escrows",
                 schema: "payment");

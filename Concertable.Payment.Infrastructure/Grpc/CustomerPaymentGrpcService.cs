@@ -19,7 +19,7 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
     {
         var result = await customerPaymentService.PayAsync(
             Guid.Parse(request.PayerId),
-            Guid.Parse(request.PayeeId),
+            request.ConcertId,
             decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
             request.Metadata,
             request.PaymentMethodId,
@@ -37,6 +37,7 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
         {
             var session = await customerPaymentService.CreatePaymentSessionAsync(
                 Guid.Parse(request.PayerId),
+                request.ConcertId,
                 request.Metadata,
                 context.CancellationToken);
 

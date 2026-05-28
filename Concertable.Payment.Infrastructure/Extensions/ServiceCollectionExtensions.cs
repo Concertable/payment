@@ -2,6 +2,7 @@ using Concertable.DataAccess;
 using Concertable.Seeding;
 using Concertable.Seeding.Extensions;
 using Concertable.Auth.Contracts.Events;
+using Concertable.B2B.Concert.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
+        services.AddScoped<IConcertPayeeRepository, ConcertPayeeRepository>();
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
 
         // Transaction service
@@ -113,6 +115,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEscrowService, EscrowService>();
 
         // Integration event handlers
+        services.AddScoped<IIntegrationEventHandler<ConcertChangedEvent>, ConcertPayeeProjectionHandler>();
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, ManagerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();

@@ -6,7 +6,7 @@ public interface ICustomerPaymentClient
 {
     Task<Result<PaymentResponse>> PayAsync(
         Guid payerId,
-        Guid payeeId,
+        int concertId,
         decimal amount,
         IDictionary<string, string> metadata,
         string paymentMethodId,
@@ -14,6 +14,7 @@ public interface ICustomerPaymentClient
 
     Task<CheckoutSession> CreatePaymentSessionAsync(
         Guid payerId,
+        int concertId,
         IDictionary<string, string> metadata,
         CancellationToken ct = default);
 }

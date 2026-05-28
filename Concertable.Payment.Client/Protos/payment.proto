@@ -90,7 +90,7 @@ service CustomerPayment {
 
 message CustomerPayRequest {
   string payer_id = 1;
-  string payee_id = 2;
+  int32 concert_id = 2;
   string amount = 3;
   map<string, string> metadata = 4;
   string payment_method_id = 5;
@@ -98,7 +98,8 @@ message CustomerPayRequest {
 
 message CreatePaymentSessionRequest {
   string payer_id = 1;
-  map<string, string> metadata = 2;
+  int32 concert_id = 2;
+  map<string, string> metadata = 3;
 }
 
 service Escrow {

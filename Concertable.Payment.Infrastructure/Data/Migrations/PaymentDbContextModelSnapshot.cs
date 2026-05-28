@@ -71,6 +71,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset?>("NextRetryAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("OccurredAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -87,6 +90,19 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.ConcertPayeeEntity", b =>
+                {
+                    b.Property<int>("ConcertId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PayeeUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ConcertId");
+
+                    b.ToTable("ConcertPayees", "payment");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.EscrowEntity", b =>

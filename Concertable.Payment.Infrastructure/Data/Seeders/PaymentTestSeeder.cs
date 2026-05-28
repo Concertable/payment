@@ -1,3 +1,5 @@
+using B2BSeedData = Concertable.B2B.Seeding.SeedData;
+using CustomerSeedData = Concertable.Customer.Seeding.SeedData;
 using Concertable.DataAccess;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Seeding;
@@ -11,12 +13,14 @@ internal class PaymentTestSeeder : ITestSeeder
     public int Order => 5;
 
     private readonly PaymentDbContext context;
-    private readonly SeedData seedData;
+    private readonly B2BSeedData b2bSeedData;
+    private readonly CustomerSeedData customerSeedData;
 
-    public PaymentTestSeeder(PaymentDbContext context, SeedData seedData)
+    public PaymentTestSeeder(PaymentDbContext context, B2BSeedData b2bSeedData, CustomerSeedData customerSeedData)
     {
         this.context = context;
-        this.seedData = seedData;
+        this.b2bSeedData = b2bSeedData;
+        this.customerSeedData = customerSeedData;
     }
 
     public Task MigrateAsync(CancellationToken ct = default) => context.Database.MigrateAsync(ct);
@@ -25,32 +29,27 @@ internal class PaymentTestSeeder : ITestSeeder
     {
         await context.PayoutAccounts.SeedIfEmptyAsync(async () =>
         {
-            seedData.VenueManager1StripeAccountId = "acct_test_venue1";
-            seedData.VenueManager1StripeCustomerId = "cus_test_venue1";
-            seedData.ArtistManager1StripeAccountId = "acct_test_artist1";
-            seedData.ArtistManager1StripeCustomerId = "cus_test_artist1";
-
-            var venueManager1 = PayoutAccountEntity.Create(seedData.VenueManager1.Id, seedData.VenueManager1.Email);
-            venueManager1.LinkAccount(seedData.VenueManager1StripeAccountId);
-            venueManager1.LinkCustomer(seedData.VenueManager1StripeCustomerId);
+            var venueManager1 = PayoutAccountEntity.Create(b2bSeedData.VenueManager1.Id, b2bSeedData.VenueManager1.Email);
+            venueManager1.LinkAccount("acct_test_venue1");
+            venueManager1.LinkCustomer("cus_test_venue1");
             venueManager1.MarkVerified();
 
-            var venueManager2 = PayoutAccountEntity.Create(seedData.VenueManager2.Id, seedData.VenueManager2.Email);
+            var venueManager2 = PayoutAccountEntity.Create(b2bSeedData.VenueManager2.Id, b2bSeedData.VenueManager2.Email);
             venueManager2.LinkAccount("acct_test_venue2");
             venueManager2.LinkCustomer("cus_test_venue2");
             venueManager2.MarkVerified();
 
-            var artistManager = PayoutAccountEntity.Create(seedData.ArtistManager1.Id, seedData.ArtistManager1.Email);
-            artistManager.LinkAccount(seedData.ArtistManager1StripeAccountId);
-            artistManager.LinkCustomer(seedData.ArtistManager1StripeCustomerId);
+            var artistManager = PayoutAccountEntity.Create(b2bSeedData.ArtistManager1.Id, b2bSeedData.ArtistManager1.Email);
+            artistManager.LinkAccount("acct_test_artist1");
+            artistManager.LinkCustomer("cus_test_artist1");
             artistManager.MarkVerified();
 
-            var artistManagerNoArtist = PayoutAccountEntity.Create(seedData.ArtistManagerNoArtist.Id, seedData.ArtistManagerNoArtist.Email);
+            var artistManagerNoArtist = PayoutAccountEntity.Create(b2bSeedData.ArtistManagerNoArtist.Id, b2bSeedData.ArtistManagerNoArtist.Email);
             artistManagerNoArtist.LinkAccount("acct_test_artist2");
             artistManagerNoArtist.LinkCustomer("cus_test_artist2");
             artistManagerNoArtist.MarkVerified();
 
-            var customer = PayoutAccountEntity.Create(seedData.Customer.Id, seedData.Customer.Email);
+            var customer = PayoutAccountEntity.Create(customerSeedData.Customer.Id, customerSeedData.Customer.Email);
             customer.LinkCustomer("cus_test_customer");
 
             context.PayoutAccounts.AddRange(

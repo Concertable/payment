@@ -1,5 +1,6 @@
 using Concertable.Payment.Domain;
 using Microsoft.Extensions.Logging;
+using GrpcStatusCode = global::Grpc.Core.StatusCode;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -153,4 +154,14 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for booking {BookingId} is {Status}, not Held; skipping release")]
     internal static partial void EscrowNotHeldSkippingRelease(this ILogger logger, int escrowId, int bookingId, EscrowStatus status);
+
+    // GrpcExceptionInterceptor
+    [LoggerMessage(Level = LogLevel.Warning, Message = "gRPC handler returned error in {Method}: {StatusCode} {Detail}")]
+    internal static partial void GrpcHandlerRpcError(this ILogger logger, string method, GrpcStatusCode statusCode, string detail);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "gRPC handler error in {Method}")]
+    internal static partial void GrpcHandlerError(this ILogger logger, string method, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception in gRPC handler {Method}")]
+    internal static partial void GrpcHandlerUnhandledException(this ILogger logger, string method, Exception ex);
 }

@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Concertable.Payment.AppHost.Extensions/Concertable.Payment.AppHost.Extensions.csproj" />
   <Project Path="Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
   <Project Path="Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
   <Project Path="Concertable.Payment.Application/Concertable.Payment.Application.csproj" />
@@ -6,6 +7,7 @@
   <Project Path="Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
   <Project Path="Concertable.Payment.Web/Concertable.Payment.Web.csproj" />
   <Project Path="Concertable.Payment.Workers/Concertable.Payment.Workers.csproj" />
+  <Project Path="Concertable.Payment.Seeding/Concertable.Payment.Seeding.csproj" />
   <Folder Name="/Tests/">
     <Project Path="Tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
   </Folder>
