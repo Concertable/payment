@@ -25,7 +25,7 @@ services.AddScoped<IKeyedServiceProvider>(sp => (IKeyedServiceProvider)sp);
 services.AddSingleton(TimeProvider.System);
 services.AddSharedInfrastructure(builder.Configuration);
 services.AddScoped<AuditInterceptor>();
-services.AddScoped<DomainEventDispatchInterceptor>();
+services.AddScoped<IDomainEventDispatchInterceptor, DomainEventDispatchInterceptor>();
 services.AddSeedingInfrastructure();
 services.AddCurrentUser();
 services.AddPaymentInfrastructure(builder.Configuration);
