@@ -1,6 +1,6 @@
 using Concertable.DataAccess;
-using Concertable.Seed;
-using Concertable.Seed.Extensions;
+using Concertable.Seed.Shared;
+using Concertable.Seed.Shared.Extensions;
 using Concertable.Auth.Contracts.Events;
 using Concertable.B2B.Concert.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;

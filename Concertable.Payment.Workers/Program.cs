@@ -12,7 +12,7 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
-using Concertable.Seed.Extensions;
+using Concertable.Seed.Shared.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
 
