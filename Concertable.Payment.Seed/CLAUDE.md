@@ -1,4 +1,4 @@
-# Concertable.Payment.Seeding
+# Concertable.Payment.Seed
 
 ## `StripeE2EAccountResolver` must cover every seeded user with a Stripe ID
 

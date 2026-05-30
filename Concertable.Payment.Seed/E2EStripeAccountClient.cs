@@ -4,7 +4,7 @@ using Concertable.Payment.Domain;
 using Microsoft.Extensions.Configuration;
 using Stripe;
 
-namespace Concertable.Payment.Seeding;
+namespace Concertable.Payment.Seed;
 
 /// <summary>
 /// E2E substitute for <see cref="IStripeAccountClient"/> that intercepts account provisioning using

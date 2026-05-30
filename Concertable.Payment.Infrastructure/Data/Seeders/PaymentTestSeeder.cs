@@ -1,9 +1,9 @@
-using B2BSeedData = Concertable.B2B.Seeding.SeedData;
-using CustomerSeedData = Concertable.Customer.Seeding.SeedData;
+using B2BSeedData = Concertable.B2B.Seed.Infrastructure.SeedData;
+using CustomerSeedData = Concertable.Customer.Seed.SeedData;
 using Concertable.DataAccess;
 using Concertable.Payment.Infrastructure.Data;
-using Concertable.Seeding;
-using Concertable.Seeding.Extensions;
+using Concertable.Seed;
+using Concertable.Seed.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Data.Seeders;

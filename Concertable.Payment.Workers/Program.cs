@@ -3,7 +3,7 @@ using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Infrastructure.Extensions;
-using Concertable.Payment.Seeding;
+using Concertable.Payment.Seed;
 using Concertable.Auth.Contracts.Events;
 using Concertable.B2B.Concert.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +12,7 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
-using Concertable.Seeding.Extensions;
+using Concertable.Seed.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
 

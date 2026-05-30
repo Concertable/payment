@@ -3,7 +3,7 @@ using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
-using Concertable.Payment.Seeding;
+using Concertable.Payment.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +13,7 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
-using Concertable.Seeding.Extensions;
+using Concertable.Seed.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

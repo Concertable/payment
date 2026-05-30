@@ -1,4 +1,4 @@
-namespace Concertable.Payment.Seeding;
+namespace Concertable.Payment.Seed;
 
 public class StripeE2EAccountResolver
 {

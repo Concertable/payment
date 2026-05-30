@@ -2,7 +2,7 @@ using Concertable.Payment.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Concertable.Payment.Seeding;
+namespace Concertable.Payment.Seed;
 
 public static class E2EServiceCollectionExtensions
 {
