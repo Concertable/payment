@@ -4,7 +4,7 @@ using Concertable.Kernel.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Stripe;
-using static Concertable.Payment.Domain.TransactionTypes;
+using static Concertable.Payment.Contracts.TransactionTypes;
 
 namespace Concertable.Payment.Infrastructure.Services;
 

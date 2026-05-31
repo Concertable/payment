@@ -92,19 +92,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.ConcertPayeeEntity", b =>
-                {
-                    b.Property<int>("ConcertId")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("PayeeUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("ConcertId");
-
-                    b.ToTable("ConcertPayees", "payment");
-                });
-
             modelBuilder.Entity("Concertable.Payment.Domain.EscrowEntity", b =>
                 {
                     b.Property<int>("Id")

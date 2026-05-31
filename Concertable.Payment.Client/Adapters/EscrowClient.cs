@@ -1,5 +1,6 @@
 using System.Globalization;
 using Concertable.Payment.Client;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain;
 using FluentResults;
 using Grpc.Core;
@@ -33,11 +34,11 @@ internal sealed class EscrowClient : IEscrowClient
                 PayeeId = payeeId.ToString(),
                 Amount = amount.ToString(CultureInfo.InvariantCulture),
                 PaymentMethodId = paymentMethodId,
-                Session = MapSession(session),
+                Session = session.ToProtoSession(),
                 BookingId = bookingId
             };
-            var response = await this.client.DepositAsync(request, cancellationToken: ct);
-            return Result.Ok(MapEscrowResponse(response));
+            var response = await client.DepositAsync(request, cancellationToken: ct);
+            return Result.Ok(response.ToEscrowResponse());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -64,7 +65,7 @@ internal sealed class EscrowClient : IEscrowClient
                 BookingId = bookingId
             };
             var response = await this.client.CaptureAsync(request, cancellationToken: ct);
-            return Result.Ok(MapEscrowResponse(response));
+            return Result.Ok(response.ToEscrowResponse());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -79,7 +80,7 @@ internal sealed class EscrowClient : IEscrowClient
         try
         {
             var request = new Proto.ReleaseByBookingIdRequest { BookingId = bookingId };
-            var response = await this.client.ReleaseByBookingIdAsync(request, cancellationToken: ct);
+            var response = await client.ReleaseByBookingIdAsync(request, cancellationToken: ct);
             TransferResponse? transfer = string.IsNullOrEmpty(response.Transfer?.TransferId)
                 ? null
                 : new TransferResponse(response.Transfer.TransferId);
@@ -91,25 +92,4 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    private static EscrowResponse MapEscrowResponse(Proto.EscrowResponse r) =>
-        new(
-            r.EscrowId,
-            r.ChargeId,
-            MapStatus(r.Status),
-            string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret);
-
-    private static EscrowStatus MapStatus(Proto.EscrowStatusType status) => status switch
-    {
-        Proto.EscrowStatusType.EscrowHeld => EscrowStatus.Held,
-        Proto.EscrowStatusType.EscrowReleased => EscrowStatus.Released,
-        Proto.EscrowStatusType.EscrowRefunded => EscrowStatus.Refunded,
-        Proto.EscrowStatusType.EscrowDisputed => EscrowStatus.Disputed,
-        Proto.EscrowStatusType.EscrowFailed => EscrowStatus.Failed,
-        _ => EscrowStatus.Pending
-    };
-
-    private static Proto.PaymentSessionType MapSession(PaymentSession session) =>
-        session == PaymentSession.OffSession
-            ? Proto.PaymentSessionType.OffSession
-            : Proto.PaymentSessionType.OnSession;
 }

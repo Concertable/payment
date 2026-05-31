@@ -1,6 +1,6 @@
 using System.Globalization;
 using Concertable.Payment.Client;
-using Concertable.Payment.Domain;
+using Concertable.Payment.Contracts;
 using FluentResults;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;

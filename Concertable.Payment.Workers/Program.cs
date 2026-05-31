@@ -1,11 +1,10 @@
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
-using Concertable.Payment.Domain.Events;
+using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Seed;
 using Concertable.Auth.Contracts.Events;
-using Concertable.B2B.Concert.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
 using Concertable.ServiceDefaults;
 using Concertable.DataAccess.Infrastructure.Data;
@@ -40,7 +39,6 @@ services.AddAzureServiceBusTransport(
         opts.ServiceName = "concertable-payment";
     },
     reg => reg
-        .SubscribeTo<ConcertChangedEvent>()
         .SubscribeTo<CredentialRegisteredEvent>()
         .SubscribeTo<PaymentSucceededEvent>()
         .SubscribeTo<PaymentFailedEvent>());

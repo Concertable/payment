@@ -2,7 +2,6 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
 using Concertable.Testing;
-using Concertable.B2B.User.Contracts;
 using FluentResults;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

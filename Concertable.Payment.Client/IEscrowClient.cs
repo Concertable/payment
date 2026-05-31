@@ -1,4 +1,4 @@
-using Concertable.Payment.Domain;
+using Concertable.Payment.Contracts;
 using FluentResults;
 
 namespace Concertable.Payment.Client;

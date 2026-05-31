@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260527221634_InitialCreate")]
+    [Migration("20260531191338_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -93,19 +93,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
-                });
-
-            modelBuilder.Entity("Concertable.Payment.Domain.ConcertPayeeEntity", b =>
-                {
-                    b.Property<int>("ConcertId")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("PayeeUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("ConcertId");
-
-                    b.ToTable("ConcertPayees", "payment");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.EscrowEntity", b =>

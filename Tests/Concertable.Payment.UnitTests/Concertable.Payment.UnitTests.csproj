@@ -26,6 +26,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Concertable.Payment.Domain" />
+    <Using Include="Concertable.Payment.Contracts" />
     <Using Include="Concertable.Payment.Application.DTOs" />
     <Using Include="Concertable.Payment.Application.Mappers" />
   </ItemGroup>

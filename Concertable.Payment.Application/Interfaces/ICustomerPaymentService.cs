@@ -7,6 +7,7 @@ internal interface ICustomerPaymentService
     Task<Result<PaymentResponse>> PayAsync(
         Guid payerId,
         int concertId,
+        Guid payeeId,
         decimal amount,
         IDictionary<string, string> metadata,
         string paymentMethodId,
@@ -15,6 +16,7 @@ internal interface ICustomerPaymentService
     Task<CheckoutSession> CreatePaymentSessionAsync(
         Guid payerId,
         int concertId,
+        Guid payeeId,
         IDictionary<string, string> metadata,
         CancellationToken ct = default);
 }

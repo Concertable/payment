@@ -1,5 +1,5 @@
 using Concertable.Messaging.Infrastructure.Extensions;
-using Concertable.Payment.Domain.Events;
+using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
