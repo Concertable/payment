@@ -11,4 +11,7 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/Tests/E2ETests/">
+    <Project Path="Tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
+  </Folder>
 </Solution>

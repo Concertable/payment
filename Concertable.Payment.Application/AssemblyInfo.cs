@@ -4,11 +4,11 @@
 [assembly: InternalsVisibleTo("Concertable.Payment.Api")]
 [assembly: InternalsVisibleTo("Concertable.Payment.Testing")]
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]
-[assembly: InternalsVisibleTo("Concertable.Testing.Integration.B2B")]
+[assembly: InternalsVisibleTo("Concertable.B2B.IntegrationTests.Fixtures")]
 [assembly: InternalsVisibleTo("Concertable.Payment.UnitTests")]
 [assembly: InternalsVisibleTo("Concertable.E2ETests.Api")]
 [assembly: InternalsVisibleTo("Concertable.Payment.Seed")]
-[assembly: InternalsVisibleTo("Concertable.Workers.UnitTests")]
+[assembly: InternalsVisibleTo("Concertable.B2B.Workers.UnitTests")]
 // Concert.Infrastructure uses IStripeValidator + IStripeValidationFactory in
 // OpportunityService/ApplicationService for pre-create/pre-apply Stripe eligibility checks.
 // TEMPORARY until eligibility routes through a Payment.Contracts facade.
