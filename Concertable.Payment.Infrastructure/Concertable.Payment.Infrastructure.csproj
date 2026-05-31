@@ -35,9 +35,7 @@
     <ProjectReference Include="..\..\Concertable.B2B\Modules\Concert\Concertable.B2B.Concert.Contracts\Concertable.B2B.Concert.Contracts.csproj" />
     <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Shared\Concertable.Seed.Shared.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Concertable.B2B.Seed.Infrastructure\Concertable.B2B.Seed.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Concertable.Customer\Concertable.Customer.Seed.Infrastructure\Concertable.Customer.Seed.Infrastructure.csproj" />
-    <!-- TEMPORARY: legacy entity/enum types until Step 2 of Payment refactor. -->
+    <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Identity\Concertable.Seed.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>
