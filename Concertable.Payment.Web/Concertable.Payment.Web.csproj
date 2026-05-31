@@ -26,7 +26,7 @@
     <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Api\Concertable.Payment.Api.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
-    <ProjectReference Include="..\Concertable.Payment.Seed\Concertable.Payment.Seed.csproj" />
+    <ProjectReference Include="..\Seed\Concertable.Payment.Seed\Concertable.Payment.Seed.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" />
     <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Infrastructure\Concertable.Messaging.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Shared\Concertable.Seed.Shared.csproj" />
