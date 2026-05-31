@@ -1,5 +1,5 @@
 using B2BSeedState = Concertable.B2B.Seed.Infrastructure.SeedState;
-using CustomerSeedState = Concertable.Customer.Seed.SeedState;
+using CustomerSeedState = Concertable.Customer.Seed.Infrastructure.SeedState;
 using Concertable.DataAccess;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Seed.Shared;
@@ -49,7 +49,7 @@ internal class PaymentTestSeeder : ITestSeeder
             artistManagerNoArtist.LinkCustomer("cus_test_artist2");
             artistManagerNoArtist.MarkVerified();
 
-            var customer = PayoutAccountEntity.Create(customerSeedState.Customer.Id, customerSeedState.Customer.Email);
+            var customer = PayoutAccountEntity.Create(customerSeedState.Customer1.Id, customerSeedState.Customer1.Email);
             customer.LinkCustomer("cus_test_customer");
 
             context.PayoutAccounts.AddRange(
