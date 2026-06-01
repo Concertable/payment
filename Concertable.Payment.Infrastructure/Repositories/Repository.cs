@@ -7,10 +7,10 @@ internal abstract class BaseRepository<TEntity>(PaymentDbContext context)
     : BaseRepository<TEntity, PaymentDbContext>(context)
     where TEntity : class;
 
-internal abstract class Repository<TEntity>(PaymentDbContext context)
-    : Repository<TEntity, PaymentDbContext>(context)
+internal abstract class ReadRepository<TEntity>(PaymentDbContext context)
+    : ReadRepository<TEntity, PaymentDbContext, int>(context)
     where TEntity : class, IIdEntity;
 
-internal abstract class GuidRepository<TEntity>(PaymentDbContext context)
-    : GuidRepository<TEntity, PaymentDbContext>(context)
-    where TEntity : class, IGuidEntity;
+internal abstract class Repository<TEntity>(PaymentDbContext context)
+    : Repository<TEntity, PaymentDbContext, int>(context)
+    where TEntity : class, IIdEntity;
