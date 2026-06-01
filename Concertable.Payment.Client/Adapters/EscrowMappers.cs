@@ -1,5 +1,4 @@
 using Concertable.Payment.Contracts;
-using Concertable.Payment.Domain;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;

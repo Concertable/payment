@@ -1,6 +1,7 @@
 using Concertable.Messaging.Contracts;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
+using Concertable.Payment.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -8,21 +9,27 @@ namespace Concertable.Payment.Infrastructure.Services.Webhook;
 
 internal sealed class WebhookProcessor : IWebhookProcessor
 {
+    private readonly PaymentDbContext context;
     private readonly IStripeEventRepository stripeEventRepository;
     private readonly IBus integrationEventBus;
+    private readonly IDbContextAccessor contextAccessor;
     private readonly IStripeHoldClient stripeHoldClient;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<WebhookProcessor> logger;
 
     public WebhookProcessor(
+        PaymentDbContext context,
         IStripeEventRepository stripeEventRepository,
-        [FromKeyedServices("webhook")] IBus integrationEventBus,
+        IBus integrationEventBus,
+        IDbContextAccessor contextAccessor,
         IStripeHoldClient stripeHoldClient,
         TimeProvider timeProvider,
         ILogger<WebhookProcessor> logger)
     {
+        this.context = context;
         this.stripeEventRepository = stripeEventRepository;
         this.integrationEventBus = integrationEventBus;
+        this.contextAccessor = contextAccessor;
         this.stripeHoldClient = stripeHoldClient;
         this.timeProvider = timeProvider;
         this.logger = logger;
@@ -46,7 +53,8 @@ internal sealed class WebhookProcessor : IWebhookProcessor
                 return;
             }
 
-            await stripeEventRepository.AddEventAsync(StripeEventEntity.Create(stripeEvent.Id, timeProvider.GetUtcNow().DateTime));
+            stripeEventRepository.AddEvent(StripeEventEntity.Create(stripeEvent.Id, timeProvider.GetUtcNow().DateTime));
+            contextAccessor.Context = context;
 
             switch (stripeEvent.Type)
             {
@@ -80,10 +88,16 @@ internal sealed class WebhookProcessor : IWebhookProcessor
                     logger.SkippingStripeEventNotHandled(stripeEvent.Id, stripeEvent.Type);
                     break;
             }
+
+            await context.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             logger.StripeWebhookProcessingError(stripeEvent.Id, ex);
+        }
+        finally
+        {
+            contextAccessor.Context = null;
         }
     }
 }

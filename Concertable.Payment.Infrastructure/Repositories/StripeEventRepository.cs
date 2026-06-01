@@ -15,11 +15,8 @@ internal sealed class StripeEventRepository : IStripeEventRepository
     public Task<StripeEventEntity?> GetEventByIdAsync(string eventId) =>
         context.StripeEvents.FirstOrDefaultAsync(e => e.EventId == eventId);
 
-    public async Task AddEventAsync(StripeEventEntity stripeEvent)
-    {
-        await context.StripeEvents.AddAsync(stripeEvent);
-        await context.SaveChangesAsync();
-    }
+    public void AddEvent(StripeEventEntity stripeEvent) =>
+        context.StripeEvents.Add(stripeEvent);
 
     public Task<bool> EventExistsAsync(string eventId) =>
         context.StripeEvents.AnyAsync(e => e.EventId == eventId);

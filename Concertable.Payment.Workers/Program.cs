@@ -43,7 +43,6 @@ services.AddAzureServiceBusTransport(
         .SubscribeTo<PaymentSucceededEvent>()
         .SubscribeTo<PaymentFailedEvent>());
 
-services.AddDirectBusKeyed("webhook");
 services.AddOutbox(
     opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")),
     runDispatcher: false);

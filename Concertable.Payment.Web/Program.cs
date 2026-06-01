@@ -67,7 +67,6 @@ services.AddAzureServiceBusTransport(
         reg.Publishes<PaymentSucceededEvent>();
         reg.Publishes<PaymentFailedEvent>();
     });
-services.AddDirectBusKeyed("webhook");
 services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
 
 services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

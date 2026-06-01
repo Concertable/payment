@@ -1,5 +1,3 @@
-using Concertable.Payment.Domain;
-
 namespace Concertable.Payment.Client;
 
 public sealed record EscrowDto(
