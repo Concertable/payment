@@ -7,7 +7,7 @@ internal class StripeEventEntityConfiguration : IEntityTypeConfiguration<StripeE
 {
     public void Configure(EntityTypeBuilder<StripeEventEntity> builder)
     {
-        builder.ToTable("StripeEvents", Schema.Name);
+        builder.ToTable(Schema.Tables.StripeEvents, Schema.Name);
         builder.HasKey(e => e.EventId);
     }
 }

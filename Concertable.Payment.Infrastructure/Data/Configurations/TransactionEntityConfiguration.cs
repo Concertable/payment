@@ -7,7 +7,7 @@ internal class TransactionEntityConfiguration : IEntityTypeConfiguration<Transac
 {
     public void Configure(EntityTypeBuilder<TransactionEntity> builder)
     {
-        builder.ToTable("Transactions", Schema.Name);
+        builder.ToTable(Schema.Tables.Transactions, Schema.Name);
         builder.Ignore(t => t.TransactionType);
         builder.HasIndex(t => t.PaymentIntentId).IsUnique();
         builder.HasIndex(t => t.FromUserId);

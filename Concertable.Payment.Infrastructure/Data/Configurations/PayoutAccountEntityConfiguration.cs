@@ -7,7 +7,7 @@ internal class PayoutAccountEntityConfiguration : IEntityTypeConfiguration<Payou
 {
     public void Configure(EntityTypeBuilder<PayoutAccountEntity> builder)
     {
-        builder.ToTable("PayoutAccounts", Schema.Name);
+        builder.ToTable(Schema.Tables.PayoutAccounts, Schema.Name);
         builder.Property(a => a.Email).IsRequired();
         builder.HasIndex(a => a.UserId).IsUnique();
         builder.HasIndex(a => a.StripeAccountId);
