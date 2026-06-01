@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain;
 
-public class VerifyTransactionEntity : TransactionEntity
+public sealed class VerifyTransactionEntity : TransactionEntity
 {
     private VerifyTransactionEntity() { }
 

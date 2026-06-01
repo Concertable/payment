@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class SettlementFailedHandler : IPaymentFailureHandler
+internal sealed class SettlementFailedHandler : IPaymentFailureHandler
 {
     private readonly ITransactionRepository transactionRepository;
     private readonly ILogger<SettlementFailedHandler> logger;

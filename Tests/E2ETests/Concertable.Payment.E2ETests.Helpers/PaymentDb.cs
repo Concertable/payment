@@ -3,7 +3,7 @@ using Dapper;
 
 namespace Concertable.E2ETests;
 
-public class PaymentDb
+public sealed class PaymentDb
 {
     private readonly IDbConnection connection;
 
@@ -30,4 +30,4 @@ public class PaymentDb
             new { bookingId });
 }
 
-public record PayoutAccountRow(string? StripeAccountId, string? StripeCustomerId);
+public sealed record PayoutAccountRow(string? StripeAccountId, string? StripeCustomerId);

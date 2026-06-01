@@ -8,7 +8,7 @@ using static Concertable.Payment.Contracts.TransactionTypes;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class StripeAccountClient : IStripeAccountClient
+internal sealed class StripeAccountClient : IStripeAccountClient
 {
     private readonly string baseUri;
     private readonly AccountService accountService;

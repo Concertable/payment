@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal class StripeEventRepository : IStripeEventRepository
+internal sealed class StripeEventRepository : IStripeEventRepository
 {
     private readonly PaymentDbContext context;
 

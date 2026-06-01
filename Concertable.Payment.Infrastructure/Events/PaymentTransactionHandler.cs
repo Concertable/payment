@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class PaymentTransactionHandler : IIntegrationEventHandler<PaymentSucceededEvent>
+internal sealed class PaymentTransactionHandler : IIntegrationEventHandler<PaymentSucceededEvent>
 {
     private readonly ITransactionHandlerFactory handlerFactory;
     private readonly ILogger<PaymentTransactionHandler> logger;

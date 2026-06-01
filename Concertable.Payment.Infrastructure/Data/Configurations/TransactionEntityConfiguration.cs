@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Payment.Infrastructure.Data.Configurations;
 
-internal class TransactionEntityConfiguration : IEntityTypeConfiguration<TransactionEntity>
+internal sealed class TransactionEntityConfiguration : IEntityTypeConfiguration<TransactionEntity>
 {
     public void Configure(EntityTypeBuilder<TransactionEntity> builder)
     {
@@ -15,7 +15,7 @@ internal class TransactionEntityConfiguration : IEntityTypeConfiguration<Transac
     }
 }
 
-internal class TicketTransactionEntityConfiguration : IEntityTypeConfiguration<TicketTransactionEntity>
+internal sealed class TicketTransactionEntityConfiguration : IEntityTypeConfiguration<TicketTransactionEntity>
 {
     public void Configure(EntityTypeBuilder<TicketTransactionEntity> builder)
     {
@@ -23,7 +23,7 @@ internal class TicketTransactionEntityConfiguration : IEntityTypeConfiguration<T
     }
 }
 
-internal class SettlementTransactionEntityConfiguration : IEntityTypeConfiguration<SettlementTransactionEntity>
+internal sealed class SettlementTransactionEntityConfiguration : IEntityTypeConfiguration<SettlementTransactionEntity>
 {
     public void Configure(EntityTypeBuilder<SettlementTransactionEntity> builder)
     {
@@ -31,7 +31,7 @@ internal class SettlementTransactionEntityConfiguration : IEntityTypeConfigurati
     }
 }
 
-internal class VerifyTransactionEntityConfiguration : IEntityTypeConfiguration<VerifyTransactionEntity>
+internal sealed class VerifyTransactionEntityConfiguration : IEntityTypeConfiguration<VerifyTransactionEntity>
 {
     public void Configure(EntityTypeBuilder<VerifyTransactionEntity> builder)
     {

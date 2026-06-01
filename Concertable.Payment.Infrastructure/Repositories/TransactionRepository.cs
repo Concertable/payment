@@ -5,7 +5,7 @@ using Concertable.Contracts;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal class TransactionRepository : ITransactionRepository
+internal sealed class TransactionRepository : ITransactionRepository
 {
     private readonly PaymentDbContext context;
 

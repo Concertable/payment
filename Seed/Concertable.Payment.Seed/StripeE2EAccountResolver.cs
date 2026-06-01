@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Seed;
 
-public class StripeE2EAccountResolver
+public sealed class StripeE2EAccountResolver
 {
     private static readonly Dictionary<Guid, string> customerIds = new()
     {

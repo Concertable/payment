@@ -6,7 +6,7 @@ namespace Concertable.Payment.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-internal class TransactionController : ControllerBase
+internal sealed class TransactionController : ControllerBase
 {
     private readonly ITransactionService purchaseService;
 

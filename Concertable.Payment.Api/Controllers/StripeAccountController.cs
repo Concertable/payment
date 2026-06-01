@@ -10,7 +10,7 @@ namespace Concertable.Payment.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-internal class StripeAccountController : ControllerBase
+internal sealed class StripeAccountController : ControllerBase
 {
     private readonly IStripeAccountClient stripeAccountClient;
     private readonly ICurrentUser currentUser;

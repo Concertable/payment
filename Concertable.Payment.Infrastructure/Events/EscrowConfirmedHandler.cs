@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class EscrowConfirmedHandler : ITransactionHandler
+internal sealed class EscrowConfirmedHandler : ITransactionHandler
 {
     private readonly IEscrowRepository escrowRepository;
     private readonly ILogger<EscrowConfirmedHandler> logger;

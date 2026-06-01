@@ -8,7 +8,7 @@ namespace Concertable.Payment.Infrastructure.Services;
 /// exercise business logic (checkout flows, escrow, etc.) without a live Stripe account.
 /// Never used in E2E — E2EStripeAccountClient handles that.
 /// </summary>
-internal class FakeStripeAccountClient : IStripeAccountClient
+internal sealed class FakeStripeAccountClient : IStripeAccountClient
 {
     private readonly IPayoutAccountRepository payoutAccountRepository;
 

@@ -2,7 +2,7 @@ using Concertable.Payment.Application.DTOs;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class VerifyTransactionHandler : ITransactionHandler
+internal sealed class VerifyTransactionHandler : ITransactionHandler
 {
     private readonly ITransactionService transactionService;
     private readonly TimeProvider timeProvider;

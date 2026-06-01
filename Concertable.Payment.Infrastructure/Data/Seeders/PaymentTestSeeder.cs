@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Data.Seeders;
 
-internal class PaymentTestSeeder : ITestSeeder
+internal sealed class PaymentTestSeeder : ITestSeeder
 {
     public int Order => 5;
 

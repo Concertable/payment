@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Application.Requests;
 
-internal record RefundRequest
+internal sealed record RefundRequest
 {
     public required decimal Amount { get; init; }
     public required string PaymentIntentId { get; init; }

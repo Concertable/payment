@@ -1,3 +1,3 @@
 namespace Concertable.Payment.Client;
 
-public record TransferResponse(string TransferId);
+public sealed record TransferResponse(string TransferId);

@@ -2,9 +2,9 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Application.DTOs;
 
-internal record PaymentMethodDto(string Brand, string Last4, int ExpMonth, int ExpYear);
+internal sealed record PaymentMethodDto(string Brand, string Last4, int ExpMonth, int ExpYear);
 
-internal record PaymentDto
+internal sealed record PaymentDto
 {
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "GBP";
@@ -14,7 +14,7 @@ internal record PaymentDto
     public Guid UserId { get; set; }
 }
 
-internal record TicketTransactionDto : ITransaction
+internal sealed record TicketTransactionDto : ITransaction
 {
     public int Id { get; set; }
     public TransactionType TransactionType => TransactionType.Ticket;
@@ -27,7 +27,7 @@ internal record TicketTransactionDto : ITransaction
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-internal record SettlementTransactionDto : ITransaction
+internal sealed record SettlementTransactionDto : ITransaction
 {
     public int Id { get; set; }
     public TransactionType TransactionType => TransactionType.Settlement;
@@ -40,7 +40,7 @@ internal record SettlementTransactionDto : ITransaction
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-internal record VerifyTransactionDto : ITransaction
+internal sealed record VerifyTransactionDto : ITransaction
 {
     public int Id { get; set; }
     public TransactionType TransactionType => TransactionType.Verify;

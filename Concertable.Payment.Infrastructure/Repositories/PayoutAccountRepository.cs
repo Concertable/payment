@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal class PayoutAccountRepository : IPayoutAccountRepository
+internal sealed class PayoutAccountRepository : IPayoutAccountRepository
 {
     private readonly PaymentDbContext context;
 

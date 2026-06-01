@@ -3,7 +3,7 @@ using Concertable.Kernel.Identity;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class TransactionService : ITransactionService
+internal sealed class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository purchaseRepository;
     private readonly ICurrentUser currentUser;

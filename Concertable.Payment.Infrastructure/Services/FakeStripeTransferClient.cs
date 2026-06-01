@@ -5,7 +5,7 @@ using FluentResults;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class FakeStripeTransferClient : IStripeTransferClient
+internal sealed class FakeStripeTransferClient : IStripeTransferClient
 {
     public Task<Result<TransferResponse>> ReleaseAsync(StripeReleaseOptions options) =>
         Task.FromResult(Result.Ok(new TransferResponse("tr_fake")));

@@ -1,3 +1,3 @@
 namespace Concertable.Payment.Client;
 
-public record RefundResponse(string RefundId);
+public sealed record RefundResponse(string RefundId);

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure;
 
-internal class EscrowService : IEscrowService
+internal sealed class EscrowService : IEscrowService
 {
     private readonly IPaymentManager paymentManager;
     private readonly IEscrowRepository escrowRepository;

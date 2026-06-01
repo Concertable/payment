@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain;
 
-public class StripeEventEntity
+public sealed class StripeEventEntity
 {
     private StripeEventEntity() { }
 

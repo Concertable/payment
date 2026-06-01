@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class TransactionHandlerFactory : ITransactionHandlerFactory
+internal sealed class TransactionHandlerFactory : ITransactionHandlerFactory
 {
     private readonly IKeyedServiceProvider serviceProvider;
     private readonly ILogger<TransactionHandlerFactory> logger;

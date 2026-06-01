@@ -2,7 +2,7 @@ using Concertable.Kernel;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
-public class EscrowEntityTests
+public sealed class EscrowEntityTests
 {
     private static EscrowEntity NewPending() =>
         EscrowEntity.Create(bookingId: 42, fromUserId: Guid.NewGuid(), toUserId: Guid.NewGuid(), amount: 5000, chargeId: "pi_test");

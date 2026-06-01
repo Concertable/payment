@@ -3,7 +3,7 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Application.Mappers;
 
-internal class TransactionMapper : ITransactionMapper
+internal sealed class TransactionMapper : ITransactionMapper
 {
     private static readonly FrozenDictionary<TransactionType, ITransactionMapper> mappers =
         new Dictionary<TransactionType, ITransactionMapper>

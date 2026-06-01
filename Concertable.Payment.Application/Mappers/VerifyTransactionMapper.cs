@@ -3,7 +3,7 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Application.Mappers;
 
-internal class VerifyTransactionMapper : ITransactionMapper
+internal sealed class VerifyTransactionMapper : ITransactionMapper
 {
     public TransactionEntity ToEntity(ITransaction dto)
     {

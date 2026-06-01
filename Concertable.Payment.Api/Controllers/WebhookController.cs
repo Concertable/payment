@@ -7,7 +7,7 @@ using Stripe;
 namespace Concertable.Payment.Api.Controllers;
 
 [Route("api/[controller]")]
-internal class WebhookController : ControllerBase
+internal sealed class WebhookController : ControllerBase
 {
     private readonly IWebhookService webhookService;
     private readonly ILogger<WebhookController> logger;

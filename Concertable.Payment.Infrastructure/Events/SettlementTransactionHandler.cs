@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class SettlementTransactionHandler : ITransactionHandler
+internal sealed class SettlementTransactionHandler : ITransactionHandler
 {
     private readonly ITransactionService transactionService;
 

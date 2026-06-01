@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class PaymentFailureHandlerFactory : IPaymentFailureHandlerFactory
+internal sealed class PaymentFailureHandlerFactory : IPaymentFailureHandlerFactory
 {
     private readonly IKeyedServiceProvider serviceProvider;
 

@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Application.Requests;
 
-internal record ReleaseRequest
+internal sealed record ReleaseRequest
 {
     public required Guid PayeeId { get; init; }
     public required decimal Amount { get; init; }

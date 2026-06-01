@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Data;
 
-internal class PaymentDbContext(
+internal sealed class PaymentDbContext(
     DbContextOptions<PaymentDbContext> options,
     PaymentConfigurationProvider provider)
     : DbContextBase(options)

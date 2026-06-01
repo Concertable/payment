@@ -5,7 +5,7 @@ using Concertable.Payment.Application.Interfaces;
 
 namespace Concertable.Payment.Infrastructure.Handlers;
 
-internal class CustomerRegisteredHandler : IIntegrationEventHandler<CredentialRegisteredEvent>
+internal sealed class CustomerRegisteredHandler : IIntegrationEventHandler<CredentialRegisteredEvent>
 {
     private readonly IStripeAccountClient stripeAccountClient;
 

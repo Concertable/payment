@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Application.Requests;
 
-internal record HoldRequest
+internal sealed record HoldRequest
 {
     public required Guid PayerId { get; init; }
     public required string PayerEmail { get; init; }

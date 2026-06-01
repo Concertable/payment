@@ -8,7 +8,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class StripePaymentIntentClient : IStripePaymentIntentClient
+internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 {
     private readonly IStripeApiClient stripeClient;
     private readonly IStripeAccountClient stripeAccountClient;

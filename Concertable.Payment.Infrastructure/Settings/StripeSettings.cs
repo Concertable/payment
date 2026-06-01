@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Infrastructure.Settings;
 
-internal class StripeSettings
+internal sealed class StripeSettings
 {
     public string? SecretKey { get; set; }
     public string? PublishableKey { get; set; }

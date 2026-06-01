@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain;
 
-public class TicketTransactionEntity : TransactionEntity
+public sealed class TicketTransactionEntity : TransactionEntity
 {
     private TicketTransactionEntity() { }
 

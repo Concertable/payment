@@ -6,7 +6,7 @@ using FluentResults;
 
 namespace Concertable.Payment.Infrastructure;
 
-internal class CustomerPaymentService : ICustomerPaymentService
+internal sealed class CustomerPaymentService : ICustomerPaymentService
 {
     private readonly IPaymentManager paymentManager;
     private readonly IStripeAccountClient stripeAccountClient;

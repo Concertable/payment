@@ -4,7 +4,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class StripeHoldClient : IStripeHoldClient
+internal sealed class StripeHoldClient : IStripeHoldClient
 {
     private readonly PaymentIntentService paymentIntentService;
 

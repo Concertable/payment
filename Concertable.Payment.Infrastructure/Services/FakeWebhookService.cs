@@ -2,7 +2,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class FakeWebhookService : IWebhookService
+internal sealed class FakeWebhookService : IWebhookService
 {
     private readonly IWebhookQueue webhookQueue;
 

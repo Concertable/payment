@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Payment.Infrastructure.Data.Configurations;
 
-internal class PayoutAccountEntityConfiguration : IEntityTypeConfiguration<PayoutAccountEntity>
+internal sealed class PayoutAccountEntityConfiguration : IEntityTypeConfiguration<PayoutAccountEntity>
 {
     public void Configure(EntityTypeBuilder<PayoutAccountEntity> builder)
     {

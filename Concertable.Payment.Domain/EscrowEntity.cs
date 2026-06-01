@@ -2,7 +2,7 @@ using Concertable.Kernel;
 
 namespace Concertable.Payment.Domain;
 
-public class EscrowEntity : IIdEntity, IAuditable
+public sealed class EscrowEntity : IIdEntity, IAuditable
 {
     private EscrowEntity() { }
 

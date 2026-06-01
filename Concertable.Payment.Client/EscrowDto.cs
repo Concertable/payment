@@ -2,7 +2,7 @@ using Concertable.Payment.Domain;
 
 namespace Concertable.Payment.Client;
 
-public record EscrowDto(
+public sealed record EscrowDto(
     int Id,
     int BookingId,
     Guid FromUserId,

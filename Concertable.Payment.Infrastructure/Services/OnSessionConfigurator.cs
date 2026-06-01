@@ -2,7 +2,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class OnSessionConfigurator : IPaymentSessionConfigurator
+internal sealed class OnSessionConfigurator : IPaymentSessionConfigurator
 {
     public void Configure(PaymentIntentCreateOptions options)
     {

@@ -4,7 +4,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services.Webhook;
 
-internal class WebhookService : IWebhookService
+internal sealed class WebhookService : IWebhookService
 {
     private readonly IWebhookQueue webhookQueue;
     private readonly string webhookSecret;

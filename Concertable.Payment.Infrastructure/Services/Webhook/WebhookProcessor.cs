@@ -6,7 +6,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services.Webhook;
 
-internal class WebhookProcessor : IWebhookProcessor
+internal sealed class WebhookProcessor : IWebhookProcessor
 {
     private readonly IStripeEventRepository stripeEventRepository;
     private readonly IBus integrationEventBus;

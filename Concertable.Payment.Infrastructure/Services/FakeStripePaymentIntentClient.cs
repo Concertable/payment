@@ -5,7 +5,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class FakeStripePaymentIntentClient : IStripePaymentIntentClient
+internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
 {
     private readonly IWebhookQueue webhookQueue;
 

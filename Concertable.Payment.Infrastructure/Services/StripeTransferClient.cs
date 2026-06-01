@@ -7,7 +7,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-internal class StripeTransferClient : IStripeTransferClient
+internal sealed class StripeTransferClient : IStripeTransferClient
 {
     private readonly IStripeApiClient stripeClient;
     private readonly ILogger<StripeTransferClient> logger;

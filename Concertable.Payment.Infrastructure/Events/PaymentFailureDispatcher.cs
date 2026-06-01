@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Events;
 
-internal class PaymentFailureDispatcher : IIntegrationEventHandler<PaymentFailedEvent>
+internal sealed class PaymentFailureDispatcher : IIntegrationEventHandler<PaymentFailedEvent>
 {
     private readonly IPaymentFailureHandlerFactory handlerFactory;
     private readonly ILogger<PaymentFailureDispatcher> logger;

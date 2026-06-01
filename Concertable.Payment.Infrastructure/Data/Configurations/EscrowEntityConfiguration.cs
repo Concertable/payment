@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Payment.Infrastructure.Data.Configurations;
 
-internal class EscrowEntityConfiguration : IEntityTypeConfiguration<EscrowEntity>
+internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<EscrowEntity>
 {
     public void Configure(EntityTypeBuilder<EscrowEntity> builder)
     {

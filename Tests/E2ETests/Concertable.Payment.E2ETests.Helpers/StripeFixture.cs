@@ -2,7 +2,7 @@ using Stripe;
 
 namespace Concertable.E2ETests;
 
-public class StripeFixture
+public sealed class StripeFixture
 {
     private readonly PaymentIntentService paymentIntents;
     private readonly TransferService transfers;

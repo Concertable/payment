@@ -8,7 +8,7 @@ using Moq;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
-public class EscrowServiceTests
+public sealed class EscrowServiceTests
 {
     private readonly Mock<IPaymentManager> paymentManager = new();
     private readonly Mock<IEscrowRepository> escrowRepository = new();
