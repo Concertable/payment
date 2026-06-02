@@ -2,7 +2,7 @@ namespace Concertable.Payment.Client;
 
 public record PaymentResponse
 {
-    public bool RequiresAction { get; set; }
-    public string? ClientSecret { get; set; }
-    public string? TransactionId { get; set; }
+    public bool RequiresAction { get; init; }
+    public string? ClientSecret { get; init; }
+    public string? TransactionId { get; init; }
 }

@@ -7,12 +7,12 @@ namespace Concertable.Payment.Application.Interfaces;
 [JsonDerivedType(typeof(VerifyTransactionDto), TransactionTypes.Verify)]
 internal interface ITransaction
 {
-    int Id { get; set; }
+    int Id { get; }
     TransactionType TransactionType { get; }
-    Guid FromUserId { get; set; }
-    Guid ToUserId { get; set; }
-    string PaymentIntentId { get; set; }
-    long Amount { get; set; }
-    TransactionStatus Status { get; set; }
-    DateTime CreatedAt { get; set; }
+    Guid FromUserId { get; }
+    Guid ToUserId { get; }
+    string PaymentIntentId { get; }
+    long Amount { get; }
+    TransactionStatus Status { get; }
+    DateTime CreatedAt { get; }
 }

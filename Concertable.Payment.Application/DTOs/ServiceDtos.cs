@@ -4,9 +4,9 @@ internal sealed record EscrowResponse(int EscrowId, string ChargeId, EscrowStatu
 
 internal sealed record PaymentResponse
 {
-    public bool RequiresAction { get; set; }
-    public string? ClientSecret { get; set; }
-    public string? TransactionId { get; set; }
+    public bool RequiresAction { get; init; }
+    public string? ClientSecret { get; init; }
+    public string? TransactionId { get; init; }
 }
 
 internal sealed record CheckoutSession(string ClientSecret, string CustomerSession, string CustomerId);
