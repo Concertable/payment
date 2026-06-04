@@ -1,3 +1,7 @@
+using Concertable.Messaging.Contracts;
+using Concertable.Messaging.Infrastructure.Outbox;
+using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -6,22 +10,36 @@ namespace Concertable.Payment.Infrastructure.Services.Webhook;
 
 internal sealed class WebhookService : IWebhookService
 {
-    private readonly IWebhookQueue webhookQueue;
+    private readonly PaymentDbContext context;
+    private readonly IDbContextAccessor contextAccessor;
+    private readonly IBus bus;
     private readonly string webhookSecret;
-    private readonly bool skipVerification;
 
-    public WebhookService(IWebhookQueue webhookQueue, IOptions<StripeSettings> stripeSettings)
+    public WebhookService(
+        PaymentDbContext context,
+        IDbContextAccessor contextAccessor,
+        IBus bus,
+        IOptions<StripeSettings> stripeSettings)
     {
-        this.webhookQueue = webhookQueue;
+        this.context = context;
+        this.contextAccessor = contextAccessor;
+        this.bus = bus;
         webhookSecret = stripeSettings.Value.WebhookSecret ?? string.Empty;
-        skipVerification = stripeSettings.Value.SkipWebhookVerification;
     }
 
     public async Task HandleAsync(string json, string stripeSignature)
     {
-        var stripeEvent = skipVerification
-            ? EventUtility.ParseEvent(json)
-            : EventUtility.ConstructEvent(json, stripeSignature, webhookSecret);
-        await webhookQueue.EnqueueAsync(stripeEvent);
+        EventUtility.ValidateSignature(json, stripeSignature, webhookSecret);
+
+        try
+        {
+            contextAccessor.Context = context;
+            await bus.SendAsync(new ProcessStripeWebhookCommand(json));
+            await context.SaveChangesAsync();
+        }
+        finally
+        {
+            contextAccessor.Context = null;
+        }
     }
 }

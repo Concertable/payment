@@ -1,4 +1,5 @@
 using Concertable.Messaging.Infrastructure.Extensions;
+using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
@@ -66,6 +67,7 @@ services.AddAzureServiceBusTransport(
     {
         reg.Publishes<PaymentSucceededEvent>();
         reg.Publishes<PaymentFailedEvent>();
+        reg.HandleCommand<ProcessStripeWebhookCommand>();
     });
 services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
 

@@ -2,6 +2,7 @@ using Concertable.DataAccess;
 using Concertable.Seed.Shared;
 using Concertable.Seed.Shared.Extensions;
 using Concertable.Auth.Contracts.Events;
+using Concertable.Payment.Application.Commands;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
@@ -97,6 +98,7 @@ public static class ServiceCollectionExtensions
         // Webhook infrastructure
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
+        services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
 
         services.AddScoped<IManagerPaymentService, ManagerPaymentService>();
         services.AddScoped<ICustomerPaymentService, CustomerPaymentService>();

@@ -94,6 +94,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         catch (Exception ex)
         {
             logger.StripeWebhookProcessingError(stripeEvent.Id, ex);
+            throw;
         }
         finally
         {
