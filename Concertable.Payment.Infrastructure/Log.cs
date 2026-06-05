@@ -6,7 +6,8 @@ namespace Concertable.Payment.Infrastructure;
 
 internal static partial class Log
 {
-    // WebhookProcessor
+    #region WebhookProcessor
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Processing Stripe event {EventId} of type {EventType}")]
     internal static partial void ProcessingStripeEvent(this ILogger logger, string eventId, string eventType);
 
@@ -34,7 +35,10 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Error, Message = "Error processing Stripe webhook for event {EventId}")]
     internal static partial void StripeWebhookProcessingError(this ILogger logger, string eventId, Exception ex);
 
-    // StripeTransferClient
+    #endregion
+
+    #region StripeTransferClient
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Stripe escrow release {TransferId} succeeded: {AmountPence} pence to {Destination} from charge {ChargeId}")]
     internal static partial void StripeEscrowReleaseSucceeded(this ILogger logger, string transferId, long amountPence, string destination, string chargeId);
 
@@ -56,7 +60,10 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Error, Message = "Refund processing failed for payment intent {IntentId}")]
     internal static partial void RefundProcessingFailed(this ILogger logger, string intentId, Exception ex);
 
-    // StripePaymentIntentClient
+    #endregion
+
+    #region StripePaymentIntentClient
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Stripe payment intent {IntentId} succeeded: {AmountPence} pence to {Destination}")]
     internal static partial void StripePaymentIntentSucceeded(this ILogger logger, string intentId, long amountPence, string destination);
 
@@ -81,7 +88,10 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Error, Message = "Hold processing failed for {AmountPence} pence on behalf of {Destination}")]
     internal static partial void HoldProcessingFailed(this ILogger logger, long amountPence, string destination, Exception ex);
 
-    // PaymentManager
+    #endregion
+
+    #region PaymentManager
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Charging {PayerId} {Amount} GBP -> {PayeeId} (stripe {DestinationStripeId}) for {Purpose}")]
     internal static partial void ChargingPayment(this ILogger logger, Guid payerId, decimal amount, Guid payeeId, string destinationStripeId, string purpose);
 
@@ -103,11 +113,17 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Error, Message = "Capture failed for PaymentIntent {PaymentIntentId}")]
     internal static partial void CaptureFailedForPaymentIntent(this ILogger logger, string paymentIntentId, Exception ex);
 
-    // TransactionHandlerFactory
+    #endregion
+
+    #region TransactionHandlerFactory
+
     [LoggerMessage(Level = LogLevel.Error, Message = "No ITransactionHandler is registered for transaction type {TransactionType}. Check ServiceCollectionExtensions for AddKeyedScoped registrations.")]
     internal static partial void NoTransactionHandlerRegistered(this ILogger logger, string transactionType);
 
-    // SettlementFailedHandler
+    #endregion
+
+    #region SettlementFailedHandler
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "No settlement transaction found for charge {ChargeId}; ignoring PaymentFailedEvent")]
     internal static partial void NoSettlementTransactionFound(this ILogger logger, string chargeId);
 
@@ -117,18 +133,27 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Settlement transaction {TransactionId} failed (Pending -> Failed) for charge {ChargeId}: {Code} {Message}")]
     internal static partial void SettlementTransactionFailed(this ILogger logger, int transactionId, string chargeId, string? code, string? message);
 
-    // PaymentTransactionHandler
+    #endregion
+
+    #region PaymentTransactionHandler
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Dispatching PaymentSucceededEvent for transaction {TransactionId} to handler for type {TransactionType}")]
     internal static partial void DispatchingPaymentSucceededEvent(this ILogger logger, string transactionId, string transactionType);
 
-    // PaymentFailureDispatcher
+    #endregion
+
+    #region PaymentFailureDispatcher
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "No IPaymentFailureHandler registered for transaction type {TransactionType}; ignoring failure for {TransactionId}")]
     internal static partial void NoPaymentFailureHandlerRegistered(this ILogger logger, string transactionType, string transactionId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Dispatching PaymentFailedEvent for transaction {TransactionId} (code {Code}) to handler for type {TransactionType}")]
     internal static partial void DispatchingPaymentFailedEvent(this ILogger logger, string transactionId, string? code, string transactionType);
 
-    // EscrowConfirmedHandler
+    #endregion
+
+    #region EscrowConfirmedHandler
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for charge {ChargeId}; ignoring PaymentSucceededEvent")]
     internal static partial void NoEscrowFoundForPaymentSucceeded(this ILogger logger, string chargeId);
 
@@ -138,7 +163,10 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Escrow {EscrowId} confirmed (Pending -> Held) for charge {ChargeId}")]
     internal static partial void EscrowConfirmed(this ILogger logger, int escrowId, string chargeId);
 
-    // EscrowFailedHandler
+    #endregion
+
+    #region EscrowFailedHandler
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for charge {ChargeId}; ignoring PaymentFailedEvent")]
     internal static partial void NoEscrowFoundForPaymentFailed(this ILogger logger, string chargeId);
 
@@ -148,14 +176,20 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Escrow {EscrowId} failed (Pending -> Failed) for charge {ChargeId}: {Code} {Message}")]
     internal static partial void EscrowFailed(this ILogger logger, int escrowId, string chargeId, string? code, string? message);
 
-    // EscrowService
+    #endregion
+
+    #region EscrowService
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for booking {BookingId}; nothing to release")]
     internal static partial void NoEscrowFoundForBooking(this ILogger logger, int bookingId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for booking {BookingId} is {Status}, not Held; skipping release")]
     internal static partial void EscrowNotHeldSkippingRelease(this ILogger logger, int escrowId, int bookingId, EscrowStatus status);
 
-    // GrpcExceptionInterceptor
+    #endregion
+
+    #region GrpcExceptionInterceptor
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "gRPC handler returned error in {Method}: {StatusCode} {Detail}")]
     internal static partial void GrpcHandlerRpcError(this ILogger logger, string method, GrpcStatusCode statusCode, string detail);
 
@@ -164,4 +198,6 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception in gRPC handler {Method}")]
     internal static partial void GrpcHandlerUnhandledException(this ILogger logger, string method, Exception ex);
+
+    #endregion
 }
