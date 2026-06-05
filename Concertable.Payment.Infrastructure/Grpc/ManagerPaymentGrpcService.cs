@@ -22,14 +22,14 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             Guid.Parse(request.PayeeId),
             decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
             request.PaymentMethodId,
-            request.Session == PaymentSessionType.OffSession ? PaymentSession.OffSession : PaymentSession.OnSession,
+            request.Session.ToPaymentSession(),
             request.BookingId,
             context.CancellationToken);
 
         if (result.IsFailed)
             throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
 
-        return MapPaymentResponse(result.Value);
+        return result.Value.ToProtoPaymentResponse();
     }
 
     public override async Task<CheckoutSessionResponse> CreateSetupSession(CreateSetupSessionRequest request, ServerCallContext context)
@@ -39,7 +39,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             request.Metadata,
             context.CancellationToken);
 
-        return MapCheckoutSession(session);
+        return session.ToProtoCheckoutSession();
     }
 
     public override async Task<CheckoutSessionResponse> CreateVerifySession(CreateVerifySessionRequest request, ServerCallContext context)
@@ -49,7 +49,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             request.Metadata,
             context.CancellationToken);
 
-        return MapCheckoutSession(session);
+        return session.ToProtoCheckoutSession();
     }
 
     public override async Task<CheckoutSessionResponse> CreateHoldSession(CreateHoldSessionRequest request, ServerCallContext context)
@@ -60,7 +60,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             request.Metadata,
             context.CancellationToken);
 
-        return MapCheckoutSession(session);
+        return session.ToProtoCheckoutSession();
     }
 
     public override async Task<FindHeldIntentResponse> FindHeldIntent(FindHeldIntentRequest request, ServerCallContext context)
@@ -72,15 +72,4 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
         return new FindHeldIntentResponse { PaymentIntentId = intentId };
     }
-
-    private static PaymentResponse MapPaymentResponse(Application.DTOs.PaymentResponse r) =>
-        new()
-        {
-            RequiresAction = r.RequiresAction,
-            ClientSecret = r.ClientSecret ?? "",
-            TransactionId = r.TransactionId ?? ""
-        };
-
-    private static CheckoutSessionResponse MapCheckoutSession(Application.DTOs.CheckoutSession s) =>
-        new() { ClientSecret = s.ClientSecret, CustomerSession = s.CustomerSession, CustomerId = s.CustomerId };
 }

@@ -37,7 +37,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
             };
             request.Metadata.Add(metadata);
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(MapPaymentResponse(response));
+            return Result.Ok(response.ToPaymentResponse());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -57,19 +57,11 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
             var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString(), ConcertId = concertId, PayeeId = payeeId.ToString() };
             request.Metadata.Add(metadata);
             var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
-            return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+            return response.ToCheckoutSession();
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
         {
             throw new NotFoundException(ex.Status.Detail);
         }
     }
-
-    private static PaymentResponse MapPaymentResponse(Proto.PaymentResponse r) =>
-        new()
-        {
-            RequiresAction = r.RequiresAction,
-            ClientSecret = string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret,
-            TransactionId = string.IsNullOrEmpty(r.TransactionId) ? null : r.TransactionId
-        };
 }
