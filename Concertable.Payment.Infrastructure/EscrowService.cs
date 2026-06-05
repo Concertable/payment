@@ -92,10 +92,6 @@ internal sealed class EscrowService : IEscrowService
         int bookingId,
         CancellationToken ct = default)
     {
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, (long)(amount * 100), paymentIntentId);
-        await escrowRepository.AddAsync(escrow);
-        await escrowRepository.SaveChangesAsync();
-
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {
             PaymentIntentId = paymentIntentId,
@@ -109,7 +105,9 @@ internal sealed class EscrowService : IEscrowService
         if (capture.IsFailed)
             return capture.ToResult<EscrowResponse>();
 
+        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, (long)(amount * 100), paymentIntentId);
         escrow.Confirm();
+        await escrowRepository.AddAsync(escrow);
         await escrowRepository.SaveChangesAsync();
 
         return Result.Ok(new EscrowResponse(escrow.Id, escrow.ChargeId, escrow.Status, null));
