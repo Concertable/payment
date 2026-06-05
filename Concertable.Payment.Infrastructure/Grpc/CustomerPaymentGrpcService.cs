@@ -1,5 +1,3 @@
-using System.Globalization;
-using Concertable.Kernel.Exceptions;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
@@ -17,13 +15,15 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
 
     public override async Task<PaymentResponse> Pay(CustomerPayRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var result = await customerPaymentService.PayAsync(
-            Guid.Parse(request.PayerId),
-            request.ConcertId,
-            Guid.Parse(request.PayeeId),
-            decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
-            request.Metadata,
-            request.PaymentMethodId,
+            command.PayerId,
+            command.ConcertId,
+            command.PayeeId,
+            command.Amount,
+            command.Metadata,
+            command.PaymentMethodId,
             context.CancellationToken);
 
         if (result.IsFailed)
@@ -34,20 +34,15 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
 
     public override async Task<CheckoutSessionResponse> CreatePaymentSession(CreatePaymentSessionRequest request, ServerCallContext context)
     {
-        try
-        {
-            var session = await customerPaymentService.CreatePaymentSessionAsync(
-                Guid.Parse(request.PayerId),
-                request.ConcertId,
-                Guid.Parse(request.PayeeId),
-                request.Metadata,
-                context.CancellationToken);
+        var command = request.ToCommand();
 
-            return session.ToProtoCheckoutSession();
-        }
-        catch (NotFoundException ex)
-        {
-            throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
-        }
+        var session = await customerPaymentService.CreatePaymentSessionAsync(
+            command.PayerId,
+            command.ConcertId,
+            command.PayeeId,
+            command.Metadata,
+            context.CancellationToken);
+
+        return session.ToProtoCheckoutSession();
     }
 }

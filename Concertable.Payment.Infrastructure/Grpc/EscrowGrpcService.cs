@@ -1,6 +1,4 @@
-using System.Globalization;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Payment.Domain;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
 
@@ -17,13 +15,15 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
 
     public override async Task<EscrowResponse> Deposit(DepositRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var result = await escrowService.DepositAsync(
-            Guid.Parse(request.PayerId),
-            Guid.Parse(request.PayeeId),
-            decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
-            request.PaymentMethodId,
-            request.Session.ToPaymentSession(),
-            request.BookingId,
+            command.PayerId,
+            command.PayeeId,
+            command.Amount,
+            command.PaymentMethodId,
+            command.Session,
+            command.BookingId,
             context.CancellationToken);
 
         if (result.IsFailed)
@@ -34,12 +34,14 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
 
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var result = await escrowService.CaptureAsync(
-            Guid.Parse(request.PayerId),
-            Guid.Parse(request.PayeeId),
-            decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
-            request.PaymentIntentId,
-            request.BookingId,
+            command.PayerId,
+            command.PayeeId,
+            command.Amount,
+            command.PaymentIntentId,
+            command.BookingId,
             context.CancellationToken);
 
         if (result.IsFailed)

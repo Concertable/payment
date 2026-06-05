@@ -1,6 +1,4 @@
-using System.Globalization;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Payment.Domain;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
 
@@ -17,13 +15,15 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
     public override async Task<PaymentResponse> Pay(ManagerPayRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var result = await managerPaymentService.PayAsync(
-            Guid.Parse(request.PayerId),
-            Guid.Parse(request.PayeeId),
-            decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
-            request.PaymentMethodId,
-            request.Session.ToPaymentSession(),
-            request.BookingId,
+            command.PayerId,
+            command.PayeeId,
+            command.Amount,
+            command.PaymentMethodId,
+            command.Session,
+            command.BookingId,
             context.CancellationToken);
 
         if (result.IsFailed)
@@ -34,9 +34,11 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
     public override async Task<CheckoutSessionResponse> CreateSetupSession(CreateSetupSessionRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var session = await managerPaymentService.CreateSetupSessionAsync(
-            Guid.Parse(request.PayerId),
-            request.Metadata,
+            command.PayerId,
+            command.Metadata,
             context.CancellationToken);
 
         return session.ToProtoCheckoutSession();
@@ -44,9 +46,11 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
     public override async Task<CheckoutSessionResponse> CreateVerifySession(CreateVerifySessionRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var session = await managerPaymentService.CreateVerifySessionAsync(
-            Guid.Parse(request.PayerId),
-            request.Metadata,
+            command.PayerId,
+            command.Metadata,
             context.CancellationToken);
 
         return session.ToProtoCheckoutSession();
@@ -54,10 +58,12 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
     public override async Task<CheckoutSessionResponse> CreateHoldSession(CreateHoldSessionRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var session = await managerPaymentService.CreateHoldSessionAsync(
-            Guid.Parse(request.PayerId),
-            decimal.Parse(request.Amount, CultureInfo.InvariantCulture),
-            request.Metadata,
+            command.PayerId,
+            command.Amount,
+            command.Metadata,
             context.CancellationToken);
 
         return session.ToProtoCheckoutSession();
@@ -65,9 +71,11 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
 
     public override async Task<FindHeldIntentResponse> FindHeldIntent(FindHeldIntentRequest request, ServerCallContext context)
     {
+        var command = request.ToCommand();
+
         var intentId = await managerPaymentService.FindHeldIntentAsync(
-            Guid.Parse(request.PayerId),
-            request.ApplicationId,
+            command.PayerId,
+            command.ApplicationId,
             context.CancellationToken);
 
         return new FindHeldIntentResponse { PaymentIntentId = intentId };
