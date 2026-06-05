@@ -29,7 +29,7 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
         if (result.IsFailed)
             throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
 
-        return MapPaymentResponse(result.Value);
+        return result.Value.ToProtoPaymentResponse();
     }
 
     public override async Task<CheckoutSessionResponse> CreatePaymentSession(CreatePaymentSessionRequest request, ServerCallContext context)
@@ -43,24 +43,11 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
                 request.Metadata,
                 context.CancellationToken);
 
-            return new CheckoutSessionResponse
-            {
-                ClientSecret = session.ClientSecret,
-                CustomerSession = session.CustomerSession,
-                CustomerId = session.CustomerId
-            };
+            return session.ToProtoCheckoutSession();
         }
         catch (NotFoundException ex)
         {
             throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
         }
     }
-
-    private static PaymentResponse MapPaymentResponse(Application.DTOs.PaymentResponse r) =>
-        new()
-        {
-            RequiresAction = r.RequiresAction,
-            ClientSecret = r.ClientSecret ?? "",
-            TransactionId = r.TransactionId ?? ""
-        };
 }

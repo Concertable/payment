@@ -22,11 +22,4 @@ internal static class EscrowMappers
         Proto.EscrowStatusType.EscrowFailed => EscrowStatus.Failed,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
-
-    public static Proto.PaymentSessionType ToProtoSession(this PaymentSession session) => session switch
-    {
-        PaymentSession.OnSession => Proto.PaymentSessionType.OnSession,
-        PaymentSession.OffSession => Proto.PaymentSessionType.OffSession,
-        _ => throw new ArgumentOutOfRangeException(nameof(session), session, null)
-    };
 }
