@@ -33,11 +33,11 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                 PayeeId = payeeId.ToString(),
                 Amount = amount.ToString(CultureInfo.InvariantCulture),
                 PaymentMethodId = paymentMethodId,
-                Session = MapSession(session),
+                Session = session.ToProtoSession(),
                 BookingId = bookingId
             };
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(MapPaymentResponse(response));
+            return Result.Ok(response.ToPaymentResponse());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -53,7 +53,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         var request = new Proto.CreateSetupSessionRequest { PayerId = payerId.ToString() };
         request.Metadata.Add(metadata);
         var response = await this.client.CreateSetupSessionAsync(request, cancellationToken: ct);
-        return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+        return response.ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateVerifySessionAsync(
@@ -64,7 +64,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         var request = new Proto.CreateVerifySessionRequest { PayerId = payerId.ToString() };
         request.Metadata.Add(metadata);
         var response = await this.client.CreateVerifySessionAsync(request, cancellationToken: ct);
-        return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+        return response.ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
@@ -80,7 +80,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         };
         request.Metadata.Add(metadata);
         var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);
-        return new CheckoutSession(response.ClientSecret, response.CustomerSession, response.CustomerId);
+        return response.ToCheckoutSession();
     }
 
     public async Task<string> FindHeldIntentAsync(
@@ -96,17 +96,4 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         var response = await this.client.FindHeldIntentAsync(request, cancellationToken: ct);
         return response.PaymentIntentId;
     }
-
-    private static PaymentResponse MapPaymentResponse(Proto.PaymentResponse r) =>
-        new()
-        {
-            RequiresAction = r.RequiresAction,
-            ClientSecret = string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret,
-            TransactionId = string.IsNullOrEmpty(r.TransactionId) ? null : r.TransactionId
-        };
-
-    private static Proto.PaymentSessionType MapSession(PaymentSession session) =>
-        session == PaymentSession.OffSession
-            ? Proto.PaymentSessionType.OffSession
-            : Proto.PaymentSessionType.OnSession;
 }
