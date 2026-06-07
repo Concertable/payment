@@ -6,13 +6,8 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 internal sealed class EscrowRepository
     : Repository<EscrowEntity>, IEscrowRepository
 {
-    private readonly PaymentDbContext context;
-
     public EscrowRepository(PaymentDbContext context)
-        : base(context)
-    {
-        this.context = context;
-    }
+        : base(context) { }
 
     public Task<EscrowEntity?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default) =>
         context.Escrows.FirstOrDefaultAsync(e => e.BookingId == bookingId, ct);
