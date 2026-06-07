@@ -1,19 +1,19 @@
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
-using Concertable.Testing;
 using FluentResults;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class EscrowServiceTests
 {
-    private readonly Mock<IPaymentManager> paymentManager = new();
-    private readonly Mock<IEscrowRepository> escrowRepository = new();
-    private readonly Mock<IPayoutAccountRepository> payoutAccountRepository = new();
-    private readonly TimeProvider timeProvider = new FakeTimeProvider();
+    private readonly Mock<IPaymentManager> paymentManager;
+    private readonly Mock<IEscrowRepository> escrowRepository;
+    private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
+    private readonly FakeTimeProvider timeProvider;
     private readonly EscrowService sut;
 
     private readonly Guid payerId = Guid.NewGuid();
@@ -21,7 +21,12 @@ public sealed class EscrowServiceTests
 
     public EscrowServiceTests()
     {
-        sut = new EscrowService(
+        this.paymentManager = new Mock<IPaymentManager>();
+        this.escrowRepository = new Mock<IEscrowRepository>();
+        this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
+        this.timeProvider = new FakeTimeProvider();
+
+        this.sut = new EscrowService(
             paymentManager.Object,
             escrowRepository.Object,
             payoutAccountRepository.Object,
