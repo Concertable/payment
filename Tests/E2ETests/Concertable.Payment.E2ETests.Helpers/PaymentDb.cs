@@ -20,13 +20,18 @@ public sealed class PaymentDb
     public Task<string?> GetLatestSettlementPaymentIntentIdAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<string?>(
             """
-            SELECT TOP 1 t.PaymentIntentId
-            FROM payment.SettlementTransactions st
-            INNER JOIN payment.Transactions t ON t.Id = st.Id
-            WHERE st.BookingId = @bookingId
-              AND t.PaymentIntentId LIKE 'pi[_]%'
-            ORDER BY t.CreatedAt DESC
+            SELECT TOP 1 PaymentIntentId
+            FROM payment.Transactions
+            WHERE Discriminator = 'SettlementTransactionEntity'
+              AND ContextId = @bookingId
+              AND PaymentIntentId LIKE 'pi[_]%'
+            ORDER BY CreatedAt DESC
             """,
+            new { bookingId });
+
+    public Task<Guid?> GetEscrowPayeeIdAsync(int bookingId) =>
+        connection.QuerySingleOrDefaultAsync<Guid?>(
+            "SELECT ToUserId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
 }
 

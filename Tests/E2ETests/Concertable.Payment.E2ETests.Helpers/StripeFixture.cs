@@ -35,6 +35,12 @@ public sealed class StripeFixture
             new PaymentMethodAttachOptions { Customer = customerId },
             cancellationToken: ct);
 
+    public Task ConfirmHoldAsync(string clientSecret, string paymentMethodId = "pm_card_visa", CancellationToken ct = default) =>
+        paymentIntents.ConfirmAsync(
+            clientSecret.Split("_secret_")[0],
+            new PaymentIntentConfirmOptions { PaymentMethod = paymentMethodId },
+            cancellationToken: ct);
+
     public async Task<PaymentIntent?> FindCapturedHoldAsync(string stripeCustomerId, decimal amount)
     {
         var results = await paymentIntents.ListAsync(new PaymentIntentListOptions
