@@ -38,7 +38,7 @@ internal sealed class EscrowService : IEscrowService
         int bookingId,
         CancellationToken ct = default)
     {
-        var payer = await payoutAccountRepository.GetByUserIdAsync(payerId, ct)
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
 
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)

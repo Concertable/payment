@@ -17,19 +17,19 @@ internal sealed class FakeStripeAccountClient : IStripeAccountClient
         this.payoutAccountRepository = payoutAccountRepository;
     }
 
-    public async Task ProvisionCustomerAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
-        account.LinkCustomer($"cus_fake_{userId:N}");
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
+        account.LinkCustomer($"cus_fake_{ownerId:N}");
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
         await payoutAccountRepository.SaveChangesAsync(ct);
     }
 
-    public async Task ProvisionConnectAccountAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
-        account.LinkAccount($"acct_fake_{userId:N}");
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
+        account.LinkAccount($"acct_fake_{ownerId:N}");
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
         await payoutAccountRepository.SaveChangesAsync(ct);

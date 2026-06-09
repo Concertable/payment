@@ -32,9 +32,9 @@ internal sealed class PaymentManager : IPaymentManager
 
     public async Task<Result<PaymentResponse>> ChargeAsync(ChargeRequest r, CancellationToken ct = default)
     {
-        var payerAccount = await payoutAccountRepository.GetByUserIdAsync(r.PayerId, ct)
+        var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {r.PayerId}");
-        var payeeAccount = await payoutAccountRepository.GetByUserIdAsync(r.PayeeId, ct)
+        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayeeId, ct)
             ?? throw new NotFoundException($"Payout account not found for payee {r.PayeeId}");
 
         var stripeCustomerId = payerAccount.StripeCustomerId
@@ -66,9 +66,9 @@ internal sealed class PaymentManager : IPaymentManager
 
     public async Task<Result<PaymentResponse>> HoldAsync(HoldRequest r, CancellationToken ct = default)
     {
-        var payerAccount = await payoutAccountRepository.GetByUserIdAsync(r.PayerId, ct)
+        var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {r.PayerId}");
-        var payeeAccount = await payoutAccountRepository.GetByUserIdAsync(r.PayeeId, ct)
+        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayeeId, ct)
             ?? throw new NotFoundException($"Payout account not found for payee {r.PayeeId}");
 
         var stripeCustomerId = payerAccount.StripeCustomerId
@@ -100,7 +100,7 @@ internal sealed class PaymentManager : IPaymentManager
 
     public async Task<Result<TransferResponse>> ReleaseAsync(ReleaseRequest r, CancellationToken ct = default)
     {
-        var payeeAccount = await payoutAccountRepository.GetByUserIdAsync(r.PayeeId, ct)
+        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayeeId, ct)
             ?? throw new NotFoundException($"Payout account not found for payee {r.PayeeId}");
 
         var destinationStripeId = payeeAccount.StripeAccountId

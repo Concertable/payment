@@ -34,7 +34,7 @@ public sealed class EscrowServiceTests
             NullLogger<EscrowService>.Instance);
 
         payoutAccountRepository
-            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PayoutAccountWith("cus_test"));
     }
 

@@ -12,8 +12,8 @@ internal sealed class PayoutAccountRepository : IPayoutAccountRepository
         this.context = context;
     }
 
-    public Task<PayoutAccountEntity?> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        context.PayoutAccounts.FirstOrDefaultAsync(a => a.UserId == userId, ct);
+    public Task<PayoutAccountEntity?> GetByOwnerIdAsync(Guid ownerId, CancellationToken ct = default) =>
+        context.PayoutAccounts.FirstOrDefaultAsync(a => a.OwnerId == ownerId, ct);
 
     public async Task AddAsync(PayoutAccountEntity entity, CancellationToken ct = default)
     {
