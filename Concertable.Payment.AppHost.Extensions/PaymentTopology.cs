@@ -4,6 +4,7 @@ public static class PaymentTopology
         topology
             .Subscribe("event-concertchangedevent",       "payment-concert-changed",       "concertable-payment")
             .Subscribe("event-credentialregisteredevent", "payment-credential-registered", "concertable-payment")
+            .Subscribe("event-tenantcreatedevent",        "payment-tenant-created",        "concertable-payment")
             .Subscribe("event-paymentsucceededevent",     "payment-payment-succeeded",     "concertable-payment")
             .Subscribe("event-paymentfailedevent",        "payment-payment-failed",        "concertable-payment")
             .Queue("command-processstripewebhookcommand");

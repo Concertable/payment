@@ -2,11 +2,11 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripeAccountClient
 {
-    /// <summary>Creates a Stripe customer and links their ID to the user's payout account row.</summary>
-    Task ProvisionCustomerAsync(Guid userId, string email, CancellationToken ct = default);
+    /// <summary>Creates a Stripe customer and links their ID to the owner's payout account row.</summary>
+    Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default);
 
-    /// <summary>Creates a Stripe Express connect account and links it to the user's payout account row.</summary>
-    Task ProvisionConnectAccountAsync(Guid userId, string email, CancellationToken ct = default);
+    /// <summary>Creates a Stripe Express connect account and links it to the owner's payout account row.</summary>
+    Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default);
 
     /// <summary>Returns the Stripe-hosted onboarding URL for the given connect account.</summary>
     Task<string> GetOnboardingLinkAsync(string stripeAccountId);

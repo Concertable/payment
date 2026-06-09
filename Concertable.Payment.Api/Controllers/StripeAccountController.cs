@@ -29,7 +29,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpGet("onboarding-link")]
     public async Task<ActionResult<string>> GetOnboardingLink()
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(currentUser.GetId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
         if (account?.StripeAccountId is null) return BadRequest("No Stripe connect account found.");
 
         return Ok(await stripeAccountClient.GetOnboardingLinkAsync(account.StripeAccountId));
@@ -38,7 +38,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpGet("account-status")]
     public async Task<ActionResult<PayoutAccountStatus>> GetAccountStatus()
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(currentUser.GetId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
         if (account?.StripeAccountId is null) return Ok(PayoutAccountStatus.NotVerified);
 
         return Ok(await stripeAccountClient.GetAccountStatusAsync(account.StripeAccountId));
@@ -47,7 +47,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpGet("payment-method")]
     public async Task<ActionResult<PaymentMethodDto?>> GetPaymentMethod()
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(currentUser.GetId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
         if (account?.StripeCustomerId is null) return Ok(null);
 
         return Ok(await stripeAccountClient.GetPaymentMethodDetailsAsync(account.StripeCustomerId));
@@ -56,16 +56,16 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpPost("setup-intent")]
     public async Task<ActionResult<string>> CreateSetupIntent()
     {
-        var userId = currentUser.GetId();
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId);
+        var ownerId = currentUser.GetOwnerId();
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId);
 
         if (account is null) return Unauthorized();
 
         var stripeCustomerId = account.StripeCustomerId;
         if (string.IsNullOrWhiteSpace(stripeCustomerId))
         {
-            await stripeAccountClient.ProvisionCustomerAsync(userId, account.Email);
-            account = await payoutAccountRepository.GetByUserIdAsync(userId);
+            await stripeAccountClient.ProvisionCustomerAsync(ownerId, account.Email);
+            account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId);
             stripeCustomerId = account?.StripeCustomerId
                 ?? throw new InvalidOperationException("Failed to provision Stripe customer.");
         }

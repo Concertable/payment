@@ -48,7 +48,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StripeAccountId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     StripeCustomerId = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -117,6 +117,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PayoutAccounts_OwnerId",
+                schema: "payment",
+                table: "PayoutAccounts",
+                column: "OwnerId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_StripeAccountId",
                 schema: "payment",
                 table: "PayoutAccounts",
@@ -127,13 +134,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment",
                 table: "PayoutAccounts",
                 column: "StripeCustomerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PayoutAccounts_UserId",
-                schema: "payment",
-                table: "PayoutAccounts",
-                column: "UserId",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_FromUserId",

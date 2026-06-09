@@ -169,6 +169,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -178,17 +181,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
 
                     b.HasIndex("StripeAccountId");
 
                     b.HasIndex("StripeCustomerId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
 
                     b.ToTable("PayoutAccounts", "payment");
                 });
