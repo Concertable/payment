@@ -47,8 +47,8 @@ public sealed class EscrowServiceTests
 
         EscrowEntity? captured = null;
         escrowRepository
-            .Setup(r => r.AddAsync(It.IsAny<EscrowEntity>()))
-            .Callback<EscrowEntity>(e => captured = e)
+            .Setup(r => r.AddAsync(It.IsAny<EscrowEntity>(), It.IsAny<CancellationToken>()))
+            .Callback<EscrowEntity, CancellationToken>((e, _) => captured = e)
             .ReturnsAsync(() => captured!);
 
         var result = await sut.DepositAsync(payerId, payeeId, 50m, "pm_test", PaymentSession.OnSession, bookingId: 7);
@@ -76,8 +76,8 @@ public sealed class EscrowServiceTests
 
         EscrowEntity? captured = null;
         escrowRepository
-            .Setup(r => r.AddAsync(It.IsAny<EscrowEntity>()))
-            .Callback<EscrowEntity>(e => captured = e)
+            .Setup(r => r.AddAsync(It.IsAny<EscrowEntity>(), It.IsAny<CancellationToken>()))
+            .Callback<EscrowEntity, CancellationToken>((e, _) => captured = e)
             .ReturnsAsync(() => captured!);
 
         var result = await sut.DepositAsync(payerId, payeeId, 50m, "pm_test", PaymentSession.OnSession, bookingId: 7);
@@ -100,7 +100,7 @@ public sealed class EscrowServiceTests
 
         Assert.True(result.IsFailed);
         escrowRepository.Verify(
-            r => r.AddAsync(It.IsAny<EscrowEntity>()),
+            r => r.AddAsync(It.IsAny<EscrowEntity>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
