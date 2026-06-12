@@ -23,7 +23,7 @@ public abstract class TransactionEntity : IIdEntity, IAuditable
     public long Amount { get; private set; }
     public TransactionStatus Status { get; private set; }
     public DateTime CreatedAt { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
+    public string CreatedBy { get; set; } = null!;
     public DateTime? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
