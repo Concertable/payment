@@ -15,6 +15,7 @@ using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
 using Concertable.Seed.Shared.Extensions;
+using Concertable.Payment.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,8 +90,12 @@ services.AddAuthorization(opts =>
     opts.AddPolicy("ServiceToken", p => p.RequireClaim("scope", "payment:write"));
 });
 
+services.AddExceptionHandler<GlobalExceptionHandler>();
+services.AddProblemDetails();
+
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
