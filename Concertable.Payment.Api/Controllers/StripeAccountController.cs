@@ -3,7 +3,7 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Concertable.Kernel.Identity;
+using Concertable.Payment.Api.Identity;
 
 namespace Concertable.Payment.Api.Controllers;
 
@@ -13,23 +13,23 @@ namespace Concertable.Payment.Api.Controllers;
 internal sealed class StripeAccountController : ControllerBase
 {
     private readonly IStripeAccountClient stripeAccountClient;
-    private readonly ICurrentUser currentUser;
+    private readonly ICurrentPayoutOwner currentPayoutOwner;
     private readonly IPayoutAccountRepository payoutAccountRepository;
 
     public StripeAccountController(
         IStripeAccountClient stripeAccountClient,
-        ICurrentUser currentUser,
+        ICurrentPayoutOwner currentPayoutOwner,
         IPayoutAccountRepository payoutAccountRepository)
     {
         this.stripeAccountClient = stripeAccountClient;
-        this.currentUser = currentUser;
+        this.currentPayoutOwner = currentPayoutOwner;
         this.payoutAccountRepository = payoutAccountRepository;
     }
 
     [HttpGet("onboarding-link")]
     public async Task<ActionResult<string>> GetOnboardingLink()
     {
-        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentPayoutOwner.OwnerId);
         if (account?.StripeAccountId is null) return BadRequest("No Stripe connect account found.");
 
         return Ok(await stripeAccountClient.GetOnboardingLinkAsync(account.StripeAccountId));
@@ -38,7 +38,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpGet("account-status")]
     public async Task<ActionResult<PayoutAccountStatus>> GetAccountStatus()
     {
-        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentPayoutOwner.OwnerId);
         if (account?.StripeAccountId is null) return Ok(PayoutAccountStatus.NotVerified);
 
         return Ok(await stripeAccountClient.GetAccountStatusAsync(account.StripeAccountId));
@@ -47,7 +47,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpGet("payment-method")]
     public async Task<ActionResult<PaymentMethodDto?>> GetPaymentMethod()
     {
-        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentUser.GetOwnerId());
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(currentPayoutOwner.OwnerId);
         if (account?.StripeCustomerId is null) return Ok(null);
 
         return Ok(await stripeAccountClient.GetPaymentMethodDetailsAsync(account.StripeCustomerId));
@@ -56,7 +56,7 @@ internal sealed class StripeAccountController : ControllerBase
     [HttpPost("setup-intent")]
     public async Task<ActionResult<string>> CreateSetupIntent()
     {
-        var ownerId = currentUser.GetOwnerId();
+        var ownerId = currentPayoutOwner.OwnerId;
         var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId);
 
         if (account is null) return Unauthorized();
