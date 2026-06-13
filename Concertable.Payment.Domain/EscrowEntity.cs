@@ -6,11 +6,11 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
 {
     private EscrowEntity() { }
 
-    private EscrowEntity(int bookingId, Guid fromUserId, Guid toUserId, long amount, string chargeId)
+    private EscrowEntity(int bookingId, Guid fromOwnerId, Guid toOwnerId, long amount, string chargeId)
     {
         BookingId = bookingId;
-        FromUserId = fromUserId;
-        ToUserId = toUserId;
+        FromOwnerId = fromOwnerId;
+        ToOwnerId = toOwnerId;
         Amount = amount;
         ChargeId = chargeId;
         Status = EscrowStatus.Pending;
@@ -18,8 +18,8 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
 
     public int Id { get; private set; }
     public int BookingId { get; private set; }
-    public Guid FromUserId { get; private set; }
-    public Guid ToUserId { get; private set; }
+    public Guid FromOwnerId { get; private set; }
+    public Guid ToOwnerId { get; private set; }
     public long Amount { get; private set; }
     public EscrowStatus Status { get; private set; }
     public string ChargeId { get; private set; } = null!;
@@ -32,8 +32,8 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
     public DateTime? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
-    public static EscrowEntity Create(int bookingId, Guid fromUserId, Guid toUserId, long amount, string chargeId) =>
-        new(bookingId, fromUserId, toUserId, amount, chargeId);
+    public static EscrowEntity Create(int bookingId, Guid fromOwnerId, Guid toOwnerId, long amount, string chargeId) =>
+        new(bookingId, fromOwnerId, toOwnerId, amount, chargeId);
 
     public void Confirm()
     {

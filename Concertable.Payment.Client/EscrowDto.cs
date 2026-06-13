@@ -3,8 +3,8 @@ namespace Concertable.Payment.Client;
 public sealed record EscrowDto(
     int Id,
     int BookingId,
-    Guid FromUserId,
-    Guid ToUserId,
+    Guid FromOwnerId,
+    Guid ToOwnerId,
     decimal Amount,
     EscrowStatus Status,
     string ChargeId,

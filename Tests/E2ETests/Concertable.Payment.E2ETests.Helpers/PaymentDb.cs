@@ -31,7 +31,7 @@ public sealed class PaymentDb
 
     public Task<Guid?> GetEscrowPayeeIdAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<Guid?>(
-            "SELECT ToUserId FROM payment.Escrows WHERE BookingId = @bookingId",
+            "SELECT ToOwnerId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
 }
 

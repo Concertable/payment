@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260612142213_InitialCreate")]
+    [Migration("20260613183131_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -120,7 +120,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("FromUserId")
+                    b.Property<Guid>("FromOwnerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastModifiedAt")
@@ -141,7 +141,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ToUserId")
+                    b.Property<Guid>("ToOwnerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("TransferId")

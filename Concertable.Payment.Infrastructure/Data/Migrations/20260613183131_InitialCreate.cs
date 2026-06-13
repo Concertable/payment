@@ -22,8 +22,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     BookingId = table.Column<int>(type: "int", nullable: false),
-                    FromUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ToOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
