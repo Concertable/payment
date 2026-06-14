@@ -7,7 +7,7 @@ public sealed class TransactionMapperTests
     [Fact]
     public void ToEntity_WithTicketDto_ReturnsTicketTransactionEntity()
     {
-        var dto = new TicketTransactionDto { FromUserId = Guid.NewGuid(), ToUserId = Guid.NewGuid(), PaymentIntentId = "pi_test" };
+        var dto = new TicketTransactionDto { PayerId = Guid.NewGuid(), PayeeId = Guid.NewGuid(), PaymentIntentId = "pi_test" };
 
         var result = sut.ToEntity(dto);
 
@@ -17,7 +17,7 @@ public sealed class TransactionMapperTests
     [Fact]
     public void ToEntity_WithSettlementDto_ReturnsSettlementTransactionEntity()
     {
-        var dto = new SettlementTransactionDto { FromUserId = Guid.NewGuid(), ToUserId = Guid.NewGuid(), PaymentIntentId = "pi_test" };
+        var dto = new SettlementTransactionDto { PayerId = Guid.NewGuid(), PayeeId = Guid.NewGuid(), PaymentIntentId = "pi_test" };
 
         var result = sut.ToEntity(dto);
 
