@@ -6,10 +6,10 @@ public abstract class TransactionEntity : IIdEntity, IAuditable
 {
     protected TransactionEntity() { }
 
-    protected TransactionEntity(Guid fromUserId, Guid toUserId, string paymentIntentId, long amount, TransactionStatus status)
+    protected TransactionEntity(Guid payerId, Guid payeeId, string paymentIntentId, long amount, TransactionStatus status)
     {
-        FromUserId = fromUserId;
-        ToUserId = toUserId;
+        PayerId = payerId;
+        PayeeId = payeeId;
         PaymentIntentId = paymentIntentId;
         Amount = amount;
         Status = status;
@@ -17,8 +17,8 @@ public abstract class TransactionEntity : IIdEntity, IAuditable
 
     public int Id { get; private set; }
     public abstract TransactionType TransactionType { get; }
-    public Guid FromUserId { get; private set; }
-    public Guid ToUserId { get; private set; }
+    public Guid PayerId { get; private set; }
+    public Guid PayeeId { get; private set; }
     public string PaymentIntentId { get; private set; } = null!;
     public long Amount { get; private set; }
     public TransactionStatus Status { get; private set; }

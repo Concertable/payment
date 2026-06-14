@@ -4,8 +4,8 @@ public sealed class TicketTransactionEntity : TransactionEntity
 {
     private TicketTransactionEntity() { }
 
-    private TicketTransactionEntity(Guid fromUserId, Guid toUserId, string paymentIntentId, long amount, TransactionStatus status, int concertId)
-        : base(fromUserId, toUserId, paymentIntentId, amount, status)
+    private TicketTransactionEntity(Guid payerId, Guid payeeId, string paymentIntentId, long amount, TransactionStatus status, int concertId)
+        : base(payerId, payeeId, paymentIntentId, amount, status)
     {
         ConcertId = concertId;
     }
@@ -13,6 +13,6 @@ public sealed class TicketTransactionEntity : TransactionEntity
     public override TransactionType TransactionType => TransactionType.Ticket;
     public int ConcertId { get; private set; }
 
-    public static TicketTransactionEntity Create(Guid fromUserId, Guid toUserId, string paymentIntentId, long amount, TransactionStatus status, int concertId)
-        => new(fromUserId, toUserId, paymentIntentId, amount, status, concertId);
+    public static TicketTransactionEntity Create(Guid payerId, Guid payeeId, string paymentIntentId, long amount, TransactionStatus status, int concertId)
+        => new(payerId, payeeId, paymentIntentId, amount, status, concertId);
 }
