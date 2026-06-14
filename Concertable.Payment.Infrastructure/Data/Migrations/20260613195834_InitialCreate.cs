@@ -79,8 +79,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FromUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PayerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PayeeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
@@ -136,10 +136,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "StripeCustomerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Transactions_FromUserId",
+                name: "IX_Transactions_PayeeId",
                 schema: "payment",
                 table: "Transactions",
-                column: "FromUserId");
+                column: "PayeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_PayerId",
+                schema: "payment",
+                table: "Transactions",
+                column: "PayerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_PaymentIntentId",
@@ -147,12 +153,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 table: "Transactions",
                 column: "PaymentIntentId",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_ToUserId",
-                schema: "payment",
-                table: "Transactions",
-                column: "ToUserId");
         }
 
         /// <inheritdoc />

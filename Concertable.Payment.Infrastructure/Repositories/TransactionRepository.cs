@@ -23,7 +23,7 @@ internal sealed class TransactionRepository : ITransactionRepository
     public Task<IPagination<TransactionEntity>> GetAsync(IPageParams pageParams, Guid userId)
     {
         var query = context.Transactions
-            .Where(t => t.FromUserId == userId || t.ToUserId == userId)
+            .Where(t => t.PayerId == userId || t.PayeeId == userId)
             .OrderByDescending(t => t.CreatedAt);
 
         return query.ToPaginationAsync(pageParams);

@@ -8,7 +8,7 @@ internal sealed class TicketTransactionMapper : ITransactionMapper
     public TransactionEntity ToEntity(ITransaction dto)
     {
         var d = (TicketTransactionDto)dto;
-        return TicketTransactionEntity.Create(d.FromUserId, d.ToUserId, d.PaymentIntentId, d.Amount, d.Status, d.ConcertId);
+        return TicketTransactionEntity.Create(d.PayerId, d.PayeeId, d.PaymentIntentId, d.Amount, d.Status, d.ConcertId);
     }
 
     public ITransaction ToDto(TransactionEntity entity)
@@ -18,8 +18,8 @@ internal sealed class TicketTransactionMapper : ITransactionMapper
         {
             Id = e.Id,
             ConcertId = e.ConcertId,
-            FromUserId = e.FromUserId,
-            ToUserId = e.ToUserId,
+            PayerId = e.PayerId,
+            PayeeId = e.PayeeId,
             PaymentIntentId = e.PaymentIntentId,
             Amount = e.Amount,
             Status = e.Status,

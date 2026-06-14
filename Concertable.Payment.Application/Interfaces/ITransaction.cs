@@ -9,8 +9,8 @@ internal interface ITransaction
 {
     int Id { get; }
     TransactionType TransactionType { get; }
-    Guid FromUserId { get; }
-    Guid ToUserId { get; }
+    Guid PayerId { get; }
+    Guid PayeeId { get; }
     string PaymentIntentId { get; }
     long Amount { get; }
     TransactionStatus Status { get; }
