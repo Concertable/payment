@@ -2,6 +2,7 @@ using Concertable.DataAccess;
 using Concertable.Seed.Shared;
 using Concertable.Seed.Shared.Extensions;
 using Concertable.Auth.Contracts.Events;
+using Concertable.B2B.Tenant.Contracts.Events;
 using Concertable.Payment.Application.Commands;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
@@ -106,7 +107,7 @@ public static class ServiceCollectionExtensions
 
         // Integration event handlers
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
-        services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, ManagerRegisteredHandler>();
+        services.AddScoped<IIntegrationEventHandler<TenantCreatedEvent>, TenantCreatedHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentFailedEvent>, PaymentFailureDispatcher>();
         services.AddScoped<ITransactionHandlerFactory, TransactionHandlerFactory>();

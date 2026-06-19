@@ -37,7 +37,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         int bookingId,
         CancellationToken ct = default)
     {
-        var payer = await payoutAccountRepository.GetByUserIdAsync(payerId, ct)
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
 
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
@@ -116,23 +116,23 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         int applicationId,
         CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(payerId, ct);
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
         var stripeCustomerId = account?.StripeCustomerId
             ?? throw new NotFoundException($"No Stripe customer for payer {payerId}");
         return await stripeHoldClient.FindHeldIntentAsync(stripeCustomerId, applicationId, ct);
     }
 
-    private async Task<string> EnsureStripeCustomerAsync(Guid userId, CancellationToken ct)
+    private async Task<string> EnsureStripeCustomerAsync(Guid ownerId, CancellationToken ct)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct)
-            ?? throw new NotFoundException($"Payout account not found for userId {userId}");
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct)
+            ?? throw new NotFoundException($"Payout account not found for owner {ownerId}");
 
         if (account.StripeCustomerId is not null)
             return account.StripeCustomerId;
 
-        await stripeAccountClient.ProvisionCustomerAsync(userId, account.Email, ct);
+        await stripeAccountClient.ProvisionCustomerAsync(ownerId, account.Email, ct);
 
-        var refreshed = await payoutAccountRepository.GetByUserIdAsync(userId, ct);
+        var refreshed = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct);
         return refreshed?.StripeCustomerId
             ?? throw new InvalidOperationException("Failed to provision Stripe customer.");
     }

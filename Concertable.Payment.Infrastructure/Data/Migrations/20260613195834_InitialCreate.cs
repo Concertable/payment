@@ -22,8 +22,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     BookingId = table.Column<int>(type: "int", nullable: false),
-                    FromUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FromOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ToOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -48,7 +48,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StripeAccountId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     StripeCustomerId = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -79,8 +79,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    FromUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ToUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PayerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PayeeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
@@ -117,6 +117,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PayoutAccounts_OwnerId",
+                schema: "payment",
+                table: "PayoutAccounts",
+                column: "OwnerId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_StripeAccountId",
                 schema: "payment",
                 table: "PayoutAccounts",
@@ -129,17 +136,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "StripeCustomerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PayoutAccounts_UserId",
-                schema: "payment",
-                table: "PayoutAccounts",
-                column: "UserId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_FromUserId",
+                name: "IX_Transactions_PayeeId",
                 schema: "payment",
                 table: "Transactions",
-                column: "FromUserId");
+                column: "PayeeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_PayerId",
+                schema: "payment",
+                table: "Transactions",
+                column: "PayerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_PaymentIntentId",
@@ -147,12 +153,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 table: "Transactions",
                 column: "PaymentIntentId",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_ToUserId",
-                schema: "payment",
-                table: "Transactions",
-                column: "ToUserId");
         }
 
         /// <inheritdoc />

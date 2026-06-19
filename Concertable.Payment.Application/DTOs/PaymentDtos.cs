@@ -19,8 +19,8 @@ internal sealed record TicketTransactionDto : ITransaction
     public int Id { get; init; }
     public TransactionType TransactionType => TransactionType.Ticket;
     public int ConcertId { get; init; }
-    public Guid FromUserId { get; init; }
-    public Guid ToUserId { get; init; }
+    public Guid PayerId { get; init; }
+    public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
     public TransactionStatus Status { get; init; }
@@ -32,8 +32,8 @@ internal sealed record SettlementTransactionDto : ITransaction
     public int Id { get; init; }
     public TransactionType TransactionType => TransactionType.Settlement;
     public int BookingId { get; init; }
-    public Guid FromUserId { get; init; }
-    public Guid ToUserId { get; init; }
+    public Guid PayerId { get; init; }
+    public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
     public TransactionStatus Status { get; init; }
@@ -45,8 +45,8 @@ internal sealed record VerifyTransactionDto : ITransaction
     public int Id { get; init; }
     public TransactionType TransactionType => TransactionType.Verify;
     public int ApplicationId { get; init; }
-    public Guid FromUserId { get; init; }
-    public Guid ToUserId { get; init; }
+    public Guid PayerId { get; init; }
+    public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
     public TransactionStatus Status { get; init; }

@@ -10,8 +10,8 @@ internal sealed class TransactionEntityConfiguration : IEntityTypeConfiguration<
         builder.ToTable(Schema.Tables.Transactions, Schema.Name);
         builder.Ignore(t => t.TransactionType);
         builder.HasIndex(t => t.PaymentIntentId).IsUnique();
-        builder.HasIndex(t => t.FromUserId);
-        builder.HasIndex(t => t.ToUserId);
+        builder.HasIndex(t => t.PayerId);
+        builder.HasIndex(t => t.PayeeId);
     }
 }
 

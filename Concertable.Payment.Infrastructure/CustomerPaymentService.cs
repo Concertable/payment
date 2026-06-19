@@ -31,7 +31,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         string paymentMethodId,
         CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(payerId, ct)
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
 
         return await paymentManager.ChargeAsync(new ChargeRequest
@@ -53,7 +53,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByUserIdAsync(payerId, ct)
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
 
         var stripeCustomerId = await EnsureStripeCustomerAsync(account, ct);
@@ -74,9 +74,9 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         if (account.StripeCustomerId is not null)
             return account.StripeCustomerId;
 
-        await stripeAccountClient.ProvisionCustomerAsync(account.UserId, account.Email, ct);
+        await stripeAccountClient.ProvisionCustomerAsync(account.OwnerId, account.Email, ct);
 
-        var refreshed = await payoutAccountRepository.GetByUserIdAsync(account.UserId, ct);
+        var refreshed = await payoutAccountRepository.GetByOwnerIdAsync(account.OwnerId, ct);
         return refreshed?.StripeCustomerId
             ?? throw new InvalidOperationException("Failed to provision Stripe customer.");
     }

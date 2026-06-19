@@ -20,8 +20,8 @@ internal sealed class TicketTransactionHandler : ITransactionHandler
         await transactionService.LogAsync(new TicketTransactionDto
         {
             ConcertId = int.Parse(meta["concertId"]),
-            FromUserId = Guid.Parse(meta["fromUserId"]),
-            ToUserId = Guid.Parse(meta["toUserId"]),
+            PayerId = Guid.Parse(meta["fromUserId"]),
+            PayeeId = Guid.Parse(meta["toUserId"]),
             PaymentIntentId = @event.TransactionId,
             Amount = long.TryParse(meta.GetValueOrDefault("amount"), out var a) ? a : 0,
             Status = TransactionStatus.Complete,

@@ -9,7 +9,7 @@ internal sealed class PayoutAccountEntityConfiguration : IEntityTypeConfiguratio
     {
         builder.ToTable(Schema.Tables.PayoutAccounts, Schema.Name);
         builder.Property(a => a.Email).IsRequired();
-        builder.HasIndex(a => a.UserId).IsUnique();
+        builder.HasIndex(a => a.OwnerId).IsUnique();
         builder.HasIndex(a => a.StripeAccountId);
         builder.HasIndex(a => a.StripeCustomerId);
     }

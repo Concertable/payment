@@ -44,21 +44,21 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         this.payoutAccountRepository = payoutAccountRepository;
     }
 
-    public async Task ProvisionCustomerAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
         var customer = await customerService.CreateAsync(new CustomerCreateOptions
         {
             Email = email,
             Address = new AddressOptions { Country = "GB" },
         }, cancellationToken: ct);
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
         account.LinkCustomer(customer.Id);
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
         await payoutAccountRepository.SaveChangesAsync(ct);
     }
 
-    public async Task ProvisionConnectAccountAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
         var stripeAccount = await accountService.CreateAsync(new AccountCreateOptions
         {
@@ -71,7 +71,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
                 Transfers = new AccountCapabilitiesTransfersOptions { Requested = true }
             }
         }, cancellationToken: ct);
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
         account.LinkAccount(stripeAccount.Id);
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
