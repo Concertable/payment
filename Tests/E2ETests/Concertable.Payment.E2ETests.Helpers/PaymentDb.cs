@@ -12,11 +12,6 @@ public sealed class PaymentDb
         this.connection = connection;
     }
 
-    public Task<PayoutAccountRow?> GetPayoutAccountByUserIdAsync(Guid userId) =>
-        connection.QuerySingleOrDefaultAsync<PayoutAccountRow?>(
-            "SELECT StripeAccountId, StripeCustomerId FROM payment.PayoutAccounts WHERE UserId = @userId",
-            new { userId });
-
     public Task<string?> GetLatestSettlementPaymentIntentIdAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<string?>(
             """
@@ -31,8 +26,6 @@ public sealed class PaymentDb
 
     public Task<Guid?> GetEscrowPayeeIdAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<Guid?>(
-            "SELECT ToUserId FROM payment.Escrows WHERE BookingId = @bookingId",
+            "SELECT ToOwnerId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
 }
-
-public sealed record PayoutAccountRow(string? StripeAccountId, string? StripeCustomerId);

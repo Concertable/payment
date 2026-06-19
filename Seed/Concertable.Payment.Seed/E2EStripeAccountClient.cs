@@ -56,12 +56,12 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// Links the pre-seeded Stripe customer ID from <see cref="StripeE2EAccountResolver"/> to the payout
     /// account DB row. Does not create a new Stripe customer — the customer already exists in test mode.
     /// </summary>
-    public async Task ProvisionCustomerAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        if (!resolver.TryGetCustomerId(userId, out var id))
+        if (!resolver.TryGetCustomerId(ownerId, out var id))
             return;
 
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
         account.LinkCustomer(id);
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);
@@ -72,12 +72,12 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// Links the pre-seeded Stripe Express account ID from <see cref="StripeE2EAccountResolver"/> to the
     /// payout account DB row. Does not create a new Stripe account — the account already exists in test mode.
     /// </summary>
-    public async Task ProvisionConnectAccountAsync(Guid userId, string email, CancellationToken ct = default)
+    public async Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        if (!resolver.TryGetAccountId(userId, out var id))
+        if (!resolver.TryGetAccountId(ownerId, out var id))
             return;
 
-        var account = await payoutAccountRepository.GetByUserIdAsync(userId, ct) ?? PayoutAccountEntity.Create(userId, email);
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
         account.LinkAccount(id);
         if (account.Id == 0)
             await payoutAccountRepository.AddAsync(account, ct);

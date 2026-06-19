@@ -117,7 +117,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("FromUserId")
+                    b.Property<Guid>("FromOwnerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("LastModifiedAt")
@@ -138,7 +138,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ToUserId")
+                    b.Property<Guid>("ToOwnerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("TransferId")
@@ -169,6 +169,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -178,17 +181,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<string>("StripeCustomerId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
 
                     b.HasIndex("StripeAccountId");
 
                     b.HasIndex("StripeCustomerId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
 
                     b.ToTable("PayoutAccounts", "payment");
                 });
@@ -229,14 +229,17 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(34)
                         .HasColumnType("nvarchar(34)");
 
-                    b.Property<Guid>("FromUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("LastModifiedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PayeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PayerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PaymentIntentId")
                         .IsRequired()
@@ -245,17 +248,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ToUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("FromUserId");
+                    b.HasIndex("PayeeId");
+
+                    b.HasIndex("PayerId");
 
                     b.HasIndex("PaymentIntentId")
                         .IsUnique();
-
-                    b.HasIndex("ToUserId");
 
                     b.ToTable("Transactions", "payment");
 

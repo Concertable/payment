@@ -18,8 +18,8 @@ internal sealed record RefundResponse(string RefundId);
 internal sealed record EscrowDto(
     int Id,
     int BookingId,
-    Guid FromUserId,
-    Guid ToUserId,
+    Guid FromOwnerId,
+    Guid ToOwnerId,
     decimal Amount,
     EscrowStatus Status,
     string ChargeId,

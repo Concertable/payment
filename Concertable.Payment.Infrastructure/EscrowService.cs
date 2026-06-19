@@ -38,7 +38,7 @@ internal sealed class EscrowService : IEscrowService
         int bookingId,
         CancellationToken ct = default)
     {
-        var payer = await payoutAccountRepository.GetByUserIdAsync(payerId, ct)
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
 
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
@@ -123,7 +123,7 @@ internal sealed class EscrowService : IEscrowService
 
         var release = await paymentManager.ReleaseAsync(new ReleaseRequest
         {
-            PayeeId = escrow.ToUserId,
+            PayeeId = escrow.ToOwnerId,
             Amount = escrow.Amount / 100m,
             ChargeId = escrow.ChargeId,
             Metadata = new Dictionary<string, string>
@@ -210,8 +210,8 @@ internal sealed class EscrowService : IEscrowService
         return new EscrowDto(
             escrow.Id,
             escrow.BookingId,
-            escrow.FromUserId,
-            escrow.ToUserId,
+            escrow.FromOwnerId,
+            escrow.ToOwnerId,
             escrow.Amount / 100m,
             escrow.Status,
             escrow.ChargeId,
