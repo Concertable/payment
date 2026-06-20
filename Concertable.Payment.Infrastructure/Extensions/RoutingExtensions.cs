@@ -11,6 +11,7 @@ public static class RoutingExtensions
         endpoints.MapGrpcService<EscrowGrpcService>().RequireAuthorization("ServiceToken");
         endpoints.MapGrpcService<ManagerPaymentGrpcService>().RequireAuthorization("ServiceToken");
         endpoints.MapGrpcService<CustomerPaymentGrpcService>().RequireAuthorization("ServiceToken");
+        endpoints.MapGrpcService<PayoutAccountGrpcService>().RequireAuthorization("ServiceToken");
         return endpoints;
     }
 }

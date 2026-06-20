@@ -104,6 +104,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IManagerPaymentService, ManagerPaymentService>();
         services.AddScoped<ICustomerPaymentService, CustomerPaymentService>();
         services.AddScoped<IEscrowService, EscrowService>();
+        services.AddScoped<IPayoutAccountService, PayoutAccountService>();
 
         // Integration event handlers
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();

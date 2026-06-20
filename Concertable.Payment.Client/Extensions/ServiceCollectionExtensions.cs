@@ -34,9 +34,17 @@ public static class ServiceCollectionExtensions
                 metadata.Add("Authorization", $"Bearer {token}");
             });
 
+        services.AddGrpcClient<Proto.PayoutAccount.PayoutAccountClient>(o => o.Address = new Uri(address))
+            .AddCallCredentials(async (_, metadata, sp) =>
+            {
+                var token = await sp.GetRequiredService<ITokenService>().GetTokenAsync("payment:write");
+                metadata.Add("Authorization", $"Bearer {token}");
+            });
+
         services.AddScoped<IManagerPaymentClient, ManagerPaymentClient>();
         services.AddScoped<ICustomerPaymentClient, CustomerPaymentClient>();
         services.AddScoped<IEscrowClient, EscrowClient>();
+        services.AddScoped<IPayoutAccountClient, PayoutAccountClient>();
 
         return services;
     }

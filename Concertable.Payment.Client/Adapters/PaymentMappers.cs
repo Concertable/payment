@@ -22,4 +22,12 @@ internal static class PaymentMappers
         PaymentSession.OffSession => Proto.PaymentSessionType.OffSession,
         _ => throw new ArgumentOutOfRangeException(nameof(session), session, null)
     };
+
+    public static PayoutAccountStatus ToStatus(this Proto.PayoutAccountStatusType status) => status switch
+    {
+        Proto.PayoutAccountStatusType.PayoutNotVerified => PayoutAccountStatus.NotVerified,
+        Proto.PayoutAccountStatusType.PayoutPending => PayoutAccountStatus.Pending,
+        Proto.PayoutAccountStatusType.PayoutVerified => PayoutAccountStatus.Verified,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+    };
 }
