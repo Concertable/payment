@@ -110,6 +110,47 @@ service Escrow {
   rpc ReleaseByBookingId(ReleaseByBookingIdRequest) returns (ReleaseByBookingIdResponse);
 }
 
+// Payout-account operations a consumer fronts for its own users (B2B's payouts proxy). The
+// owner_id is the opaque payout-account key the consumer assigns (B2B: the tenant id). Empty
+// url / client_secret means "no connect / payout account" — the consumer maps that to its own
+// status code. Mirrors the four StripeAccount HTTP endpoints, which now serve only Customer.
+service PayoutAccount {
+  rpc GetOnboardingLink(PayoutOwnerRequest) returns (OnboardingLinkResponse);
+  rpc GetAccountStatus(PayoutOwnerRequest) returns (AccountStatusResponse);
+  rpc GetPaymentMethod(PayoutOwnerRequest) returns (PaymentMethodResponse);
+  rpc CreateSetupIntent(PayoutOwnerRequest) returns (SetupIntentResponse);
+}
+
+enum PayoutAccountStatusType {
+  PAYOUT_NOT_VERIFIED = 0;
+  PAYOUT_PENDING = 1;
+  PAYOUT_VERIFIED = 2;
+}
+
+message PayoutOwnerRequest {
+  string owner_id = 1;
+}
+
+message OnboardingLinkResponse {
+  string url = 1;
+}
+
+message AccountStatusResponse {
+  PayoutAccountStatusType status = 1;
+}
+
+message PaymentMethodResponse {
+  bool has_card = 1;
+  string brand = 2;
+  string last4 = 3;
+  int32 exp_month = 4;
+  int32 exp_year = 5;
+}
+
+message SetupIntentResponse {
+  string client_secret = 1;
+}
+
 message DepositRequest {
   string payer_id = 1;
   string payee_id = 2;

@@ -1,9 +1,18 @@
+using Concertable.Payment.Domain;
 using Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class PaymentMappers
 {
+    public static PayoutAccountStatusType ToProtoStatus(this PayoutAccountStatus status) => status switch
+    {
+        PayoutAccountStatus.NotVerified => PayoutAccountStatusType.PayoutNotVerified,
+        PayoutAccountStatus.Pending => PayoutAccountStatusType.PayoutPending,
+        PayoutAccountStatus.Verified => PayoutAccountStatusType.PayoutVerified,
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+    };
+
     public static PaymentResponse ToProtoPaymentResponse(this Application.DTOs.PaymentResponse r) =>
         new()
         {
