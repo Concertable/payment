@@ -11,16 +11,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentResults" Version="4.0.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.29.2" />
-    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.67.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.67.0">
+    <PackageReference Include="FluentResults" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.AspNetCore.Server" />
+    <PackageReference Include="Grpc.Tools">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.3" />
-    <PackageReference Include="Stripe.net" Version="47.3.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Stripe.net" />
   </ItemGroup>
 
   <ItemGroup>

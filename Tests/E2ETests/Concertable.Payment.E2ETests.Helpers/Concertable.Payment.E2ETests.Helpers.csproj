@@ -9,11 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.Testing" Version="13.3.2" />
-    <PackageReference Include="Dapper" Version="2.1.72" />
-    <PackageReference Include="Respawn" Version="7.0.0" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.59.0" />
-    <PackageReference Include="Stripe.net" Version="47.3.0" />
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Respawn" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Stripe.net" />
   </ItemGroup>
 
   <ItemGroup>
