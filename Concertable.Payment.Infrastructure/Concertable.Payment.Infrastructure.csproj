@@ -33,16 +33,17 @@
     <ProjectReference Include="..\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
   </ItemGroup>
 
-  <!-- Shared platform + cross-service contracts as feed packages (versions in Directory.Packages.props).
-       Keep these as PackageReferences, never ProjectReferences, so Payment carves out standalone. -->
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.Auth.Contracts" />
     <PackageReference Include="Concertable.B2B.Tenant.Contracts" />
+    <PackageReference Include="Concertable.Contracts" />
     <PackageReference Include="Concertable.DataAccess.Infrastructure" />
     <PackageReference Include="Concertable.Seed.Shared" />
     <PackageReference Include="Concertable.Seed.Identity" />
     <PackageReference Include="Concertable.Kernel" />
     <PackageReference Include="Concertable.Messaging.Contracts" />
+    <PackageReference Include="Concertable.Messaging.Infrastructure" />
   </ItemGroup>
 
 </Project>

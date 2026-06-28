@@ -8,8 +8,7 @@
     <Description>Concertable Payment service contracts: integration events and DTOs consumed by services that interact with Payment.</Description>
   </PropertyGroup>
 
-  <!-- Shared platform as a feed package (version in Directory.Packages.props).
-       Keep as a PackageReference, never a ProjectReference, so Payment carves out standalone. -->
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.Messaging.Contracts" />
   </ItemGroup>
