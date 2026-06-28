@@ -8,8 +8,9 @@
     <Description>Concertable Payment service contracts: integration events and DTOs consumed by services that interact with Payment.</Description>
   </PropertyGroup>
 
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
+    <PackageReference Include="Concertable.Messaging.Contracts" />
   </ItemGroup>
 
 </Project>

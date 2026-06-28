@@ -21,15 +21,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Concertable.ServiceDefaults\Concertable.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Api\Concertable.Payment.Api.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
     <ProjectReference Include="..\Seed\Concertable.Payment.Seed\Concertable.Payment.Seed.csproj" />
-    <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.AzureServiceBus\Concertable.Messaging.AzureServiceBus.csproj" />
-    <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Infrastructure\Concertable.Messaging.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Shared\Concertable.Seed.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
+  <ItemGroup>
+    <PackageReference Include="Concertable.ServiceDefaults" />
+    <PackageReference Include="Concertable.DataAccess.Infrastructure" />
+    <PackageReference Include="Concertable.Kernel" />
+    <PackageReference Include="Concertable.Messaging.AzureServiceBus" />
+    <PackageReference Include="Concertable.Messaging.Infrastructure" />
+    <PackageReference Include="Concertable.Seed.Shared" />
   </ItemGroup>
 
 </Project>

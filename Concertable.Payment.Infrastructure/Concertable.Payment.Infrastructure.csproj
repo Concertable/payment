@@ -31,16 +31,19 @@
     <ProjectReference Include="..\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
-    <ProjectReference Include="..\..\Concertable.Auth.Contracts\Concertable.Auth.Contracts.csproj" />
-    <ProjectReference Include="..\..\Concertable.B2B\Modules\Tenant\Concertable.B2B.Tenant.Contracts\Concertable.B2B.Tenant.Contracts.csproj" />
-    <ProjectReference Include="..\..\Concertable.DataAccess\Concertable.DataAccess.Infrastructure\Concertable.DataAccess.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Shared\Concertable.Seed.Shared.csproj" />
-    <ProjectReference Include="..\..\Shared\Seed\Concertable.Seed.Identity\Concertable.Seed.Identity.csproj" />
   </ItemGroup>
 
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
-    <ProjectReference Include="..\..\Concertable.Messaging\Concertable.Messaging.Contracts\Concertable.Messaging.Contracts.csproj" />
+    <PackageReference Include="Concertable.Auth.Contracts" />
+    <PackageReference Include="Concertable.B2B.Tenant.Contracts" />
+    <PackageReference Include="Concertable.Contracts" />
+    <PackageReference Include="Concertable.DataAccess.Infrastructure" />
+    <PackageReference Include="Concertable.Seed.Shared" />
+    <PackageReference Include="Concertable.Seed.Identity" />
+    <PackageReference Include="Concertable.Kernel" />
+    <PackageReference Include="Concertable.Messaging.Contracts" />
+    <PackageReference Include="Concertable.Messaging.Infrastructure" />
   </ItemGroup>
 
 </Project>
