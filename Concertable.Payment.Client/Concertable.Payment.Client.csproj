@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Description>Concertable Payment service gRPC client: the typed PayoutAccount/escrow client + generated proto stubs consumed by services that call Payment.</Description>
   </PropertyGroup>
 
   <ItemGroup>
