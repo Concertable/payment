@@ -6,8 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Shared platform as a feed package (version in Directory.Packages.props).
+       Keep as a PackageReference, never a ProjectReference, so Payment carves out standalone. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Concertable.Kernel\Concertable.Kernel.csproj" />
+    <PackageReference Include="Concertable.Kernel" />
   </ItemGroup>
 
 </Project>
