@@ -11,9 +11,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Concertable.Shared.Api\Concertable.Shared.Api.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Shared Web/API infra as a feed package (version in Directory.Packages.props).
+       Keep as a PackageReference, never a ProjectReference, so Payment carves out standalone. -->
+  <ItemGroup>
+    <PackageReference Include="Concertable.Shared.Api" />
   </ItemGroup>
 
 </Project>
