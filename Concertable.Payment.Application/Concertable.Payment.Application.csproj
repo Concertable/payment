@@ -15,8 +15,7 @@
     <ProjectReference Include="..\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
   </ItemGroup>
 
-  <!-- Shared platform as feed packages (versions in Directory.Packages.props).
-       Keep these as PackageReferences, never ProjectReferences, so Payment carves out standalone. -->
+  <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.Contracts" />
     <PackageReference Include="Concertable.Kernel" />
