@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <Description>Concertable Payment service contracts: integration events and DTOs consumed by services that interact with Payment.</Description>
   </PropertyGroup>
 
   <ItemGroup>
