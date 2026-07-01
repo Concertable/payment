@@ -2,6 +2,8 @@ using Concertable.Payment.Application.Interfaces.Webhook;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using Stripe;
+using Transfer = Stripe.Transfer;
+using Refund = Stripe.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
