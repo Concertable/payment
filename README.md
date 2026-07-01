@@ -22,8 +22,8 @@ exported as `GITHUB_PACKAGES_TOKEN` (the `nuget.config` reads it):
 
 ```sh
 export GITHUB_PACKAGES_TOKEN=<your read:packages PAT>
-dotnet build Concertable.Payment.Web/Concertable.Payment.Web.csproj
-dotnet build Concertable.Payment.Workers/Concertable.Payment.Workers.csproj
+dotnet build src/Concertable.Payment.Web/Concertable.Payment.Web.csproj
+dotnet build src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj
 ```
 
 Building the two host projects pulls the whole deployable closure. (In the monorepo's CI the same
