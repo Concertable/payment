@@ -2,6 +2,8 @@ using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
 using FluentResults;
 using Stripe;
+using Transfer = Concertable.Payment.Application.DTOs.Transfer;
+using Refund = Concertable.Payment.Application.DTOs.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -14,7 +16,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         this.webhookQueue = webhookQueue;
     }
 
-    public async Task<Result<PaymentResponse>> ChargeAsync(StripeChargeOptions opts)
+    public async Task<Result<PaymentOutcome>> ChargeAsync(StripeChargeOptions opts)
     {
         var transactionId = $"pi_fake_{Guid.NewGuid():N}";
 
@@ -34,14 +36,14 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
             }
         });
 
-        return Result.Ok(new PaymentResponse
+        return Result.Ok(new PaymentOutcome
         {
             RequiresAction = false,
             TransactionId = transactionId
         });
     }
 
-    public async Task<Result<PaymentResponse>> HoldAsync(StripeHoldOptions opts)
+    public async Task<Result<PaymentOutcome>> HoldAsync(StripeHoldOptions opts)
     {
         var transactionId = $"pi_fake_{Guid.NewGuid():N}";
 
@@ -61,16 +63,16 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
             }
         });
 
-        return Result.Ok(new PaymentResponse
+        return Result.Ok(new PaymentOutcome
         {
             RequiresAction = false,
             TransactionId = transactionId
         });
     }
 
-    public Task<Result<TransferResponse>> ReleaseAsync(StripeReleaseOptions opts) =>
-        Task.FromResult(Result.Ok(new TransferResponse($"tr_fake_{Guid.NewGuid():N}")));
+    public Task<Result<Transfer>> ReleaseAsync(StripeReleaseOptions opts) =>
+        Task.FromResult(Result.Ok(new Transfer($"tr_fake_{Guid.NewGuid():N}")));
 
-    public Task<Result<RefundResponse>> RefundAsync(StripeRefundOptions opts) =>
-        Task.FromResult(Result.Ok(new RefundResponse($"re_fake_{Guid.NewGuid():N}")));
+    public Task<Result<Refund>> RefundAsync(StripeRefundOptions opts) =>
+        Task.FromResult(Result.Ok(new Refund($"re_fake_{Guid.NewGuid():N}")));
 }

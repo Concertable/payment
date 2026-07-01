@@ -108,6 +108,7 @@ service Escrow {
   rpc Deposit(DepositRequest) returns (EscrowResponse);
   rpc Capture(CaptureRequest) returns (EscrowResponse);
   rpc ReleaseByBookingId(ReleaseByBookingIdRequest) returns (ReleaseByBookingIdResponse);
+  rpc RefundByBookingId(RefundByBookingIdRequest) returns (RefundByBookingIdResponse);
 }
 
 // Payout-account operations a consumer fronts for its own users (B2B's payouts proxy). The
@@ -174,4 +175,16 @@ message ReleaseByBookingIdRequest {
 
 message ReleaseByBookingIdResponse {
   TransferResponse transfer = 1;
+}
+
+message RefundResponse {
+  string refund_id = 1;
+}
+
+message RefundByBookingIdRequest {
+  int32 booking_id = 1;
+}
+
+message RefundByBookingIdResponse {
+  RefundResponse refund = 1;
 }

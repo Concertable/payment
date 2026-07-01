@@ -5,6 +5,8 @@ using Concertable.Kernel.Exceptions;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Transfer = Concertable.Payment.Application.DTOs.Transfer;
+using Refund = Concertable.Payment.Application.DTOs.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -30,7 +32,7 @@ internal sealed class PaymentManager : IPaymentManager
         this.logger = logger;
     }
 
-    public async Task<Result<PaymentResponse>> ChargeAsync(ChargeRequest r, CancellationToken ct = default)
+    public async Task<Result<PaymentOutcome>> ChargeAsync(ChargeRequest r, CancellationToken ct = default)
     {
         var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {r.PayerId}");
@@ -64,7 +66,7 @@ internal sealed class PaymentManager : IPaymentManager
         });
     }
 
-    public async Task<Result<PaymentResponse>> HoldAsync(HoldRequest r, CancellationToken ct = default)
+    public async Task<Result<PaymentOutcome>> HoldAsync(HoldRequest r, CancellationToken ct = default)
     {
         var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayerId, ct)
             ?? throw new NotFoundException($"Payout account not found for payer {r.PayerId}");
@@ -98,7 +100,7 @@ internal sealed class PaymentManager : IPaymentManager
         });
     }
 
-    public async Task<Result<TransferResponse>> ReleaseAsync(ReleaseRequest r, CancellationToken ct = default)
+    public async Task<Result<Transfer>> ReleaseAsync(ReleaseRequest r, CancellationToken ct = default)
     {
         var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayeeId, ct)
             ?? throw new NotFoundException($"Payout account not found for payee {r.PayeeId}");
@@ -124,7 +126,7 @@ internal sealed class PaymentManager : IPaymentManager
         });
     }
 
-    public async Task<Result<RefundResponse>> RefundAsync(RefundRequest r, CancellationToken ct = default)
+    public async Task<Result<Refund>> RefundAsync(RefundRequest r, CancellationToken ct = default)
     {
         var metadata = new Dictionary<string, string>
         {
