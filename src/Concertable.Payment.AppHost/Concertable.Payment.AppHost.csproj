@@ -12,9 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" IsAspireProjectResource="false" />
+    <ProjectReference Include="..\..\..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\Concertable.Payment.AppHost.Extensions\Concertable.Payment.AppHost.Extensions.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\..\Concertable.Auth\Concertable.Auth.csproj" />
+    <ProjectReference Include="..\..\..\Concertable.Auth\Concertable.Auth.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
   </ItemGroup>
