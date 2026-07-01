@@ -5,6 +5,6 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripeTransferClient
 {
-    Task<Result<TransferResponse>> ReleaseAsync(StripeReleaseOptions options);
-    Task<Result<RefundResponse>> RefundAsync(StripeRefundOptions options);
+    Task<Result<Transfer>> ReleaseAsync(StripeReleaseOptions options);
+    Task<Result<Refund>> RefundAsync(StripeRefundOptions options);
 }

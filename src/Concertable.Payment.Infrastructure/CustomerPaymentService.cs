@@ -22,7 +22,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         this.payoutAccountRepository = payoutAccountRepository;
     }
 
-    public async Task<Result<PaymentResponse>> PayAsync(
+    public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,

@@ -5,6 +5,6 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripePaymentIntentClient
 {
-    Task<Result<PaymentResponse>> ChargeAsync(StripeChargeOptions options);
-    Task<Result<PaymentResponse>> HoldAsync(StripeHoldOptions options);
+    Task<Result<PaymentOutcome>> ChargeAsync(StripeChargeOptions options);
+    Task<Result<PaymentOutcome>> HoldAsync(StripeHoldOptions options);
 }

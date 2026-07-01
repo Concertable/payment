@@ -6,10 +6,10 @@ namespace Concertable.Payment.Infrastructure.Mappers;
 
 internal static class PaymentIntentMappers
 {
-    public static Result<PaymentResponse> ToPaymentResult(this PaymentIntent intent) =>
+    public static Result<PaymentOutcome> ToPaymentResult(this PaymentIntent intent) =>
         intent.Status is not ("succeeded" or "requires_action" or "requires_confirmation")
             ? Result.Fail($"Payment failed with status: {intent.Status}")
-            : Result.Ok(new PaymentResponse
+            : Result.Ok(new PaymentOutcome
             {
                 RequiresAction = intent.Status is "requires_action" or "requires_confirmation",
                 ClientSecret = intent.ClientSecret,

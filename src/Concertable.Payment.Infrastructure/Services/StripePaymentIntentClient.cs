@@ -27,7 +27,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         this.logger = logger;
     }
 
-    public async Task<Result<PaymentResponse>> ChargeAsync(StripeChargeOptions opts)
+    public async Task<Result<PaymentOutcome>> ChargeAsync(StripeChargeOptions opts)
     {
         try
         {
@@ -76,7 +76,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         }
     }
 
-    public async Task<Result<PaymentResponse>> HoldAsync(StripeHoldOptions opts)
+    public async Task<Result<PaymentOutcome>> HoldAsync(StripeHoldOptions opts)
     {
         try
         {
