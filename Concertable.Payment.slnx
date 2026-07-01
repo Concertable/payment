@@ -1,20 +1,20 @@
 <Solution>
-  <Project Path="Concertable.Payment.AppHost.Extensions/Concertable.Payment.AppHost.Extensions.csproj" />
-  <Project Path="Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
-  <Project Path="Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
-  <Project Path="Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj" />
-  <Project Path="Concertable.Payment.Application/Concertable.Payment.Application.csproj" />
-  <Project Path="Concertable.Payment.Domain/Concertable.Payment.Domain.csproj" />
-  <Project Path="Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
-  <Project Path="Concertable.Payment.Web/Concertable.Payment.Web.csproj" />
-  <Project Path="Concertable.Payment.Workers/Concertable.Payment.Workers.csproj" />
+  <Project Path="src/Concertable.Payment.AppHost.Extensions/Concertable.Payment.AppHost.Extensions.csproj" />
+  <Project Path="src/Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
+  <Project Path="src/Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
+  <Project Path="src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj" />
+  <Project Path="src/Concertable.Payment.Application/Concertable.Payment.Application.csproj" />
+  <Project Path="src/Concertable.Payment.Domain/Concertable.Payment.Domain.csproj" />
+  <Project Path="src/Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
+  <Project Path="src/Concertable.Payment.Web/Concertable.Payment.Web.csproj" />
+  <Project Path="src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj" />
   <Folder Name="/Seed/">
-    <Project Path="Seed/Concertable.Payment.Seed/Concertable.Payment.Seed.csproj" />
+    <Project Path="src/Seed/Concertable.Payment.Seed/Concertable.Payment.Seed.csproj" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="Tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
+    <Project Path="tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
   </Folder>
   <Folder Name="/Tests/E2ETests/">
-    <Project Path="Tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
   </Folder>
 </Solution>

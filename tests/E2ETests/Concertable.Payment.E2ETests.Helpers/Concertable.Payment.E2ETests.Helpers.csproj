@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" />
-    <ProjectReference Include="..\..\..\..\Shared\Tests\Concertable.E2ETests\Concertable.E2ETests.csproj" />
+    <ProjectReference Include="..\..\..\..\Concertable.Shared\tests\Concertable.E2ETests\Concertable.E2ETests.csproj" />
   </ItemGroup>
 
 </Project>
