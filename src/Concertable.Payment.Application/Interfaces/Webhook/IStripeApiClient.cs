@@ -1,4 +1,6 @@
 using Stripe;
+using Transfer = Stripe.Transfer;
+using Refund = Stripe.Refund;
 
 namespace Concertable.Payment.Application.Interfaces.Webhook;
 

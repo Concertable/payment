@@ -4,7 +4,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ICustomerPaymentService
 {
-    Task<Result<PaymentResponse>> PayAsync(
+    Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,

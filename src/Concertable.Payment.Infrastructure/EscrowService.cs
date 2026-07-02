@@ -29,7 +29,7 @@ internal sealed class EscrowService : IEscrowService
         this.logger = logger;
     }
 
-    public async Task<Result<EscrowResponse>> DepositAsync(
+    public async Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -60,7 +60,7 @@ internal sealed class EscrowService : IEscrowService
         }, ct);
 
         if (hold.IsFailed)
-            return hold.ToResult<EscrowResponse>();
+            return hold.ToResult<EscrowDeposit>();
 
         if (string.IsNullOrEmpty(hold.Value.TransactionId))
             return Result.Fail("Stripe hold response missing PaymentIntent id.");
@@ -81,10 +81,10 @@ internal sealed class EscrowService : IEscrowService
             await escrowRepository.SaveChangesAsync();
         }
 
-        return Result.Ok(new EscrowResponse(escrow.Id, escrow.ChargeId, escrow.Status, hold.Value.ClientSecret));
+        return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, hold.Value.ClientSecret));
     }
 
-    public async Task<Result<EscrowResponse>> CaptureAsync(
+    public async Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -103,17 +103,17 @@ internal sealed class EscrowService : IEscrowService
         }, ct);
 
         if (capture.IsFailed)
-            return capture.ToResult<EscrowResponse>();
+            return capture.ToResult<EscrowDeposit>();
 
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, (long)(amount * 100), paymentIntentId);
         escrow.Confirm();
         await escrowRepository.AddAsync(escrow);
         await escrowRepository.SaveChangesAsync();
 
-        return Result.Ok(new EscrowResponse(escrow.Id, escrow.ChargeId, escrow.Status, null));
+        return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null));
     }
 
-    public async Task<Result<TransferResponse>> ReleaseAsync(int escrowId, CancellationToken ct = default)
+    public async Task<Result<Transfer>> ReleaseAsync(int escrowId, CancellationToken ct = default)
     {
         var escrow = await escrowRepository.GetByIdAsync(escrowId)
             ?? throw new NotFoundException($"Escrow {escrowId} not found");
@@ -143,28 +143,28 @@ internal sealed class EscrowService : IEscrowService
         return release;
     }
 
-    public async Task<Result<TransferResponse?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default)
+    public async Task<Result<Transfer?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default)
     {
         var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
         if (escrow is null)
         {
             logger.NoEscrowFoundForBooking(bookingId);
-            return Result.Ok<TransferResponse?>(null);
+            return Result.Ok<Transfer?>(null);
         }
 
         if (escrow.Status != EscrowStatus.Held)
         {
             logger.EscrowNotHeldSkippingRelease(escrow.Id, bookingId, escrow.Status);
-            return Result.Ok<TransferResponse?>(null);
+            return Result.Ok<Transfer?>(null);
         }
 
         var release = await ReleaseAsync(escrow.Id, ct);
         return release.IsFailed
-            ? release.ToResult<TransferResponse?>()
-            : Result.Ok<TransferResponse?>(release.Value);
+            ? release.ToResult<Transfer?>()
+            : Result.Ok<Transfer?>(release.Value);
     }
 
-    public async Task<Result<RefundResponse>> RefundAsync(
+    public async Task<Result<Refund>> RefundAsync(
         int escrowId,
         decimal? amount = null,
         string? reason = null,
@@ -199,6 +199,31 @@ internal sealed class EscrowService : IEscrowService
         await escrowRepository.SaveChangesAsync();
 
         return refund;
+    }
+
+    public async Task<Result<Refund?>> RefundByBookingIdAsync(
+        int bookingId,
+        decimal? amount = null,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        if (escrow is null)
+        {
+            logger.NoEscrowToRefundForBooking(bookingId);
+            return Result.Ok<Refund?>(null);
+        }
+
+        if (escrow.Status == EscrowStatus.Refunded)
+        {
+            logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
+            return Result.Ok<Refund?>(new Refund(escrow.RefundId!));
+        }
+
+        var refund = await RefundAsync(escrow.Id, amount, reason, ct);
+        return refund.IsFailed
+            ? refund.ToResult<Refund?>()
+            : Result.Ok<Refund?>(refund.Value);
     }
 
     public async Task<EscrowDto?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default)

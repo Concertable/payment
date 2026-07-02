@@ -186,6 +186,12 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for booking {BookingId} is {Status}, not Held; skipping release")]
     internal static partial void EscrowNotHeldSkippingRelease(this ILogger logger, int escrowId, int bookingId, EscrowStatus status);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for booking {BookingId}; nothing to refund")]
+    internal static partial void NoEscrowToRefundForBooking(this ILogger logger, int bookingId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Escrow {EscrowId} for booking {BookingId} already Refunded; skipping refund")]
+    internal static partial void EscrowAlreadyRefunded(this ILogger logger, int escrowId, int bookingId);
+
     #endregion
 
     #region GrpcExceptionInterceptor
