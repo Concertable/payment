@@ -64,4 +64,19 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
                 : null
         };
     }
+
+    public override async Task<RefundByBookingIdResponse> RefundByBookingId(RefundByBookingIdRequest request, ServerCallContext context)
+    {
+        var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
+
+        if (result.IsFailed)
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
+
+        return new RefundByBookingIdResponse
+        {
+            Refund = result.Value is not null
+                ? new RefundResponse { RefundId = result.Value.RefundId }
+                : null
+        };
+    }
 }

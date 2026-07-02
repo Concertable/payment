@@ -28,7 +28,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.transactionRepository = transactionRepository;
     }
 
-    public async Task<Result<PaymentResponse>> PayAsync(
+    public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
