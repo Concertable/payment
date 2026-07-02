@@ -1,8 +1,8 @@
 namespace Concertable.Payment.Application.DTOs;
 
-internal sealed record EscrowResponse(int EscrowId, string ChargeId, EscrowStatus Status, string? ClientSecret = null);
+internal sealed record EscrowDeposit(int EscrowId, string ChargeId, EscrowStatus Status, string? ClientSecret = null);
 
-internal sealed record PaymentResponse
+internal sealed record PaymentOutcome
 {
     public bool RequiresAction { get; init; }
     public string? ClientSecret { get; init; }
@@ -11,9 +11,9 @@ internal sealed record PaymentResponse
 
 internal sealed record CheckoutSession(string ClientSecret, string CustomerSession, string CustomerId);
 
-internal sealed record TransferResponse(string TransferId);
+internal sealed record Transfer(string TransferId);
 
-internal sealed record RefundResponse(string RefundId);
+internal sealed record Refund(string RefundId);
 
 internal sealed record EscrowDto(
     int Id,

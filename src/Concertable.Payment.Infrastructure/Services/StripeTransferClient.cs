@@ -4,6 +4,8 @@ using Concertable.Payment.Infrastructure;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Transfer = Concertable.Payment.Application.DTOs.Transfer;
+using Refund = Concertable.Payment.Application.DTOs.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -18,7 +20,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         this.logger = logger;
     }
 
-    public async Task<Result<TransferResponse>> ReleaseAsync(StripeReleaseOptions opts)
+    public async Task<Result<Transfer>> ReleaseAsync(StripeReleaseOptions opts)
     {
         try
         {
@@ -36,7 +38,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
 
             logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
 
-            return Result.Ok(new TransferResponse(transfer.Id));
+            return Result.Ok(new Transfer(transfer.Id));
         }
         catch (StripeException ex)
         {
@@ -50,7 +52,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         }
     }
 
-    public async Task<Result<RefundResponse>> RefundAsync(StripeRefundOptions opts)
+    public async Task<Result<Refund>> RefundAsync(StripeRefundOptions opts)
     {
         try
         {
@@ -75,7 +77,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
 
             logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);
 
-            return Result.Ok(new RefundResponse(refund.Id));
+            return Result.Ok(new Refund(refund.Id));
         }
         catch (StripeException ex)
         {

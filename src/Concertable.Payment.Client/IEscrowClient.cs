@@ -23,4 +23,6 @@ public interface IEscrowClient
         CancellationToken ct = default);
 
     Task<Result<TransferResponse?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
+
+    Task<Result<RefundResponse?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
 }
