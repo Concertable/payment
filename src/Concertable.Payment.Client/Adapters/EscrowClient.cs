@@ -91,4 +91,22 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
+    public async Task<Result<RefundResponse?>> RefundByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var request = new Proto.RefundByBookingIdRequest { BookingId = bookingId };
+            var response = await client.RefundByBookingIdAsync(request, cancellationToken: ct);
+            RefundResponse? refund = string.IsNullOrEmpty(response.Refund?.RefundId)
+                ? null
+                : new RefundResponse(response.Refund.RefundId);
+            return Result.Ok(refund);
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            return Result.Fail(ex.Status.Detail);
+        }
+    }
 }
