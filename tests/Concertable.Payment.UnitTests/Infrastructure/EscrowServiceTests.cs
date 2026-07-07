@@ -254,6 +254,25 @@ public sealed class EscrowServiceTests
         Assert.Equal(EscrowStatus.Refunded, releasedEscrow.Status);
     }
 
+    [Fact]
+    public async Task RefundByBookingIdAsync_NotRefundableStatus_IsNoOpSuccess()
+    {
+        var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+
+        escrowRepository
+            .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pendingEscrow);
+
+        var result = await sut.RefundByBookingIdAsync(7);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+        Assert.Equal(EscrowStatus.Pending, pendingEscrow.Status);
+        paymentManager.Verify(
+            p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static PayoutAccountEntity PayoutAccountWith(string stripeCustomerId)
     {
         var account = PayoutAccountEntity.Create(Guid.NewGuid(), "payer@test.com");
