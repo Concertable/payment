@@ -28,4 +28,14 @@ public sealed class PaymentDb
         connection.QuerySingleOrDefaultAsync<Guid?>(
             "SELECT ToOwnerId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
+
+    public Task<int?> GetEscrowStatusAsync(int bookingId) =>
+        connection.QuerySingleOrDefaultAsync<int?>(
+            "SELECT Status FROM payment.Escrows WHERE BookingId = @bookingId",
+            new { bookingId });
+
+    public Task<string?> GetEscrowRefundIdAsync(int bookingId) =>
+        connection.QuerySingleOrDefaultAsync<string?>(
+            "SELECT RefundId FROM payment.Escrows WHERE BookingId = @bookingId",
+            new { bookingId });
 }
