@@ -5,8 +5,8 @@ using Concertable.Kernel.Exceptions;
 using FluentResults;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using Transfer = Concertable.Payment.Application.DTOs.Transfer;
-using Refund = Concertable.Payment.Application.DTOs.Refund;
+using Transfer = Concertable.Payment.Contracts.Transfer;
+using Refund = Concertable.Payment.Contracts.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 

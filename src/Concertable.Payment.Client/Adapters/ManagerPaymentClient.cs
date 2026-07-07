@@ -16,7 +16,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentResponse>> PayAsync(
+    public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -37,7 +37,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                 BookingId = bookingId
             };
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentResponse());
+            return Result.Ok(response.ToPaymentOutcome());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {

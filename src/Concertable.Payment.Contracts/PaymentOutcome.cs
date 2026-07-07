@@ -1,6 +1,6 @@
-namespace Concertable.Payment.Client;
+namespace Concertable.Payment.Contracts;
 
-public record PaymentResponse
+public record PaymentOutcome
 {
     public bool RequiresAction { get; init; }
     public string? ClientSecret { get; init; }

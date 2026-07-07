@@ -5,7 +5,7 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentMappers
 {
-    public static PaymentResponse ToPaymentResponse(this Proto.PaymentResponse r) =>
+    public static PaymentOutcome ToPaymentOutcome(this Proto.PaymentResponse r) =>
         new()
         {
             RequiresAction = r.RequiresAction,
