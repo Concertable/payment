@@ -220,6 +220,12 @@ internal sealed class EscrowService : IEscrowService
             return Result.Ok<Refund?>(new Refund(escrow.RefundId!));
         }
 
+        if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
+        {
+            logger.EscrowNotRefundableSkippingRefund(escrow.Id, bookingId, escrow.Status);
+            return Result.Ok<Refund?>(null);
+        }
+
         var refund = await RefundAsync(escrow.Id, amount, reason, ct);
         return refund.IsFailed
             ? refund.ToResult<Refund?>()
