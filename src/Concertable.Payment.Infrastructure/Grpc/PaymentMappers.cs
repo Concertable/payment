@@ -13,7 +13,7 @@ internal static class PaymentMappers
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
 
-    public static PaymentResponse ToProtoPaymentResponse(this Application.DTOs.PaymentOutcome r) =>
+    public static PaymentResponse ToProtoPaymentResponse(this PaymentOutcome r) =>
         new()
         {
             RequiresAction = r.RequiresAction,

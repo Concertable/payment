@@ -5,7 +5,7 @@ namespace Concertable.Payment.Client;
 
 public interface IManagerPaymentClient
 {
-    Task<Result<PaymentResponse>> PayAsync(
+    Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
