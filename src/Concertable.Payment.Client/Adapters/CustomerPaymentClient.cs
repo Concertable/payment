@@ -1,6 +1,7 @@
 using System.Globalization;
 using Concertable.Kernel.Exceptions;
 using Concertable.Payment.Client;
+using Concertable.Payment.Contracts;
 using FluentResults;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;
@@ -16,7 +17,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentResponse>> PayAsync(
+    public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
@@ -37,7 +38,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
             };
             request.Metadata.Add(metadata);
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentResponse());
+            return Result.Ok(response.ToPaymentOutcome());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {

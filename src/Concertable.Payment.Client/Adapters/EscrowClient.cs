@@ -16,7 +16,7 @@ internal sealed class EscrowClient : IEscrowClient
         this.client = client;
     }
 
-    public async Task<Result<EscrowResponse>> DepositAsync(
+    public async Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -37,7 +37,7 @@ internal sealed class EscrowClient : IEscrowClient
                 BookingId = bookingId
             };
             var response = await client.DepositAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToEscrowResponse());
+            return Result.Ok(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -45,7 +45,7 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<EscrowResponse>> CaptureAsync(
+    public async Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -64,7 +64,7 @@ internal sealed class EscrowClient : IEscrowClient
                 BookingId = bookingId
             };
             var response = await this.client.CaptureAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToEscrowResponse());
+            return Result.Ok(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -72,7 +72,7 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<TransferResponse?>> ReleaseByBookingIdAsync(
+    public async Task<Result<Transfer?>> ReleaseByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default)
     {
@@ -80,9 +80,9 @@ internal sealed class EscrowClient : IEscrowClient
         {
             var request = new Proto.ReleaseByBookingIdRequest { BookingId = bookingId };
             var response = await client.ReleaseByBookingIdAsync(request, cancellationToken: ct);
-            TransferResponse? transfer = string.IsNullOrEmpty(response.Transfer?.TransferId)
+            Transfer? transfer = string.IsNullOrEmpty(response.Transfer?.TransferId)
                 ? null
-                : new TransferResponse(response.Transfer.TransferId);
+                : new Transfer(response.Transfer.TransferId);
             return Result.Ok(transfer);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
@@ -91,7 +91,7 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<RefundResponse?>> RefundByBookingIdAsync(
+    public async Task<Result<Refund?>> RefundByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default)
     {
@@ -99,9 +99,9 @@ internal sealed class EscrowClient : IEscrowClient
         {
             var request = new Proto.RefundByBookingIdRequest { BookingId = bookingId };
             var response = await client.RefundByBookingIdAsync(request, cancellationToken: ct);
-            RefundResponse? refund = string.IsNullOrEmpty(response.Refund?.RefundId)
+            Refund? refund = string.IsNullOrEmpty(response.Refund?.RefundId)
                 ? null
-                : new RefundResponse(response.Refund.RefundId);
+                : new Refund(response.Refund.RefundId);
             return Result.Ok(refund);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
