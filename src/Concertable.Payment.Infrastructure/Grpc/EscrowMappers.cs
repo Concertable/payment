@@ -4,7 +4,7 @@ namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class EscrowMappers
 {
-    public static EscrowResponse ToProtoEscrowResponse(this Application.DTOs.EscrowDeposit r) =>
+    public static EscrowResponse ToProtoEscrowResponse(this EscrowDeposit r) =>
         new()
         {
             EscrowId = r.EscrowId,
