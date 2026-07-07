@@ -32,6 +32,16 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
+## LOW
+
+### Redundant explicit type args on `Result.Ok<T?>(nonNullValue)`
+
+`EscrowService`'s `ByBookingId` methods spell the generic on non-null returns too — `Result.Ok<Transfer?>(release.Value)` / `Result.Ok<Refund?>(refund.Value)` / `Result.Ok<Refund?>(new Refund(...))`. For reference types `T?` and `T` are the same runtime type (annotation only), so inference already yields the right result and the `<T?>` is noise there. It's only genuinely required on the bare-`null` returns (`Result.Ok<Refund?>(null)`), where a `null` literal gives inference nothing to bind. Left as-is to avoid churning pre-existing lines; the fix is to drop the type arg wherever the argument is non-null.
+
+**Resolves when:** the redundant `<T?>` args on non-null `Result.Ok` calls in `EscrowService` are dropped, keeping them only on the `null`-literal returns.
+
+---
+
 ## RESOLVED
 
 ### ✅ `Payment.Seed.Contracts` parks consumer-domain data in Payment (agnostic-conduit violation)

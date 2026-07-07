@@ -7,6 +7,7 @@ public sealed class StripeFixture
     private readonly PaymentIntentService paymentIntents;
     private readonly TransferService transfers;
     private readonly PaymentMethodService paymentMethods;
+    private readonly RefundService refunds;
 
     public DateTime LastReset { get; private set; }
 
@@ -17,7 +18,11 @@ public sealed class StripeFixture
         paymentIntents = new PaymentIntentService(client);
         transfers = new TransferService(client);
         paymentMethods = new PaymentMethodService(client);
+        refunds = new RefundService(client);
     }
+
+    public Task<Refund> GetRefundAsync(string refundId, CancellationToken ct = default) =>
+        refunds.GetAsync(refundId, cancellationToken: ct);
 
     public async Task DetachAllCardsAsync(string customerId, CancellationToken ct = default)
     {
