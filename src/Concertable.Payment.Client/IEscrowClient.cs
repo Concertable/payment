@@ -5,7 +5,7 @@ namespace Concertable.Payment.Client;
 
 public interface IEscrowClient
 {
-    Task<Result<EscrowResponse>> DepositAsync(
+    Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -14,7 +14,7 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<EscrowResponse>> CaptureAsync(
+    Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -22,7 +22,7 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<TransferResponse?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Result<Transfer?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
 
-    Task<Result<RefundResponse?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Result<Refund?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
 }

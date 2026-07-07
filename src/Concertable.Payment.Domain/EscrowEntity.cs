@@ -1,4 +1,5 @@
 using Concertable.Kernel;
+using Concertable.Payment.Contracts;
 
 namespace Concertable.Payment.Domain;
 

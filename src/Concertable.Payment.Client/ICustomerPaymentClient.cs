@@ -1,10 +1,11 @@
+using Concertable.Payment.Contracts;
 using FluentResults;
 
 namespace Concertable.Payment.Client;
 
 public interface ICustomerPaymentClient
 {
-    Task<Result<PaymentResponse>> PayAsync(
+    Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
