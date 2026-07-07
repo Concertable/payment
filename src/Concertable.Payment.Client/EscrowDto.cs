@@ -1,3 +1,5 @@
+using Concertable.Payment.Contracts;
+
 namespace Concertable.Payment.Client;
 
 public sealed record EscrowDto(

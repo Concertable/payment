@@ -1,4 +1,4 @@
-namespace Concertable.Payment.Domain;
+namespace Concertable.Payment.Contracts;
 
 public enum EscrowStatus
 {

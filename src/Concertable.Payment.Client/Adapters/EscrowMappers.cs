@@ -5,7 +5,7 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class EscrowMappers
 {
-    public static EscrowResponse ToEscrowResponse(this Proto.EscrowResponse r) =>
+    public static EscrowDeposit ToEscrowDeposit(this Proto.EscrowResponse r) =>
         new(
             r.EscrowId,
             r.ChargeId,
