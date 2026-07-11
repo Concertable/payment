@@ -18,8 +18,8 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
 
     public async Task PayWithNewCardAsync(string cardNumber)
     {
-        await CardTab.ClickAsync();
         await CardFrameElement.ScrollIntoViewIfNeededAsync();
+        await CardTab.ClickAsync();
         await FillCardAsync(cardNumber);
         await ConfirmButton.ClickAsync();
     }
