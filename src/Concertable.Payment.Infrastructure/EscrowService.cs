@@ -116,7 +116,7 @@ internal sealed class EscrowService : IEscrowService
     public async Task<Result<Transfer>> ReleaseAsync(int escrowId, CancellationToken ct = default)
     {
         var escrow = await escrowRepository.GetByIdAsync(escrowId)
-            ?? throw new NotFoundException($"Escrow {escrowId} not found");
+            .OrNotFound($"Escrow {escrowId}");
 
         if (escrow.Status != EscrowStatus.Held)
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}, not Held");
@@ -171,7 +171,7 @@ internal sealed class EscrowService : IEscrowService
         CancellationToken ct = default)
     {
         var escrow = await escrowRepository.GetByIdAsync(escrowId)
-            ?? throw new NotFoundException($"Escrow {escrowId} not found");
+            .OrNotFound($"Escrow {escrowId}");
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}; cannot refund");
