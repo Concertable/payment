@@ -14,6 +14,14 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
+### `EscrowService.RefundByBookingIdAsync` is asymmetric with `ReleaseByBookingIdAsync` — hard-fails on non-refundable escrow
+
+`RefundByBookingIdAsync` (`EscrowService.cs`) only no-ops on already-`Refunded` escrow; for any other non-refundable status it delegates to `RefundAsync`, which **hard-fails** (`Result.Fail`) on `Pending`/`Failed`. Its sibling `ReleaseByBookingIdAsync` instead treats any non-`Held` escrow as a benign no-op (`Result.Ok(null)`) — the point of a `ByBookingId` convenience method being that a booking-lifecycle caller can invoke it blindly without knowing escrow state. The asymmetry means cancelling a booking whose escrow never advanced past `Pending` (hold initiated, webhook not yet confirmed) or is `Failed` fails the whole refund/cancel (gRPC `FailedPrecondition` → B2B `EscrowClient` `Result.Fail`) instead of no-op'ing. Flagged reviewing PR #76 (concert-cancel + escrow-refund) and not addressed before merge; whether it bites depends on how the B2B cancel handler treats a `FailedPrecondition` from refund.
+
+**Resolves when:** the intended contract is decided and made symmetric — if "cancel is safe to call regardless of escrow state" (the Release precedent), `RefundByBookingIdAsync` treats `Pending`/`Failed` as `Result.Ok(null)` rather than propagating a hard failure.
+
+---
+
 ## LOW
 
 ### Missing Stripe webhook secret masked until the first webhook arrives
