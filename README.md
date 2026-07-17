@@ -10,7 +10,7 @@ startup.
 
 Development happens in the **monorepo** ([`Concertable/concertable`](https://github.com/Concertable/concertable)),
 under `api/Concertable.Payment/`. That folder is **automatically mirrored** to the read-only repo
-[`Concertable/concertable-payment`](https://github.com/Concertable/concertable-payment) on every
+[`Concertable/payment`](https://github.com/Concertable/payment) on every
 push to `master`. **Don't open PRs against the mirror** — nothing flows back from it.
 
 ## Building standalone
