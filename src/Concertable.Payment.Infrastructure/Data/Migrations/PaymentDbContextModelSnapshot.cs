@@ -92,7 +92,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.EscrowEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -157,7 +157,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.ToTable("Escrows", "payment");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.PayoutAccountEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.PayoutAccountEntity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -193,7 +193,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.ToTable("PayoutAccounts", "payment");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.StripeEventEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.StripeEventEntity", b =>
                 {
                     b.Property<string>("EventId")
                         .HasColumnType("nvarchar(450)");
@@ -206,7 +206,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.ToTable("StripeEvents", "payment");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.TransactionEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.TransactionEntity", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -264,9 +264,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.UseTphMappingStrategy();
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.SettlementTransactionEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
                 {
-                    b.HasBaseType("Concertable.Payment.Domain.TransactionEntity");
+                    b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
                     b.Property<int>("BookingId")
                         .ValueGeneratedOnUpdateSometimes()
@@ -276,9 +276,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.TicketTransactionEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.TicketTransactionEntity", b =>
                 {
-                    b.HasBaseType("Concertable.Payment.Domain.TransactionEntity");
+                    b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
                     b.Property<int>("ConcertId")
                         .ValueGeneratedOnUpdateSometimes()
@@ -288,9 +288,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasDiscriminator().HasValue("TicketTransactionEntity");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.VerifyTransactionEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.VerifyTransactionEntity", b =>
                 {
-                    b.HasBaseType("Concertable.Payment.Domain.TransactionEntity");
+                    b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
                     b.Property<int>("ApplicationId")
                         .ValueGeneratedOnUpdateSometimes()

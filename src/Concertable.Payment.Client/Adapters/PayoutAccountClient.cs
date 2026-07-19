@@ -1,3 +1,4 @@
+using Concertable.Payment.Client.Enums;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
