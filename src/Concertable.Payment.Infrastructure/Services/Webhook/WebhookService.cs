@@ -24,7 +24,8 @@ internal sealed class WebhookService : IWebhookService
         this.context = context;
         this.contextAccessor = contextAccessor;
         this.bus = bus;
-        webhookSecret = stripeSettings.Value.WebhookSecret ?? string.Empty;
+        webhookSecret = stripeSettings.Value.WebhookSecret
+            ?? throw new InvalidOperationException("Stripe:WebhookSecret is not configured — webhook signature validation requires it.");
     }
 
     public async Task HandleAsync(string json, string stripeSignature)
