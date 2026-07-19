@@ -1,7 +1,7 @@
 using Concertable.Kernel;
-using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Enums;
 
-namespace Concertable.Payment.Domain;
+namespace Concertable.Payment.Domain.Entities;
 
 public sealed class EscrowEntity : IIdEntity, IAuditable
 {
