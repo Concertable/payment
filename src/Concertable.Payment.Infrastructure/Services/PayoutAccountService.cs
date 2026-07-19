@@ -1,6 +1,5 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Payment.Domain;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
