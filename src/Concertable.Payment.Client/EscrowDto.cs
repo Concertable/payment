@@ -1,4 +1,5 @@
 using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Enums;
 
 namespace Concertable.Payment.Client;
 
