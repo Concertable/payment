@@ -1,6 +1,6 @@
 using Concertable.Kernel;
 
-namespace Concertable.Payment.Domain;
+namespace Concertable.Payment.Domain.Entities;
 
 public sealed class PayoutAccountEntity : IIdEntity
 {

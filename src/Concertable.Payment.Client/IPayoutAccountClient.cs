@@ -1,3 +1,5 @@
+using Concertable.Payment.Client.Enums;
+
 namespace Concertable.Payment.Client;
 
 /// <summary>gRPC client for the owner-keyed payout-account operations a consumer fronts for its own users. The

@@ -1,4 +1,4 @@
-namespace Concertable.Payment.Domain;
+namespace Concertable.Payment.Domain.Enums;
 
 public enum PayoutAccountStatus
 {
