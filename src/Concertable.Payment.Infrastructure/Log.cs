@@ -1,4 +1,3 @@
-using Concertable.Payment.Domain;
 using Microsoft.Extensions.Logging;
 using GrpcStatusCode = global::Grpc.Core.StatusCode;
 

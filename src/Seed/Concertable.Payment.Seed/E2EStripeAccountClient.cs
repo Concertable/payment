@@ -1,6 +1,7 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Payment.Domain;
+using Concertable.Payment.Domain.Entities;
+using Concertable.Payment.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Stripe;
 

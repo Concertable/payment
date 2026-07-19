@@ -1,4 +1,3 @@
-using Concertable.Payment.Domain;
 using Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
