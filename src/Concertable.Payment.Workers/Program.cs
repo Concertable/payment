@@ -37,7 +37,8 @@ services.AddAzureServiceBusTransport(
     opts =>
     {
         opts.ConnectionString = builder.Configuration.GetConnectionString("asb")
-            ?? throw new InvalidOperationException("Connection string 'asb' is required.");
+            ?? (builder.Environment.IsEnvironment("Testing") ? null!
+                : throw new InvalidOperationException("Connection string 'asb' is required."));
         opts.ServiceName = "concertable-payment";
     },
     reg => reg
