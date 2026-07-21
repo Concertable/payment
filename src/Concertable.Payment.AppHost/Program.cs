@@ -6,7 +6,7 @@ var b2bDb = sql.AddDatabase(AppHostConstants.Databases.B2B);
 var paymentDb = sql.AddDatabase(AppHostConstants.Databases.Payment);
 
 var asb = builder.AddServiceBus();
-asb.Topology().AddPaymentTopology();
+asb.Topology().AddPaymentTopology().AddAuthTopology();
 
 var auth = builder.AddAuth<Projects.Concertable_Auth>(authDb, b2bDb, asb);
 auth.WithEnvironment("ServiceAuth__AuthClientId", "concertable-auth");
