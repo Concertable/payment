@@ -7,5 +7,8 @@ public static class PaymentTopology
             .Subscribe("event-tenantcreatedevent",        "payment-tenant-created",        "concertable-payment")
             .Subscribe("event-paymentsucceededevent",     "payment-payment-succeeded",     "concertable-payment")
             .Subscribe("event-paymentfailedevent",        "payment-payment-failed",        "concertable-payment")
-            .Queue("command-processstripewebhookcommand");
+            // Both names exist across the service-scoped queue rename: Payment keeps using the
+            // unscoped name until platform-sync pins it to the Messaging version that scopes it.
+            .Queue("command-processstripewebhookcommand")
+            .Queue("command-concertable-payment-processstripewebhookcommand");
 }
