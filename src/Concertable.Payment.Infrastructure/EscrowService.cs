@@ -161,7 +161,7 @@ internal sealed class EscrowService : IEscrowService
         var release = await ReleaseAsync(escrow.Id, ct);
         return release.IsFailed
             ? release.ToResult<Transfer?>()
-            : Result.Ok<Transfer?>(release.Value);
+            : Result.Ok(release.Value);
     }
 
     public async Task<Result<Refund>> RefundAsync(
@@ -217,7 +217,7 @@ internal sealed class EscrowService : IEscrowService
         if (escrow.Status == EscrowStatus.Refunded)
         {
             logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
-            return Result.Ok<Refund?>(new Refund(escrow.RefundId!));
+            return Result.Ok(new Refund(escrow.RefundId!));
         }
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
@@ -229,7 +229,7 @@ internal sealed class EscrowService : IEscrowService
         var refund = await RefundAsync(escrow.Id, amount, reason, ct);
         return refund.IsFailed
             ? refund.ToResult<Refund?>()
-            : Result.Ok<Refund?>(refund.Value);
+            : Result.Ok(refund.Value);
     }
 
     public async Task<EscrowDto?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default)
