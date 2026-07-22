@@ -39,6 +39,8 @@ public static class ServiceCollectionExtensions
 
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
 
+        services.AddScoped<IOutboxUnitOfWorkBehavior, OutboxUnitOfWorkBehavior>();
+
         // Repositories + mappers
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
