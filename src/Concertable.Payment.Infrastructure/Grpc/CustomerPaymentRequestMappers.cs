@@ -7,14 +7,14 @@ internal sealed record CustomerPayCommand(
     int ConcertId,
     Guid PayeeId,
     decimal Amount,
-    IDictionary<string, string> Metadata,
+    IReadOnlyDictionary<string, string> Metadata,
     string PaymentMethodId);
 
 internal sealed record CreatePaymentSessionCommand(
     Guid PayerId,
     int ConcertId,
     Guid PayeeId,
-    IDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata);
 
 internal static class CustomerPaymentRequestMappers
 {

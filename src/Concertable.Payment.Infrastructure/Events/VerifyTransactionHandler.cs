@@ -19,8 +19,8 @@ internal sealed class VerifyTransactionHandler : ITransactionHandler
 
         await transactionService.LogAsync(new VerifyTransactionDto
         {
-            ApplicationId = int.Parse(meta["applicationId"]),
-            PayerId = Guid.Parse(meta["venueManagerId"]),
+            ApplicationId = int.Parse(meta[PaymentMetadataKeys.ApplicationId]),
+            PayerId = Guid.Parse(meta[PaymentMetadataKeys.VenueManagerId]),
             PayeeId = Guid.Empty,
             PaymentIntentId = @event.TransactionId,
             Amount = 100,

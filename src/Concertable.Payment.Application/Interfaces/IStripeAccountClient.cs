@@ -29,7 +29,7 @@ internal interface IStripeAccountClient
     /// </summary>
     Task<CheckoutSession> CreatePaymentSessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     /// <summary>
@@ -39,7 +39,7 @@ internal interface IStripeAccountClient
     /// </summary>
     Task<CheckoutSession> CreateSetupSessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     /// <summary>
@@ -48,7 +48,7 @@ internal interface IStripeAccountClient
     /// </summary>
     Task<CheckoutSession> CreateVerifySessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     /// <summary>
@@ -59,6 +59,6 @@ internal interface IStripeAccountClient
     Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 }
