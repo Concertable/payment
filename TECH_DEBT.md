@@ -24,6 +24,18 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## LOW
 
+### Published `Payment.Client` metadata params are still `IDictionary`, not `IReadOnlyDictionary`
+
+`ICustomerPaymentClient` / `IManagerPaymentClient` (and their `Adapters` impls) in the published
+`Concertable.Payment.Client` package still take `IDictionary<string, string> metadata`. Nothing mutates
+it — every read is read-only — so like the Payment-internal surface it should be `IReadOnlyDictionary`.
+It was left out of that narrowing sweep because `Payment.Client` is consumed by B2B and Customer (and
+their test fixtures *implement* the interfaces), so changing the signature is a breaking package change
+that can't land in one PR — it needs an expand/contract across a platform-version bump.
+
+**Resolves when:** the pair narrows to `IReadOnlyDictionary` via a breaking `Payment.Client` release +
+the platform-sync bump that carries it to B2B/Customer.
+
 ### gRPC mappers use the `""` literal and erase value presence
 
 `Grpc/PaymentMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`, `TransactionId = r.TransactionId ?? ""`) and `Grpc/EscrowMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`). Proto3 strings can't be null, so a fallback at the wire boundary is genuinely required — but the `""` literal violates `docs/CODE_CONVENTIONS.md` (`string.Empty` for semantic fallbacks), and the receiver has to interpret empty string as "absent" (e.g. no client secret when `RequiresAction` is false).
