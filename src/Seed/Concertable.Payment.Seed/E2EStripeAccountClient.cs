@@ -1,3 +1,4 @@
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Contracts;
@@ -216,13 +217,13 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
         {
-            Amount = (long)(amount * 100),
+            Amount = amount.ToMinorUnits(),
             Currency = "gbp",
             Customer = stripeCustomerId,
             SetupFutureUsage = "off_session",

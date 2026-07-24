@@ -39,7 +39,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var options = new PaymentIntentCreateOptions
             {
-                Amount = (long)(opts.Amount * 100),
+                Amount = opts.Amount.ToMinorUnits(),
                 Currency = "GBP",
                 PaymentMethod = opts.PaymentMethodId,
                 Customer = opts.StripeCustomerId,
@@ -66,12 +66,12 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         }
         catch (StripeException ex)
         {
-            logger.StripeChargeFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code, ex);
+            logger.StripeChargeFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.PaymentProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
+            logger.PaymentProcessingFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
@@ -88,7 +88,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var options = new PaymentIntentCreateOptions
             {
-                Amount = (long)(opts.Amount * 100),
+                Amount = opts.Amount.ToMinorUnits(),
                 Currency = "GBP",
                 PaymentMethod = opts.PaymentMethodId,
                 Customer = opts.StripeCustomerId,
@@ -112,12 +112,12 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         }
         catch (StripeException ex)
         {
-            logger.StripeHoldFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex.StripeError?.Code, ex);
+            logger.StripeHoldFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.HoldProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
+            logger.HoldProcessingFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
