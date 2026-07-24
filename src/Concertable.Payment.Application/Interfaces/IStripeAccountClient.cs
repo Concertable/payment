@@ -58,7 +58,7 @@ internal interface IStripeAccountClient
     /// </summary>
     Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 }

@@ -1,11 +1,12 @@
 using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class EscrowEntityTests
 {
     private static EscrowEntity NewPending() =>
-        EscrowEntity.Create(bookingId: 42, fromOwnerId: Guid.NewGuid(), toOwnerId: Guid.NewGuid(), amount: 5000, chargeId: "pi_test");
+        EscrowEntity.Create(bookingId: 42, fromOwnerId: Guid.NewGuid(), toOwnerId: Guid.NewGuid(), amount: Money.Gbp(50), chargeId: "pi_test");
 
     [Fact]
     public void Create_StartsInPending()

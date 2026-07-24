@@ -32,7 +32,7 @@ internal sealed class EscrowService : IEscrowService
     public async Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -69,7 +69,7 @@ internal sealed class EscrowService : IEscrowService
             bookingId,
             payerId,
             payeeId,
-            (long)(amount * 100),
+            amount,
             hold.Value.TransactionId);
 
         await escrowRepository.AddAsync(escrow);
@@ -87,7 +87,7 @@ internal sealed class EscrowService : IEscrowService
     public async Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default)
@@ -105,7 +105,7 @@ internal sealed class EscrowService : IEscrowService
         if (capture.IsFailed)
             return capture.ToResult<EscrowDeposit>();
 
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, (long)(amount * 100), paymentIntentId);
+        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, paymentIntentId);
         escrow.Confirm();
         await escrowRepository.AddAsync(escrow);
         await escrowRepository.SaveChangesAsync();
@@ -124,7 +124,7 @@ internal sealed class EscrowService : IEscrowService
         var release = await paymentManager.ReleaseAsync(new ReleaseRequest
         {
             PayeeId = escrow.ToOwnerId,
-            Amount = escrow.Amount / 100m,
+            Amount = escrow.Amount,
             ChargeId = escrow.ChargeId,
             Metadata = new Dictionary<string, string>
             {
@@ -166,7 +166,7 @@ internal sealed class EscrowService : IEscrowService
 
     public async Task<Result<Refund>> RefundAsync(
         int escrowId,
-        decimal? amount = null,
+        Money? amount = null,
         string? reason = null,
         CancellationToken ct = default)
     {
@@ -176,7 +176,7 @@ internal sealed class EscrowService : IEscrowService
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}; cannot refund");
 
-        var refundAmount = amount ?? escrow.Amount / 100m;
+        var refundAmount = amount ?? escrow.Amount;
 
         var refund = await paymentManager.RefundAsync(new RefundRequest
         {
@@ -203,7 +203,7 @@ internal sealed class EscrowService : IEscrowService
 
     public async Task<Result<Refund?>> RefundByBookingIdAsync(
         int bookingId,
-        decimal? amount = null,
+        Money? amount = null,
         string? reason = null,
         CancellationToken ct = default)
     {
@@ -243,7 +243,7 @@ internal sealed class EscrowService : IEscrowService
             escrow.BookingId,
             escrow.FromOwnerId,
             escrow.ToOwnerId,
-            escrow.Amount / 100m,
+            escrow.Amount.Amount,
             escrow.Status,
             escrow.ChargeId,
             escrow.TransferId,
