@@ -7,7 +7,7 @@ internal interface IEscrowService
     Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -16,7 +16,7 @@ internal interface IEscrowService
     Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default);
@@ -27,13 +27,13 @@ internal interface IEscrowService
 
     Task<Result<Refund?>> RefundByBookingIdAsync(
         int bookingId,
-        decimal? amount = null,
+        Money? amount = null,
         string? reason = null,
         CancellationToken ct = default);
 
     Task<Result<Refund>> RefundAsync(
         int escrowId,
-        decimal? amount = null,
+        Money? amount = null,
         string? reason = null,
         CancellationToken ct = default);
 
