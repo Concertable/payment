@@ -46,14 +46,14 @@ internal sealed class PaymentManager : IPaymentManager
 
         var metadata = new Dictionary<string, string>
         {
-            ["fromUserId"] = r.PayerId.ToString(),
-            ["fromUserEmail"] = r.PayerEmail,
-            ["toUserId"] = r.PayeeId.ToString(),
-            ["amount"] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.FromUserId] = r.PayerId.ToString(),
+            [PaymentMetadataKeys.FromUserEmail] = r.PayerEmail,
+            [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
+            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
         }
         .Merge(r.Metadata);
 
-        logger.ChargingPayment(r.PayerId, r.Amount, r.PayeeId, destinationStripeId, r.Metadata["type"]);
+        logger.ChargingPayment(r.PayerId, r.Amount, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(r.Session).ChargeAsync(new StripeChargeOptions
         {
@@ -80,14 +80,14 @@ internal sealed class PaymentManager : IPaymentManager
 
         var metadata = new Dictionary<string, string>
         {
-            ["fromUserId"] = r.PayerId.ToString(),
-            ["fromUserEmail"] = r.PayerEmail,
-            ["toUserId"] = r.PayeeId.ToString(),
-            ["amount"] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.FromUserId] = r.PayerId.ToString(),
+            [PaymentMetadataKeys.FromUserEmail] = r.PayerEmail,
+            [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
+            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
         }
         .Merge(r.Metadata);
 
-        logger.HoldingPayment(r.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata["type"]);
+        logger.HoldingPayment(r.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(r.Session).HoldAsync(new StripeHoldOptions
         {
@@ -110,8 +110,8 @@ internal sealed class PaymentManager : IPaymentManager
 
         var metadata = new Dictionary<string, string>
         {
-            ["toUserId"] = r.PayeeId.ToString(),
-            ["amount"] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
+            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
         }
         .Merge(r.Metadata);
 
@@ -130,7 +130,7 @@ internal sealed class PaymentManager : IPaymentManager
     {
         var metadata = new Dictionary<string, string>
         {
-            ["amount"] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
         }
         .Merge(r.Metadata);
 
@@ -150,7 +150,7 @@ internal sealed class PaymentManager : IPaymentManager
     {
         try
         {
-            logger.CapturingPaymentIntent(r.PaymentIntentId, r.Metadata["type"]);
+            logger.CapturingPaymentIntent(r.PaymentIntentId, r.Metadata[PaymentMetadataKeys.Type]);
 
             await stripeHoldClient.CaptureAsync(r.PaymentIntentId, r.Metadata, ct);
             return Result.Ok();
