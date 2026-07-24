@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEntityTypeConfigurationProvider>(sp => sp.GetRequiredService<PaymentConfigurationProvider>());
 
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
+        services.Configure<PlatformFeeOptions>(configuration.GetSection(PlatformFeeOptions.SectionName));
 
         // Repositories + mappers
         services.AddScoped<ITransactionRepository, TransactionRepository>();
