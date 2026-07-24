@@ -1,3 +1,4 @@
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
@@ -51,7 +52,7 @@ public sealed class EscrowServiceTests
             .Callback<EscrowEntity, CancellationToken>((e, _) => captured = e)
             .ReturnsAsync(() => captured!);
 
-        var result = await sut.DepositAsync(payerId, payeeId, 50m, "pm_test", PaymentSession.OnSession, bookingId: 7);
+        var result = await sut.DepositAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, bookingId: 7);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(EscrowStatus.Held, result.Value.Status);
@@ -80,7 +81,7 @@ public sealed class EscrowServiceTests
             .Callback<EscrowEntity, CancellationToken>((e, _) => captured = e)
             .ReturnsAsync(() => captured!);
 
-        var result = await sut.DepositAsync(payerId, payeeId, 50m, "pm_test", PaymentSession.OnSession, bookingId: 7);
+        var result = await sut.DepositAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, bookingId: 7);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(EscrowStatus.Pending, result.Value.Status);
@@ -96,7 +97,7 @@ public sealed class EscrowServiceTests
             .Setup(p => p.HoldAsync(It.IsAny<HoldRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Fail<PaymentOutcome>("card_declined"));
 
-        var result = await sut.DepositAsync(payerId, payeeId, 50m, "pm_test", PaymentSession.OnSession, bookingId: 7);
+        var result = await sut.DepositAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, bookingId: 7);
 
         Assert.True(result.IsFailed);
         escrowRepository.Verify(
@@ -123,7 +124,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task ReleaseByBookingIdAsync_EscrowNotHeld_ReturnsNullResult()
     {
-        var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
         escrowRepository
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(pendingEscrow);
@@ -140,7 +141,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task ReleaseByBookingIdAsync_EscrowHeld_ReleasesAndMutatesEntity()
     {
-        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
         heldEscrow.Confirm();
 
         escrowRepository
@@ -182,7 +183,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task RefundByBookingIdAsync_AlreadyRefunded_IsNoOpSuccess()
     {
-        var refundedEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var refundedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
         refundedEscrow.Confirm();
         refundedEscrow.Refund("re_prior", timeProvider.GetUtcNow().DateTime);
 
@@ -203,7 +204,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task RefundByBookingIdAsync_EscrowHeld_RefundsAndMutatesEntity()
     {
-        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
         heldEscrow.Confirm();
 
         escrowRepository
@@ -229,7 +230,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task RefundByBookingIdAsync_DestinationCharge_ReversesTransfer()
     {
-        var releasedEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var releasedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
         releasedEscrow.Confirm();
         releasedEscrow.Release("tr_dest", timeProvider.GetUtcNow().DateTime);
 
@@ -257,7 +258,7 @@ public sealed class EscrowServiceTests
     [Fact]
     public async Task RefundByBookingIdAsync_NotRefundableStatus_IsNoOpSuccess()
     {
-        var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, 5000, "pi_test");
+        var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), "pi_test");
 
         escrowRepository
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
