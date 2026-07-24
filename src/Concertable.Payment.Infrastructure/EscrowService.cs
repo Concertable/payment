@@ -1,9 +1,11 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -14,17 +16,20 @@ internal sealed class EscrowService : IEscrowService
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<EscrowService> logger;
+    private readonly Money platformFee;
 
     public EscrowService(
         IPaymentManager paymentManager,
         IEscrowRepository escrowRepository,
         IPayoutAccountRepository payoutAccountRepository,
+        IOptions<PlatformFeeOptions> platformFeeOptions,
         TimeProvider timeProvider,
         ILogger<EscrowService> logger)
     {
         this.paymentManager = paymentManager;
         this.escrowRepository = escrowRepository;
         this.payoutAccountRepository = payoutAccountRepository;
+        this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
         this.timeProvider = timeProvider;
         this.logger = logger;
     }
@@ -44,20 +49,18 @@ internal sealed class EscrowService : IEscrowService
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
             throw new BadRequestException("Stripe customer setup is required for off-session payments.");
 
-        var hold = await paymentManager.HoldAsync(new HoldRequest
-        {
-            PayerId = payerId,
-            PayerEmail = payer.Email,
-            PayeeId = payeeId,
-            Amount = amount,
-            PaymentMethodId = paymentMethodId,
-            Metadata = new Dictionary<string, string>
+        var hold = await paymentManager.HoldAsync(
+            payerId,
+            payeeId,
+            amount + platformFee,
+            paymentMethodId,
+            session,
+            new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
                 [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             },
-            Session = session
-        }, ct);
+            ct);
 
         if (hold.IsFailed)
             return hold.ToResult<EscrowDeposit>();
@@ -70,6 +73,7 @@ internal sealed class EscrowService : IEscrowService
             payerId,
             payeeId,
             amount,
+            platformFee,
             hold.Value.TransactionId);
 
         await escrowRepository.AddAsync(escrow);
@@ -105,7 +109,7 @@ internal sealed class EscrowService : IEscrowService
         if (capture.IsFailed)
             return capture.ToResult<EscrowDeposit>();
 
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, paymentIntentId);
+        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
         escrow.Confirm();
         await escrowRepository.AddAsync(escrow);
         await escrowRepository.SaveChangesAsync();
@@ -124,7 +128,7 @@ internal sealed class EscrowService : IEscrowService
         var release = await paymentManager.ReleaseAsync(new ReleaseRequest
         {
             PayeeId = escrow.ToOwnerId,
-            Amount = escrow.Amount,
+            Amount = escrow.Amount - escrow.PlatformFee,
             ChargeId = escrow.ChargeId,
             Metadata = new Dictionary<string, string>
             {

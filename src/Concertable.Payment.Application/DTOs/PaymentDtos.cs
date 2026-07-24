@@ -36,6 +36,7 @@ internal sealed record SettlementTransactionDto : ITransaction
     public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
+    public long PlatformFee { get; init; }
     public TransactionStatus Status { get; init; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }
