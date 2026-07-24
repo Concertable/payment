@@ -1,8 +1,10 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -13,19 +15,22 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly IStripeHoldClient stripeHoldClient;
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ITransactionRepository transactionRepository;
+    private readonly Money platformFee;
 
     public ManagerPaymentService(
         IPaymentManager paymentManager,
         IStripeAccountClient stripeAccountClient,
         IStripeHoldClient stripeHoldClient,
         IPayoutAccountRepository payoutAccountRepository,
-        ITransactionRepository transactionRepository)
+        ITransactionRepository transactionRepository,
+        IOptions<PlatformFeeOptions> platformFeeOptions)
     {
         this.paymentManager = paymentManager;
         this.stripeAccountClient = stripeAccountClient;
         this.stripeHoldClient = stripeHoldClient;
         this.payoutAccountRepository = payoutAccountRepository;
         this.transactionRepository = transactionRepository;
+        this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
     public async Task<Result<PaymentOutcome>> PayAsync(
@@ -43,20 +48,19 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
             throw new BadRequestException("Stripe customer setup is required for off-session payments.");
 
-        var charge = await paymentManager.ChargeAsync(new ChargeRequest
-        {
-            PayerId = payerId,
-            PayerEmail = payer.Email,
-            PayeeId = payeeId,
-            Amount = amount,
-            PaymentMethodId = paymentMethodId,
-            Metadata = new Dictionary<string, string>
+        var charge = await paymentManager.SettleAsync(
+            payerId,
+            payeeId,
+            amount + platformFee,
+            amount,
+            paymentMethodId,
+            session,
+            new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.Type] = TransactionTypes.Settlement,
                 [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             },
-            Session = session
-        }, ct);
+            ct);
 
         if (charge.IsFailed)
             return charge;
@@ -68,7 +72,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             payerId,
             payeeId,
             charge.Value.TransactionId,
-            amount.ToMinorUnits(),
+            (amount + platformFee).ToMinorUnits(),
+            platformFee.ToMinorUnits(),
             TransactionStatus.Pending,
             bookingId);
 
@@ -108,7 +113,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         CancellationToken ct = default)
     {
         var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
-        return await stripeAccountClient.CreateHoldSessionAsync(stripeCustomerId, amount, metadata, ct);
+        return await stripeAccountClient.CreateHoldSessionAsync(stripeCustomerId, amount + platformFee, metadata, ct);
     }
 
     public async Task<string> FindHeldIntentAsync(

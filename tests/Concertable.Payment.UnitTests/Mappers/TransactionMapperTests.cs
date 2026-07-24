@@ -37,7 +37,7 @@ public sealed class TransactionMapperTests
     [Fact]
     public void ToDto_WithSettlementEntity_ReturnsSettlementTransactionDto()
     {
-        var entity = SettlementTransactionEntity.Create(Guid.NewGuid(), Guid.NewGuid(), "pi_test", 0, TransactionStatus.Complete, 1);
+        var entity = SettlementTransactionEntity.Create(Guid.NewGuid(), Guid.NewGuid(), "pi_test", 0, 0, TransactionStatus.Complete, 1);
 
         var result = sut.ToDto(entity);
 
