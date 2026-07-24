@@ -1,4 +1,4 @@
-using System.Globalization;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
 using FluentResults;
@@ -27,11 +27,12 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
+            var money = Money.Gbp(amount);
             var request = new Proto.DepositRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = amount.ToString(CultureInfo.InvariantCulture),
+                Amount = money.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId,
                 Session = session.ToProtoSession(),
                 BookingId = bookingId
@@ -55,11 +56,12 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
+            var money = Money.Gbp(amount);
             var request = new Proto.CaptureRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = amount.ToString(CultureInfo.InvariantCulture),
+                Amount = money.ToProtoMoney(),
                 PaymentIntentId = paymentIntentId,
                 BookingId = bookingId
             };
