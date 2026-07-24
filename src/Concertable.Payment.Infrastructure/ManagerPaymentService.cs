@@ -52,8 +52,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             PaymentMethodId = paymentMethodId,
             Metadata = new Dictionary<string, string>
             {
-                ["type"] = TransactionTypes.Settlement,
-                ["bookingId"] = bookingId.ToString()
+                [PaymentMetadataKeys.Type] = TransactionTypes.Settlement,
+                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             },
             Session = session
         }, ct);
@@ -85,7 +85,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
     public async Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
@@ -94,7 +94,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
     public async Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
@@ -104,7 +104,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
