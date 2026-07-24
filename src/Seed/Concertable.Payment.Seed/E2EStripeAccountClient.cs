@@ -1,5 +1,7 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
 using Microsoft.Extensions.Configuration;
@@ -131,13 +133,13 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task<CheckoutSession> CreatePaymentSessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
         {
-            Amount = long.Parse(metadata["amount"]),
-            Currency = metadata.TryGetValue("currency", out var c) ? c : "GBP",
+            Amount = metadata.GetValueAs<long>(PaymentMetadataKeys.Amount),
+            Currency = metadata.GetValue(PaymentMetadataKeys.Currency),
             Customer = stripeCustomerId,
             SetupFutureUsage = "off_session",
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
@@ -159,7 +161,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task<CheckoutSession> CreateSetupSessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var intent = await setupIntentService.CreateAsync(new SetupIntentCreateOptions
@@ -185,7 +187,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task<CheckoutSession> CreateVerifySessionAsync(
         string stripeCustomerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
@@ -215,7 +217,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
