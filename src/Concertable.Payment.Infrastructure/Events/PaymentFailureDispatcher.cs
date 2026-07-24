@@ -19,7 +19,7 @@ internal sealed class PaymentFailureDispatcher : IIntegrationEventHandler<Paymen
 
     public async Task HandleAsync(PaymentFailedEvent @event, MessageEnvelope envelope, CancellationToken ct)
     {
-        var type = @event.Metadata.GetValueOrDefault("type", string.Empty);
+        var type = @event.Metadata.GetValue(PaymentMetadataKeys.Type);
         var handler = handlerFactory.Create(type);
 
         if (handler is null)
