@@ -12,12 +12,12 @@ internal sealed record ManagerPayCommand(
 
 internal sealed record CreateSessionCommand(
     Guid PayerId,
-    IDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata);
 
 internal sealed record CreateHoldSessionCommand(
     Guid PayerId,
     decimal Amount,
-    IDictionary<string, string> Metadata);
+    IReadOnlyDictionary<string, string> Metadata);
 
 internal sealed record FindHeldIntentCommand(
     Guid PayerId,

@@ -27,7 +27,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         int concertId,
         Guid payeeId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default)
     {
@@ -50,7 +50,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         Guid payerId,
         int concertId,
         Guid payeeId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
@@ -60,9 +60,9 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
 
         var mergedMetadata = new Dictionary<string, string>
         {
-            ["fromUserId"] = payerId.ToString(),
-            ["fromUserEmail"] = account.Email,
-            ["toUserId"] = payeeId.ToString()
+            [PaymentMetadataKeys.FromUserId] = payerId.ToString(),
+            [PaymentMetadataKeys.FromUserEmail] = account.Email,
+            [PaymentMetadataKeys.ToUserId] = payeeId.ToString()
         }
         .Merge(metadata);
 

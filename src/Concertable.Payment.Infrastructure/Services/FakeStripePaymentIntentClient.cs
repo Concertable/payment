@@ -23,7 +23,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         await webhookQueue.EnqueueAsync(new Event
         {
             Id = $"evt_fake_{Guid.NewGuid():N}",
-            Type = "payment_intent.succeeded",
+            Type = EventTypes.PaymentIntentSucceeded,
             Data = new EventData
             {
                 Object = new PaymentIntent
@@ -50,7 +50,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         await webhookQueue.EnqueueAsync(new Event
         {
             Id = $"evt_fake_{Guid.NewGuid():N}",
-            Type = "payment_intent.succeeded",
+            Type = EventTypes.PaymentIntentSucceeded,
             Data = new EventData
             {
                 Object = new PaymentIntent

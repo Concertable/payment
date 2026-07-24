@@ -10,6 +10,6 @@ internal sealed class FakeStripeHoldClient : IStripeHoldClient
     public Task CancelAsync(string intentId, CancellationToken ct = default) =>
         Task.CompletedTask;
 
-    public Task CaptureAsync(string intentId, IDictionary<string, string> metadata, CancellationToken ct = default) =>
+    public Task CaptureAsync(string intentId, IReadOnlyDictionary<string, string> metadata, CancellationToken ct = default) =>
         Task.CompletedTask;
 }
