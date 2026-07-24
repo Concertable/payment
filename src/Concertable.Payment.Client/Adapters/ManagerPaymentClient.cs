@@ -1,4 +1,4 @@
-using System.Globalization;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
 using FluentResults;
@@ -27,11 +27,12 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         try
         {
+            var money = Money.Gbp(amount);
             var request = new Proto.ManagerPayRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = amount.ToString(CultureInfo.InvariantCulture),
+                Amount = money.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId,
                 Session = session.ToProtoSession(),
                 BookingId = bookingId
@@ -73,10 +74,11 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
+        var money = Money.Gbp(amount);
         var request = new Proto.CreateHoldSessionRequest
         {
             PayerId = payerId.ToString(),
-            Amount = amount.ToString(CultureInfo.InvariantCulture)
+            Amount = money.ToProtoMoney()
         };
         request.Metadata.Add(metadata);
         var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);

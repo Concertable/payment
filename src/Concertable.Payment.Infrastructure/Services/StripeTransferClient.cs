@@ -29,7 +29,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
 
             var transfer = await stripeClient.CreateTransferAsync(new TransferCreateOptions
             {
-                Amount = (long)(opts.Amount * 100),
+                Amount = opts.Amount.ToMinorUnits(),
                 Currency = "GBP",
                 Destination = opts.DestinationStripeId,
                 SourceTransaction = opts.ChargeId,
@@ -42,12 +42,12 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         }
         catch (StripeException ex)
         {
-            logger.StripeReleaseFailed((long)(opts.Amount * 100), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
+            logger.StripeReleaseFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
             return Result.Fail($"Stripe Error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            logger.ReleaseProcessingFailed((long)(opts.Amount * 100), opts.DestinationStripeId, ex);
+            logger.ReleaseProcessingFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex);
             return Result.Fail($"General Error: {ex.Message}");
         }
     }
@@ -60,17 +60,17 @@ internal sealed class StripeTransferClient : IStripeTransferClient
             {
                 await stripeClient.CreateTransferReversalAsync(opts.TransferId, new TransferReversalCreateOptions
                 {
-                    Amount = (long)(opts.Amount * 100),
+                    Amount = opts.Amount.ToMinorUnits(),
                     Metadata = opts.Metadata
                 });
 
-                logger.StripeTransferReversalSucceeded(opts.TransferId, (long)(opts.Amount * 100));
+                logger.StripeTransferReversalSucceeded(opts.TransferId, opts.Amount.ToMinorUnits());
             }
 
             var refund = await stripeClient.CreateRefundAsync(new RefundCreateOptions
             {
                 PaymentIntent = opts.PaymentIntentId,
-                Amount = (long)(opts.Amount * 100),
+                Amount = opts.Amount.ToMinorUnits(),
                 Reason = opts.Reason,
                 Metadata = opts.Metadata
             });

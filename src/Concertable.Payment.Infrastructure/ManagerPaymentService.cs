@@ -31,7 +31,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -68,7 +68,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             payerId,
             payeeId,
             charge.Value.TransactionId,
-            (long)(amount * 100),
+            amount.ToMinorUnits(),
             TransactionStatus.Pending,
             bookingId);
 
@@ -103,7 +103,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
