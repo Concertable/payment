@@ -53,8 +53,8 @@ internal sealed class EscrowService : IEscrowService
             PaymentMethodId = paymentMethodId,
             Metadata = new Dictionary<string, string>
             {
-                ["type"] = TransactionTypes.Escrow,
-                ["bookingId"] = bookingId.ToString()
+                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
+                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             },
             Session = session
         }, ct);
@@ -97,8 +97,8 @@ internal sealed class EscrowService : IEscrowService
             PaymentIntentId = paymentIntentId,
             Metadata = new Dictionary<string, string>
             {
-                ["type"] = TransactionTypes.Escrow,
-                ["bookingId"] = bookingId.ToString()
+                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
+                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             }
         }, ct);
 
@@ -128,9 +128,9 @@ internal sealed class EscrowService : IEscrowService
             ChargeId = escrow.ChargeId,
             Metadata = new Dictionary<string, string>
             {
-                ["type"] = "escrowRelease",
-                ["escrowId"] = escrow.Id.ToString(),
-                ["bookingId"] = escrow.BookingId.ToString()
+                [PaymentMetadataKeys.Type] = TransactionTypes.EscrowRelease,
+                [PaymentMetadataKeys.EscrowId] = escrow.Id.ToString(),
+                [PaymentMetadataKeys.BookingId] = escrow.BookingId.ToString()
             }
         }, ct);
 
@@ -186,9 +186,9 @@ internal sealed class EscrowService : IEscrowService
             Reason = reason,
             Metadata = new Dictionary<string, string>
             {
-                ["type"] = "escrowRefund",
-                ["escrowId"] = escrow.Id.ToString(),
-                ["bookingId"] = escrow.BookingId.ToString()
+                [PaymentMetadataKeys.Type] = TransactionTypes.EscrowRefund,
+                [PaymentMetadataKeys.EscrowId] = escrow.Id.ToString(),
+                [PaymentMetadataKeys.BookingId] = escrow.BookingId.ToString()
             }
         }, ct);
 

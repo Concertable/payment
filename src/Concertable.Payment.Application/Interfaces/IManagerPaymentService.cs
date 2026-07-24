@@ -20,7 +20,7 @@ internal interface IManagerPaymentService
     /// </summary>
     Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     /// <summary>
@@ -29,7 +29,7 @@ internal interface IManagerPaymentService
     /// </summary>
     Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     /// <summary>
@@ -39,7 +39,7 @@ internal interface IManagerPaymentService
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<string> FindHeldIntentAsync(

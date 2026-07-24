@@ -6,5 +6,5 @@ internal sealed record RefundRequest
     public required string PaymentIntentId { get; init; }
     public string? TransferId { get; init; }
     public string? Reason { get; init; }
-    public required IDictionary<string, string> Metadata { get; init; }
+    public required IReadOnlyDictionary<string, string> Metadata { get; init; }
 }
