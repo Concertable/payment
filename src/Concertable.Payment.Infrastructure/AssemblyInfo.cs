@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Concertable.Payment.Api")]
+[assembly: InternalsVisibleTo("Concertable.Payment.Seed")]
 [assembly: InternalsVisibleTo("Concertable.Payment.Web")]
 [assembly: InternalsVisibleTo("Concertable.Payment.Testing")]
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]

@@ -23,7 +23,7 @@ internal sealed class StripeHoldClient : IStripeHoldClient
 
         var held = intents.FirstOrDefault(pi =>
             pi.Status == "requires_capture" &&
-            pi.Metadata.TryGetValue("applicationId", out var id) &&
+            pi.Metadata.TryGetValue(PaymentMetadataKeys.ApplicationId, out var id) &&
             id == applicationId.ToString());
 
         return held?.Id ?? throw new NotFoundException($"No held payment intent found for application {applicationId}");
@@ -32,7 +32,7 @@ internal sealed class StripeHoldClient : IStripeHoldClient
     public Task CancelAsync(string intentId, CancellationToken ct = default) =>
         paymentIntentService.CancelAsync(intentId, cancellationToken: ct);
 
-    public Task CaptureAsync(string intentId, IDictionary<string, string> metadata, CancellationToken ct = default) =>
+    public Task CaptureAsync(string intentId, IReadOnlyDictionary<string, string> metadata, CancellationToken ct = default) =>
         paymentIntentService.CaptureAsync(intentId, new PaymentIntentCaptureOptions
         {
             Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value)
