@@ -1,5 +1,5 @@
-using System.Globalization;
 using Concertable.Kernel.Exceptions;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
 using FluentResults;
@@ -28,12 +28,13 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
     {
         try
         {
+            var money = Money.Gbp(amount);
             var request = new Proto.CustomerPayRequest
             {
                 PayerId = payerId.ToString(),
                 ConcertId = concertId,
                 PayeeId = payeeId.ToString(),
-                Amount = amount.ToString(CultureInfo.InvariantCulture),
+                Amount = money.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId
             };
             request.Metadata.Add(metadata);

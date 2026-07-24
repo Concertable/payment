@@ -49,11 +49,11 @@ internal sealed class PaymentManager : IPaymentManager
             [PaymentMetadataKeys.FromUserId] = r.PayerId.ToString(),
             [PaymentMetadataKeys.FromUserEmail] = r.PayerEmail,
             [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
         }
         .Merge(r.Metadata);
 
-        logger.ChargingPayment(r.PayerId, r.Amount, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
+        logger.ChargingPayment(r.PayerId, r.Amount.Amount, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(r.Session).ChargeAsync(new StripeChargeOptions
         {
@@ -83,11 +83,11 @@ internal sealed class PaymentManager : IPaymentManager
             [PaymentMetadataKeys.FromUserId] = r.PayerId.ToString(),
             [PaymentMetadataKeys.FromUserEmail] = r.PayerEmail,
             [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
         }
         .Merge(r.Metadata);
 
-        logger.HoldingPayment(r.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
+        logger.HoldingPayment(r.Amount.Amount, r.PayerId, r.PayeeId, destinationStripeId, r.Metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(r.Session).HoldAsync(new StripeHoldOptions
         {
@@ -111,11 +111,11 @@ internal sealed class PaymentManager : IPaymentManager
         var metadata = new Dictionary<string, string>
         {
             [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
         }
         .Merge(r.Metadata);
 
-        logger.ReleasingPayment(r.Amount, r.PayeeId, destinationStripeId, r.ChargeId);
+        logger.ReleasingPayment(r.Amount.Amount, r.PayeeId, destinationStripeId, r.ChargeId);
 
         return await transferClient.ReleaseAsync(new StripeReleaseOptions
         {
@@ -130,11 +130,11 @@ internal sealed class PaymentManager : IPaymentManager
     {
         var metadata = new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.Amount] = ((long)(r.Amount * 100)).ToString()
+            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
         }
         .Merge(r.Metadata);
 
-        logger.RefundingPayment(r.Amount, r.PaymentIntentId, string.IsNullOrEmpty(r.TransferId) ? string.Empty : $" (reversing transfer {r.TransferId})");
+        logger.RefundingPayment(r.Amount.Amount, r.PaymentIntentId, string.IsNullOrEmpty(r.TransferId) ? string.Empty : $" (reversing transfer {r.TransferId})");
 
         return await transferClient.RefundAsync(new StripeRefundOptions
         {
