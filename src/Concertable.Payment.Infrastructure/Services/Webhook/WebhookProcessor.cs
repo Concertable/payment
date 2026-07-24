@@ -58,29 +58,29 @@ internal sealed class WebhookProcessor : IWebhookProcessor
 
             switch (stripeEvent.Type)
             {
-                case "payment_intent.succeeded":
-                    logger.PublishingPaymentSucceededEvent(intent.Id, stripeEvent.Id, intent.Metadata.GetValueOrDefault("type", "unknown"));
+                case EventTypes.PaymentIntentSucceeded:
+                    logger.PublishingPaymentSucceededEvent(intent.Id, stripeEvent.Id, intent.Metadata.GetValueOrDefault(PaymentMetadataKeys.Type, "unknown"));
                     await integrationEventBus.PublishAsync(new PaymentSucceededEvent(intent.Id, intent.Metadata), cancellationToken);
                     break;
 
-                case "payment_intent.amount_capturable_updated":
-                    if (intent.Metadata.TryGetValue("type", out var capturedType) && capturedType == TransactionTypes.Verify)
+                case EventTypes.PaymentIntentAmountCapturableUpdated:
+                    if (intent.Metadata.TryGetValue(PaymentMetadataKeys.Type, out var capturedType) && capturedType == TransactionTypes.Verify)
                     {
                         logger.CancellingVerifyPaymentIntent(intent.Id, stripeEvent.Id);
                         await stripeHoldClient.CancelAsync(intent.Id, cancellationToken);
                         var enrichedMetadata = new Dictionary<string, string>(intent.Metadata)
                         {
-                            ["paymentMethodId"] = intent.PaymentMethodId
+                            [PaymentMetadataKeys.PaymentMethodId] = intent.PaymentMethodId
                         };
                         logger.PublishingVerifyPaymentSucceededEvent(intent.Id, stripeEvent.Id);
                         await integrationEventBus.PublishAsync(new PaymentSucceededEvent(intent.Id, enrichedMetadata), cancellationToken);
                     }
                     break;
 
-                case "payment_intent.payment_failed":
+                case EventTypes.PaymentIntentPaymentFailed:
                     var failureCode = intent.LastPaymentError?.Code;
                     var failureMessage = intent.LastPaymentError?.Message;
-                    logger.PublishingPaymentFailedEvent(intent.Id, stripeEvent.Id, intent.Metadata.GetValueOrDefault("type", "unknown"), failureCode, failureMessage);
+                    logger.PublishingPaymentFailedEvent(intent.Id, stripeEvent.Id, intent.Metadata.GetValueOrDefault(PaymentMetadataKeys.Type, "unknown"), failureCode, failureMessage);
                     await integrationEventBus.PublishAsync(new PaymentFailedEvent(intent.Id, failureCode, failureMessage, intent.Metadata), cancellationToken);
                     break;
 

@@ -9,7 +9,7 @@ internal interface ICustomerPaymentService
         int concertId,
         Guid payeeId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default);
 
@@ -17,6 +17,6 @@ internal interface ICustomerPaymentService
         Guid payerId,
         int concertId,
         Guid payeeId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 }

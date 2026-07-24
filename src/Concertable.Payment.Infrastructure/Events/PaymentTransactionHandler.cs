@@ -19,7 +19,7 @@ internal sealed class PaymentTransactionHandler : IIntegrationEventHandler<Payme
 
     public async Task HandleAsync(PaymentSucceededEvent @event, MessageEnvelope envelope, CancellationToken ct)
     {
-        var type = @event.Metadata.GetValueOrDefault("type", string.Empty);
+        var type = @event.Metadata.GetValue(PaymentMetadataKeys.Type);
         logger.DispatchingPaymentSucceededEvent(@event.TransactionId, type);
 
         var handler = handlerFactory.Create(type);
