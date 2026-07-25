@@ -13,6 +13,11 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
             money.Property(m => m.Amount).HasColumnName("Amount");
             money.Property(m => m.Currency).HasColumnName("Currency");
         });
+        builder.ComplexProperty(e => e.PlatformFee, money =>
+        {
+            money.Property(m => m.Amount).HasColumnName("PlatformFee");
+            money.Property(m => m.Currency).HasColumnName("PlatformFeeCurrency");
+        });
         builder.HasIndex(e => e.BookingId).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
         builder.HasIndex(e => e.Status);
