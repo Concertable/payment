@@ -31,19 +31,14 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         string paymentMethodId,
         CancellationToken ct = default)
     {
-        var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
-
-        return await paymentManager.ChargeAsync(new ChargeRequest
-        {
-            PayerId = payerId,
-            PayerEmail = account.Email,
-            PayeeId = payeeId,
-            Amount = amount,
-            PaymentMethodId = paymentMethodId,
-            Metadata = metadata,
-            Session = PaymentSession.OnSession
-        }, ct);
+        return await paymentManager.ChargeAsync(
+            payerId,
+            payeeId,
+            amount,
+            paymentMethodId,
+            PaymentSession.OnSession,
+            metadata,
+            ct);
     }
 
     public async Task<CheckoutSession> CreatePaymentSessionAsync(
