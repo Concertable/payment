@@ -16,6 +16,9 @@ public sealed class ManagerPaymentServiceTests
     private readonly Mock<IStripeHoldClient> stripeHoldClient;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
     private readonly Mock<ITransactionRepository> transactionRepository;
+    private readonly Mock<ILedger> ledger;
+
+    private readonly List<LedgerPosting> postings = [];
 
     private readonly Guid payerId = Guid.NewGuid();
     private readonly Guid payeeId = Guid.NewGuid();
@@ -27,6 +30,12 @@ public sealed class ManagerPaymentServiceTests
         this.stripeHoldClient = new Mock<IStripeHoldClient>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
         this.transactionRepository = new Mock<ITransactionRepository>();
+        this.ledger = new Mock<ILedger>();
+
+        ledger
+            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
+            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
 
         payoutAccountRepository
             .Setup(r => r.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -40,6 +49,7 @@ public sealed class ManagerPaymentServiceTests
             stripeHoldClient.Object,
             payoutAccountRepository.Object,
             transactionRepository.Object,
+            ledger.Object,
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
     [Fact]
@@ -67,6 +77,12 @@ public sealed class ManagerPaymentServiceTests
         Assert.NotNull(captured);
         Assert.Equal(6200, captured.Amount);
         Assert.Equal(1200, captured.PlatformFee);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(7, posting.BookingId);
+        Assert.Equal("pi_fee", posting.PaymentIntentId);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(1200, posting.CreditMinorUnits(LedgerAccountType.PlatformRevenue));
     }
 
     [Fact]
@@ -90,6 +106,11 @@ public sealed class ManagerPaymentServiceTests
         Assert.NotNull(captured);
         Assert.Equal(5000, captured.Amount);
         Assert.Equal(0, captured.PlatformFee);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(2, posting.Legs.Count);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.DoesNotContain(posting.Legs, l => l.Account.Type == LedgerAccountType.PlatformRevenue);
     }
 
     [Fact]
