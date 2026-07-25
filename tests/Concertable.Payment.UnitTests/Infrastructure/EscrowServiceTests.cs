@@ -16,8 +16,11 @@ public sealed class EscrowServiceTests
     private readonly Mock<IPaymentManager> paymentManager;
     private readonly Mock<IEscrowRepository> escrowRepository;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
+    private readonly Mock<ILedger> ledger;
     private readonly FakeTimeProvider timeProvider;
     private readonly EscrowService sut;
+
+    private readonly List<LedgerPosting> postings = [];
 
     private readonly Guid payerId = Guid.NewGuid();
     private readonly Guid payeeId = Guid.NewGuid();
@@ -27,6 +30,13 @@ public sealed class EscrowServiceTests
         this.paymentManager = new Mock<IPaymentManager>();
         this.escrowRepository = new Mock<IEscrowRepository>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
+        this.ledger = new Mock<ILedger>();
+
+        ledger
+            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
+            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
+
         this.timeProvider = new FakeTimeProvider();
 
         this.sut = SutWithFee(0m);
@@ -41,6 +51,7 @@ public sealed class EscrowServiceTests
             paymentManager.Object,
             escrowRepository.Object,
             payoutAccountRepository.Object,
+            ledger.Object,
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);
@@ -67,6 +78,11 @@ public sealed class EscrowServiceTests
         Assert.Equal(EscrowStatus.Held, captured.Status);
         Assert.Equal("pi_synced", captured.ChargeId);
         Assert.Equal(7, captured.BookingId);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.Receivable));
+        Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.StripeClearing));
     }
 
     [Fact]
@@ -94,6 +110,7 @@ public sealed class EscrowServiceTests
         Assert.Equal("pi_3ds_secret_xyz", result.Value.ClientSecret);
         Assert.NotNull(captured);
         Assert.Equal(EscrowStatus.Pending, captured.Status);
+        Assert.Empty(postings);
     }
 
     [Fact]
@@ -231,6 +248,11 @@ public sealed class EscrowServiceTests
         Assert.Equal("re_test", result.Value.RefundId);
         Assert.Equal(EscrowStatus.Refunded, heldEscrow.Status);
         Assert.Equal("re_test", heldEscrow.RefundId);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.StripeClearing));
+        Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
     }
 
     [Fact]
@@ -259,6 +281,11 @@ public sealed class EscrowServiceTests
         Assert.NotNull(captured);
         Assert.Equal("tr_dest", captured.TransferId);
         Assert.Equal(EscrowStatus.Refunded, releasedEscrow.Status);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
     }
 
     [Fact]
@@ -349,6 +376,11 @@ public sealed class EscrowServiceTests
         Assert.Equal(Money.Gbp(62), captured.Amount);
         Assert.Equal(Money.Gbp(12), captured.PlatformFee);
         Assert.Equal(EscrowStatus.Held, captured.Status);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.Receivable));
+        Assert.Equal(6200, posting.CreditMinorUnits(LedgerAccountType.StripeClearing));
     }
 
     [Fact]
@@ -375,6 +407,12 @@ public sealed class EscrowServiceTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(released);
         Assert.Equal(Money.Gbp(50), released.Amount);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.StripeClearing));
+        Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(1200, posting.CreditMinorUnits(LedgerAccountType.PlatformRevenue));
     }
 
     [Fact]
