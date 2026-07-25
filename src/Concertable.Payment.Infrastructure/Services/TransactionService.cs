@@ -8,15 +8,18 @@ internal sealed class TransactionService : ITransactionService
     private readonly ITransactionRepository purchaseRepository;
     private readonly ICurrentUser currentUser;
     private readonly ITransactionMapper transactionMapper;
+    private readonly ILedger ledger;
 
     public TransactionService(
         ICurrentUser currentUser,
         ITransactionRepository purchaseRepository,
-        ITransactionMapper transactionMapper)
+        ITransactionMapper transactionMapper,
+        ILedger ledger)
     {
         this.currentUser = currentUser;
         this.purchaseRepository = purchaseRepository;
         this.transactionMapper = transactionMapper;
+        this.ledger = ledger;
     }
 
     public async Task LogAsync(ITransaction dto)
@@ -25,15 +28,17 @@ internal sealed class TransactionService : ITransactionService
         await purchaseRepository.CreateAsync(entity);
     }
 
-    public async Task CompleteAsync(string paymentIntentId)
+    public async Task CompleteAsync(string paymentIntentId, CancellationToken ct = default)
     {
         var entity = await purchaseRepository.GetByPaymentIntentIdAsync(paymentIntentId);
 
-        if (entity is null)
+        if (entity is null || !entity.Complete())
             return;
 
-        entity.Complete();
         await purchaseRepository.SaveChangesAsync();
+
+        if (entity is SettlementTransactionEntity settlement)
+            await ledger.PostAsync(LedgerPostings.DirectSettlement(settlement), ct);
     }
 
     public async Task<IPagination<ITransaction>> GetAsync(IPageParams pageParams)
