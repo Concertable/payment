@@ -15,6 +15,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly IStripeHoldClient stripeHoldClient;
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ITransactionRepository transactionRepository;
+    private readonly ILedger ledger;
     private readonly Money platformFee;
 
     public ManagerPaymentService(
@@ -23,6 +24,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         IStripeHoldClient stripeHoldClient,
         IPayoutAccountRepository payoutAccountRepository,
         ITransactionRepository transactionRepository,
+        ILedger ledger,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
         this.paymentManager = paymentManager;
@@ -30,6 +32,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.stripeHoldClient = stripeHoldClient;
         this.payoutAccountRepository = payoutAccountRepository;
         this.transactionRepository = transactionRepository;
+        this.ledger = ledger;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
@@ -83,6 +86,10 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         {
             transaction.Complete();
             await transactionRepository.SaveChangesAsync();
+
+            await ledger.PostAsync(
+                LedgerPostings.DirectSettlement(payerId, payeeId, amount, platformFee, bookingId, charge.Value.TransactionId),
+                ct);
         }
 
         return charge;
