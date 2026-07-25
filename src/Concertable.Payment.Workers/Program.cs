@@ -5,7 +5,6 @@ using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Seed;
 using Concertable.Auth.Contracts.Events;
-using Concertable.B2B.Tenant.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
 using Concertable.ServiceDefaults;
 using Concertable.DataAccess.Infrastructure.Data;
@@ -43,7 +42,7 @@ services.AddAzureServiceBusTransport(
     },
     reg => reg
         .SubscribeTo<CredentialRegisteredEvent>()
-        .SubscribeTo<TenantCreatedEvent>()
+        .SubscribeTo<PayoutOwnerRegisteredEvent>()
         .SubscribeTo<PaymentSucceededEvent>()
         .SubscribeTo<PaymentFailedEvent>());
 
