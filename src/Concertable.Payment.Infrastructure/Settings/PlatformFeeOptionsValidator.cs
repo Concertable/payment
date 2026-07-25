@@ -14,17 +14,12 @@ internal sealed class PlatformFeeOptionsValidator : IValidateOptions<PlatformFee
 
     public ValidateOptionsResult Validate(string? name, PlatformFeeOptions options)
     {
+        var configured = configuration[$"{PlatformFeeOptions.SectionName}:{nameof(PlatformFeeOptions.Fee)}"];
+        if (string.IsNullOrWhiteSpace(configured))
+            return ValidateOptionsResult.Fail($"{PlatformFeeOptions.SectionName}:{nameof(PlatformFeeOptions.Fee)} must be configured.");
+
         if (options.Fee < 0)
             return ValidateOptionsResult.Fail($"{PlatformFeeOptions.SectionName}:{nameof(PlatformFeeOptions.Fee)} cannot be negative.");
-
-        // Where real Stripe money moves (prod, and E2E's Stripe test mode) the fee must be an explicit
-        // decision — refuse a silently-defaulted 0. Checked on the raw config key, not options.Fee, because
-        // a non-nullable decimal reads 0 whether the key is absent or explicitly 0.
-        var useRealStripe = configuration.GetSection("ExternalServices").GetValue<bool>("UseRealStripe");
-        var configured = configuration[$"{PlatformFeeOptions.SectionName}:{nameof(PlatformFeeOptions.Fee)}"];
-        if (useRealStripe && string.IsNullOrWhiteSpace(configured))
-            return ValidateOptionsResult.Fail(
-                $"{PlatformFeeOptions.SectionName}:{nameof(PlatformFeeOptions.Fee)} must be explicitly configured when real Stripe is enabled — refusing to default to 0, because silently taking no platform fee is a financial risk.");
 
         return ValidateOptionsResult.Success;
     }
