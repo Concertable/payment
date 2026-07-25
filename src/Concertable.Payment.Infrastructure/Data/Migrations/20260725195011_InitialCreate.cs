@@ -45,6 +45,38 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "LedgerAccounts",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Currency = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LedgerAccounts", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LedgerTransactions",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    BookingId = table.Column<int>(type: "int", nullable: false),
+                    PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    OccurredAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LedgerTransactions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PayoutAccounts",
                 schema: "payment",
                 columns: table => new
@@ -100,6 +132,38 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     table.PrimaryKey("PK_Transactions", x => x.Id);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "LedgerEntries",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LedgerTransactionId = table.Column<int>(type: "int", nullable: false),
+                    LedgerAccountId = table.Column<int>(type: "int", nullable: false),
+                    Direction = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<long>(type: "bigint", nullable: false),
+                    Currency = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LedgerEntries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LedgerEntries_LedgerAccounts_LedgerAccountId",
+                        column: x => x.LedgerAccountId,
+                        principalSchema: "payment",
+                        principalTable: "LedgerAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_LedgerEntries_LedgerTransactions_LedgerTransactionId",
+                        column: x => x.LedgerTransactionId,
+                        principalSchema: "payment",
+                        principalTable: "LedgerTransactions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Escrows_BookingId",
                 schema: "payment",
@@ -119,6 +183,37 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment",
                 table: "Escrows",
                 column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LedgerAccounts_Type_OwnerId_Currency",
+                schema: "payment",
+                table: "LedgerAccounts",
+                columns: new[] { "Type", "OwnerId", "Currency" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LedgerEntries_LedgerAccountId",
+                schema: "payment",
+                table: "LedgerEntries",
+                column: "LedgerAccountId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LedgerEntries_LedgerTransactionId",
+                schema: "payment",
+                table: "LedgerEntries",
+                column: "LedgerTransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LedgerTransactions_BookingId",
+                schema: "payment",
+                table: "LedgerTransactions",
+                column: "BookingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LedgerTransactions_PaymentIntentId",
+                schema: "payment",
+                table: "LedgerTransactions",
+                column: "PaymentIntentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_OwnerId",
@@ -167,6 +262,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment");
 
             migrationBuilder.DropTable(
+                name: "LedgerEntries",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
                 name: "PayoutAccounts",
                 schema: "payment");
 
@@ -176,6 +275,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Transactions",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "LedgerAccounts",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "LedgerTransactions",
                 schema: "payment");
         }
     }
