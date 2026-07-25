@@ -49,7 +49,8 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
                 Metadata = opts.Metadata,
                 TransferData = new PaymentIntentTransferDataOptions
                 {
-                    Destination = opts.DestinationStripeId
+                    Destination = opts.DestinationStripeId,
+                    Amount = (opts.TransferAmount ?? opts.Amount).ToMinorUnits()
                 }
             };
 

@@ -155,6 +155,19 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                                 .HasColumnName("Currency");
                         });
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PlatformFee", "Concertable.Payment.Domain.Entities.EscrowEntity.PlatformFee#Money", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("PlatformFee");
+
+                            b1.Property<int>("Currency")
+                                .HasColumnType("int")
+                                .HasColumnName("PlatformFeeCurrency");
+                        });
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
@@ -283,6 +296,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("int")
                         .HasColumnName("ContextId");
+
+                    b.Property<long>("PlatformFee")
+                        .HasColumnType("bigint");
 
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });
