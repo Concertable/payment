@@ -11,6 +11,7 @@ using Concertable.ServiceDefaults;
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
+using Concertable.Messaging.AzureServiceBus.Options;
 using Concertable.Kernel.Extensions;
 using Concertable.Seed.Shared.Extensions;
 
@@ -39,7 +40,9 @@ services.AddAzureServiceBusTransport(
         opts.ConnectionString = builder.Configuration.GetConnectionString("asb")
             ?? (builder.Environment.IsEnvironment("Testing") ? null!
                 : throw new InvalidOperationException("Connection string 'asb' is required."));
-        opts.ServiceName = "concertable-payment";
+        opts.ServiceName = builder.Configuration[AzureServiceBusOptions.ServiceNameConfigKey]
+            ?? (builder.Environment.IsEnvironment("Testing") ? "concertable-payment"
+                : throw new InvalidOperationException($"Configuration '{AzureServiceBusOptions.ServiceNameConfigKey}' is required."));
     },
     reg => reg
         .SubscribeTo<CredentialRegisteredEvent>()
