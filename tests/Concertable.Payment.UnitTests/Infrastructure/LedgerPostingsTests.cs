@@ -21,6 +21,22 @@ public sealed class LedgerPostingsTests
     }
 
     [Fact]
+    public void DirectSettlement_FromSettlementEntity_ReconstructsChargeShareFee()
+    {
+        var settlement = SettlementTransactionEntity.Create(
+            Payer, Payee, "pi_entity", amount: 6200, platformFee: 1200, TransactionStatus.Complete, bookingId: 7);
+
+        var posting = LedgerPostings.DirectSettlement(settlement);
+
+        Assert.Equal(7, posting.BookingId);
+        Assert.Equal("pi_entity", posting.PaymentIntentId);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.Receivable));
+        Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(1200, posting.CreditMinorUnits(LedgerAccountType.PlatformRevenue));
+    }
+
+    [Fact]
     public void DirectSettlement_ZeroFee_OmitsRevenueLegAndBalances()
     {
         var posting = LedgerPostings.DirectSettlement(Payer, Payee, Money.Gbp(50), Money.Gbp(0), 7, "pi");

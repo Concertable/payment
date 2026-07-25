@@ -2,6 +2,15 @@ namespace Concertable.Payment.Infrastructure;
 
 internal static class LedgerPostings
 {
+    public static LedgerPosting DirectSettlement(SettlementTransactionEntity settlement) =>
+        DirectSettlement(
+            settlement.PayerId,
+            settlement.PayeeId,
+            Money.FromMinorUnits(settlement.Amount - settlement.PlatformFee, Currency.Gbp),
+            Money.FromMinorUnits(settlement.PlatformFee, Currency.Gbp),
+            settlement.BookingId,
+            settlement.PaymentIntentId);
+
     public static LedgerPosting DirectSettlement(
         Guid payerId, Guid payeeId, Money gross, Money fee, int bookingId, string? paymentIntentId)
     {

@@ -6,11 +6,13 @@ namespace Concertable.Payment.Infrastructure.Events;
 internal sealed class EscrowConfirmedHandler : ITransactionHandler
 {
     private readonly IEscrowRepository escrowRepository;
+    private readonly ILedger ledger;
     private readonly ILogger<EscrowConfirmedHandler> logger;
 
-    public EscrowConfirmedHandler(IEscrowRepository escrowRepository, ILogger<EscrowConfirmedHandler> logger)
+    public EscrowConfirmedHandler(IEscrowRepository escrowRepository, ILedger ledger, ILogger<EscrowConfirmedHandler> logger)
     {
         this.escrowRepository = escrowRepository;
+        this.ledger = ledger;
         this.logger = logger;
     }
 
@@ -31,6 +33,10 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
 
         escrow.Confirm();
         await escrowRepository.SaveChangesAsync();
+
+        await ledger.PostAsync(
+            LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+            ct);
 
         logger.EscrowConfirmed(escrow.Id, escrow.ChargeId);
     }
