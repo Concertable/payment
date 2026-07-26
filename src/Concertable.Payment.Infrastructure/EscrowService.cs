@@ -14,7 +14,7 @@ internal sealed class EscrowService : IEscrowService
     private readonly IPaymentManager paymentManager;
     private readonly IEscrowRepository escrowRepository;
     private readonly IPayoutAccountRepository payoutAccountRepository;
-    private readonly ILedger ledger;
+    private readonly ILedgerService ledger;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<EscrowService> logger;
     private readonly Money platformFee;
@@ -23,7 +23,7 @@ internal sealed class EscrowService : IEscrowService
         IPaymentManager paymentManager,
         IEscrowRepository escrowRepository,
         IPayoutAccountRepository payoutAccountRepository,
-        ILedger ledger,
+        ILedgerService ledger,
         IOptions<PlatformFeeOptions> platformFeeOptions,
         TimeProvider timeProvider,
         ILogger<EscrowService> logger)
