@@ -8,13 +8,13 @@ internal sealed class TransactionService : ITransactionService
     private readonly ITransactionRepository purchaseRepository;
     private readonly ICurrentUser currentUser;
     private readonly ITransactionMapper transactionMapper;
-    private readonly ILedger ledger;
+    private readonly ILedgerService ledger;
 
     public TransactionService(
         ICurrentUser currentUser,
         ITransactionRepository purchaseRepository,
         ITransactionMapper transactionMapper,
-        ILedger ledger)
+        ILedgerService ledger)
     {
         this.currentUser = currentUser;
         this.purchaseRepository = purchaseRepository;
