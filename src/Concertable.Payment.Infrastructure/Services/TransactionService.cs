@@ -35,10 +35,13 @@ internal sealed class TransactionService : ITransactionService
         if (entity is null || !entity.Complete())
             return;
 
-        await purchaseRepository.SaveChangesAsync();
-
         if (entity is SettlementTransactionEntity settlement)
+        {
             await ledger.PostAsync(LedgerPostings.DirectSettlement(settlement), ct);
+            return;
+        }
+
+        await purchaseRepository.SaveChangesAsync();
     }
 
     public async Task<IPagination<ITransaction>> GetAsync(IPageParams pageParams)

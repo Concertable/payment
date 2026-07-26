@@ -45,7 +45,7 @@ public sealed class TransactionServiceTests
         await sut.CompleteAsync("pi_3ds");
 
         Assert.Equal(TransactionStatus.Complete, settlement.Status);
-        repository.Verify(r => r.SaveChangesAsync(), Times.Once);
+        repository.Verify(r => r.SaveChangesAsync(), Times.Never);
 
         var posting = Assert.Single(postings);
         Assert.Equal(7, posting.BookingId);
@@ -67,6 +67,33 @@ public sealed class TransactionServiceTests
 
         repository.Verify(r => r.SaveChangesAsync(), Times.Never);
         Assert.Empty(postings);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_LedgerStagingFails_RetryCommitsStateAndPostingTogether()
+    {
+        var failedAttempt = SettlementTransactionEntity.Create(
+            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, bookingId: 7);
+        var retry = SettlementTransactionEntity.Create(
+            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, bookingId: 7);
+        repository
+            .SetupSequence(r => r.GetByPaymentIntentIdAsync("pi_retry"))
+            .ReturnsAsync(failedAttempt)
+            .ReturnsAsync(retry);
+        ledger
+            .SetupSequence(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Ledger staging failed"))
+            .ReturnsAsync((LedgerTransactionEntity)null!);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.CompleteAsync("pi_retry"));
+
+        repository.Verify(r => r.SaveChangesAsync(), Times.Never);
+
+        await sut.CompleteAsync("pi_retry");
+
+        Assert.Equal(TransactionStatus.Complete, retry.Status);
+        repository.Verify(r => r.SaveChangesAsync(), Times.Never);
+        ledger.Verify(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

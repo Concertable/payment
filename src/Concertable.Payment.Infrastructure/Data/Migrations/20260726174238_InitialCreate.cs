@@ -67,6 +67,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    PostingType = table.Column<int>(type: "int", nullable: false),
+                    ExternalId = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     BookingId = table.Column<int>(type: "int", nullable: false),
                     PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     OccurredAt = table.Column<DateTime>(type: "datetime2", nullable: false)
@@ -214,6 +216,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment",
                 table: "LedgerTransactions",
                 column: "PaymentIntentId");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_LedgerTransactions_PostingType_ExternalId",
+                schema: "payment",
+                table: "LedgerTransactions",
+                columns: new[] { "PostingType", "ExternalId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_OwnerId",
