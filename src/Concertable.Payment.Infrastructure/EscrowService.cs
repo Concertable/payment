@@ -85,8 +85,6 @@ internal sealed class EscrowService : IEscrowService
         if (!hold.Value.RequiresAction)
         {
             escrow.Confirm();
-            await escrowRepository.SaveChangesAsync();
-
             await ledger.PostAsync(
                 LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
                 ct);
@@ -119,8 +117,6 @@ internal sealed class EscrowService : IEscrowService
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
         escrow.Confirm();
         await escrowRepository.AddAsync(escrow);
-        await escrowRepository.SaveChangesAsync();
-
         await ledger.PostAsync(
             LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
             ct);
@@ -153,11 +149,14 @@ internal sealed class EscrowService : IEscrowService
             return release;
 
         escrow.Release(release.Value.TransferId, timeProvider.GetUtcNow().DateTime);
-        await escrowRepository.SaveChangesAsync();
-
         await ledger.PostAsync(
             LedgerPostings.EscrowRelease(
-                escrow.ToOwnerId, escrow.Amount - escrow.PlatformFee, escrow.PlatformFee, escrow.BookingId, escrow.ChargeId),
+                escrow.ToOwnerId,
+                escrow.Amount - escrow.PlatformFee,
+                escrow.PlatformFee,
+                escrow.BookingId,
+                escrow.ChargeId,
+                release.Value.TransferId),
             ct);
 
         return release;
@@ -216,12 +215,21 @@ internal sealed class EscrowService : IEscrowService
             return refund;
 
         escrow.Refund(refund.Value.RefundId, timeProvider.GetUtcNow().DateTime);
-        await escrowRepository.SaveChangesAsync();
-
         var refundPosting = escrow.TransferId is null
-            ? LedgerPostings.EscrowRefundBeforeRelease(escrow.FromOwnerId, refundAmount, escrow.BookingId, escrow.ChargeId)
+            ? LedgerPostings.EscrowRefundBeforeRelease(
+                escrow.FromOwnerId,
+                refundAmount,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId)
             : LedgerPostings.EscrowRefundAfterRelease(
-                escrow.FromOwnerId, escrow.ToOwnerId, escrow.Amount - escrow.PlatformFee, escrow.PlatformFee, escrow.BookingId, escrow.ChargeId);
+                escrow.FromOwnerId,
+                escrow.ToOwnerId,
+                escrow.Amount - escrow.PlatformFee,
+                escrow.PlatformFee,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId);
         await ledger.PostAsync(refundPosting, ct);
 
         return refund;

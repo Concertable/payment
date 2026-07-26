@@ -13,6 +13,8 @@ public sealed class LedgerTransactionEntityTests
 
     private static LedgerTransactionEntity PostSettlement(Money gross, Money fee) =>
         LedgerTransactionEntity.Post(
+            postingType: LedgerPostingType.DirectSettlement,
+            externalId: "pi_test",
             bookingId: 7,
             paymentIntentId: "pi_test",
             occurredAt: DateTime.UtcNow,
@@ -46,12 +48,16 @@ public sealed class LedgerTransactionEntityTests
 
         Assert.Equal(7, transaction.BookingId);
         Assert.Equal("pi_test", transaction.PaymentIntentId);
+        Assert.Equal(LedgerPostingType.DirectSettlement, transaction.PostingType);
+        Assert.Equal("pi_test", transaction.ExternalId);
     }
 
     [Fact]
     public void Post_UnbalancedLegs_Throws()
     {
         var ex = Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
+            postingType: LedgerPostingType.DirectSettlement,
+            externalId: "pi_test",
             bookingId: 7,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,
@@ -67,6 +73,8 @@ public sealed class LedgerTransactionEntityTests
     [Fact]
     public void Post_FewerThanTwoLegs_Throws() =>
         Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
+            postingType: LedgerPostingType.DirectSettlement,
+            externalId: "pi_test",
             bookingId: 7,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,
@@ -75,6 +83,8 @@ public sealed class LedgerTransactionEntityTests
     [Fact]
     public void Post_NonPositiveAmount_Throws() =>
         Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
+            postingType: LedgerPostingType.DirectSettlement,
+            externalId: "pi_test",
             bookingId: 7,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,

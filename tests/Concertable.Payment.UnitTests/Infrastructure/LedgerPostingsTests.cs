@@ -30,6 +30,8 @@ public sealed class LedgerPostingsTests
 
         Assert.Equal(7, posting.BookingId);
         Assert.Equal("pi_entity", posting.PaymentIntentId);
+        Assert.Equal(LedgerPostingType.DirectSettlement, posting.PostingType);
+        Assert.Equal("pi_entity", posting.ExternalId);
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.Receivable));
         Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Payable));
@@ -61,7 +63,7 @@ public sealed class LedgerPostingsTests
     [Fact]
     public void EscrowRelease_WithFee_ClearsToPayeeAndRevenue()
     {
-        var posting = LedgerPostings.EscrowRelease(Payee, Money.Gbp(50), Money.Gbp(12), 7, "pi");
+        var posting = LedgerPostings.EscrowRelease(Payee, Money.Gbp(50), Money.Gbp(12), 7, "pi", "tr_1");
 
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.StripeClearing));
@@ -72,7 +74,7 @@ public sealed class LedgerPostingsTests
     [Fact]
     public void EscrowRelease_ZeroFee_OmitsRevenueLeg()
     {
-        var posting = LedgerPostings.EscrowRelease(Payee, Money.Gbp(50), Money.Gbp(0), 7, "pi");
+        var posting = LedgerPostings.EscrowRelease(Payee, Money.Gbp(50), Money.Gbp(0), 7, "pi", "tr_1");
 
         Assert.Equal(2, posting.Legs.Count);
         Assert.Equal(0, posting.SignedMinorUnitSum());
@@ -82,7 +84,7 @@ public sealed class LedgerPostingsTests
     [Fact]
     public void EscrowRefundBeforeRelease_ReversesClearingToPayer()
     {
-        var posting = LedgerPostings.EscrowRefundBeforeRelease(Payer, Money.Gbp(62), 7, "pi");
+        var posting = LedgerPostings.EscrowRefundBeforeRelease(Payer, Money.Gbp(62), 7, "pi", "re_1");
 
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.StripeClearing));
@@ -92,7 +94,8 @@ public sealed class LedgerPostingsTests
     [Fact]
     public void EscrowRefundAfterRelease_WithFee_ReversesPayeeAndRevenueToPayer()
     {
-        var posting = LedgerPostings.EscrowRefundAfterRelease(Payer, Payee, Money.Gbp(50), Money.Gbp(12), 7, "pi");
+        var posting = LedgerPostings.EscrowRefundAfterRelease(
+            Payer, Payee, Money.Gbp(50), Money.Gbp(12), 7, "pi", "re_1");
 
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.Payable));
@@ -103,7 +106,8 @@ public sealed class LedgerPostingsTests
     [Fact]
     public void EscrowRefundAfterRelease_ZeroFee_OmitsRevenueLeg()
     {
-        var posting = LedgerPostings.EscrowRefundAfterRelease(Payer, Payee, Money.Gbp(50), Money.Gbp(0), 7, "pi");
+        var posting = LedgerPostings.EscrowRefundAfterRelease(
+            Payer, Payee, Money.Gbp(50), Money.Gbp(0), 7, "pi", "re_1");
 
         Assert.Equal(2, posting.Legs.Count);
         Assert.Equal(0, posting.SignedMinorUnitSum());

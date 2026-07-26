@@ -6,15 +6,22 @@ namespace Concertable.Payment.Infrastructure.Data.Configurations;
 
 internal sealed class LedgerAccountEntityConfiguration : IEntityTypeConfiguration<LedgerAccountEntity>
 {
+    internal const string IdentityIndex = "IX_LedgerAccounts_Type_OwnerId_Currency";
+
     public void Configure(EntityTypeBuilder<LedgerAccountEntity> builder)
     {
         builder.ToTable(Schema.Tables.LedgerAccounts, Schema.Name);
-        builder.HasIndex(a => new { a.Type, a.OwnerId, a.Currency }).IsUnique().HasFilter(null);
+        builder.HasIndex(a => new { a.Type, a.OwnerId, a.Currency })
+            .IsUnique()
+            .HasFilter(null)
+            .HasDatabaseName(IdentityIndex);
     }
 }
 
 internal sealed class LedgerTransactionEntityConfiguration : IEntityTypeConfiguration<LedgerTransactionEntity>
 {
+    internal const string PostingIdentityIndex = "UX_LedgerTransactions_PostingType_ExternalId";
+
     public void Configure(EntityTypeBuilder<LedgerTransactionEntity> builder)
     {
         builder.ToTable(Schema.Tables.LedgerTransactions, Schema.Name);
@@ -24,6 +31,10 @@ internal sealed class LedgerTransactionEntityConfiguration : IEntityTypeConfigur
             .OnDelete(DeleteBehavior.Cascade);
         builder.Metadata.FindNavigation(nameof(LedgerTransactionEntity.Entries))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(t => t.ExternalId).HasMaxLength(255);
+        builder.HasIndex(t => new { t.PostingType, t.ExternalId })
+            .IsUnique()
+            .HasDatabaseName(PostingIdentityIndex);
         builder.HasIndex(t => t.BookingId);
         builder.HasIndex(t => t.PaymentIntentId);
     }

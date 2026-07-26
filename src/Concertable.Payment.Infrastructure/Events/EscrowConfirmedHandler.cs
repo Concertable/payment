@@ -32,8 +32,6 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
         }
 
         escrow.Confirm();
-        await escrowRepository.SaveChangesAsync();
-
         await ledger.PostAsync(
             LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
             ct);

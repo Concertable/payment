@@ -28,13 +28,15 @@ internal sealed class LedgerPostingService : ILedger
         }
 
         var transaction = LedgerTransactionEntity.Post(
+            posting.PostingType,
+            posting.ExternalId,
             posting.BookingId,
             posting.PaymentIntentId,
             timeProvider.GetUtcNow().DateTime,
             legs);
 
         await transactionRepository.AddAsync(transaction, ct);
-        await transactionRepository.SaveChangesAsync(ct);
+        await transactionRepository.CommitPostingAsync(ct);
 
         return transaction;
     }
