@@ -45,7 +45,7 @@ public sealed class EscrowConfirmedHandlerTests
         await sut.HandleAsync(EventFor("pi_3ds"), CancellationToken.None);
 
         Assert.Equal(EscrowStatus.Held, escrow.Status);
-        escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
 
         var posting = Assert.Single(postings);
         Assert.Equal(7, posting.BookingId);

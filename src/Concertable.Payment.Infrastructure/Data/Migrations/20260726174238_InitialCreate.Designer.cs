@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260725195011_InitialCreate")]
+    [Migration("20260726174238_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -252,17 +252,29 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("BookingId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentIntentId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int>("PostingType")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId");
 
                     b.HasIndex("PaymentIntentId");
+
+                    b.HasIndex("PostingType", "ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LedgerTransactions_PostingType_ExternalId");
 
                     b.ToTable("LedgerTransactions", "payment");
                 });
