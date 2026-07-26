@@ -1,9 +1,4 @@
-namespace Concertable.Payment.Application.Interfaces;
-
-internal interface ILedger
-{
-    Task<LedgerTransactionEntity> PostAsync(LedgerPosting posting, CancellationToken ct = default);
-}
+namespace Concertable.Payment.Application.DTOs;
 
 internal readonly record struct LedgerAccountRef(LedgerAccountType Type, Guid? OwnerId);
 

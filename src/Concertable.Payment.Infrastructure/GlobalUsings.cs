@@ -8,6 +8,7 @@ global using Concertable.Payment.Domain.Enums;
 global using Concertable.Payment.Contracts;
 global using Concertable.Payment.Contracts.Enums;
 global using Concertable.Payment.Contracts.Events;
+global using Concertable.Payment.Application.DTOs;
 global using Concertable.Payment.Application.Interfaces;
 global using Concertable.Payment.Application.Interfaces.Webhook;
 global using Concertable.Payment.Application.Mappers;

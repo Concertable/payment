@@ -1,26 +1,34 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure;
+using Concertable.Payment.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
-public sealed class LedgerPostingServiceTests
+public sealed class LedgerServiceTests : IDisposable
 {
     private readonly Mock<ILedgerAccountRepository> accountRepository;
     private readonly Mock<ILedgerTransactionRepository> transactionRepository;
-    private readonly LedgerPostingService sut;
+    private readonly PaymentDbContext context;
+    private readonly LedgerService sut;
 
     private readonly Guid payer = Guid.NewGuid();
     private readonly Guid payee = Guid.NewGuid();
 
     private LedgerTransactionEntity? posted;
 
-    public LedgerPostingServiceTests()
+    public LedgerServiceTests()
     {
         this.accountRepository = new Mock<ILedgerAccountRepository>();
         this.transactionRepository = new Mock<ILedgerTransactionRepository>();
+        this.context = new PaymentDbContext(
+            new DbContextOptionsBuilder<PaymentDbContext>()
+                .UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=ledger-service-unit-tests;Trusted_Connection=True")
+                .Options,
+            new PaymentConfigurationProvider());
 
         accountRepository
             .Setup(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()))
@@ -30,11 +38,11 @@ public sealed class LedgerPostingServiceTests
             .Setup(r => r.AddAsync(It.IsAny<LedgerTransactionEntity>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerTransactionEntity, CancellationToken>((t, _) => posted = t)
             .ReturnsAsync((LedgerTransactionEntity t, CancellationToken _) => t);
-        transactionRepository
-            .Setup(r => r.CommitPostingAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        this.sut = new LedgerPostingService(accountRepository.Object, transactionRepository.Object, new FakeTimeProvider());
+        this.sut = new LedgerService(
+            accountRepository.Object,
+            transactionRepository.Object,
+            context,
+            new FakeTimeProvider());
     }
 
     private void AllAccountsMissing() =>
@@ -51,14 +59,13 @@ public sealed class LedgerPostingServiceTests
         ]);
 
     [Fact]
-    public async Task PostAsync_WhenAccountsMissing_StagesAccountsAndTransactionWithoutSaving()
+    public async Task PostAsync_WhenAccountsMissing_AddsAccountsAndTransaction()
     {
         AllAccountsMissing();
 
         await sut.PostAsync(Settlement(Money.Gbp(50), Money.Gbp(10)));
 
         accountRepository.Verify(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
-        transactionRepository.Verify(r => r.CommitPostingAsync(It.IsAny<CancellationToken>()), Times.Once);
         Assert.NotNull(posted);
         Assert.Equal(3, posted!.Entries.Count);
     }
@@ -99,48 +106,16 @@ public sealed class LedgerPostingServiceTests
     }
 
     [Fact]
-    public async Task PostAsync_ConcurrentDuplicatePosting_BothCompleteWithOneCommittedIdentity()
-    {
-        var account = LedgerAccountEntity.Create(LedgerAccountType.Receivable, payer, Currency.Gbp);
-        accountRepository
-            .Setup(r => r.FindAsync(It.IsAny<LedgerAccountType>(), It.IsAny<Guid?>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(account);
-
-        var commitAttempt = 0;
-        transactionRepository
-            .Setup(r => r.CommitPostingAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Interlocked.Increment(ref commitAttempt) == 1);
-
-        var posting = new LedgerPosting(
-            LedgerPostingType.DirectSettlement,
-            "pi_concurrent",
-            7,
-            "pi_concurrent",
-            [
-                new PostingLeg(new LedgerAccountRef(LedgerAccountType.Receivable, payer), LedgerDirection.Debit, Money.Gbp(50)),
-                new PostingLeg(new LedgerAccountRef(LedgerAccountType.Receivable, payer), LedgerDirection.Credit, Money.Gbp(50))
-            ]);
-
-        await Task.WhenAll(sut.PostAsync(posting), sut.PostAsync(posting));
-
-        transactionRepository.Verify(
-            r => r.AddAsync(
-                It.Is<LedgerTransactionEntity>(
-                    t => t.PostingType == LedgerPostingType.DirectSettlement && t.ExternalId == "pi_concurrent"),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-        Assert.Equal(2, commitAttempt);
-    }
-
-    [Fact]
-    public async Task PostAsync_CommitFailure_Propagates()
+    public async Task PostAsync_RepositoryFailure_Propagates()
     {
         AllAccountsMissing();
         transactionRepository
-            .Setup(r => r.CommitPostingAsync(It.IsAny<CancellationToken>()))
+            .Setup(r => r.AddAsync(It.IsAny<LedgerTransactionEntity>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Database unavailable"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => sut.PostAsync(Settlement(Money.Gbp(50), Money.Gbp(10))));
     }
+
+    public void Dispose() => context.Dispose();
 }
