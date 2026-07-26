@@ -83,10 +83,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await transactionRepository.CreateAsync(transaction);
 
         if (!charge.Value.RequiresAction && transaction.Complete())
-        {
-            await transactionRepository.SaveChangesAsync();
             await ledger.PostAsync(LedgerPostings.DirectSettlement(transaction), ct);
-        }
 
         return charge;
     }
