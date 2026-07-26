@@ -6,10 +6,10 @@ namespace Concertable.Payment.Infrastructure.Events;
 internal sealed class EscrowConfirmedHandler : ITransactionHandler
 {
     private readonly IEscrowRepository escrowRepository;
-    private readonly ILedger ledger;
+    private readonly ILedgerService ledger;
     private readonly ILogger<EscrowConfirmedHandler> logger;
 
-    public EscrowConfirmedHandler(IEscrowRepository escrowRepository, ILedger ledger, ILogger<EscrowConfirmedHandler> logger)
+    public EscrowConfirmedHandler(IEscrowRepository escrowRepository, ILedgerService ledger, ILogger<EscrowConfirmedHandler> logger)
     {
         this.escrowRepository = escrowRepository;
         this.ledger = ledger;

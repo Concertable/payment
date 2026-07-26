@@ -56,10 +56,52 @@ public sealed class LedgerPostingConcurrencyTests
         }
     }
 
-    private static LedgerPostingService CreateLedger(PaymentDbContext context) =>
+    [Fact]
+    public async Task PostAsync_ConcurrentDuplicatePosting_CommitsOnePosting()
+    {
+        var databaseName = $"ledger-duplicate-{Guid.NewGuid():N}";
+        var connectionString =
+            $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=True;MultipleActiveResultSets=true";
+        var setupOptions = new DbContextOptionsBuilder<PaymentDbContext>()
+            .UseSqlServer(connectionString)
+            .Options;
+
+        await using (var setupContext = new PaymentDbContext(setupOptions, new PaymentConfigurationProvider()))
+            await setupContext.Database.EnsureCreatedAsync();
+
+        try
+        {
+            var saveBarrier = new ConcurrentSaveBarrier(2);
+            var options = new DbContextOptionsBuilder<PaymentDbContext>()
+                .UseSqlServer(connectionString)
+                .AddInterceptors(saveBarrier)
+                .Options;
+            await using var firstContext = new PaymentDbContext(options, new PaymentConfigurationProvider());
+            await using var secondContext = new PaymentDbContext(options, new PaymentConfigurationProvider());
+            var firstLedger = CreateLedger(firstContext);
+            var secondLedger = CreateLedger(secondContext);
+
+            await Task.WhenAll(
+                firstLedger.PostAsync(CreatePosting("same")),
+                secondLedger.PostAsync(CreatePosting("same")));
+
+            await using var verificationContext = new PaymentDbContext(setupOptions, new PaymentConfigurationProvider());
+            Assert.Single(await verificationContext.LedgerAccounts.ToListAsync());
+            Assert.Single(await verificationContext.LedgerTransactions.ToListAsync());
+            Assert.Equal(2, await verificationContext.LedgerEntries.CountAsync());
+        }
+        finally
+        {
+            await using var cleanupContext = new PaymentDbContext(setupOptions, new PaymentConfigurationProvider());
+            await cleanupContext.Database.EnsureDeletedAsync();
+        }
+    }
+
+    private static LedgerService CreateLedger(PaymentDbContext context) =>
         new(
             new LedgerAccountRepository(context),
             new LedgerTransactionRepository(context),
+            context,
             TimeProvider.System);
 
     private static LedgerPosting CreatePosting(string externalId) =>

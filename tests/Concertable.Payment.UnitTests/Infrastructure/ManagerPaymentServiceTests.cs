@@ -16,7 +16,7 @@ public sealed class ManagerPaymentServiceTests
     private readonly Mock<IStripeHoldClient> stripeHoldClient;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
     private readonly Mock<ITransactionRepository> transactionRepository;
-    private readonly Mock<ILedger> ledger;
+    private readonly Mock<ILedgerService> ledger;
 
     private readonly List<LedgerPosting> postings = [];
 
@@ -30,12 +30,12 @@ public sealed class ManagerPaymentServiceTests
         this.stripeHoldClient = new Mock<IStripeHoldClient>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
         this.transactionRepository = new Mock<ITransactionRepository>();
-        this.ledger = new Mock<ILedger>();
+        this.ledger = new Mock<ILedgerService>();
 
         ledger
             .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
-            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
+            .Returns(Task.CompletedTask);
 
         payoutAccountRepository
             .Setup(r => r.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))

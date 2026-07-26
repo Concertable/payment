@@ -15,7 +15,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly IStripeHoldClient stripeHoldClient;
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ITransactionRepository transactionRepository;
-    private readonly ILedger ledger;
+    private readonly ILedgerService ledger;
     private readonly Money platformFee;
 
     public ManagerPaymentService(
@@ -24,7 +24,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         IStripeHoldClient stripeHoldClient,
         IPayoutAccountRepository payoutAccountRepository,
         ITransactionRepository transactionRepository,
-        ILedger ledger,
+        ILedgerService ledger,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
         this.paymentManager = paymentManager;

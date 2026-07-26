@@ -10,7 +10,7 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 public sealed class EscrowConfirmedHandlerTests
 {
     private readonly Mock<IEscrowRepository> escrowRepository;
-    private readonly Mock<ILedger> ledger;
+    private readonly Mock<ILedgerService> ledger;
     private readonly EscrowConfirmedHandler sut;
 
     private readonly List<LedgerPosting> postings = [];
@@ -21,12 +21,12 @@ public sealed class EscrowConfirmedHandlerTests
     public EscrowConfirmedHandlerTests()
     {
         this.escrowRepository = new Mock<IEscrowRepository>();
-        this.ledger = new Mock<ILedger>();
+        this.ledger = new Mock<ILedgerService>();
 
         ledger
             .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
-            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
+            .Returns(Task.CompletedTask);
 
         this.sut = new EscrowConfirmedHandler(escrowRepository.Object, ledger.Object, NullLogger<EscrowConfirmedHandler>.Instance);
     }

@@ -52,7 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEscrowRepository, EscrowRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
         services.AddScoped<ILedgerTransactionRepository, LedgerTransactionRepository>();
-        services.AddScoped<ILedger, LedgerPostingService>();
+        services.AddScoped<ILedgerService, LedgerService>();
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
 
         // Transaction service

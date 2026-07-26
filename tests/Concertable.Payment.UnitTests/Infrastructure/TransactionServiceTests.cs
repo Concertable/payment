@@ -10,7 +10,7 @@ public sealed class TransactionServiceTests
     private readonly Mock<ICurrentUser> currentUser;
     private readonly Mock<ITransactionRepository> repository;
     private readonly Mock<ITransactionMapper> mapper;
-    private readonly Mock<ILedger> ledger;
+    private readonly Mock<ILedgerService> ledger;
     private readonly TransactionService sut;
 
     private readonly List<LedgerPosting> postings = [];
@@ -23,12 +23,12 @@ public sealed class TransactionServiceTests
         this.currentUser = new Mock<ICurrentUser>();
         this.repository = new Mock<ITransactionRepository>();
         this.mapper = new Mock<ITransactionMapper>();
-        this.ledger = new Mock<ILedger>();
+        this.ledger = new Mock<ILedgerService>();
 
         ledger
             .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
-            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
+            .Returns(Task.CompletedTask);
 
         this.sut = new TransactionService(currentUser.Object, repository.Object, mapper.Object, ledger.Object);
     }
@@ -83,7 +83,7 @@ public sealed class TransactionServiceTests
         ledger
             .SetupSequence(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Ledger staging failed"))
-            .ReturnsAsync((LedgerTransactionEntity)null!);
+            .Returns(Task.CompletedTask);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.CompleteAsync("pi_retry"));
 

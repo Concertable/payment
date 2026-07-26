@@ -16,7 +16,7 @@ public sealed class EscrowServiceTests
     private readonly Mock<IPaymentManager> paymentManager;
     private readonly Mock<IEscrowRepository> escrowRepository;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
-    private readonly Mock<ILedger> ledger;
+    private readonly Mock<ILedgerService> ledger;
     private readonly FakeTimeProvider timeProvider;
     private readonly EscrowService sut;
 
@@ -30,12 +30,12 @@ public sealed class EscrowServiceTests
         this.paymentManager = new Mock<IPaymentManager>();
         this.escrowRepository = new Mock<IEscrowRepository>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
-        this.ledger = new Mock<ILedger>();
+        this.ledger = new Mock<ILedgerService>();
 
         ledger
             .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
-            .ReturnsAsync((LedgerPosting _, CancellationToken _) => null!);
+            .Returns(Task.CompletedTask);
 
         this.timeProvider = new FakeTimeProvider();
 
