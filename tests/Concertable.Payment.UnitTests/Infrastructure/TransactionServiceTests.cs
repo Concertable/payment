@@ -26,11 +26,11 @@ public sealed class TransactionServiceTests
         this.ledger = new Mock<ILedgerService>();
 
         ledger
-            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
-        this.sut = new TransactionService(currentUser.Object, repository.Object, mapper.Object, ledger.Object);
+        this.sut = new TransactionService(currentUser.Object, repository.Object, mapper.Object, ledger.Object, new FakeUnitOfWork());
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class TransactionServiceTests
             .ReturnsAsync(failedAttempt)
             .ReturnsAsync(retry);
         ledger
-            .SetupSequence(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Ledger staging failed"))
             .Returns(Task.CompletedTask);
 
@@ -93,7 +93,7 @@ public sealed class TransactionServiceTests
 
         Assert.Equal(TransactionStatus.Complete, retry.Status);
         repository.Verify(r => r.SaveChangesAsync(), Times.Never);
-        ledger.Verify(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        ledger.Verify(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]

@@ -16,6 +16,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ITransactionRepository transactionRepository;
     private readonly ILedgerService ledger;
+    private readonly IUnitOfWork unitOfWork;
     private readonly Money platformFee;
 
     public ManagerPaymentService(
@@ -25,6 +26,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         IPayoutAccountRepository payoutAccountRepository,
         ITransactionRepository transactionRepository,
         ILedgerService ledger,
+        IUnitOfWork unitOfWork,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
         this.paymentManager = paymentManager;
@@ -33,6 +35,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.payoutAccountRepository = payoutAccountRepository;
         this.transactionRepository = transactionRepository;
         this.ledger = ledger;
+        this.unitOfWork = unitOfWork;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
@@ -83,7 +86,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await transactionRepository.CreateAsync(transaction);
 
         if (!charge.Value.RequiresAction && transaction.Complete())
-            await ledger.PostAsync(LedgerPostings.DirectSettlement(transaction), ct);
+            await unitOfWork.ExecuteAsync(
+                () => ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct), ct);
 
         return charge;
     }
