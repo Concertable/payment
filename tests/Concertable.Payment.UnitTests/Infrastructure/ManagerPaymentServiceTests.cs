@@ -33,7 +33,7 @@ public sealed class ManagerPaymentServiceTests
         this.ledger = new Mock<ILedgerService>();
 
         ledger
-            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
@@ -50,6 +50,7 @@ public sealed class ManagerPaymentServiceTests
             payoutAccountRepository.Object,
             transactionRepository.Object,
             ledger.Object,
+            new FakeUnitOfWork(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
     [Fact]
