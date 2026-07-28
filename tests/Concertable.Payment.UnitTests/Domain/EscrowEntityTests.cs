@@ -1,11 +1,12 @@
 using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class EscrowEntityTests
 {
     private static EscrowEntity NewPending() =>
-        EscrowEntity.Create(bookingId: 42, fromOwnerId: Guid.NewGuid(), toOwnerId: Guid.NewGuid(), amount: 5000, chargeId: "pi_test");
+        EscrowEntity.Create(bookingId: 42, fromOwnerId: Guid.NewGuid(), toOwnerId: Guid.NewGuid(), gross: Money.Gbp(50), platformFee: Money.Gbp(0), chargeId: "pi_test");
 
     [Fact]
     public void Create_StartsInPending()
@@ -17,6 +18,15 @@ public sealed class EscrowEntityTests
         Assert.Null(escrow.RefundId);
         Assert.Null(escrow.ReleasedAt);
         Assert.Null(escrow.RefundedAt);
+    }
+
+    [Fact]
+    public void Create_WithPlatformFee_SetsAmountToGrossPlusFee()
+    {
+        var escrow = EscrowEntity.Create(bookingId: 42, fromOwnerId: Guid.NewGuid(), toOwnerId: Guid.NewGuid(), gross: Money.Gbp(50), platformFee: Money.Gbp(12), chargeId: "pi_test");
+
+        Assert.Equal(Money.Gbp(62), escrow.Amount);
+        Assert.Equal(Money.Gbp(12), escrow.PlatformFee);
     }
 
     [Fact]

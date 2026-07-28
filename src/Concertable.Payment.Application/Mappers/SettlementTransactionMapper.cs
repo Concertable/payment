@@ -8,7 +8,7 @@ internal sealed class SettlementTransactionMapper : ITransactionMapper
     public TransactionEntity ToEntity(ITransaction dto)
     {
         var d = (SettlementTransactionDto)dto;
-        return SettlementTransactionEntity.Create(d.PayerId, d.PayeeId, d.PaymentIntentId, d.Amount, d.Status, d.BookingId);
+        return SettlementTransactionEntity.Create(d.PayerId, d.PayeeId, d.PaymentIntentId, d.Amount, d.PlatformFee, d.Status, d.BookingId);
     }
 
     public ITransaction ToDto(TransactionEntity entity)
@@ -22,6 +22,7 @@ internal sealed class SettlementTransactionMapper : ITransactionMapper
             PayeeId = e.PayeeId,
             PaymentIntentId = e.PaymentIntentId,
             Amount = e.Amount,
+            PlatformFee = e.PlatformFee,
             Status = e.Status,
             CreatedAt = e.CreatedAt
         };
