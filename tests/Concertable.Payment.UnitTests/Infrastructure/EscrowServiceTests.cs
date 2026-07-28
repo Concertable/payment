@@ -33,7 +33,7 @@ public sealed class EscrowServiceTests
         this.ledger = new Mock<ILedgerService>();
 
         ledger
-            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
@@ -52,6 +52,7 @@ public sealed class EscrowServiceTests
             escrowRepository.Object,
             payoutAccountRepository.Object,
             ledger.Object,
+            new FakeUnitOfWork(),
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);
