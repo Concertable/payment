@@ -24,11 +24,11 @@ public sealed class EscrowConfirmedHandlerTests
         this.ledger = new Mock<ILedgerService>();
 
         ledger
-            .Setup(l => l.PostAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
+            .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
-        this.sut = new EscrowConfirmedHandler(escrowRepository.Object, ledger.Object, NullLogger<EscrowConfirmedHandler>.Instance);
+        this.sut = new EscrowConfirmedHandler(escrowRepository.Object, ledger.Object, new FakeUnitOfWork(), NullLogger<EscrowConfirmedHandler>.Instance);
     }
 
     private static PaymentSucceededEvent EventFor(string chargeId) =>
