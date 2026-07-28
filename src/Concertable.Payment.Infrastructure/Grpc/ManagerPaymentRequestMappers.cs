@@ -1,11 +1,12 @@
 using Concertable.Payment.Grpc;
+using Money = Concertable.Kernel.ValueObjects.Money;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal sealed record ManagerPayCommand(
     Guid PayerId,
     Guid PayeeId,
-    decimal Amount,
+    Money Amount,
     string PaymentMethodId,
     PaymentSession Session,
     int BookingId);
@@ -16,7 +17,7 @@ internal sealed record CreateSessionCommand(
 
 internal sealed record CreateHoldSessionCommand(
     Guid PayerId,
-    decimal Amount,
+    Money Amount,
     IReadOnlyDictionary<string, string> Metadata);
 
 internal sealed record FindHeldIntentCommand(
@@ -28,7 +29,7 @@ internal static class ManagerPaymentRequestMappers
     public static ManagerPayCommand ToCommand(this ManagerPayRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ParseOrThrow<decimal>(nameof(request.Amount)),
+        request.Amount.ToMoney(),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId);
@@ -43,7 +44,7 @@ internal static class ManagerPaymentRequestMappers
 
     public static CreateHoldSessionCommand ToCommand(this CreateHoldSessionRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.Amount.ParseOrThrow<decimal>(nameof(request.Amount)),
+        request.Amount.ToMoney(),
         request.Metadata);
 
     public static FindHeldIntentCommand ToCommand(this FindHeldIntentRequest request) => new(
