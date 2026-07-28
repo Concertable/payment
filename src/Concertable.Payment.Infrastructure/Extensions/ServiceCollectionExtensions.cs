@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Messaging.Contracts;
 
@@ -40,6 +41,11 @@ public static class ServiceCollectionExtensions
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
 
         services.AddScoped<IOutboxUnitOfWorkBehavior, OutboxUnitOfWorkBehavior>();
+
+        services.AddOptions<PlatformFeeOptions>()
+            .Bind(configuration.GetSection(PlatformFeeOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PlatformFeeOptions>, PlatformFeeOptionsValidator>();
 
         // Repositories + mappers
         services.AddScoped<ITransactionRepository, TransactionRepository>();
