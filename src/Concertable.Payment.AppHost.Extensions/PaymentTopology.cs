@@ -1,11 +1,18 @@
+using Concertable.Auth.Contracts.Events;
+using Concertable.B2B.Concert.Contracts.Events;
+using Concertable.B2B.Tenant.Contracts.Events;
+using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Contracts.Events;
+
 public static class PaymentTopology
 {
     public static AsbTopology AddPaymentTopology(this AsbTopology topology) =>
         topology
-            .Subscribe("event-concertchangedevent",       "payment-concert-changed",       "concertable-payment")
-            .Subscribe("event-credentialregisteredevent", "payment-credential-registered", "concertable-payment")
-            .Subscribe("event-tenantcreatedevent",        "payment-tenant-created",        "concertable-payment")
-            .Subscribe("event-paymentsucceededevent",     "payment-payment-succeeded",     "concertable-payment")
-            .Subscribe("event-paymentfailedevent",        "payment-payment-failed",        "concertable-payment")
-            .Queue("command-concertable-payment-processstripewebhookcommand");
+            .Subscribe<ConcertChangedEvent>(AppHostConstants.ServiceNames.Payment)
+            .Subscribe<CredentialRegisteredEvent>(AppHostConstants.ServiceNames.Payment)
+            .Subscribe<TenantCreatedEvent>(AppHostConstants.ServiceNames.Payment)
+            .Subscribe<PaymentSucceededEvent>(AppHostConstants.ServiceNames.Payment)
+            .Subscribe<PaymentFailedEvent>(AppHostConstants.ServiceNames.Payment)
+            .Queue("command-processstripewebhookcommand")
+            .Queue<ProcessStripeWebhookCommand>(AppHostConstants.ServiceNames.Payment);
 }

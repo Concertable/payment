@@ -2,7 +2,8 @@ namespace Concertable.Payment.Application.Requests;
 
 internal sealed record StripeChargeOptions
 {
-    public required decimal Amount { get; init; }
+    public required Money Amount { get; init; }
+    public Money? TransferAmount { get; init; }
     public required string PaymentMethodId { get; init; }
     public required string StripeCustomerId { get; init; }
     public required string DestinationStripeId { get; init; }

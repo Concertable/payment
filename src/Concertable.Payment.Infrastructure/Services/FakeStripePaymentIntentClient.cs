@@ -30,7 +30,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
                 {
                     Id = transactionId,
                     Status = "succeeded",
-                    AmountReceived = (long)(opts.Amount * 100),
+                    AmountReceived = opts.Amount.ToMinorUnits(),
                     Metadata = opts.Metadata
                 }
             }
@@ -57,7 +57,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
                 {
                     Id = transactionId,
                     Status = "succeeded",
-                    AmountReceived = (long)(opts.Amount * 100),
+                    AmountReceived = opts.Amount.ToMinorUnits(),
                     Metadata = opts.Metadata
                 }
             }

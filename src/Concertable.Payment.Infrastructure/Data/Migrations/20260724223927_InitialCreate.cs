@@ -24,7 +24,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     BookingId = table.Column<int>(type: "int", nullable: false),
                     FromOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ToOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -34,7 +33,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Currency = table.Column<int>(type: "int", nullable: false),
+                    PlatformFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PlatformFeeCurrency = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -89,7 +92,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(34)", maxLength: 34, nullable: false),
-                    ContextId = table.Column<int>(type: "int", nullable: true)
+                    ContextId = table.Column<int>(type: "int", nullable: true),
+                    PlatformFee = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
