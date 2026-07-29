@@ -23,23 +23,21 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task ExecuteAsync_CommitsOperationalStateAndLedgerRowsTogether()
+    public async Task SaveChangesAsync_CommitsOperationalStateAndLedgerRowsTogether()
     {
         await using var context = await CreateMigratedContextAsync();
         var escrow = await AddPendingEscrowAsync(context);
         var unitOfWork = new UnitOfWork(context);
         var ledger = CreateLedger(context);
 
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            escrow.Confirm();
-            await ledger.StageAsync(
-                LedgerPostings.EscrowHold(
-                    escrow.FromOwnerId,
-                    escrow.Amount,
-                    escrow.BookingId,
-                    escrow.ChargeId));
-        });
+        escrow.Confirm();
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(
+                escrow.FromOwnerId,
+                escrow.Amount,
+                escrow.BookingId,
+                escrow.ChargeId));
+        await unitOfWork.SaveChangesAsync();
 
         await using var verificationContext = CreateContext();
         var persistedEscrow = await verificationContext.Escrows.SingleAsync(e => e.Id == escrow.Id);
@@ -52,14 +50,13 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenLedgerStagingFails_LeavesOperationalStateAndLedgerRowsUnchanged()
+    public async Task SaveChangesAsync_WhenLedgerStagingFails_LeavesOperationalStateAndLedgerRowsUnchanged()
     {
         await using var context = await CreateMigratedContextAsync();
         var escrow = await AddPendingEscrowAsync(context);
         var initialAccountCount = await context.LedgerAccounts.CountAsync();
         var initialTransactionCount = await context.LedgerTransactions.CountAsync();
         var initialEntryCount = await context.LedgerEntries.CountAsync();
-        var unitOfWork = new UnitOfWork(context);
         var ledger = CreateLedger(context);
 
         var unbalancedPosting = new LedgerPosting(
@@ -78,12 +75,8 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
                     Money.Gbp(1))
             ]);
 
-        await Assert.ThrowsAsync<DomainException>(() =>
-            unitOfWork.ExecuteAsync(async () =>
-            {
-                escrow.Confirm();
-                await ledger.StageAsync(unbalancedPosting);
-            }));
+        escrow.Confirm();
+        await Assert.ThrowsAsync<DomainException>(() => ledger.StageAsync(unbalancedPosting));
 
         await using var verificationContext = CreateContext();
         Assert.Equal(
@@ -98,7 +91,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenSaveFails_RollsBackOperationalStateAndLedgerRows()
+    public async Task SaveChangesAsync_WhenSaveFails_RollsBackOperationalStateAndLedgerRows()
     {
         await using var context = await CreateMigratedContextAsync();
         var duplicateExternalId = $"pi_{Guid.NewGuid():N}";
@@ -106,30 +99,28 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         var ledger = CreateLedger(context);
         var unitOfWork = new UnitOfWork(context);
 
-        await unitOfWork.ExecuteAsync(() =>
-            ledger.StageAsync(
-                LedgerPostings.EscrowHold(
-                    payerId,
-                    Money.Gbp(50),
-                    NextBookingId(),
-                    duplicateExternalId)));
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(
+                payerId,
+                Money.Gbp(50),
+                NextBookingId(),
+                duplicateExternalId));
+        await unitOfWork.SaveChangesAsync();
 
         var escrow = await AddPendingEscrowAsync(context, payerId);
         var initialAccountCount = await context.LedgerAccounts.CountAsync();
         var initialTransactionCount = await context.LedgerTransactions.CountAsync();
         var initialEntryCount = await context.LedgerEntries.CountAsync();
 
-        await Assert.ThrowsAsync<DbUpdateException>(() =>
-            unitOfWork.ExecuteAsync(async () =>
-            {
-                escrow.Confirm();
-                await ledger.StageAsync(
-                    LedgerPostings.EscrowHold(
-                        escrow.FromOwnerId,
-                        escrow.Amount,
-                        escrow.BookingId,
-                        duplicateExternalId));
-            }));
+        escrow.Confirm();
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(
+                escrow.FromOwnerId,
+                escrow.Amount,
+                escrow.BookingId,
+                duplicateExternalId));
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => unitOfWork.SaveChangesAsync());
 
         await using var verificationContext = CreateContext();
         Assert.Equal(
