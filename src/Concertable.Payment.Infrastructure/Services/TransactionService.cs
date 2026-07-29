@@ -40,8 +40,8 @@ internal sealed class TransactionService : ITransactionService
 
         if (entity is SettlementTransactionEntity settlement)
         {
-            await unitOfWork.ExecuteAsync(
-                () => ledger.StageAsync(LedgerPostings.DirectSettlement(settlement), ct), ct);
+            await ledger.StageAsync(LedgerPostings.DirectSettlement(settlement), ct);
+            await unitOfWork.SaveChangesAsync(ct);
             return;
         }
 

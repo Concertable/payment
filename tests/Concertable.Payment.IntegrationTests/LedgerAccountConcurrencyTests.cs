@@ -35,20 +35,18 @@ public sealed class LedgerAccountConcurrencyTests : IClassFixture<SqlFixture>
                 new LedgerTransactionRepository(context),
                 TimeProvider.System);
 
-            await unitOfWork.ExecuteAsync(async () =>
-            {
-                await ledger.StageAsync(
-                    LedgerPostings.EscrowHold(
-                        payerId,
-                        Money.Gbp(50),
-                        bookingId,
-                        paymentIntentId));
+            await ledger.StageAsync(
+                LedgerPostings.EscrowHold(
+                    payerId,
+                    Money.Gbp(50),
+                    bookingId,
+                    paymentIntentId));
 
-                if (Interlocked.Increment(ref readyCount) == 2)
-                    bothReady.SetResult();
+            if (Interlocked.Increment(ref readyCount) == 2)
+                bothReady.SetResult();
 
-                await bothReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            });
+            await bothReady.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await unitOfWork.SaveChangesAsync();
         }
 
         await Task.WhenAll(
