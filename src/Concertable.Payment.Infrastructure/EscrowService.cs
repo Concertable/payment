@@ -82,17 +82,16 @@ internal sealed class EscrowService : IEscrowService
             platformFee,
             hold.Value.TransactionId);
 
-        await unitOfWork.ExecuteAsync(() => escrowRepository.AddAsync(escrow), ct);
+        await escrowRepository.AddAsync(escrow);
+        await unitOfWork.SaveChangesAsync(ct);
 
         if (!hold.Value.RequiresAction)
         {
-            await unitOfWork.ExecuteAsync(async () =>
-            {
-                escrow.Confirm();
-                await ledger.StageAsync(
-                    LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
-                    ct);
-            }, ct);
+            escrow.Confirm();
+            await ledger.StageAsync(
+                LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+                ct);
+            await unitOfWork.SaveChangesAsync(ct);
         }
 
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, hold.Value.ClientSecret));
@@ -121,13 +120,11 @@ internal sealed class EscrowService : IEscrowService
 
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
         escrow.Confirm();
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            await escrowRepository.AddAsync(escrow);
-            await ledger.StageAsync(
-                LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
-                ct);
-        }, ct);
+        await escrowRepository.AddAsync(escrow);
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null));
     }
@@ -156,19 +153,17 @@ internal sealed class EscrowService : IEscrowService
         if (release.IsFailed)
             return release;
 
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            escrow.Release(release.Value.TransferId, timeProvider.GetUtcNow().DateTime);
-            await ledger.StageAsync(
-                LedgerPostings.EscrowRelease(
-                    escrow.ToOwnerId,
-                    escrow.Amount - escrow.PlatformFee,
-                    escrow.PlatformFee,
-                    escrow.BookingId,
-                    escrow.ChargeId,
-                    release.Value.TransferId),
-                ct);
-        }, ct);
+        escrow.Release(release.Value.TransferId, timeProvider.GetUtcNow().DateTime);
+        await ledger.StageAsync(
+            LedgerPostings.EscrowRelease(
+                escrow.ToOwnerId,
+                escrow.Amount - escrow.PlatformFee,
+                escrow.PlatformFee,
+                escrow.BookingId,
+                escrow.ChargeId,
+                release.Value.TransferId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return release;
     }
@@ -231,26 +226,24 @@ internal sealed class EscrowService : IEscrowService
         if (refund.IsFailed)
             return refund;
 
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            escrow.Refund(refund.Value.RefundId, timeProvider.GetUtcNow().DateTime);
-            var refundPosting = escrow.TransferId is null
-                ? LedgerPostings.EscrowRefundBeforeRelease(
-                    escrow.FromOwnerId,
-                    refundAmount,
-                    escrow.BookingId,
-                    escrow.ChargeId,
-                    refund.Value.RefundId)
-                : LedgerPostings.EscrowRefundAfterRelease(
-                    escrow.FromOwnerId,
-                    escrow.ToOwnerId,
-                    payeeRefundAmount!.Value,
-                    refundAmount - payeeRefundAmount.Value,
-                    escrow.BookingId,
-                    escrow.ChargeId,
-                    refund.Value.RefundId);
-            await ledger.StageAsync(refundPosting, ct);
-        }, ct);
+        escrow.Refund(refund.Value.RefundId, timeProvider.GetUtcNow().DateTime);
+        var refundPosting = escrow.TransferId is null
+            ? LedgerPostings.EscrowRefundBeforeRelease(
+                escrow.FromOwnerId,
+                refundAmount,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId)
+            : LedgerPostings.EscrowRefundAfterRelease(
+                escrow.FromOwnerId,
+                escrow.ToOwnerId,
+                payeeRefundAmount!.Value,
+                refundAmount - payeeRefundAmount.Value,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId);
+        await ledger.StageAsync(refundPosting, ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return refund;
     }
