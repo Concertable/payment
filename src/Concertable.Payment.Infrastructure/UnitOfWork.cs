@@ -9,9 +9,15 @@ namespace Concertable.Payment.Infrastructure;
 
 internal interface IUnitOfWork : IUnitOfWork<PaymentDbContext>;
 
-internal sealed class UnitOfWork(PaymentDbContext context)
-    : IUnitOfWork
+internal sealed class UnitOfWork : IUnitOfWork
 {
+    private readonly PaymentDbContext context;
+
+    public UnitOfWork(PaymentDbContext context)
+    {
+        this.context = context;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         SaveChangesWithAccountReconciliationAsync(cancellationToken);
 
