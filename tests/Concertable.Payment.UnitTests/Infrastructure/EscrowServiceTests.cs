@@ -280,7 +280,7 @@ public sealed class EscrowServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
-        Assert.Equal("tr_dest", captured.TransferId);
+        Assert.Equal("tr_dest", captured.TransferReversal!.TransferId);
         Assert.Equal(EscrowStatus.Refunded, releasedEscrow.Status);
 
         var posting = Assert.Single(postings);
@@ -311,7 +311,7 @@ public sealed class EscrowServiceTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
         Assert.Equal(Money.Gbp(10), captured.Amount);
-        Assert.Equal(Money.Gbp(10), captured.TransferReversalAmount);
+        Assert.Equal(Money.Gbp(10), captured.TransferReversal!.Amount);
 
         var posting = Assert.Single(postings);
         Assert.Equal(0, posting.SignedMinorUnitSum());
@@ -342,7 +342,7 @@ public sealed class EscrowServiceTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
         Assert.Equal(Money.Gbp(55), captured.Amount);
-        Assert.Equal(Money.Gbp(50), captured.TransferReversalAmount);
+        Assert.Equal(Money.Gbp(50), captured.TransferReversal!.Amount);
 
         var posting = Assert.Single(postings);
         Assert.Equal(0, posting.SignedMinorUnitSum());

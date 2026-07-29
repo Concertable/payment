@@ -20,7 +20,7 @@ public sealed class StripeTransferClientTests
         stripeClient
             .Setup(c => c.CreateTransferReversalAsync("tr_test", It.IsAny<TransferReversalCreateOptions>()))
             .Callback<string, TransferReversalCreateOptions>((_, options) => reversal = options)
-            .ReturnsAsync(new TransferReversal());
+            .ReturnsAsync(new Stripe.TransferReversal());
         stripeClient
             .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>()))
             .Callback<RefundCreateOptions>(options => refund = options)
@@ -34,8 +34,7 @@ public sealed class StripeTransferClientTests
         {
             Amount = Money.Gbp(55),
             PaymentIntentId = "pi_test",
-            TransferId = "tr_test",
-            TransferReversalAmount = Money.Gbp(50),
+            TransferReversal = new("tr_test", Money.Gbp(50)),
             Metadata = []
         });
 

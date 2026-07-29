@@ -212,8 +212,9 @@ internal sealed class EscrowService : IEscrowService
         {
             Amount = refundAmount,
             PaymentIntentId = escrow.ChargeId,
-            TransferId = escrow.TransferId,
-            TransferReversalAmount = payeeRefundAmount,
+            TransferReversal = escrow.TransferId is null
+                ? null
+                : new TransferReversal(escrow.TransferId, payeeRefundAmount!.Value),
             Reason = reason,
             Metadata = new Dictionary<string, string>
             {
