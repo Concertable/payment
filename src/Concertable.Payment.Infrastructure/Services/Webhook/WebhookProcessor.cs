@@ -13,7 +13,6 @@ internal sealed class WebhookProcessor : IWebhookProcessor
     private readonly IStripeEventRepository stripeEventRepository;
     private readonly IBus integrationEventBus;
     private readonly IDbContextAccessor contextAccessor;
-    private readonly IStripeHoldClient stripeHoldClient;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<WebhookProcessor> logger;
 
@@ -22,7 +21,6 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         IStripeEventRepository stripeEventRepository,
         IBus integrationEventBus,
         IDbContextAccessor contextAccessor,
-        IStripeHoldClient stripeHoldClient,
         TimeProvider timeProvider,
         ILogger<WebhookProcessor> logger)
     {
@@ -30,7 +28,6 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         this.stripeEventRepository = stripeEventRepository;
         this.integrationEventBus = integrationEventBus;
         this.contextAccessor = contextAccessor;
-        this.stripeHoldClient = stripeHoldClient;
         this.timeProvider = timeProvider;
         this.logger = logger;
     }
@@ -66,8 +63,6 @@ internal sealed class WebhookProcessor : IWebhookProcessor
                 case EventTypes.PaymentIntentAmountCapturableUpdated:
                     if (intent.Metadata.TryGetValue(PaymentMetadataKeys.Type, out var capturedType) && capturedType == TransactionTypes.Verify)
                     {
-                        logger.CancellingVerifyPaymentIntent(intent.Id, stripeEvent.Id);
-                        await stripeHoldClient.CancelAsync(intent.Id, cancellationToken);
                         var enrichedMetadata = new Dictionary<string, string>(intent.Metadata)
                         {
                             [PaymentMetadataKeys.PaymentMethodId] = intent.PaymentMethodId
