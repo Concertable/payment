@@ -10,12 +10,15 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class StripeTransferClientTests
 {
-    [Fact]
-    public async Task RefundAsync_UsesPayeeRefundForTransferReversalAndTotalForCustomerRefund()
+    private readonly Mock<IStripeApiClient> stripeClient;
+    private readonly StripeTransferClient sut;
+
+    private TransferReversalCreateOptions? reversal;
+    private RefundCreateOptions? refund;
+
+    public StripeTransferClientTests()
     {
-        var stripeClient = new Mock<IStripeApiClient>();
-        TransferReversalCreateOptions? reversal = null;
-        RefundCreateOptions? refund = null;
+        this.stripeClient = new Mock<IStripeApiClient>();
 
         stripeClient
             .Setup(c => c.CreateTransferReversalAsync("tr_test", It.IsAny<TransferReversalCreateOptions>()))
@@ -26,10 +29,14 @@ public sealed class StripeTransferClientTests
             .Callback<RefundCreateOptions>(options => refund = options)
             .ReturnsAsync(new Stripe.Refund { Id = "re_test", Amount = 5500 });
 
-        var sut = new StripeTransferClient(
+        this.sut = new StripeTransferClient(
             stripeClient.Object,
             NullLogger<StripeTransferClient>.Instance);
+    }
 
+    [Fact]
+    public async Task RefundAsync_UsesPayeeRefundForTransferReversalAndTotalForCustomerRefund()
+    {
         var result = await sut.RefundAsync(new StripeRefundOptions
         {
             Amount = Money.Gbp(55),
