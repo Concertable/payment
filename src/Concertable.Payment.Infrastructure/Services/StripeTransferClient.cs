@@ -56,18 +56,17 @@ internal sealed class StripeTransferClient : IStripeTransferClient
     {
         try
         {
-            if (!string.IsNullOrEmpty(opts.TransferId))
+            if (opts.TransferReversal is not null)
             {
-                var transferReversalAmount = opts.TransferReversalAmount
-                    ?? throw new InvalidOperationException("A transfer reversal amount is required when refunding a transferred payment.");
-
-                await stripeClient.CreateTransferReversalAsync(opts.TransferId, new TransferReversalCreateOptions
+                await stripeClient.CreateTransferReversalAsync(opts.TransferReversal.TransferId, new TransferReversalCreateOptions
                 {
-                    Amount = transferReversalAmount.ToMinorUnits(),
+                    Amount = opts.TransferReversal.Amount.ToMinorUnits(),
                     Metadata = opts.Metadata
                 });
 
-                logger.StripeTransferReversalSucceeded(opts.TransferId, transferReversalAmount.ToMinorUnits());
+                logger.StripeTransferReversalSucceeded(
+                    opts.TransferReversal.TransferId,
+                    opts.TransferReversal.Amount.ToMinorUnits());
             }
 
             var refund = await stripeClient.CreateRefundAsync(new RefundCreateOptions
