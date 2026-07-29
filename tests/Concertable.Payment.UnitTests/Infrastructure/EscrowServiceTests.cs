@@ -290,6 +290,68 @@ public sealed class EscrowServiceTests
     }
 
     [Fact]
+    public async Task RefundAsync_AfterRelease_PartialRefundWithZeroFee_ReversesRefundedAmount()
+    {
+        var releasedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
+        releasedEscrow.Confirm();
+        releasedEscrow.Release("tr_dest", timeProvider.GetUtcNow().DateTime);
+
+        escrowRepository
+            .Setup(r => r.GetByIdAsync(releasedEscrow.Id))
+            .ReturnsAsync(releasedEscrow);
+
+        RefundRequest? captured = null;
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<RefundRequest, CancellationToken>((r, _) => captured = r)
+            .ReturnsAsync(Result.Ok(new Refund("re_partial")));
+
+        var result = await sut.RefundAsync(releasedEscrow.Id, Money.Gbp(10));
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(captured);
+        Assert.Equal(Money.Gbp(10), captured.Amount);
+        Assert.Equal(Money.Gbp(10), captured.TransferReversalAmount);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(1000, posting.DebitMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(0, posting.DebitMinorUnits(LedgerAccountType.PlatformRevenue));
+        Assert.Equal(1000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
+    }
+
+    [Fact]
+    public async Task RefundAsync_AfterRelease_PartialRefundWithFee_SplitsPayeeAndRevenueReversal()
+    {
+        var releasedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_test");
+        releasedEscrow.Confirm();
+        releasedEscrow.Release("tr_dest", timeProvider.GetUtcNow().DateTime);
+
+        escrowRepository
+            .Setup(r => r.GetByIdAsync(releasedEscrow.Id))
+            .ReturnsAsync(releasedEscrow);
+
+        RefundRequest? captured = null;
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<RefundRequest, CancellationToken>((r, _) => captured = r)
+            .ReturnsAsync(Result.Ok(new Refund("re_partial")));
+
+        var result = await sut.RefundAsync(releasedEscrow.Id, Money.Gbp(55));
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(captured);
+        Assert.Equal(Money.Gbp(55), captured.Amount);
+        Assert.Equal(Money.Gbp(50), captured.TransferReversalAmount);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(500, posting.DebitMinorUnits(LedgerAccountType.PlatformRevenue));
+        Assert.Equal(5500, posting.CreditMinorUnits(LedgerAccountType.Receivable));
+    }
+
+    [Fact]
     public async Task RefundByBookingIdAsync_NotRefundableStatus_IsNoOpSuccess()
     {
         var pendingEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
