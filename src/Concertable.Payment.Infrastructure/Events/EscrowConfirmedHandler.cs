@@ -37,13 +37,11 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
             return;
         }
 
-        await unitOfWork.ExecuteAsync(async () =>
-        {
-            escrow.Confirm();
-            await ledger.StageAsync(
-                LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
-                ct);
-        }, ct);
+        escrow.Confirm();
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         logger.EscrowConfirmed(escrow.Id, escrow.ChargeId);
     }
