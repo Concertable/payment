@@ -207,12 +207,18 @@ internal sealed class EscrowService : IEscrowService
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}; cannot refund");
 
         var refundAmount = amount ?? escrow.Amount;
+        Money? payeeRefundAmount = escrow.TransferId is null
+            ? null
+            : Money.FromMinorUnits(
+                Math.Min(refundAmount.ToMinorUnits(), (escrow.Amount - escrow.PlatformFee).ToMinorUnits()),
+                refundAmount.Currency);
 
         var refund = await paymentManager.RefundAsync(new RefundRequest
         {
             Amount = refundAmount,
             PaymentIntentId = escrow.ChargeId,
             TransferId = escrow.TransferId,
+            TransferReversalAmount = payeeRefundAmount,
             Reason = reason,
             Metadata = new Dictionary<string, string>
             {
@@ -238,8 +244,8 @@ internal sealed class EscrowService : IEscrowService
                 : LedgerPostings.EscrowRefundAfterRelease(
                     escrow.FromOwnerId,
                     escrow.ToOwnerId,
-                    escrow.Amount - escrow.PlatformFee,
-                    escrow.PlatformFee,
+                    payeeRefundAmount!.Value,
+                    refundAmount - payeeRefundAmount.Value,
                     escrow.BookingId,
                     escrow.ChargeId,
                     refund.Value.RefundId);
