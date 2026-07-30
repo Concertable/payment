@@ -8,18 +8,14 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
     public void Configure(EntityTypeBuilder<EscrowEntity> builder)
     {
         builder.ToTable(Schema.Tables.Escrows, Schema.Name);
-        builder.ComplexProperty(e => e.Amount, money =>
-        {
-            money.Property(m => m.Amount).HasColumnName("Amount");
-            money.Property(m => m.Currency).HasColumnName("Currency");
-        });
-        builder.ComplexProperty(e => e.PlatformFee, money =>
-        {
-            money.Property(m => m.Amount).HasColumnName("PlatformFee");
-            money.Property(m => m.Currency).HasColumnName("PlatformFeeCurrency");
-        });
+        builder.Property(e => e.Currency).HasConversion<string>().HasMaxLength(3);
         builder.HasIndex(e => e.BookingId).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
+        builder.HasIndex(e => e.CommissionAuthorizationId).IsUnique().HasFilter("[CommissionAuthorizationId] IS NOT NULL");
         builder.HasIndex(e => e.Status);
+        builder.HasOne(e => e.CommissionAuthorization)
+            .WithMany()
+            .HasForeignKey(e => e.CommissionAuthorizationId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

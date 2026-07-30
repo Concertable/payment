@@ -22,7 +22,7 @@ internal sealed class SettlementTransactionMapper : ITransactionMapper
             PayeeId = e.PayeeId,
             PaymentIntentId = e.PaymentIntentId,
             Amount = e.Amount,
-            PlatformFee = e.PlatformFee,
+            PlatformFee = e.CommissionGrossMinor,
             Status = e.Status,
             CreatedAt = e.CreatedAt
         };

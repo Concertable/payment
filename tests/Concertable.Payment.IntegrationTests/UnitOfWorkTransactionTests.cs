@@ -34,7 +34,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         await ledger.StageAsync(
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
-                escrow.Amount,
+                escrow.PayerTotalMinor.ToMoney(escrow.Currency),
                 escrow.BookingId,
                 escrow.ChargeId));
         await unitOfWork.SaveChangesAsync();
@@ -68,7 +68,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
                 new(
                     new(LedgerAccountType.Receivable, escrow.FromOwnerId),
                     LedgerDirection.Debit,
-                    escrow.Amount),
+                    escrow.PayerTotalMinor.ToMoney(escrow.Currency)),
                 new(
                     new(LedgerAccountType.StripeClearing, null),
                     LedgerDirection.Credit,
@@ -116,7 +116,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         await ledger.StageAsync(
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
-                escrow.Amount,
+                escrow.PayerTotalMinor.ToMoney(escrow.Currency),
                 escrow.BookingId,
                 duplicateExternalId));
 

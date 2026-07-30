@@ -32,6 +32,34 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         return result.Value.ToProtoEscrowResponse();
     }
 
+    public override async Task<EscrowResponse> DepositCommissionAuthorized(
+        CommissionAuthorizedDepositRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var result = await escrowService.DepositCommissionAuthorizedAsync(
+            command.PayerId,
+            command.PayeeId,
+            command.Gross.ToMinorUnits(),
+            command.Gross.Currency,
+            command.PaymentMethodId,
+            command.Session,
+            command.BookingId,
+            command.CommissionAuthorizationId,
+            command.ExternalReference,
+            command.ExpectedCommissionMinor,
+            command.ExpectedPayerTotalMinor,
+            command.StripeSetupIntentId,
+            context.CancellationToken);
+
+        if (result.IsFailed)
+            throw new RpcException(new Status(
+                StatusCode.FailedPrecondition,
+                result.Errors[0].Message));
+
+        return result.Value.ToProtoEscrowResponse();
+    }
+
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
@@ -46,6 +74,32 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
 
         if (result.IsFailed)
             throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
+
+        return result.Value.ToProtoEscrowResponse();
+    }
+
+    public override async Task<EscrowResponse> CaptureCommissionAuthorized(
+        CommissionAuthorizedCaptureRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var result = await escrowService.CaptureCommissionAuthorizedAsync(
+            command.PayerId,
+            command.PayeeId,
+            command.Gross.ToMinorUnits(),
+            command.Gross.Currency,
+            command.PaymentIntentId,
+            command.BookingId,
+            command.CommissionAuthorizationId,
+            command.ExternalReference,
+            command.ExpectedCommissionMinor,
+            command.ExpectedPayerTotalMinor,
+            context.CancellationToken);
+
+        if (result.IsFailed)
+            throw new RpcException(new Status(
+                StatusCode.FailedPrecondition,
+                result.Errors[0].Message));
 
         return result.Value.ToProtoEscrowResponse();
     }
@@ -71,6 +125,29 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
 
         if (result.IsFailed)
             throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
+
+        return new RefundByBookingIdResponse
+        {
+            Refund = result.Value is not null
+                ? new RefundResponse { RefundId = result.Value.RefundId }
+                : null
+        };
+    }
+
+    public override async Task<RefundByBookingIdResponse> RefundCommissionAuthorizedByBookingId(
+        CommissionAuthorizedRefundByBookingIdRequest request,
+        ServerCallContext context)
+    {
+        var result = await escrowService.RefundCommissionAuthorizedByBookingIdAsync(
+            request.BookingId,
+            request.GrossMinor,
+            request.Currency.ToDomainCurrency(),
+            ct: context.CancellationToken);
+
+        if (result.IsFailed)
+            throw new RpcException(new Status(
+                StatusCode.FailedPrecondition,
+                result.Errors[0].Message));
 
         return new RefundByBookingIdResponse
         {

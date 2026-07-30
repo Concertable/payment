@@ -51,24 +51,24 @@ internal sealed class FakeStripeAccountClient : IStripeAccountClient
         string stripeCustomerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        Task.FromResult(new CheckoutSession("pi_fake_secret", "cuss_fake_secret", stripeCustomerId));
+        Task.FromResult(new CheckoutSession("pi_fake_secret", "cuss_fake_secret", stripeCustomerId, "pi_fake"));
 
     public Task<CheckoutSession> CreateSetupSessionAsync(
         string stripeCustomerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        Task.FromResult(new CheckoutSession("seti_fake_secret", "cuss_fake_secret", stripeCustomerId));
+        Task.FromResult(new CheckoutSession("seti_fake_secret", "cuss_fake_secret", stripeCustomerId, "seti_fake"));
 
     public Task<CheckoutSession> CreateVerifySessionAsync(
         string stripeCustomerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        Task.FromResult(new CheckoutSession("pi_fake_verify_secret", "cuss_fake_secret", stripeCustomerId));
+        Task.FromResult(new CheckoutSession("pi_fake_verify_secret", "cuss_fake_secret", stripeCustomerId, "seti_fake_verify"));
 
     public Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        Task.FromResult(new CheckoutSession("pi_fake_hold_secret", "cuss_fake_secret", stripeCustomerId));
+        Task.FromResult(new CheckoutSession("pi_fake_hold_secret", "cuss_fake_secret", stripeCustomerId, "pi_fake_hold"));
 }

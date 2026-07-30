@@ -27,14 +27,16 @@ internal sealed class StripeTransferClient : IStripeTransferClient
             if (string.IsNullOrEmpty(opts.DestinationStripeId))
                 return Result.Fail("Recipient does not have a Stripe account");
 
-            var transfer = await stripeClient.CreateTransferAsync(new TransferCreateOptions
-            {
-                Amount = opts.Amount.ToMinorUnits(),
-                Currency = "GBP",
-                Destination = opts.DestinationStripeId,
-                SourceTransaction = opts.ChargeId,
-                Metadata = opts.Metadata
-            });
+            var transfer = await stripeClient.CreateTransferAsync(
+                new TransferCreateOptions
+                {
+                    Amount = opts.Amount.ToMinorUnits(),
+                    Currency = "GBP",
+                    Destination = opts.DestinationStripeId,
+                    SourceTransaction = opts.ChargeId,
+                    Metadata = opts.Metadata
+                },
+                StripeIdempotency.FromMetadata(opts.Metadata, "release"));
 
             logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
 
@@ -58,24 +60,33 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         {
             if (opts.TransferReversal is not null)
             {
-                await stripeClient.CreateTransferReversalAsync(opts.TransferReversal.TransferId, new TransferReversalCreateOptions
-                {
-                    Amount = opts.TransferReversal.Amount.ToMinorUnits(),
-                    Metadata = opts.Metadata
-                });
+                await stripeClient.CreateTransferReversalAsync(
+                    opts.TransferReversal.TransferId,
+                    new TransferReversalCreateOptions
+                    {
+                        Amount = opts.TransferReversal.Amount.ToMinorUnits(),
+                        Metadata = opts.Metadata
+                    },
+                    StripeIdempotency.FromMetadata(
+                        opts.Metadata,
+                        $"refund-reversal:{opts.Metadata.GetValue(PaymentMetadataKeys.CumulativeGrossRefundMinor)}"));
 
                 logger.StripeTransferReversalSucceeded(
                     opts.TransferReversal.TransferId,
                     opts.TransferReversal.Amount.ToMinorUnits());
             }
 
-            var refund = await stripeClient.CreateRefundAsync(new RefundCreateOptions
-            {
-                PaymentIntent = opts.PaymentIntentId,
-                Amount = opts.Amount.ToMinorUnits(),
-                Reason = opts.Reason,
-                Metadata = opts.Metadata
-            });
+            var refund = await stripeClient.CreateRefundAsync(
+                new RefundCreateOptions
+                {
+                    PaymentIntent = opts.PaymentIntentId,
+                    Amount = opts.Amount.ToMinorUnits(),
+                    Reason = opts.Reason,
+                    Metadata = opts.Metadata
+                },
+                StripeIdempotency.FromMetadata(
+                    opts.Metadata,
+                    $"refund:{opts.Metadata.GetValue(PaymentMetadataKeys.CumulativeGrossRefundMinor)}"));
 
             logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);
 
