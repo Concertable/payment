@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
 
         services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
 
+        services.AddScoped<IOutboxUnitOfWorkBehavior, OutboxUnitOfWorkBehavior>();
+
         services.AddOptions<PlatformFeeOptions>()
             .Bind(configuration.GetSection(PlatformFeeOptions.SectionName))
             .ValidateOnStart();
