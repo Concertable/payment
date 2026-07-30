@@ -5,7 +5,7 @@ using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services.Webhook;
 
-internal sealed class PaymentIntentWebhookHandler
+internal sealed class PaymentIntentWebhookHandler : IStripeWebhookHandler<PaymentIntent>
 {
     private readonly IBus integrationEventBus;
     private readonly ILogger<PaymentIntentWebhookHandler> logger;
