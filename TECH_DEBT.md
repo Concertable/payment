@@ -30,6 +30,30 @@ Migrating ledger posting to `IUnitOfWork<PaymentDbContext>.ExecuteAsync` removed
 
 **Resolves when:** the first-use race is decided — either accept transaction-rollback + retry as the contract (add an integration test asserting concurrent first-use converges after retry) or pre-provision the singleton platform accounts so no first-use race exists.
 
+### Verify PaymentIntent hold is no longer explicitly cancelled — it auto-expires (immediate follow-up PR)
+
+> **Scheduled: the PR immediately after `Fix/Verify3dsClientServerRace`.** Removing the racing webhook
+> cancel unblocks the E2E now; restoring an explicit, deterministic release of the £1 verify auth is
+> the very next piece of work — not a someday item.
+
+
+`WebhookProcessor` used to `stripeHoldClient.CancelAsync(intent.Id)` on the verify PI the instant
+`amount_capturable_updated` arrived, to release the £1 verification authorization. That cancel raced
+the client's `stripe.confirmPayment` for a 3DS card: after the challenge the PI reaches
+`requires_capture` (which fires the webhook), and if the server's cancel flipped it to `canceled`
+before Stripe.js did its final retrieve, the client saw a canceled PI ("A processing error occurred"),
+never fired `onSuccess → /accept`, and the booking never happened (the `Verify3dsClientServerRace`
+E2E timeout). The cancel is removed; the webhook now only publishes `PaymentSucceededEvent`. The card
+is still saved (`SetupFutureUsage="off_session"` attaches it on confirmation, independent of capture),
+so booking is unaffected. The £1 manual-capture hold is now released by Stripe's automatic expiry of
+uncaptured authorizations (~7 days) instead of immediately. This mirrors the escrow flow, whose
+webhook already never touches the held PI (it's captured at accept-time by `CaptureEscrowAcceptStep`).
+
+**Resolves when:** the transient £1 auth is deemed worth releasing deterministically — release it at
+accept-time from the Versus/DoorSplit accept step (mirroring escrow's capture-at-accept), which needs a
+`CancelHeldIntent` operation added to the `Payment.Client` gRPC surface (a breaking/additive package
+change across a platform-version bump, so not a single-PR change).
+
 ### Published `Payment.Client` metadata params are still `IDictionary`, not `IReadOnlyDictionary`
 
 `ICustomerPaymentClient` / `IManagerPaymentClient` (and their `Adapters` impls) in the published
