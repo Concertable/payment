@@ -29,9 +29,6 @@ internal sealed class StripeHoldClient : IStripeHoldClient
         return held?.Id ?? throw new NotFoundException($"No held payment intent found for application {applicationId}");
     }
 
-    public Task CancelAsync(string intentId, CancellationToken ct = default) =>
-        paymentIntentService.CancelAsync(intentId, cancellationToken: ct);
-
     public Task CaptureAsync(string intentId, IReadOnlyDictionary<string, string> metadata, CancellationToken ct = default) =>
         paymentIntentService.CaptureAsync(intentId, new PaymentIntentCaptureOptions
         {
