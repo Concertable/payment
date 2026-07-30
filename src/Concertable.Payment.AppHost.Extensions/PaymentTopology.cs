@@ -1,6 +1,5 @@
 using Concertable.Auth.Contracts.Events;
 using Concertable.B2B.Concert.Contracts.Events;
-using Concertable.B2B.Tenant.Contracts.Events;
 using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
 
@@ -10,7 +9,7 @@ public static class PaymentTopology
         topology
             .Subscribe<ConcertChangedEvent>(AppHostConstants.ServiceNames.Payment)
             .Subscribe<CredentialRegisteredEvent>(AppHostConstants.ServiceNames.Payment)
-            .Subscribe<TenantCreatedEvent>(AppHostConstants.ServiceNames.Payment)
+            .Subscribe<PayoutOwnerRegisteredEvent>(AppHostConstants.ServiceNames.Payment)
             .Subscribe<PaymentSucceededEvent>(AppHostConstants.ServiceNames.Payment)
             .Subscribe<PaymentFailedEvent>(AppHostConstants.ServiceNames.Payment)
             .Queue<ProcessStripeWebhookCommand>(AppHostConstants.ServiceNames.Payment);
