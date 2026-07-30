@@ -32,6 +32,16 @@ internal sealed class TransactionRepository : ITransactionRepository
     public Task<TransactionEntity?> GetByPaymentIntentIdAsync(string paymentIntentId) =>
         context.Transactions.FirstOrDefaultAsync(t => t.PaymentIntentId == paymentIntentId);
 
+    public Task<SettlementTransactionEntity?> GetSettlementByCommissionAuthorizationIdAsync(
+        Guid commissionAuthorizationId,
+        CancellationToken ct = default) =>
+        context.SettlementTransactions.SingleOrDefaultAsync(
+            t => t.CommissionAuthorizationId == commissionAuthorizationId,
+            ct);
+
+    public Task AddAsync(TransactionEntity entity, CancellationToken ct = default) =>
+        context.Transactions.AddAsync(entity, ct).AsTask();
+
     public async Task CreateAsync(TransactionEntity entity)
     {
         await context.Transactions.AddAsync(entity);

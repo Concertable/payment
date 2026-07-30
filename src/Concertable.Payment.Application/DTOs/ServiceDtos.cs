@@ -1,6 +1,10 @@
 namespace Concertable.Payment.Application.DTOs;
 
-internal sealed record CheckoutSession(string ClientSecret, string CustomerSession, string CustomerId);
+internal sealed record CheckoutSession(
+    string ClientSecret,
+    string CustomerSession,
+    string CustomerId,
+    string? StripeIntentId = null);
 
 internal sealed record EscrowDto(
     int Id,
@@ -11,6 +15,4 @@ internal sealed record EscrowDto(
     EscrowStatus Status,
     string ChargeId,
     string? TransferId,
-    string? RefundId,
-    DateTime? ReleasedAt,
-    DateTime? RefundedAt);
+    DateTime? ReleasedAt);

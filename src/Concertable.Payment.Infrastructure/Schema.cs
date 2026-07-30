@@ -13,5 +13,8 @@ internal static class Schema
         public const string LedgerAccounts = "LedgerAccounts";
         public const string LedgerTransactions = "LedgerTransactions";
         public const string LedgerEntries = "LedgerEntries";
+        public const string CommissionConfigurations = "CommissionConfigurations";
+        public const string CommissionAuthorizations = "CommissionAuthorizations";
+        public const string PaymentRefunds = "PaymentRefunds";
     }
 }

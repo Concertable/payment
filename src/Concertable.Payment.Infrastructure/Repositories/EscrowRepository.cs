@@ -9,9 +9,27 @@ internal sealed class EscrowRepository
     public EscrowRepository(PaymentDbContext context)
         : base(context) { }
 
+    public Task<EscrowEntity?> GetWithRefundsByIdAsync(int id, CancellationToken ct = default) =>
+        context.Escrows
+            .Include(e => e.Refunds)
+            .FirstOrDefaultAsync(e => e.Id == id, ct);
+
     public Task<EscrowEntity?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default) =>
-        context.Escrows.FirstOrDefaultAsync(e => e.BookingId == bookingId, ct);
+        context.Escrows
+            .Include(e => e.Refunds)
+            .FirstOrDefaultAsync(e => e.BookingId == bookingId, ct);
 
     public Task<EscrowEntity?> GetByChargeIdAsync(string chargeId, CancellationToken ct = default) =>
-        context.Escrows.FirstOrDefaultAsync(e => e.ChargeId == chargeId, ct);
+        context.Escrows
+            .Include(e => e.Refunds)
+            .FirstOrDefaultAsync(e => e.ChargeId == chargeId, ct);
+
+    public Task<EscrowEntity?> GetByCommissionAuthorizationIdAsync(
+        Guid commissionAuthorizationId,
+        CancellationToken ct = default) =>
+        context.Escrows
+            .Include(e => e.Refunds)
+            .FirstOrDefaultAsync(
+            e => e.CommissionAuthorizationId == commissionAuthorizationId,
+            ct);
 }

@@ -16,4 +16,10 @@ internal static class MoneyMappers
         Proto.Currency.Gbp => Currency.Gbp,
         _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
     };
+
+    public static Proto.Currency ToProtoCurrency(this Currency currency) => currency switch
+    {
+        Currency.Gbp => Proto.Currency.Gbp,
+        _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
+    };
 }

@@ -30,8 +30,12 @@ internal sealed class StripeHoldClient : IStripeHoldClient
     }
 
     public Task CaptureAsync(string intentId, IReadOnlyDictionary<string, string> metadata, CancellationToken ct = default) =>
-        paymentIntentService.CaptureAsync(intentId, new PaymentIntentCaptureOptions
-        {
-            Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value)
-        }, cancellationToken: ct);
+        paymentIntentService.CaptureAsync(
+            intentId,
+            new PaymentIntentCaptureOptions
+            {
+                Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value)
+            },
+            StripeIdempotency.FromMetadata(metadata, "capture"),
+            ct);
 }

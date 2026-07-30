@@ -16,6 +16,7 @@ public sealed class ManagerPaymentServiceTests
     private readonly Mock<IStripeHoldClient> stripeHoldClient;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
     private readonly Mock<ITransactionRepository> transactionRepository;
+    private readonly Mock<ICommissionService> commissionService;
     private readonly Mock<ILedgerService> ledger;
 
     private readonly List<LedgerPosting> postings = [];
@@ -30,6 +31,7 @@ public sealed class ManagerPaymentServiceTests
         this.stripeHoldClient = new Mock<IStripeHoldClient>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
         this.transactionRepository = new Mock<ITransactionRepository>();
+        this.commissionService = new Mock<ICommissionService>();
         this.ledger = new Mock<ILedgerService>();
 
         ledger
@@ -49,6 +51,7 @@ public sealed class ManagerPaymentServiceTests
             stripeHoldClient.Object,
             payoutAccountRepository.Object,
             transactionRepository.Object,
+            commissionService.Object,
             ledger.Object,
             new FakeUnitOfWork(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
@@ -77,7 +80,7 @@ public sealed class ManagerPaymentServiceTests
         Assert.Equal(Money.Gbp(50), payeeAmount);
         Assert.NotNull(captured);
         Assert.Equal(6200, captured.Amount);
-        Assert.Equal(1200, captured.PlatformFee);
+        Assert.Equal(1200, captured.CommissionGrossMinor);
 
         var posting = Assert.Single(postings);
         Assert.Equal(7, posting.BookingId);
@@ -106,7 +109,7 @@ public sealed class ManagerPaymentServiceTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
         Assert.Equal(5000, captured.Amount);
-        Assert.Equal(0, captured.PlatformFee);
+        Assert.Equal(0, captured.CommissionGrossMinor);
 
         var posting = Assert.Single(postings);
         Assert.Equal(2, posting.Legs.Count);
