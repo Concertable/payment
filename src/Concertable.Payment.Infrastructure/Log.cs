@@ -19,9 +19,6 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for PaymentIntent {IntentId} (event {EventId}) of transaction type {TransactionType}")]
     internal static partial void PublishingPaymentSucceededEvent(this ILogger logger, string intentId, string eventId, string transactionType);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Cancelling verify PaymentIntent {IntentId} after 3DS completion (event {EventId})")]
-    internal static partial void CancellingVerifyPaymentIntent(this ILogger logger, string intentId, string eventId);
-
     [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for verify PaymentIntent {IntentId} (event {EventId})")]
     internal static partial void PublishingVerifyPaymentSucceededEvent(this ILogger logger, string intentId, string eventId);
 
