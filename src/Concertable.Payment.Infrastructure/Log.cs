@@ -10,8 +10,8 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Processing Stripe event {EventId} of type {EventType}")]
     internal static partial void ProcessingStripeEvent(this ILogger logger, string eventId, string eventType);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: data object is {ObjectType}, not PaymentIntent")]
-    internal static partial void SkippingStripeEventNotPaymentIntent(this ILogger logger, string eventId, string objectType);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: data object is {ObjectType}, not a PaymentIntent or SetupIntent")]
+    internal static partial void SkippingStripeEventUnhandledObject(this ILogger logger, string eventId, string objectType);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: already processed")]
     internal static partial void SkippingStripeEventAlreadyProcessed(this ILogger logger, string eventId);
@@ -19,11 +19,11 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for PaymentIntent {IntentId} (event {EventId}) of transaction type {TransactionType}")]
     internal static partial void PublishingPaymentSucceededEvent(this ILogger logger, string intentId, string eventId, string transactionType);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Cancelling verify PaymentIntent {IntentId} after 3DS completion (event {EventId})")]
-    internal static partial void CancellingVerifyPaymentIntent(this ILogger logger, string intentId, string eventId);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for verify PaymentIntent {IntentId} (event {EventId})")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for verify SetupIntent {IntentId} (event {EventId})")]
     internal static partial void PublishingVerifyPaymentSucceededEvent(this ILogger logger, string intentId, string eventId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentFailedEvent for verify SetupIntent {IntentId} (event {EventId}): {Code} {Message}")]
+    internal static partial void PublishingVerifyPaymentFailedEvent(this ILogger logger, string intentId, string eventId, string? code, string? message);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentFailedEvent for PaymentIntent {IntentId} (event {EventId}) of transaction type {TransactionType}: {Code} {Message}")]
     internal static partial void PublishingPaymentFailedEvent(this ILogger logger, string intentId, string eventId, string transactionType, string? code, string? message);
