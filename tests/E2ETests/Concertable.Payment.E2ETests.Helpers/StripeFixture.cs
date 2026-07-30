@@ -30,7 +30,7 @@ public sealed class StripeFixture
             new PaymentMethodListOptions { Customer = customerId, Type = "card", Limit = 100 },
             cancellationToken: ct);
 
-        foreach (var pm in list.Data)
+        foreach (var pm in list.Data.Where(pm => pm.CustomerId == customerId))
             await paymentMethods.DetachAsync(pm.Id, cancellationToken: ct);
     }
 

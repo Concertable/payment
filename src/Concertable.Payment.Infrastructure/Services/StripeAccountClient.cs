@@ -180,18 +180,15 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
+        var intent = await setupIntentService.CreateAsync(new SetupIntentCreateOptions
         {
-            Amount = 100,
-            Currency = "gbp",
             Customer = stripeCustomerId,
-            SetupFutureUsage = "off_session",
-            CaptureMethod = "manual",
-            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            AutomaticPaymentMethods = new SetupIntentAutomaticPaymentMethodsOptions
             {
                 Enabled = true,
                 AllowRedirects = "never",
             },
+            Usage = "off_session",
             Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value),
         }, cancellationToken: ct);
 
