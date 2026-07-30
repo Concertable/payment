@@ -46,6 +46,48 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         }
     }
 
+    public async Task<Result<PaymentOutcome>> PayCommissionAuthorizedAsync(
+        Guid payerId,
+        Guid payeeId,
+        long grossMinor,
+        Currency currency,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await client.PayCommissionAuthorizedAsync(
+                new Proto.CommissionAuthorizedManagerPayRequest
+                {
+                    PayerId = payerId.ToString(),
+                    PayeeId = payeeId.ToString(),
+                    GrossMinor = grossMinor,
+                    Currency = currency.ToProtoCurrency(),
+                    PaymentMethodId = paymentMethodId,
+                    Session = session.ToProtoSession(),
+                    BookingId = bookingId,
+                    CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                    ExternalReference = externalReference,
+                    ExpectedCommissionMinor = expectedCommissionMinor,
+                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
+                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+                },
+                cancellationToken: ct);
+            return Result.Ok(response.ToPaymentOutcome());
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            return Result.Fail(ex.Status.Detail);
+        }
+    }
+
     public async Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
         IDictionary<string, string> metadata,
@@ -83,6 +125,43 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         request.Metadata.Add(metadata);
         var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);
         return response.ToCheckoutSession();
+    }
+
+    public async Task<Result<CheckoutSession>> CreateCommissionAuthorizedHoldSessionAsync(
+        Guid payerId,
+        long grossMinor,
+        Currency currency,
+        IDictionary<string, string> metadata,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var request = new Proto.CreateCommissionAuthorizedHoldSessionRequest
+            {
+                PayerId = payerId.ToString(),
+                GrossMinor = grossMinor,
+                Currency = currency.ToProtoCurrency(),
+                CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                ExternalReference = externalReference,
+                ExpectedCommissionMinor = expectedCommissionMinor,
+                ExpectedPayerTotalMinor = expectedPayerTotalMinor,
+                StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+            };
+            request.Metadata.Add(metadata);
+            var response = await client.CreateCommissionAuthorizedHoldSessionAsync(
+                request,
+                cancellationToken: ct);
+            return Result.Ok(response.ToCheckoutSession());
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
+        {
+            return Result.Fail(ex.Status.Detail);
+        }
     }
 
     public async Task<string> FindHeldIntentAsync(

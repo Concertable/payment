@@ -1,3 +1,4 @@
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using FluentResults;
 
@@ -14,6 +15,21 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
+    Task<Result<EscrowDeposit>> DepositCommissionAuthorizedAsync(
+        Guid payerId,
+        Guid payeeId,
+        long grossMinor,
+        Currency currency,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId = null,
+        CancellationToken ct = default);
+
     Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
@@ -22,7 +38,26 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
+    Task<Result<EscrowDeposit>> CaptureCommissionAuthorizedAsync(
+        Guid payerId,
+        Guid payeeId,
+        long grossMinor,
+        Currency currency,
+        string paymentIntentId,
+        int bookingId,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        CancellationToken ct = default);
+
     Task<Result<Transfer?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
 
     Task<Result<Refund?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
+
+    Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+        int bookingId,
+        long grossMinor,
+        Currency currency,
+        CancellationToken ct = default);
 }
