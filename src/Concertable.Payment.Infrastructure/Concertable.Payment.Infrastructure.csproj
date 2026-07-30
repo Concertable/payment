@@ -36,7 +36,6 @@
   <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.Auth.Contracts" />
-    <PackageReference Include="Concertable.B2B.Tenant.Contracts" />
     <PackageReference Include="Concertable.Contracts" />
     <PackageReference Include="Concertable.DataAccess.Infrastructure" />
     <PackageReference Include="Concertable.Seed.Shared" />

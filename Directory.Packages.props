@@ -38,7 +38,6 @@
        else restore fails NU1101. -->
   <ItemGroup>
     <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.B2B.Tenant.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Kernel" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.DataAccess.Application" Version="$(ConcertablePlatformVersion)" />
