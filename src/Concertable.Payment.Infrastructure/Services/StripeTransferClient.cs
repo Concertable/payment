@@ -56,15 +56,17 @@ internal sealed class StripeTransferClient : IStripeTransferClient
     {
         try
         {
-            if (!string.IsNullOrEmpty(opts.TransferId))
+            if (opts.TransferReversal is not null)
             {
-                await stripeClient.CreateTransferReversalAsync(opts.TransferId, new TransferReversalCreateOptions
+                await stripeClient.CreateTransferReversalAsync(opts.TransferReversal.TransferId, new TransferReversalCreateOptions
                 {
-                    Amount = opts.Amount.ToMinorUnits(),
+                    Amount = opts.TransferReversal.Amount.ToMinorUnits(),
                     Metadata = opts.Metadata
                 });
 
-                logger.StripeTransferReversalSucceeded(opts.TransferId, opts.Amount.ToMinorUnits());
+                logger.StripeTransferReversalSucceeded(
+                    opts.TransferReversal.TransferId,
+                    opts.TransferReversal.Amount.ToMinorUnits());
             }
 
             var refund = await stripeClient.CreateRefundAsync(new RefundCreateOptions
