@@ -1,4 +1,5 @@
 using System.Data;
+using Concertable.Payment.Domain.Enums;
 using Dapper;
 
 namespace Concertable.E2ETests;
@@ -38,4 +39,30 @@ public sealed class PaymentDb
         connection.QuerySingleOrDefaultAsync<string?>(
             "SELECT RefundId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
+
+    public Task<int> GetLedgerTransactionCountAsync(int bookingId) =>
+        connection.QuerySingleAsync<int>(
+            "SELECT COUNT(*) FROM payment.LedgerTransactions WHERE BookingId = @bookingId",
+            new { bookingId });
+
+    public Task<long> GetLedgerSignedSumAsync(int bookingId) =>
+        connection.QuerySingleAsync<long>(
+            """
+            SELECT COALESCE(SUM(e.Amount), 0)
+            FROM payment.LedgerEntries e
+            JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
+            WHERE t.BookingId = @bookingId
+            """,
+            new { bookingId });
+
+    public Task<long> GetLedgerPlatformRevenueAsync(int bookingId) =>
+        connection.QuerySingleAsync<long>(
+            """
+            SELECT COALESCE(-SUM(e.Amount), 0)
+            FROM payment.LedgerEntries e
+            JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
+            JOIN payment.LedgerAccounts a ON a.Id = e.LedgerAccountId
+            WHERE t.BookingId = @bookingId AND a.Type = @platformRevenue
+            """,
+            new { bookingId, platformRevenue = (int)LedgerAccountType.PlatformRevenue });
 }
