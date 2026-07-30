@@ -143,13 +143,16 @@ internal sealed class PaymentManager : IPaymentManager
         }
         .Merge(r.Metadata);
 
-        logger.RefundingPayment(r.Amount.Amount, r.PaymentIntentId, string.IsNullOrEmpty(r.TransferId) ? string.Empty : $" (reversing transfer {r.TransferId})");
+        logger.RefundingPayment(
+            r.Amount.Amount,
+            r.PaymentIntentId,
+            r.TransferReversal is null ? string.Empty : $" (reversing transfer {r.TransferReversal.TransferId})");
 
         return await transferClient.RefundAsync(new StripeRefundOptions
         {
             Amount = r.Amount,
             PaymentIntentId = r.PaymentIntentId,
-            TransferId = r.TransferId,
+            TransferReversal = r.TransferReversal,
             Reason = r.Reason,
             Metadata = metadata
         });

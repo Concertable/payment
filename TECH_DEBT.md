@@ -24,6 +24,12 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## LOW
 
+### Concurrent *first-use* of a shared ledger account now relies on transaction-rollback + retry, not in-line reconcile
+
+Migrating ledger posting to `IUnitOfWork<PaymentDbContext>.ExecuteAsync` removed `LedgerService`'s hand-rolled `CommitPostingAsync`/`ReconcileConcurrentAccountsAsync` loop, which used to catch the account `IdentityIndex` duplicate-key violation from two postings creating the same account concurrently (e.g. the very first two settlements both minting the singleton `PlatformRevenue` account) and reconcile them onto one row so both postings still committed. Under the staged design each posting commits in its own transaction, so on that race one commit wins and the loser's whole `ExecuteAsync` block (escrow/settlement mutation + ledger staging) rolls back. The async/message paths self-heal on retry (account then exists); a synchronous gRPC caller (`EscrowService` hold/release) would surface the failure to retry itself. Duplicate-*posting* idempotency is unaffected — still enforced by the `PostingIdentityIndex` unique index (tested in `LedgerTransactionConfigurationTests`) plus the `EscrowConfirmedHandler` status guard. The old `LedgerPostingConcurrencyTests` (which drove the deleted reconcile via a real-localdb save barrier) was removed with the migration.
+
+**Resolves when:** the first-use race is decided — either accept transaction-rollback + retry as the contract (add an integration test asserting concurrent first-use converges after retry) or pre-provision the singleton platform accounts so no first-use race exists.
+
 ### Verify PaymentIntent hold is no longer explicitly cancelled — it auto-expires (immediate follow-up PR)
 
 > **Scheduled: the PR immediately after `Fix/Verify3dsClientServerRace`.** Removing the racing webhook
