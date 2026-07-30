@@ -6,14 +6,6 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## MEDIUM
 
-### Payment compile-depends on `B2B.Tenant.Contracts` (a reverse adapter→data-service edge)
-
-`Payment.Infrastructure` references `Concertable.B2B.Tenant.Contracts` purely for `TenantCreatedEvent`, which `TenantCreatedHandler` consumes to provision a payout account (treating `TenantId` as an opaque owner key). This is the wrong dependency direction — Payment is an agnostic **adapter**; it shouldn't compile-depend on a **data service**'s contracts (the `PAYMENT_AGNOSTIC_AUDIT` killed the other Payment→B2B edges, and the Phase 0 note in `plans/SERVICE_BUILD_SEPARATION.md` flagged this one as a regression that postdated it). Phase 3's chosen fix is option (a) — **package** the edge (consume `B2B.Tenant.Contracts` as a `PackageReference`) rather than re-route it, because re-routing is a runtime change to the E2E-covered payout flow that belongs with the Phase 5 B2B work, not the build-separation packaging step. As of **Phase 3a** only the producer is published (`<IsPackable>true</IsPackable>` on `B2B.Tenant.Contracts`); the consumer edge is **still a `ProjectReference`** in `Concertable.Payment.Infrastructure.csproj` — the flip to `PackageReference` lands in **Phase 3b**. `TenantCreatedEvent` is consumed by nobody but Payment, so the re-route is clean when it happens.
-
-**Resolves when:** the subscription is re-routed to a Payment-owned/generic event (the audit's "pattern E") — define e.g. `PayoutOwnerRegisteredEvent` in `Payment.Contracts`, have B2B's Tenant module publish it (a correct data→adapter edge), drop Payment's `B2B.Tenant.Contracts` reference. Needs an E2E run (payout-provisioning flow).
-
----
-
 ### `EscrowService.RefundByBookingIdAsync` is asymmetric with `ReleaseByBookingIdAsync` — hard-fails on non-refundable escrow
 
 `RefundByBookingIdAsync` (`EscrowService.cs`) only no-ops on already-`Refunded` escrow; for any other non-refundable status it delegates to `RefundAsync`, which **hard-fails** (`Result.Fail`) on `Pending`/`Failed`. Its sibling `ReleaseByBookingIdAsync` instead treats any non-`Held` escrow as a benign no-op (`Result.Ok(null)`) — the point of a `ByBookingId` convenience method being that a booking-lifecycle caller can invoke it blindly without knowing escrow state. The asymmetry means cancelling a booking whose escrow never advanced past `Pending` (hold initiated, webhook not yet confirmed) or is `Failed` fails the whole refund/cancel (gRPC `FailedPrecondition` → B2B `EscrowClient` `Result.Fail`) instead of no-op'ing. Flagged reviewing PR #76 (concert-cancel + escrow-refund) and not addressed before merge; whether it bites depends on how the B2B cancel handler treats a `FailedPrecondition` from refund.
@@ -23,6 +15,12 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 ---
 
 ## LOW
+
+### Concurrent *first-use* of a shared ledger account now relies on transaction-rollback + retry, not in-line reconcile
+
+Migrating ledger posting to `IUnitOfWork<PaymentDbContext>.ExecuteAsync` removed `LedgerService`'s hand-rolled `CommitPostingAsync`/`ReconcileConcurrentAccountsAsync` loop, which used to catch the account `IdentityIndex` duplicate-key violation from two postings creating the same account concurrently (e.g. the very first two settlements both minting the singleton `PlatformRevenue` account) and reconcile them onto one row so both postings still committed. Under the staged design each posting commits in its own transaction, so on that race one commit wins and the loser's whole `ExecuteAsync` block (escrow/settlement mutation + ledger staging) rolls back. The async/message paths self-heal on retry (account then exists); a synchronous gRPC caller (`EscrowService` hold/release) would surface the failure to retry itself. Duplicate-*posting* idempotency is unaffected — still enforced by the `PostingIdentityIndex` unique index (tested in `LedgerTransactionConfigurationTests`) plus the `EscrowConfirmedHandler` status guard. The old `LedgerPostingConcurrencyTests` (which drove the deleted reconcile via a real-localdb save barrier) was removed with the migration.
+
+**Resolves when:** the first-use race is decided — either accept transaction-rollback + retry as the contract (add an integration test asserting concurrent first-use converges after retry) or pre-provision the singleton platform accounts so no first-use race exists.
 
 ### Published `Payment.Client` metadata params are still `IDictionary`, not `IReadOnlyDictionary`
 

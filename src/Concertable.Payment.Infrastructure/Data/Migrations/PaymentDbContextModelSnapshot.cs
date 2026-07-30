@@ -181,6 +181,101 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.ToTable("Escrows", "payment");
                 });
 
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerAccountEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "OwnerId", "Currency")
+                        .IsUnique();
+
+                    b.ToTable("LedgerAccounts", "payment");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerEntryEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Currency")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LedgerAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LedgerTransactionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LedgerAccountId");
+
+                    b.HasIndex("LedgerTransactionId");
+
+                    b.ToTable("LedgerEntries", "payment");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerTransactionEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentIntentId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("PostingType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId");
+
+                    b.HasIndex("PaymentIntentId");
+
+                    b.HasIndex("PostingType", "ExternalId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LedgerTransactions_PostingType_ExternalId");
+
+                    b.ToTable("LedgerTransactions", "payment");
+                });
+
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.PayoutAccountEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -325,6 +420,28 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnName("ContextId");
 
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerEntryEntity", b =>
+                {
+                    b.HasOne("Concertable.Payment.Domain.Entities.LedgerAccountEntity", "Account")
+                        .WithMany()
+                        .HasForeignKey("LedgerAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Concertable.Payment.Domain.Entities.LedgerTransactionEntity", null)
+                        .WithMany("Entries")
+                        .HasForeignKey("LedgerTransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerTransactionEntity", b =>
+                {
+                    b.Navigation("Entries");
                 });
 #pragma warning restore 612, 618
         }
