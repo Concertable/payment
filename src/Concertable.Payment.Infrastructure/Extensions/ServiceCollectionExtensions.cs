@@ -109,8 +109,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentManager, PaymentManager>();
 
         // Webhook infrastructure
-        services.AddScoped<PaymentIntentWebhookHandler>();
-        services.AddScoped<SetupIntentWebhookHandler>();
+        services.AddScoped<IStripeWebhookHandler<Stripe.PaymentIntent>, PaymentIntentWebhookHandler>();
+        services.AddScoped<IStripeWebhookHandler<Stripe.SetupIntent>, SetupIntentWebhookHandler>();
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
