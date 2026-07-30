@@ -9,16 +9,16 @@ internal sealed class WebhookProcessor : IWebhookProcessor
     private readonly IStripeEventRepository stripeEventRepository;
     private readonly IOutboxUnitOfWorkBehavior outboxBehavior;
     private readonly TimeProvider timeProvider;
-    private readonly PaymentIntentWebhookHandler paymentIntentHandler;
-    private readonly SetupIntentWebhookHandler setupIntentHandler;
+    private readonly IStripeWebhookHandler<PaymentIntent> paymentIntentHandler;
+    private readonly IStripeWebhookHandler<SetupIntent> setupIntentHandler;
     private readonly ILogger<WebhookProcessor> logger;
 
     public WebhookProcessor(
         IStripeEventRepository stripeEventRepository,
         IOutboxUnitOfWorkBehavior outboxBehavior,
         TimeProvider timeProvider,
-        PaymentIntentWebhookHandler paymentIntentHandler,
-        SetupIntentWebhookHandler setupIntentHandler,
+        IStripeWebhookHandler<PaymentIntent> paymentIntentHandler,
+        IStripeWebhookHandler<SetupIntent> setupIntentHandler,
         ILogger<WebhookProcessor> logger)
     {
         this.stripeEventRepository = stripeEventRepository;
