@@ -29,9 +29,9 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
 {
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly StripeE2EAccountResolver resolver;
-    // CreateSetupSessionAsync (venue hire apply) + CreateSetupIntentAsync (onboarding card save)
+    // CreateSetupSessionAsync (venue hire apply), CreateVerifySessionAsync (door split / versus verify), CreateSetupIntentAsync (onboarding card save)
     private readonly SetupIntentService setupIntentService;
-    // CreatePaymentSessionAsync (flat fee / door split / versus), CreateVerifySessionAsync, CreateHoldSessionAsync (venue hire accept)
+    // CreatePaymentSessionAsync (flat fee / door split / versus), CreateHoldSessionAsync (venue hire accept)
     private readonly PaymentIntentService paymentIntentService;
     // GetPaymentMethodDetailsAsync — reads the test card re-attached by @ResetsStripe before each scenario
     private readonly PaymentMethodService paymentMethodService;
@@ -181,8 +181,8 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     }
 
     /// <summary>
-    /// Creates a real Stripe <see cref="PaymentIntent"/> with <c>capture_method=manual</c> and amount £1
-    /// to verify the customer's card is valid before committing to a booking.
+    /// Creates a real Stripe <see cref="SetupIntent"/> to verify the customer's card (SCA/3DS) and save it
+    /// for the off-session settlement charge that fires after the gig — no amount, no authorisation hold.
     /// Real object required because <c>Stripe.js elements({ clientSecret })</c> validates against
     /// <c>api.stripe.com/v1/elements/sessions</c> and rejects fake secrets.
     /// </summary>
@@ -191,18 +191,15 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
+        var intent = await setupIntentService.CreateAsync(new SetupIntentCreateOptions
         {
-            Amount = 100,
-            Currency = "gbp",
             Customer = stripeCustomerId,
-            SetupFutureUsage = "off_session",
-            CaptureMethod = "manual",
-            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+            AutomaticPaymentMethods = new SetupIntentAutomaticPaymentMethodsOptions
             {
                 Enabled = true,
                 AllowRedirects = "never",
             },
+            Usage = "off_session",
             Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value),
         }, cancellationToken: ct);
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);

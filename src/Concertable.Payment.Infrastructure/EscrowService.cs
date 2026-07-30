@@ -14,6 +14,8 @@ internal sealed class EscrowService : IEscrowService
     private readonly IPaymentManager paymentManager;
     private readonly IEscrowRepository escrowRepository;
     private readonly IPayoutAccountRepository payoutAccountRepository;
+    private readonly ILedgerService ledger;
+    private readonly IUnitOfWork unitOfWork;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<EscrowService> logger;
     private readonly Money platformFee;
@@ -22,6 +24,8 @@ internal sealed class EscrowService : IEscrowService
         IPaymentManager paymentManager,
         IEscrowRepository escrowRepository,
         IPayoutAccountRepository payoutAccountRepository,
+        ILedgerService ledger,
+        IUnitOfWork unitOfWork,
         IOptions<PlatformFeeOptions> platformFeeOptions,
         TimeProvider timeProvider,
         ILogger<EscrowService> logger)
@@ -29,6 +33,8 @@ internal sealed class EscrowService : IEscrowService
         this.paymentManager = paymentManager;
         this.escrowRepository = escrowRepository;
         this.payoutAccountRepository = payoutAccountRepository;
+        this.ledger = ledger;
+        this.unitOfWork = unitOfWork;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
         this.timeProvider = timeProvider;
         this.logger = logger;
@@ -77,12 +83,15 @@ internal sealed class EscrowService : IEscrowService
             hold.Value.TransactionId);
 
         await escrowRepository.AddAsync(escrow);
-        await escrowRepository.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(ct);
 
         if (!hold.Value.RequiresAction)
         {
             escrow.Confirm();
-            await escrowRepository.SaveChangesAsync();
+            await ledger.StageAsync(
+                LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+                ct);
+            await unitOfWork.SaveChangesAsync(ct);
         }
 
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, hold.Value.ClientSecret));
@@ -112,7 +121,10 @@ internal sealed class EscrowService : IEscrowService
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
         escrow.Confirm();
         await escrowRepository.AddAsync(escrow);
-        await escrowRepository.SaveChangesAsync();
+        await ledger.StageAsync(
+            LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null));
     }
@@ -142,7 +154,16 @@ internal sealed class EscrowService : IEscrowService
             return release;
 
         escrow.Release(release.Value.TransferId, timeProvider.GetUtcNow().DateTime);
-        await escrowRepository.SaveChangesAsync();
+        await ledger.StageAsync(
+            LedgerPostings.EscrowRelease(
+                escrow.ToOwnerId,
+                escrow.Amount - escrow.PlatformFee,
+                escrow.PlatformFee,
+                escrow.BookingId,
+                escrow.ChargeId,
+                release.Value.TransferId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return release;
     }
@@ -165,7 +186,7 @@ internal sealed class EscrowService : IEscrowService
         var release = await ReleaseAsync(escrow.Id, ct);
         return release.IsFailed
             ? release.ToResult<Transfer?>()
-            : Result.Ok(release.Value);
+            : Result.Ok<Transfer?>(release.Value);
     }
 
     public async Task<Result<Refund>> RefundAsync(
@@ -181,12 +202,19 @@ internal sealed class EscrowService : IEscrowService
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}; cannot refund");
 
         var refundAmount = amount ?? escrow.Amount;
+        Money? payeeRefundAmount = escrow.TransferId is null
+            ? null
+            : Money.FromMinorUnits(
+                Math.Min(refundAmount.ToMinorUnits(), (escrow.Amount - escrow.PlatformFee).ToMinorUnits()),
+                refundAmount.Currency);
 
         var refund = await paymentManager.RefundAsync(new RefundRequest
         {
             Amount = refundAmount,
             PaymentIntentId = escrow.ChargeId,
-            TransferId = escrow.TransferId,
+            TransferReversal = escrow.TransferId is null
+                ? null
+                : new TransferReversal(escrow.TransferId, payeeRefundAmount!.Value),
             Reason = reason,
             Metadata = new Dictionary<string, string>
             {
@@ -200,7 +228,23 @@ internal sealed class EscrowService : IEscrowService
             return refund;
 
         escrow.Refund(refund.Value.RefundId, timeProvider.GetUtcNow().DateTime);
-        await escrowRepository.SaveChangesAsync();
+        var refundPosting = escrow.TransferId is null
+            ? LedgerPostings.EscrowRefundBeforeRelease(
+                escrow.FromOwnerId,
+                refundAmount,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId)
+            : LedgerPostings.EscrowRefundAfterRelease(
+                escrow.FromOwnerId,
+                escrow.ToOwnerId,
+                payeeRefundAmount!.Value,
+                refundAmount - payeeRefundAmount.Value,
+                escrow.BookingId,
+                escrow.ChargeId,
+                refund.Value.RefundId);
+        await ledger.StageAsync(refundPosting, ct);
+        await unitOfWork.SaveChangesAsync(ct);
 
         return refund;
     }
@@ -221,7 +265,7 @@ internal sealed class EscrowService : IEscrowService
         if (escrow.Status == EscrowStatus.Refunded)
         {
             logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
-            return Result.Ok(new Refund(escrow.RefundId!));
+            return Result.Ok<Refund?>(new Refund(escrow.RefundId!));
         }
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
@@ -233,7 +277,7 @@ internal sealed class EscrowService : IEscrowService
         var refund = await RefundAsync(escrow.Id, amount, reason, ct);
         return refund.IsFailed
             ? refund.ToResult<Refund?>()
-            : Result.Ok(refund.Value);
+            : Result.Ok<Refund?>(refund.Value);
     }
 
     public async Task<EscrowDto?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default)
