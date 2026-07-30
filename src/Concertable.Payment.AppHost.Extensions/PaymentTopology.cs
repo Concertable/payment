@@ -13,6 +13,5 @@ public static class PaymentTopology
             .Subscribe<TenantCreatedEvent>(AppHostConstants.ServiceNames.Payment)
             .Subscribe<PaymentSucceededEvent>(AppHostConstants.ServiceNames.Payment)
             .Subscribe<PaymentFailedEvent>(AppHostConstants.ServiceNames.Payment)
-            .Queue("command-processstripewebhookcommand")
             .Queue<ProcessStripeWebhookCommand>(AppHostConstants.ServiceNames.Payment);
 }
