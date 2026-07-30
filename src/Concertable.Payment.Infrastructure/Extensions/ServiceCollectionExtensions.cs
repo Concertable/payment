@@ -2,8 +2,8 @@ using Concertable.DataAccess;
 using Concertable.Seed.Shared;
 using Concertable.Seed.Shared.Extensions;
 using Concertable.Auth.Contracts.Events;
-using Concertable.B2B.Tenant.Contracts.Events;
 using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
@@ -52,6 +52,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
+        services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
+        services.AddScoped<ILedgerTransactionRepository, LedgerTransactionRepository>();
+        services.AddScoped<ILedgerService, LedgerService>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
 
         // Transaction service
@@ -116,7 +120,7 @@ public static class ServiceCollectionExtensions
 
         // Integration event handlers
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
-        services.AddScoped<IIntegrationEventHandler<TenantCreatedEvent>, TenantCreatedHandler>();
+        services.AddScoped<IIntegrationEventHandler<PayoutOwnerRegisteredEvent>, PayoutOwnerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentFailedEvent>, PaymentFailureDispatcher>();
         services.AddScoped<ITransactionHandlerFactory, TransactionHandlerFactory>();
