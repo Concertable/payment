@@ -56,7 +56,9 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             configurator.Configure(options);
 
-            var paymentIntent = await stripeClient.CreatePaymentIntentAsync(options);
+            var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
+                options,
+                StripeIdempotency.FromMetadata(opts.Metadata, "charge"));
 
             if (paymentIntent.Status == "succeeded")
                 logger.StripePaymentIntentSucceeded(paymentIntent.Id, paymentIntent.Amount, options.TransferData.Destination);
@@ -102,7 +104,9 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             configurator.Configure(options);
 
-            var paymentIntent = await stripeClient.CreatePaymentIntentAsync(options);
+            var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
+                options,
+                StripeIdempotency.FromMetadata(opts.Metadata, "hold"));
 
             if (paymentIntent.Status == "succeeded")
                 logger.StripeEscrowHoldSucceeded(paymentIntent.Id, paymentIntent.Amount, options.OnBehalfOf);

@@ -14,6 +14,7 @@ using Concertable.Payment.Infrastructure.Repositories;
 using Concertable.Payment.Infrastructure.Services;
 using Concertable.Payment.Infrastructure.Services.Webhook;
 using Concertable.Payment.Infrastructure.Settings;
+using Concertable.Payment.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,21 +48,32 @@ public static class ServiceCollectionExtensions
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<PlatformFeeOptions>, PlatformFeeOptionsValidator>();
 
-        // Repositories + mappers
+        services.AddOptions<PlatformCommissionOptions>()
+            .Bind(configuration.GetSection(PlatformCommissionOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PlatformCommissionOptions>, PlatformCommissionOptionsValidator>();
+        services.AddOptions<PlatformCommissionTaxOptions>()
+            .Bind(configuration.GetSection(PlatformCommissionTaxOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PlatformCommissionTaxOptions>, PlatformCommissionTaxOptionsValidator>();
+
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
+        services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
+        services.AddScoped<ICommissionAuthorizationRepository, CommissionAuthorizationRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
         services.AddScoped<ILedgerTransactionRepository, LedgerTransactionRepository>();
         services.AddScoped<ILedgerService, LedgerService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
+        services.AddSingleton<CommissionCalculator>();
+        services.AddScoped<CommissionConfigurationBootstrapper>();
+        services.AddScoped<ICommissionService, CommissionService>();
 
-        // Transaction service
         services.AddScoped<ITransactionService, TransactionService>();
 
-        // Stripe real/fake toggle
         var useRealStripe = configuration.GetSection("ExternalServices").GetValue<bool>("UseRealStripe");
         if (useRealStripe)
         {
@@ -108,7 +120,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripePaymentIntentClientFactory, StripePaymentIntentClientFactory>();
         services.AddScoped<IPaymentManager, PaymentManager>();
 
-        // Webhook infrastructure
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
@@ -118,7 +129,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEscrowService, EscrowService>();
         services.AddScoped<IPayoutAccountService, PayoutAccountService>();
 
-        // Integration event handlers
         services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PayoutOwnerRegisteredEvent>, PayoutOwnerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();
@@ -147,5 +157,13 @@ public static class ServiceCollectionExtensions
         var sp = scope.ServiceProvider;
         await sp.GetRequiredService<OutboxDbContext>().Database.MigrateAsync();
         await sp.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
+    }
+
+    public static async Task BootstrapCommissionConfigurationAsync(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        await scope.ServiceProvider
+            .GetRequiredService<CommissionConfigurationBootstrapper>()
+            .EnsureConfiguredRevisionAsync();
     }
 }

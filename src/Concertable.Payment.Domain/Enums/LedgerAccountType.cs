@@ -5,5 +5,6 @@ public enum LedgerAccountType
     PlatformRevenue,
     StripeClearing,
     Payable,
-    Receivable
+    Receivable,
+    VatLiability
 }

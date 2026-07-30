@@ -1,6 +1,7 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
 using FluentResults;
@@ -17,6 +18,7 @@ public sealed class EscrowServiceTests
     private readonly Mock<IEscrowRepository> escrowRepository;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
     private readonly Mock<ILedgerService> ledger;
+    private readonly Mock<ICommissionService> commissionService;
     private readonly FakeTimeProvider timeProvider;
     private readonly EscrowService sut;
 
@@ -31,6 +33,7 @@ public sealed class EscrowServiceTests
         this.escrowRepository = new Mock<IEscrowRepository>();
         this.payoutAccountRepository = new Mock<IPayoutAccountRepository>();
         this.ledger = new Mock<ILedgerService>();
+        this.commissionService = new Mock<ICommissionService>();
 
         ledger
             .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
@@ -53,6 +56,8 @@ public sealed class EscrowServiceTests
             payoutAccountRepository.Object,
             ledger.Object,
             new FakeUnitOfWork(),
+            commissionService.Object,
+            new CommissionCalculator(),
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);
@@ -209,7 +214,13 @@ public sealed class EscrowServiceTests
     {
         var refundedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
         refundedEscrow.Confirm();
-        refundedEscrow.Refund("re_prior", timeProvider.GetUtcNow().DateTime);
+        refundedEscrow.RecordRefund(PaymentRefundEntity.CreateCompleted(
+            refundedEscrow.Id,
+            "re_prior",
+            5000,
+            0,
+            0,
+            timeProvider.GetUtcNow()));
 
         escrowRepository
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
@@ -235,7 +246,7 @@ public sealed class EscrowServiceTests
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
         escrowRepository
-            .Setup(r => r.GetByIdAsync(heldEscrow.Id))
+            .Setup(r => r.GetWithRefundsByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
 
         paymentManager
@@ -248,7 +259,7 @@ public sealed class EscrowServiceTests
         Assert.NotNull(result.Value);
         Assert.Equal("re_test", result.Value.RefundId);
         Assert.Equal(EscrowStatus.Refunded, heldEscrow.Status);
-        Assert.Equal("re_test", heldEscrow.RefundId);
+        Assert.Equal("re_test", Assert.Single(heldEscrow.Refunds).StripeRefundId);
 
         var posting = Assert.Single(postings);
         Assert.Equal(0, posting.SignedMinorUnitSum());
@@ -267,7 +278,7 @@ public sealed class EscrowServiceTests
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(releasedEscrow);
         escrowRepository
-            .Setup(r => r.GetByIdAsync(releasedEscrow.Id))
+            .Setup(r => r.GetWithRefundsByIdAsync(releasedEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(releasedEscrow);
 
         RefundRequest? captured = null;
@@ -297,7 +308,7 @@ public sealed class EscrowServiceTests
         releasedEscrow.Release("tr_dest", timeProvider.GetUtcNow().DateTime);
 
         escrowRepository
-            .Setup(r => r.GetByIdAsync(releasedEscrow.Id))
+            .Setup(r => r.GetWithRefundsByIdAsync(releasedEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(releasedEscrow);
 
         RefundRequest? captured = null;
@@ -328,7 +339,7 @@ public sealed class EscrowServiceTests
         releasedEscrow.Release("tr_dest", timeProvider.GetUtcNow().DateTime);
 
         escrowRepository
-            .Setup(r => r.GetByIdAsync(releasedEscrow.Id))
+            .Setup(r => r.GetWithRefundsByIdAsync(releasedEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(releasedEscrow);
 
         RefundRequest? captured = null;
@@ -392,8 +403,8 @@ public sealed class EscrowServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal(Money.Gbp(62), heldAmount);
         Assert.NotNull(captured);
-        Assert.Equal(Money.Gbp(62), captured.Amount);
-        Assert.Equal(Money.Gbp(12), captured.PlatformFee);
+        Assert.Equal(6200, captured.PayerTotalMinor);
+        Assert.Equal(1200, captured.CommissionGrossMinor);
     }
 
     [Fact]
@@ -413,8 +424,8 @@ public sealed class EscrowServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
-        Assert.Equal(Money.Gbp(50), captured.Amount);
-        Assert.Equal(Money.Gbp(0), captured.PlatformFee);
+        Assert.Equal(5000, captured.PayerTotalMinor);
+        Assert.Equal(0, captured.CommissionGrossMinor);
     }
 
     [Fact]
@@ -436,8 +447,8 @@ public sealed class EscrowServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
-        Assert.Equal(Money.Gbp(62), captured.Amount);
-        Assert.Equal(Money.Gbp(12), captured.PlatformFee);
+        Assert.Equal(6200, captured.PayerTotalMinor);
+        Assert.Equal(1200, captured.CommissionGrossMinor);
         Assert.Equal(EscrowStatus.Held, captured.Status);
 
         var posting = Assert.Single(postings);
@@ -488,7 +499,7 @@ public sealed class EscrowServiceTests
             .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
         escrowRepository
-            .Setup(r => r.GetByIdAsync(heldEscrow.Id))
+            .Setup(r => r.GetWithRefundsByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
 
         RefundRequest? refunded = null;

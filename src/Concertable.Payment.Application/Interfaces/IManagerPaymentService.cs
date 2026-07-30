@@ -13,6 +13,21 @@ internal interface IManagerPaymentService
         int bookingId,
         CancellationToken ct = default);
 
+    Task<Result<PaymentOutcome>> PayCommissionAuthorizedAsync(
+        Guid payerId,
+        Guid payeeId,
+        long grossMinor,
+        Currency currency,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId,
+        CancellationToken ct = default);
+
     /// <summary>
     /// The amount is known but cannot be charged yet — the other party hasn't accepted.
     /// Pre-authorises the card for a future off-session charge so the bank will honour it
@@ -40,6 +55,18 @@ internal interface IManagerPaymentService
         Guid payerId,
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
+        CancellationToken ct = default);
+
+    Task<Result<CheckoutSession>> CreateCommissionAuthorizedHoldSessionAsync(
+        Guid payerId,
+        long grossMinor,
+        Currency currency,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionAuthorizationId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId,
         CancellationToken ct = default);
 
     Task<string> FindHeldIntentAsync(

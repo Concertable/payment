@@ -151,7 +151,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         }, cancellationToken: ct);
 
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
-        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
     public async Task<CheckoutSession> CreateSetupSessionAsync(
@@ -172,7 +172,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         }, cancellationToken: ct);
 
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
-        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
     public async Task<CheckoutSession> CreateVerifySessionAsync(
@@ -193,7 +193,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         }, cancellationToken: ct);
 
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
-        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
@@ -202,23 +202,26 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
-        {
-            Amount = amount.ToMinorUnits(),
-            Currency = "gbp",
-            Customer = stripeCustomerId,
-            SetupFutureUsage = "off_session",
-            CaptureMethod = "manual",
-            AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+        var intent = await paymentIntentService.CreateAsync(
+            new PaymentIntentCreateOptions
             {
-                Enabled = true,
-                AllowRedirects = "never",
+                Amount = amount.ToMinorUnits(),
+                Currency = "gbp",
+                Customer = stripeCustomerId,
+                SetupFutureUsage = "off_session",
+                CaptureMethod = "manual",
+                AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
+                {
+                    Enabled = true,
+                    AllowRedirects = "never",
+                },
+                Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value),
             },
-            Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value),
-        }, cancellationToken: ct);
+            StripeIdempotency.FromMetadata(metadata, "hold-session"),
+            ct);
 
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
-        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
     private async Task<string> CreateCustomerSessionAsync(string stripeCustomerId, CancellationToken ct)

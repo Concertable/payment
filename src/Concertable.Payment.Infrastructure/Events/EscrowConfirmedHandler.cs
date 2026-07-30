@@ -39,7 +39,11 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
 
         escrow.Confirm();
         await ledger.StageAsync(
-            LedgerPostings.EscrowHold(escrow.FromOwnerId, escrow.Amount, escrow.BookingId, escrow.ChargeId),
+            LedgerPostings.EscrowHold(
+                escrow.FromOwnerId,
+                Money.FromMinorUnits(escrow.PayerTotalMinor, escrow.Currency),
+                escrow.BookingId,
+                escrow.ChargeId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
 
