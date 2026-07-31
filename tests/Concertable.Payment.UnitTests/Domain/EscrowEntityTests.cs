@@ -135,6 +135,25 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
+    public void RecordRefund_PartialGross_BumpsConcurrencyToken()
+    {
+        var escrow = NewPending();
+        escrow.Confirm();
+        var before = escrow.ConcurrencyToken;
+        var refund = PaymentRefundEntity.CreateCompletedForEscrow(
+            escrow.Id,
+            "re_partial",
+            grossRefundedMinor: 1000,
+            commissionRefundedMinor: 0,
+            commissionVatReversedMinor: 0,
+            DateTimeOffset.UtcNow);
+
+        escrow.RecordRefund(refund);
+
+        Assert.NotEqual(before, escrow.ConcurrencyToken);
+    }
+
+    [Fact]
     public void RecordRefund_FromReleasedWithFullGross_TransitionsToRefunded()
     {
         var escrow = NewPending();

@@ -43,6 +43,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         ChargeId = chargeId;
         CommissionAuthorizationId = commissionAuthorizationId;
         Status = EscrowStatus.Pending;
+        ConcurrencyToken = Guid.NewGuid();
     }
 
     public int Id { get; private set; }
@@ -62,6 +63,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
     public string ChargeId { get; private set; } = null!;
     public string? TransferId { get; private set; }
     public DateTime? ReleasedAt { get; private set; }
+    public Guid ConcurrencyToken { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
@@ -139,6 +141,9 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             throw new DomainException("Refund belongs to another escrow.");
 
         refunds.Add(refund);
+        // Bump the token so a partial refund (which leaves Status unchanged) still forces the parent
+        // into the optimistic-concurrency check; a child-only insert alone never updates the parent row.
+        ConcurrencyToken = Guid.NewGuid();
         if (refunds.Sum(r => r.GrossRefundedMinor) == PayeeGrossMinor)
             Status = EscrowStatus.Refunded;
     }

@@ -57,6 +57,7 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
+            TestPaymentDbContext.Unopened(),
             new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 

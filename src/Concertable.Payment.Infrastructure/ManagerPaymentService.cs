@@ -2,9 +2,11 @@ using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
+using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -20,6 +22,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly CommissionCalculator commissionCalculator;
     private readonly ILedgerService ledger;
     private readonly IUnitOfWork unitOfWork;
+    private readonly PaymentDbContext context;
     private readonly TimeProvider timeProvider;
     private readonly Money platformFee;
 
@@ -33,6 +36,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         CommissionCalculator commissionCalculator,
         ILedgerService ledger,
         IUnitOfWork unitOfWork,
+        PaymentDbContext context,
         TimeProvider timeProvider,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
@@ -45,6 +49,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.commissionCalculator = commissionCalculator;
         this.ledger = ledger;
         this.unitOfWork = unitOfWork;
+        this.context = context;
         this.timeProvider = timeProvider;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
@@ -355,7 +360,20 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 settlement.PaymentIntentId,
                 refund.Value.RefundId),
             ct);
-        await unitOfWork.SaveChangesAsync(ct);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            context.ChangeTracker.Clear();
+            var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
+            var committedGross = current?.Refunds.Sum(r => r.GrossRefundedMinor) ?? 0;
+            return checked(committedGross + grossMinor) > (current?.PayeeGrossMinor ?? 0)
+                ? Result.Fail("refund_gross_exceeds_remaining_gross")
+                : Result.Fail("refund_conflict");
+        }
 
         return Result.Ok<Refund?>(refund.Value);
     }

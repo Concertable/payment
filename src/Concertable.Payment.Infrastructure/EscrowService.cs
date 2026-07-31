@@ -1,9 +1,11 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Concertable.Payment.Domain;
@@ -20,6 +22,7 @@ internal sealed class EscrowService : IEscrowService
     private readonly IUnitOfWork unitOfWork;
     private readonly ICommissionService commissionService;
     private readonly CommissionCalculator commissionCalculator;
+    private readonly PaymentDbContext context;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<EscrowService> logger;
     private readonly Money platformFee;
@@ -32,6 +35,7 @@ internal sealed class EscrowService : IEscrowService
         IUnitOfWork unitOfWork,
         ICommissionService commissionService,
         CommissionCalculator commissionCalculator,
+        PaymentDbContext context,
         IOptions<PlatformFeeOptions> platformFeeOptions,
         TimeProvider timeProvider,
         ILogger<EscrowService> logger)
@@ -43,6 +47,7 @@ internal sealed class EscrowService : IEscrowService
         this.unitOfWork = unitOfWork;
         this.commissionService = commissionService;
         this.commissionCalculator = commissionCalculator;
+        this.context = context;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
         this.timeProvider = timeProvider;
         this.logger = logger;
@@ -578,7 +583,20 @@ internal sealed class EscrowService : IEscrowService
                 escrow.ChargeId,
                 refund.Value.RefundId);
         await ledger.StageAsync(refundPosting, ct);
-        await unitOfWork.SaveChangesAsync(ct);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            context.ChangeTracker.Clear();
+            var current = await escrowRepository.GetWithRefundsByIdAsync(escrow.Id, ct);
+            var committedGross = current?.Refunds.Sum(r => r.GrossRefundedMinor) ?? 0;
+            return checked(committedGross + grossRefundMinor) > (current?.PayeeGrossMinor ?? 0)
+                ? Result.Fail("refund_gross_exceeds_remaining_gross")
+                : Result.Fail("refund_conflict");
+        }
 
         return refund;
     }

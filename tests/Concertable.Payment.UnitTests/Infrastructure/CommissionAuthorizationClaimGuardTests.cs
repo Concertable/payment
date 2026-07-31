@@ -122,6 +122,7 @@ public sealed class CommissionAuthorizationClaimGuardTests
             new FakeUnitOfWork(),
             commissionService.Object,
             new CommissionCalculator(),
+            TestPaymentDbContext.Unopened(),
             Options.Create(new PlatformFeeOptions { Fee = 0m }),
             new FakeTimeProvider(),
             NullLogger<EscrowService>.Instance);
@@ -137,6 +138,7 @@ public sealed class CommissionAuthorizationClaimGuardTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
+            TestPaymentDbContext.Unopened(),
             new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = 0m }));
 
