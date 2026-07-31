@@ -11,14 +11,14 @@ internal sealed record ManagerPayCommand(
     PaymentSession Session,
     int BookingId);
 
-internal sealed record CommissionAuthorizedManagerPayCommand(
+internal sealed record BoundCommissionManagerPayCommand(
     Guid PayerId,
     Guid PayeeId,
     Money Gross,
     string PaymentMethodId,
     PaymentSession Session,
     int BookingId,
-    Guid CommissionAuthorizationId,
+    Guid CommissionBindingId,
     string ExternalReference,
     long ExpectedCommissionMinor,
     long ExpectedPayerTotalMinor,
@@ -33,11 +33,11 @@ internal sealed record CreateHoldSessionCommand(
     Money Amount,
     IReadOnlyDictionary<string, string> Metadata);
 
-internal sealed record CreateCommissionAuthorizedHoldSessionCommand(
+internal sealed record CreateBoundCommissionHoldSessionCommand(
     Guid PayerId,
     Money Gross,
     IReadOnlyDictionary<string, string> Metadata,
-    Guid CommissionAuthorizationId,
+    Guid CommissionBindingId,
     string ExternalReference,
     long ExpectedCommissionMinor,
     long ExpectedPayerTotalMinor,
@@ -57,16 +57,16 @@ internal static class ManagerPaymentRequestMappers
         request.Session.ToPaymentSession(),
         request.BookingId);
 
-    public static CommissionAuthorizedManagerPayCommand ToCommand(
-        this CommissionAuthorizedManagerPayRequest request) => new(
+    public static BoundCommissionManagerPayCommand ToCommand(
+        this BoundCommissionManagerPayRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
         Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId,
-        request.CommissionAuthorizationId.ParseOrThrow<Guid>(
-            nameof(request.CommissionAuthorizationId)),
+        request.CommissionBindingId.ParseOrThrow<Guid>(
+            nameof(request.CommissionBindingId)),
         request.ExternalReference,
         request.ExpectedCommissionMinor,
         request.ExpectedPayerTotalMinor,
@@ -85,13 +85,13 @@ internal static class ManagerPaymentRequestMappers
         request.Amount.ToMoney(),
         request.Metadata);
 
-    public static CreateCommissionAuthorizedHoldSessionCommand ToCommand(
-        this CreateCommissionAuthorizedHoldSessionRequest request) => new(
+    public static CreateBoundCommissionHoldSessionCommand ToCommand(
+        this CreateBoundCommissionHoldSessionRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
         request.Metadata,
-        request.CommissionAuthorizationId.ParseOrThrow<Guid>(
-            nameof(request.CommissionAuthorizationId)),
+        request.CommissionBindingId.ParseOrThrow<Guid>(
+            nameof(request.CommissionBindingId)),
         request.ExternalReference,
         request.ExpectedCommissionMinor,
         request.ExpectedPayerTotalMinor,

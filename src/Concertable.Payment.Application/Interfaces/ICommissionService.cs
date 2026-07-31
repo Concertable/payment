@@ -9,7 +9,7 @@ internal interface ICommissionService
         Currency currency,
         CancellationToken ct = default);
 
-    Task<Result<CommissionAuthorization>> CreateOrBindAuthorizationAsync(
+    Task<Result<CommissionBinding>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -21,8 +21,8 @@ internal interface ICommissionService
         long? expectedPayerTotalMinor,
         CancellationToken ct = default);
 
-    Task<Result<AuthorizedCommission>> CalculateAuthorizedAsync(
-        Guid authorizationId,
+    Task<Result<BoundCommission>> CalculateBoundAsync(
+        Guid bindingId,
         string externalReference,
         string payerReference,
         Currency currency,
@@ -33,16 +33,11 @@ internal interface ICommissionService
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
-    Task<Result> ClaimAuthorizationAsync(
-        Guid authorizationId,
-        CommissionAuthorizationConsumer consumer,
-        CancellationToken ct = default);
-
     Task<string?> FindBoundPaymentIntentAsync(
-        Guid authorizationId,
+        Guid bindingId,
         CancellationToken ct = default);
 
     void BindPaymentIntent(
-        CommissionAuthorizationEntity authorization,
+        CommissionBindingEntity binding,
         string paymentIntentId);
 }

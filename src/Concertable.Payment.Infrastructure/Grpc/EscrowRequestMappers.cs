@@ -11,14 +11,14 @@ internal sealed record DepositCommand(
     PaymentSession Session,
     int BookingId);
 
-internal sealed record CommissionAuthorizedDepositCommand(
+internal sealed record BoundCommissionDepositCommand(
     Guid PayerId,
     Guid PayeeId,
     Money Gross,
     string PaymentMethodId,
     PaymentSession Session,
     int BookingId,
-    Guid CommissionAuthorizationId,
+    Guid CommissionBindingId,
     string ExternalReference,
     long ExpectedCommissionMinor,
     long ExpectedPayerTotalMinor,
@@ -31,13 +31,13 @@ internal sealed record CaptureCommand(
     string PaymentIntentId,
     int BookingId);
 
-internal sealed record CommissionAuthorizedCaptureCommand(
+internal sealed record BoundCommissionCaptureCommand(
     Guid PayerId,
     Guid PayeeId,
     Money Gross,
     string PaymentIntentId,
     int BookingId,
-    Guid CommissionAuthorizationId,
+    Guid CommissionBindingId,
     string ExternalReference,
     long ExpectedCommissionMinor,
     long ExpectedPayerTotalMinor);
@@ -52,16 +52,16 @@ internal static class EscrowRequestMappers
         request.Session.ToPaymentSession(),
         request.BookingId);
 
-    public static CommissionAuthorizedDepositCommand ToCommand(
-        this CommissionAuthorizedDepositRequest request) => new(
+    public static BoundCommissionDepositCommand ToCommand(
+        this BoundCommissionDepositRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
         Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId,
-        request.CommissionAuthorizationId.ParseOrThrow<Guid>(
-            nameof(request.CommissionAuthorizationId)),
+        request.CommissionBindingId.ParseOrThrow<Guid>(
+            nameof(request.CommissionBindingId)),
         request.ExternalReference,
         request.ExpectedCommissionMinor,
         request.ExpectedPayerTotalMinor,
@@ -74,15 +74,15 @@ internal static class EscrowRequestMappers
         request.PaymentIntentId,
         request.BookingId);
 
-    public static CommissionAuthorizedCaptureCommand ToCommand(
-        this CommissionAuthorizedCaptureRequest request) => new(
+    public static BoundCommissionCaptureCommand ToCommand(
+        this BoundCommissionCaptureRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
         Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
         request.PaymentIntentId,
         request.BookingId,
-        request.CommissionAuthorizationId.ParseOrThrow<Guid>(
-            nameof(request.CommissionAuthorizationId)),
+        request.CommissionBindingId.ParseOrThrow<Guid>(
+            nameof(request.CommissionBindingId)),
         request.ExternalReference,
         request.ExpectedCommissionMinor,
         request.ExpectedPayerTotalMinor);

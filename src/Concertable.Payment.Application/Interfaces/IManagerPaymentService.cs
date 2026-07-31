@@ -13,7 +13,7 @@ internal interface IManagerPaymentService
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome>> PayCommissionAuthorizedAsync(
+    Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -21,7 +21,7 @@ internal interface IManagerPaymentService
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -57,12 +57,12 @@ internal interface IManagerPaymentService
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<CheckoutSession>> CreateCommissionAuthorizedHoldSessionAsync(
+    Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
         IReadOnlyDictionary<string, string> metadata,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -74,7 +74,7 @@ internal interface IManagerPaymentService
         int applicationId,
         CancellationToken ct = default);
 
-    Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+    Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,

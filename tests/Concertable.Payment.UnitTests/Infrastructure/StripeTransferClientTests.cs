@@ -52,7 +52,7 @@ public sealed class StripeTransferClientTests
     [Fact]
     public async Task RefundAsync_UsesPayeeRefundForTransferReversalAndTotalForCustomerRefund()
     {
-        var authorizationId = Guid.NewGuid();
+        var bindingId = Guid.NewGuid();
         var result = await sut.RefundAsync(new StripeRefundOptions
         {
             Amount = Money.Gbp(55),
@@ -60,7 +60,7 @@ public sealed class StripeTransferClientTests
             TransferReversal = new("tr_test", Money.Gbp(50)),
             Metadata = new Dictionary<string, string>
             {
-                [PaymentMetadataKeys.CommissionAuthorizationId] = authorizationId.ToString(),
+                [PaymentMetadataKeys.CommissionBindingId] = bindingId.ToString(),
                 [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "5500"
             }
         });
@@ -69,12 +69,12 @@ public sealed class StripeTransferClientTests
         Assert.NotNull(reversal);
         Assert.Equal(5000, reversal.Amount);
         Assert.Equal(
-            $"commission:{authorizationId}:refund-reversal:5500",
+            $"commission:{bindingId}:refund-reversal:5500",
             reversalRequest?.IdempotencyKey);
         Assert.NotNull(refund);
         Assert.Equal(5500, refund.Amount);
         Assert.Equal(
-            $"commission:{authorizationId}:refund:5500",
+            $"commission:{bindingId}:refund:5500",
             refundRequest?.IdempotencyKey);
     }
 

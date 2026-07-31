@@ -98,7 +98,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CommissionAuthorizations",
+                name: "CommissionBindings",
                 schema: "payment",
                 columns: table => new
                 {
@@ -112,9 +112,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CommissionAuthorizations", x => x.Id);
+                    table.PrimaryKey("PK_CommissionBindings", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CommissionAuthorizations_CommissionConfigurations_CommissionConfigurationId",
+                        name: "FK_CommissionBindings_CommissionConfigurations_CommissionConfigurationId",
                         column: x => x.CommissionConfigurationId,
                         principalSchema: "payment",
                         principalTable: "CommissionConfigurations",
@@ -155,28 +155,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CommissionAuthorizationClaims",
-                schema: "payment",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CommissionAuthorizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Consumer = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ClaimedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CommissionAuthorizationClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CommissionAuthorizationClaims_CommissionAuthorizations_CommissionAuthorizationId",
-                        column: x => x.CommissionAuthorizationId,
-                        principalSchema: "payment",
-                        principalTable: "CommissionAuthorizations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Escrows",
                 schema: "payment",
                 columns: table => new
@@ -186,7 +164,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     BookingId = table.Column<int>(type: "int", nullable: false),
                     FromOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ToOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CommissionAuthorizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CommissionBindingId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
                     PayeeGrossMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionGrossMinor = table.Column<long>(type: "bigint", nullable: false),
@@ -208,10 +186,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_Escrows", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Escrows_CommissionAuthorizations_CommissionAuthorizationId",
-                        column: x => x.CommissionAuthorizationId,
+                        name: "FK_Escrows_CommissionBindings_CommissionBindingId",
+                        column: x => x.CommissionBindingId,
                         principalSchema: "payment",
-                        principalTable: "CommissionAuthorizations",
+                        principalTable: "CommissionBindings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -234,7 +212,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(34)", maxLength: 34, nullable: false),
                     ContextId = table.Column<int>(type: "int", nullable: true),
-                    CommissionAuthorizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CommissionBindingId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: true),
                     PayeeGrossMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionGrossMinor = table.Column<long>(type: "bigint", nullable: true),
@@ -248,10 +226,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_Transactions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Transactions_CommissionAuthorizations_CommissionAuthorizationId",
-                        column: x => x.CommissionAuthorizationId,
+                        name: "FK_Transactions_CommissionBindings_CommissionBindingId",
+                        column: x => x.CommissionBindingId,
                         principalSchema: "payment",
-                        principalTable: "CommissionAuthorizations",
+                        principalTable: "CommissionBindings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -294,37 +272,30 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommissionAuthorizationClaims_CommissionAuthorizationId",
+                name: "IX_CommissionBindings_CommissionConfigurationId",
                 schema: "payment",
-                table: "CommissionAuthorizationClaims",
-                column: "CommissionAuthorizationId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CommissionAuthorizations_CommissionConfigurationId",
-                schema: "payment",
-                table: "CommissionAuthorizations",
+                table: "CommissionBindings",
                 column: "CommissionConfigurationId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommissionAuthorizations_ExternalReference_PayerReference",
+                name: "IX_CommissionBindings_ExternalReference_PayerReference",
                 schema: "payment",
-                table: "CommissionAuthorizations",
+                table: "CommissionBindings",
                 columns: new[] { "ExternalReference", "PayerReference" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommissionAuthorizations_StripePaymentIntentId",
+                name: "IX_CommissionBindings_StripePaymentIntentId",
                 schema: "payment",
-                table: "CommissionAuthorizations",
+                table: "CommissionBindings",
                 column: "StripePaymentIntentId",
                 unique: true,
                 filter: "[StripePaymentIntentId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommissionAuthorizations_StripeSetupIntentId",
+                name: "IX_CommissionBindings_StripeSetupIntentId",
                 schema: "payment",
-                table: "CommissionAuthorizations",
+                table: "CommissionBindings",
                 column: "StripeSetupIntentId",
                 unique: true,
                 filter: "[StripeSetupIntentId] IS NOT NULL");
@@ -351,12 +322,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Escrows_CommissionAuthorizationId",
+                name: "IX_Escrows_CommissionBindingId",
                 schema: "payment",
                 table: "Escrows",
-                column: "CommissionAuthorizationId",
+                column: "CommissionBindingId",
                 unique: true,
-                filter: "[CommissionAuthorizationId] IS NOT NULL");
+                filter: "[CommissionBindingId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Escrows_Status",
@@ -442,12 +413,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "StripeCustomerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Transactions_CommissionAuthorizationId",
+                name: "IX_Transactions_CommissionBindingId",
                 schema: "payment",
                 table: "Transactions",
-                column: "CommissionAuthorizationId",
+                column: "CommissionBindingId",
                 unique: true,
-                filter: "[CommissionAuthorizationId] IS NOT NULL");
+                filter: "[CommissionBindingId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_PayeeId",
@@ -472,10 +443,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "CommissionAuthorizationClaims",
-                schema: "payment");
-
             migrationBuilder.DropTable(
                 name: "LedgerEntries",
                 schema: "payment");
@@ -509,7 +476,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment");
 
             migrationBuilder.DropTable(
-                name: "CommissionAuthorizations",
+                name: "CommissionBindings",
                 schema: "payment");
 
             migrationBuilder.DropTable(

@@ -32,12 +32,12 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
         return result.Value.ToProtoPaymentResponse();
     }
 
-    public override async Task<PaymentResponse> PayCommissionAuthorized(
-        CommissionAuthorizedManagerPayRequest request,
+    public override async Task<PaymentResponse> PayBoundCommission(
+        BoundCommissionManagerPayRequest request,
         ServerCallContext context)
     {
         var command = request.ToCommand();
-        var result = await managerPaymentService.PayCommissionAuthorizedAsync(
+        var result = await managerPaymentService.PayBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
             command.Gross.ToMinorUnits(),
@@ -45,7 +45,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.PaymentMethodId,
             command.Session,
             command.BookingId,
-            command.CommissionAuthorizationId,
+            command.CommissionBindingId,
             command.ExternalReference,
             command.ExpectedCommissionMinor,
             command.ExpectedPayerTotalMinor,
@@ -97,17 +97,17 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
         return session.ToProtoCheckoutSession();
     }
 
-    public override async Task<CheckoutSessionResponse> CreateCommissionAuthorizedHoldSession(
-        CreateCommissionAuthorizedHoldSessionRequest request,
+    public override async Task<CheckoutSessionResponse> CreateBoundCommissionHoldSession(
+        CreateBoundCommissionHoldSessionRequest request,
         ServerCallContext context)
     {
         var command = request.ToCommand();
-        var result = await managerPaymentService.CreateCommissionAuthorizedHoldSessionAsync(
+        var result = await managerPaymentService.CreateBoundCommissionHoldSessionAsync(
             command.PayerId,
             command.Gross.ToMinorUnits(),
             command.Gross.Currency,
             command.Metadata,
-            command.CommissionAuthorizationId,
+            command.CommissionBindingId,
             command.ExternalReference,
             command.ExpectedCommissionMinor,
             command.ExpectedPayerTotalMinor,

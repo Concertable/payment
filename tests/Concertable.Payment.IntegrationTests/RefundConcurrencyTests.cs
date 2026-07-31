@@ -37,12 +37,12 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         int bookingId = 8_100 + Random.Shared.Next(1_000);
         await using (var seed = CreateContext())
         {
-            var authorization = await SeedAuthorizationAsync(seed);
-            var escrow = EscrowEntity.CreateAuthorized(
+            var binding = await SeedAuthorizationAsync(seed);
+            var escrow = EscrowEntity.CreateBound(
                 bookingId,
                 Guid.NewGuid(),
                 Guid.NewGuid(),
-                authorization.Id,
+                binding.Id,
                 new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
                 $"pi_escrow_{Guid.NewGuid():N}");
             escrow.Confirm();
@@ -70,7 +70,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Options.Create(new PlatformFeeOptions { Fee = 0m }),
                 TimeProvider.System,
                 NullLogger<EscrowService>.Instance);
-            return await service.RefundCommissionAuthorizedByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
@@ -101,15 +101,15 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         int bookingId = 9_100 + Random.Shared.Next(1_000);
         await using (var seed = CreateContext())
         {
-            var authorization = await SeedAuthorizationAsync(seed);
-            var settlement = SettlementTransactionEntity.CreateAuthorized(
+            var binding = await SeedAuthorizationAsync(seed);
+            var settlement = SettlementTransactionEntity.CreateBound(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 $"pi_settlement_{Guid.NewGuid():N}",
                 new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
                 TransactionStatus.Complete,
                 bookingId,
-                authorization.Id);
+                binding.Id);
             settlement.CreatedBy = "integration";
             settlement.CreatedAt = DateTime.UtcNow;
             seed.SettlementTransactions.Add(settlement);
@@ -135,7 +135,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 context,
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
-            return await service.RefundCommissionAuthorizedByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
@@ -217,15 +217,15 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
             inner.ExecuteAsync(operation, cancellationToken);
     }
 
-    private static async Task<CommissionAuthorizationEntity> SeedAuthorizationAsync(PaymentDbContext context)
+    private static async Task<CommissionBindingEntity> SeedAuthorizationAsync(PaymentDbContext context)
     {
         var configuration = CommissionConfigurationEntity.Create(
             Guid.NewGuid(), $"integration-{Guid.NewGuid():N}", Currency.Gbp, 500, DateTimeOffset.UtcNow);
-        var authorization = CommissionAuthorizationEntity.Create(
+        var binding = CommissionBindingEntity.Create(
             configuration.Id, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
-        context.AddRange(configuration, authorization);
+        context.AddRange(configuration, binding);
         await context.SaveChangesAsync();
-        return authorization;
+        return binding;
     }
 
     private PaymentDbContext CreateContext()
