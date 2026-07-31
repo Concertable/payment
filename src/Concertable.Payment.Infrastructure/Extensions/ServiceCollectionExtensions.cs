@@ -120,6 +120,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripePaymentIntentClientFactory, StripePaymentIntentClientFactory>();
         services.AddScoped<IPaymentManager, PaymentManager>();
 
+        services.AddScoped<IStripeWebhookHandler<Stripe.PaymentIntent>, PaymentIntentWebhookHandler>();
+        services.AddScoped<IStripeWebhookHandler<Stripe.SetupIntent>, SetupIntentWebhookHandler>();
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();

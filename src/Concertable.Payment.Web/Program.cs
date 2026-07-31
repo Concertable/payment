@@ -15,6 +15,7 @@ using Concertable.Messaging.Application.Extensions;
 using Concertable.Messaging.AzureServiceBus.Extensions;
 using Concertable.Kernel.Extensions;
 using Concertable.Seed.Shared.Extensions;
+using Concertable.Shared.Api.Exceptions;
 using Concertable.Payment.Web;
 
 var builder = WebApplication.CreateBuilder(args);
