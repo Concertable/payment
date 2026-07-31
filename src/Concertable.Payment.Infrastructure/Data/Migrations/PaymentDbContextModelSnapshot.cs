@@ -227,6 +227,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("CommissionVatRateBasisPoints")
                         .HasColumnType("int");
 
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -427,7 +431,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.ToTable("PaymentRefunds", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)");
+                            t.HasCheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL AND [SettlementTransactionId] IS NOT NULL) OR ([EscrowId] IS NOT NULL AND [SettlementTransactionId] IS NULL)");
                         });
                 });
 
@@ -561,6 +565,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<int>("CommissionVatRateBasisPoints")
                         .HasColumnType("int");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Currency")
                         .IsRequired()
