@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Concertable.Payment.Infrastructure.Data.Configurations;
 
-internal sealed class CommissionAuthorizationEntityConfiguration
-    : IEntityTypeConfiguration<CommissionAuthorizationEntity>
+internal sealed class CommissionBindingEntityConfiguration
+    : IEntityTypeConfiguration<CommissionBindingEntity>
 {
-    public void Configure(EntityTypeBuilder<CommissionAuthorizationEntity> builder)
+    public void Configure(EntityTypeBuilder<CommissionBindingEntity> builder)
     {
-        builder.ToTable(Schema.Tables.CommissionAuthorizations, Schema.Name);
+        builder.ToTable(Schema.Tables.CommissionBindings, Schema.Name);
         builder.Property(a => a.Id).ValueGeneratedNever();
         builder.Property(a => a.ExternalReference).HasMaxLength(200);
         builder.Property(a => a.PayerReference).HasMaxLength(200);

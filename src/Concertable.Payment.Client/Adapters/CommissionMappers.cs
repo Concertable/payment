@@ -16,10 +16,10 @@ internal static class CommissionMappers
             response.CommissionMinor,
             response.PayerTotalMinor);
 
-    public static CommissionAuthorization ToCommissionAuthorization(
-        this Proto.CommissionAuthorizationResponse response) =>
+    public static CommissionBinding ToCommissionBinding(
+        this Proto.CommissionBindingResponse response) =>
         new(
-            Guid.Parse(response.AuthorizationId),
+            Guid.Parse(response.BindingId),
             Guid.Parse(response.CommissionConfigurationId),
             response.ConfigurationVersion,
             response.RateBasisPoints,

@@ -46,7 +46,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         }
     }
 
-    public async Task<Result<PaymentOutcome>> PayCommissionAuthorizedAsync(
+    public async Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -54,7 +54,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -63,8 +63,8 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         try
         {
-            var response = await client.PayCommissionAuthorizedAsync(
-                new Proto.CommissionAuthorizedManagerPayRequest
+            var response = await client.PayBoundCommissionAsync(
+                new Proto.BoundCommissionManagerPayRequest
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
@@ -73,7 +73,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId,
-                    CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                    CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
                     ExpectedCommissionMinor = expectedCommissionMinor,
                     ExpectedPayerTotalMinor = expectedPayerTotalMinor,
@@ -127,12 +127,12 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         return response.ToCheckoutSession();
     }
 
-    public async Task<Result<CheckoutSession>> CreateCommissionAuthorizedHoldSessionAsync(
+    public async Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
         IDictionary<string, string> metadata,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -141,19 +141,19 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         try
         {
-            var request = new Proto.CreateCommissionAuthorizedHoldSessionRequest
+            var request = new Proto.CreateBoundCommissionHoldSessionRequest
             {
                 PayerId = payerId.ToString(),
                 GrossMinor = grossMinor,
                 Currency = currency.ToProtoCurrency(),
-                CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                CommissionBindingId = commissionBindingId.ToString(),
                 ExternalReference = externalReference,
                 ExpectedCommissionMinor = expectedCommissionMinor,
                 ExpectedPayerTotalMinor = expectedPayerTotalMinor,
                 StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
             };
             request.Metadata.Add(metadata);
-            var response = await client.CreateCommissionAuthorizedHoldSessionAsync(
+            var response = await client.CreateBoundCommissionHoldSessionAsync(
                 request,
                 cancellationToken: ct);
             return Result.Ok(response.ToCheckoutSession());

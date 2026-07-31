@@ -7,8 +7,8 @@ internal interface ITransactionRepository : IRepository<TransactionEntity>
 {
     Task<IPagination<TransactionEntity>> GetAsync(IPageParams pageParams, Guid userId);
     Task<TransactionEntity?> GetByPaymentIntentIdAsync(string paymentIntentId);
-    Task<SettlementTransactionEntity?> GetSettlementByCommissionAuthorizationIdAsync(
-        Guid commissionAuthorizationId,
+    Task<SettlementTransactionEntity?> GetSettlementByCommissionBindingIdAsync(
+        Guid commissionBindingId,
         CancellationToken ct = default);
     Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,

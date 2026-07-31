@@ -62,8 +62,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
         services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
-        services.AddScoped<ICommissionAuthorizationRepository, CommissionAuthorizationRepository>();
-        services.AddScoped<ICommissionAuthorizationClaimRepository, CommissionAuthorizationClaimRepository>();
+        services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
         services.AddScoped<ILedgerTransactionRepository, LedgerTransactionRepository>();
         services.AddScoped<ILedgerService, LedgerService>();

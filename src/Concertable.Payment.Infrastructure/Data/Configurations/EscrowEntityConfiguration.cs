@@ -12,11 +12,11 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
         builder.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(e => e.BookingId).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
-        builder.HasIndex(e => e.CommissionAuthorizationId).IsUnique().HasFilter("[CommissionAuthorizationId] IS NOT NULL");
+        builder.HasIndex(e => e.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
         builder.HasIndex(e => e.Status);
-        builder.HasOne(e => e.CommissionAuthorization)
+        builder.HasOne(e => e.CommissionBinding)
             .WithMany()
-            .HasForeignKey(e => e.CommissionAuthorizationId)
+            .HasForeignKey(e => e.CommissionBindingId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

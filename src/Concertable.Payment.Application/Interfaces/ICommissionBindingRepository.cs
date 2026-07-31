@@ -2,9 +2,9 @@ using Concertable.DataAccess.Application;
 
 namespace Concertable.Payment.Application.Interfaces;
 
-internal interface ICommissionAuthorizationRepository : IRepository<CommissionAuthorizationEntity, Guid>
+internal interface ICommissionBindingRepository : IRepository<CommissionBindingEntity, Guid>
 {
-    Task<CommissionAuthorizationEntity?> GetByIdentityAsync(
+    Task<CommissionBindingEntity?> GetByIdentityAsync(
         string externalReference,
         string payerReference,
         CancellationToken ct = default);
