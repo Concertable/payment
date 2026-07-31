@@ -39,6 +39,13 @@ internal sealed class TransactionRepository : ITransactionRepository
             t => t.CommissionAuthorizationId == commissionAuthorizationId,
             ct);
 
+    public Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default) =>
+        context.SettlementTransactions
+            .Include(t => t.Refunds)
+            .FirstOrDefaultAsync(t => t.BookingId == bookingId, ct);
+
     public Task AddAsync(TransactionEntity entity, CancellationToken ct = default) =>
         context.Transactions.AddAsync(entity, ct).AsTask();
 

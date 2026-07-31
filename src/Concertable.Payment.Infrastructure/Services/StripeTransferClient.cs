@@ -81,6 +81,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                 {
                     PaymentIntent = opts.PaymentIntentId,
                     Amount = opts.Amount.ToMinorUnits(),
+                    ReverseTransfer = opts.ReverseTransfer ? true : null,
                     Reason = opts.Reason,
                     Metadata = opts.Metadata
                 },
