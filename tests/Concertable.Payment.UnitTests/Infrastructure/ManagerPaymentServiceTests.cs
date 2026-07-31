@@ -1,10 +1,12 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
 using FluentResults;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -52,8 +54,10 @@ public sealed class ManagerPaymentServiceTests
             payoutAccountRepository.Object,
             transactionRepository.Object,
             commissionService.Object,
+            new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
+            new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
     [Fact]
@@ -131,6 +135,96 @@ public sealed class ManagerPaymentServiceTests
         await sut.CreateHoldSessionAsync(payerId, Money.Gbp(50), new Dictionary<string, string>());
 
         Assert.Equal(Money.Gbp(62), held);
+    }
+
+    [Fact]
+    public async Task RefundCommissionAuthorizedByBookingIdAsync_FullRefund_RecordsDurableRowAndReversesTransfer()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+
+        RefundRequest? captured = null;
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<RefundRequest, CancellationToken>((r, _) => captured = r)
+            .ReturnsAsync(Result.Ok(new Refund("re_settlement")));
+
+        var result = await sut.RefundCommissionAuthorizedByBookingIdAsync(7, 5000, Currency.Gbp);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(captured);
+        Assert.True(captured.ReverseTransfer);
+        Assert.Equal(Money.Gbp(60), captured.Amount);
+
+        var recorded = Assert.Single(settlement.Refunds);
+        Assert.Equal("re_settlement", recorded.StripeRefundId);
+        Assert.Equal(5000, recorded.GrossRefundedMinor);
+        Assert.Equal(1000, recorded.CommissionRefundedMinor);
+        Assert.Equal(200, recorded.CommissionVatReversedMinor);
+        Assert.Equal(settlement.Id, recorded.SettlementTransactionId);
+        Assert.Null(recorded.EscrowId);
+
+        var posting = Assert.Single(postings);
+        Assert.Equal(0, posting.SignedMinorUnitSum());
+        Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.Payable));
+        Assert.Equal(800, posting.DebitMinorUnits(LedgerAccountType.PlatformRevenue));
+        Assert.Equal(200, posting.DebitMinorUnits(LedgerAccountType.VatLiability));
+        Assert.Equal(6000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
+    }
+
+    [Fact]
+    public async Task RefundCommissionAuthorizedByBookingIdAsync_ExceedsRemainingGross_Fails()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+
+        var result = await sut.RefundCommissionAuthorizedByBookingIdAsync(7, 5001, Currency.Gbp);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(settlement.Refunds);
+        paymentManager.Verify(
+            p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RefundCommissionAuthorizedByBookingIdAsync_NoSettlement_IsNoOpSuccess()
+    {
+        var sut = SutWithFee(0m);
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SettlementTransactionEntity?)null);
+
+        var result = await sut.RefundCommissionAuthorizedByBookingIdAsync(7, 5000, Currency.Gbp);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Value);
+        paymentManager.Verify(
+            p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private SettlementTransactionEntity CompletedAuthorizedSettlement()
+    {
+        var settlement = SettlementTransactionEntity.CreateAuthorized(
+            payerId,
+            payeeId,
+            "pi_settlement",
+            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+            TransactionStatus.Pending,
+            bookingId: 7,
+            commissionAuthorizationId: Guid.NewGuid());
+        settlement.Complete();
+        return settlement;
     }
 
     private static PayoutAccountEntity PayoutAccountWith(string stripeCustomerId)

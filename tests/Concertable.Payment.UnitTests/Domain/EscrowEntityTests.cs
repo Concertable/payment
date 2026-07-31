@@ -121,7 +121,7 @@ public sealed class EscrowEntityTests
     {
         var escrow = NewPending();
         escrow.Confirm();
-        var refund = PaymentRefundEntity.CreateCompleted(
+        var refund = PaymentRefundEntity.CreateCompletedForEscrow(
             escrow.Id,
             "re_partial",
             grossRefundedMinor: 1000,
@@ -195,7 +195,7 @@ public sealed class EscrowEntityTests
     }
 
     private static PaymentRefundEntity FullRefund(EscrowEntity escrow) =>
-        PaymentRefundEntity.CreateCompleted(
+        PaymentRefundEntity.CreateCompletedForEscrow(
             escrow.Id,
             $"re_{Guid.NewGuid():N}",
             escrow.PayeeGrossMinor,

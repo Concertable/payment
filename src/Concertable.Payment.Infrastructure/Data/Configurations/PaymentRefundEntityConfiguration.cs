@@ -15,5 +15,13 @@ internal sealed class PaymentRefundEntityConfiguration : IEntityTypeConfiguratio
             .WithMany(e => e.Refunds)
             .HasForeignKey(r => r.EscrowId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(r => r.SettlementTransaction)
+            .WithMany(t => t.Refunds)
+            .HasForeignKey(r => r.SettlementTransactionId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.ToTable(t =>
+            t.HasCheckConstraint(
+                "CK_PaymentRefunds_Owner",
+                "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)"));
     }
 }

@@ -73,4 +73,11 @@ internal interface IManagerPaymentService
         Guid payerId,
         int applicationId,
         CancellationToken ct = default);
+
+    Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+        int bookingId,
+        long grossMinor,
+        Currency currency,
+        string? reason = null,
+        CancellationToken ct = default);
 }

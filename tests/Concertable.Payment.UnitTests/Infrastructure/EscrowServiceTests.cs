@@ -214,7 +214,7 @@ public sealed class EscrowServiceTests
     {
         var refundedEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
         refundedEscrow.Confirm();
-        refundedEscrow.RecordRefund(PaymentRefundEntity.CreateCompleted(
+        refundedEscrow.RecordRefund(PaymentRefundEntity.CreateCompletedForEscrow(
             refundedEscrow.Id,
             "re_prior",
             5000,
