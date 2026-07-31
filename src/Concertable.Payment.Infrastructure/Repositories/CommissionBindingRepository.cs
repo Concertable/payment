@@ -13,7 +13,6 @@ internal sealed class CommissionBindingRepository
         Guid id,
         CancellationToken ct = default) =>
         context.CommissionBindings
-            .Include(a => a.CommissionConfiguration)
             .SingleOrDefaultAsync(a => a.Id == id, ct);
 
     public Task<CommissionBindingEntity?> GetByIdentityAsync(
@@ -21,7 +20,6 @@ internal sealed class CommissionBindingRepository
         string payerReference,
         CancellationToken ct = default) =>
         context.CommissionBindings
-            .Include(a => a.CommissionConfiguration)
             .SingleOrDefaultAsync(
                 a => a.ExternalReference == externalReference &&
                      a.PayerReference == payerReference,
