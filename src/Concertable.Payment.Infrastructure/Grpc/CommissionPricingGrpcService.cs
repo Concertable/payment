@@ -78,10 +78,10 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
                 result.Errors[0].Message));
 
         return new CommissionQuote(
-            result.Value.Configuration.Id,
-            result.Value.Configuration.Version,
-            result.Value.Configuration.RateBasisPoints,
-            result.Value.Configuration.Currency,
+            result.Value.Terms.ConfigurationId,
+            result.Value.Terms.Version,
+            result.Value.Terms.RateBasisPoints,
+            result.Value.Terms.Currency,
             result.Value.Calculation.PayeeGrossMinor,
             result.Value.Calculation.CommissionGrossMinor,
             result.Value.Calculation.PayerTotalMinor).ToProto();

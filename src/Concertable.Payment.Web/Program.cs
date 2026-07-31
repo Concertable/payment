@@ -111,7 +111,6 @@ app.MapDefaultEndpoints();
 
 if (!app.Environment.IsProduction())
     await app.Services.MigratePaymentDatabaseAsync();
-await app.Services.BootstrapCommissionConfigurationAsync();
 
 app.Run();
 

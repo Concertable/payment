@@ -56,7 +56,6 @@ services.AddInbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionStr
 var app = builder.Build();
 
 await app.Services.MigratePaymentDatabaseAsync();
-await app.Services.BootstrapCommissionConfigurationAsync();
 
 using (var scope = app.Services.CreateScope())
 {
