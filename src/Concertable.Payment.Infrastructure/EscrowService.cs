@@ -395,7 +395,9 @@ internal sealed class EscrowService : IEscrowService
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
             return Result.Fail($"Escrow {escrowId} is {escrow.Status}; cannot refund");
 
-        var refundedTotalMinor = escrow.Refunds.Sum(r => r.PayerTotalRefundedMinor);
+        var refundedTotalMinor = escrow.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.PayerTotalRefundedMinor);
         var remainingTotalMinor = checked(escrow.PayerTotalMinor - refundedTotalMinor);
         var refundTotal = amount?.ToMinorUnits() ?? remainingTotalMinor;
         if (amount is not null && amount.Value.Currency != escrow.Currency)
@@ -403,7 +405,9 @@ internal sealed class EscrowService : IEscrowService
         if (refundTotal <= 0 || refundTotal > remainingTotalMinor)
             return Result.Fail("refund_amount_exceeds_remaining_total");
 
-        var refundedGrossMinor = escrow.Refunds.Sum(r => r.GrossRefundedMinor);
+        var refundedGrossMinor = escrow.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor);
         var remainingGrossMinor = checked(escrow.PayeeGrossMinor - refundedGrossMinor);
         var grossRefundMinor = Math.Min(refundTotal, remainingGrossMinor);
         var commissionRefundMinor = checked(refundTotal - grossRefundMinor);
@@ -435,9 +439,10 @@ internal sealed class EscrowService : IEscrowService
             logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
             return Result.Ok<Refund?>(new Refund(
                 escrow.Refunds
+                    .Where(r => r.Status == PaymentRefundStatus.Completed)
                     .OrderByDescending(r => r.CompletedAt)
                     .First()
-                    .StripeRefundId));
+                    .StripeRefundId!));
         }
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
@@ -475,7 +480,9 @@ internal sealed class EscrowService : IEscrowService
         if (grossMinor <= 0)
             return Result.Fail("refund_gross_must_be_positive");
 
-        var grossAlreadyRefunded = escrow.Refunds.Sum(r => r.GrossRefundedMinor);
+        var grossAlreadyRefunded = escrow.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor);
         var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
         if (cumulativeGrossRefund > escrow.PayeeGrossMinor)
             return Result.Fail("refund_gross_exceeds_remaining_gross");
@@ -490,10 +497,10 @@ internal sealed class EscrowService : IEscrowService
             escrow.PayeeGrossMinor);
         var commissionRefundMinor = checked(
             cumulativeCommissionRefund -
-            escrow.Refunds.Sum(r => r.CommissionRefundedMinor));
+            escrow.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionRefundedMinor));
         var commissionVatReversedMinor = checked(
             cumulativeVatReversal -
-            escrow.Refunds.Sum(r => r.CommissionVatReversedMinor));
+            escrow.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionVatReversedMinor));
 
         var refund = await ExecuteRefundAsync(
             escrow,
@@ -534,8 +541,27 @@ internal sealed class EscrowService : IEscrowService
         CancellationToken ct)
     {
         var payerTotalRefundMinor = checked(grossRefundMinor + commissionRefundMinor);
-        var cumulativeGrossRefundMinor = checked(
-            escrow.Refunds.Sum(refund => refund.GrossRefundedMinor) + grossRefundMinor);
+
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            escrow.Id,
+            grossRefundMinor,
+            commissionRefundMinor,
+            commissionVatReversedMinor,
+            timeProvider.GetUtcNow());
+        escrow.RecordRefund(reservation);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            context.ChangeTracker.Clear();
+            return await ReservationConflictAsync(escrow.Id, grossRefundMinor, ct);
+        }
+
+        var cumulativeGrossRefundMinor = escrow.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor);
         var metadata = EscrowMetadata(escrow, TransactionTypes.EscrowRefund);
         metadata[PaymentMetadataKeys.PayeeGrossMinor] = grossRefundMinor.ToString();
         metadata[PaymentMetadataKeys.CommissionGrossMinor] = commissionRefundMinor.ToString();
@@ -555,16 +581,13 @@ internal sealed class EscrowService : IEscrowService
             Metadata = metadata
         }, ct);
         if (refund.IsFailed)
+        {
+            escrow.ReleaseRefund(reservation);
+            await unitOfWork.SaveChangesAsync(ct);
             return refund;
+        }
 
-        var refundEntity = PaymentRefundEntity.CreateCompletedForEscrow(
-            escrow.Id,
-            refund.Value.RefundId,
-            grossRefundMinor,
-            commissionRefundMinor,
-            commissionVatReversedMinor,
-            timeProvider.GetUtcNow());
-        escrow.RecordRefund(refundEntity);
+        escrow.CompleteRefund(reservation, refund.Value.RefundId, timeProvider.GetUtcNow());
 
         var refundPosting = escrow.TransferId is null
             ? LedgerPostings.EscrowRefundBeforeRelease(
@@ -583,22 +606,23 @@ internal sealed class EscrowService : IEscrowService
                 escrow.ChargeId,
                 refund.Value.RefundId);
         await ledger.StageAsync(refundPosting, ct);
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            context.ChangeTracker.Clear();
-            var current = await escrowRepository.GetWithRefundsByIdAsync(escrow.Id, ct);
-            var committedGross = current?.Refunds.Sum(r => r.GrossRefundedMinor) ?? 0;
-            return checked(committedGross + grossRefundMinor) > (current?.PayeeGrossMinor ?? 0)
-                ? Result.Fail("refund_gross_exceeds_remaining_gross")
-                : Result.Fail("refund_conflict");
-        }
+        await unitOfWork.SaveChangesAsync(ct);
 
         return refund;
+    }
+
+    private async Task<Result<Refund>> ReservationConflictAsync(
+        int escrowId,
+        long grossRefundMinor,
+        CancellationToken ct)
+    {
+        var current = await escrowRepository.GetWithRefundsByIdAsync(escrowId, ct);
+        var reservedGross = current?.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor) ?? 0;
+        return checked(reservedGross + grossRefundMinor) > (current?.PayeeGrossMinor ?? 0)
+            ? Result.Fail("refund_gross_exceeds_remaining_gross")
+            : Result.Fail("refund_conflict");
     }
 
     private static IReadOnlyDictionary<string, string> CommissionMetadata(

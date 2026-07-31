@@ -195,6 +195,55 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
+    public void RecordRefund_PendingFullGross_DoesNotTransitionToRefunded()
+    {
+        var escrow = NewPending();
+        escrow.Confirm();
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            escrow.Id, escrow.PayeeGrossMinor, escrow.CommissionGrossMinor, escrow.CommissionVatMinor, DateTimeOffset.UtcNow);
+
+        escrow.RecordRefund(reservation);
+
+        Assert.Equal(EscrowStatus.Held, escrow.Status);
+        Assert.Same(reservation, Assert.Single(escrow.Refunds));
+    }
+
+    [Fact]
+    public void CompleteRefund_FullGross_TransitionsToRefundedAndBumpsToken()
+    {
+        var escrow = NewPending();
+        escrow.Confirm();
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            escrow.Id, escrow.PayeeGrossMinor, escrow.CommissionGrossMinor, escrow.CommissionVatMinor, DateTimeOffset.UtcNow);
+        escrow.RecordRefund(reservation);
+        var afterReserve = escrow.ConcurrencyToken;
+
+        escrow.CompleteRefund(reservation, "re_done", DateTimeOffset.UtcNow);
+
+        Assert.Equal(EscrowStatus.Refunded, escrow.Status);
+        Assert.Equal("re_done", reservation.StripeRefundId);
+        Assert.NotEqual(afterReserve, escrow.ConcurrencyToken);
+    }
+
+    [Fact]
+    public void ReleaseRefund_FailsReservationAndKeepsEscrowRefundable()
+    {
+        var escrow = NewPending();
+        escrow.Confirm();
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            escrow.Id, escrow.PayeeGrossMinor, escrow.CommissionGrossMinor, escrow.CommissionVatMinor, DateTimeOffset.UtcNow);
+        escrow.RecordRefund(reservation);
+        var afterReserve = escrow.ConcurrencyToken;
+
+        escrow.ReleaseRefund(reservation);
+
+        Assert.Equal(EscrowStatus.Held, escrow.Status);
+        Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
+        Assert.False(reservation.CountsTowardCumulative);
+        Assert.NotEqual(afterReserve, escrow.ConcurrencyToken);
+    }
+
+    [Fact]
     public void MarkDisputed_FromHeld_TransitionsToDisputed()
     {
         var escrow = NewPending();
