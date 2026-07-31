@@ -46,7 +46,7 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<EscrowDeposit>> DepositCommissionAuthorizedAsync(
+    public async Task<Result<EscrowDeposit>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -54,7 +54,7 @@ internal sealed class EscrowClient : IEscrowClient
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -63,8 +63,8 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
-            var response = await client.DepositCommissionAuthorizedAsync(
-                new Proto.CommissionAuthorizedDepositRequest
+            var response = await client.DepositBoundCommissionAsync(
+                new Proto.BoundCommissionDepositRequest
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
@@ -73,7 +73,7 @@ internal sealed class EscrowClient : IEscrowClient
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId,
-                    CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                    CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
                     ExpectedCommissionMinor = expectedCommissionMinor,
                     ExpectedPayerTotalMinor = expectedPayerTotalMinor,
@@ -116,14 +116,14 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<EscrowDeposit>> CaptureCommissionAuthorizedAsync(
+    public async Task<Result<EscrowDeposit>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
         Currency currency,
         string paymentIntentId,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
@@ -131,8 +131,8 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
-            var response = await client.CaptureCommissionAuthorizedAsync(
-                new Proto.CommissionAuthorizedCaptureRequest
+            var response = await client.CaptureBoundCommissionAsync(
+                new Proto.BoundCommissionCaptureRequest
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
@@ -140,7 +140,7 @@ internal sealed class EscrowClient : IEscrowClient
                     Currency = currency.ToProtoCurrency(),
                     PaymentIntentId = paymentIntentId,
                     BookingId = bookingId,
-                    CommissionAuthorizationId = commissionAuthorizationId.ToString(),
+                    CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
                     ExpectedCommissionMinor = expectedCommissionMinor,
                     ExpectedPayerTotalMinor = expectedPayerTotalMinor
@@ -192,7 +192,7 @@ internal sealed class EscrowClient : IEscrowClient
         }
     }
 
-    public async Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+    public async Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,
@@ -200,8 +200,8 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
-            var response = await client.RefundCommissionAuthorizedByBookingIdAsync(
-                new Proto.CommissionAuthorizedRefundByBookingIdRequest
+            var response = await client.RefundBoundCommissionByBookingIdAsync(
+                new Proto.BoundCommissionRefundByBookingIdRequest
                 {
                     BookingId = bookingId,
                     GrossMinor = grossMinor,

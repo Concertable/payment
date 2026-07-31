@@ -1,10 +1,10 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class CommissionAuthorizationEntity : IGuidEntity
+public sealed class CommissionBindingEntity : IGuidEntity
 {
-    private CommissionAuthorizationEntity() { }
+    private CommissionBindingEntity() { }
 
-    private CommissionAuthorizationEntity(
+    private CommissionBindingEntity(
         Guid id,
         Guid commissionConfigurationId,
         string externalReference,
@@ -14,7 +14,7 @@ public sealed class CommissionAuthorizationEntity : IGuidEntity
         string? stripeSetupIntentId)
     {
         if (id == Guid.Empty)
-            throw new DomainException("Commission authorization id is required.");
+            throw new DomainException("Commission binding id is required.");
         if (commissionConfigurationId == Guid.Empty)
             throw new DomainException("Commission configuration id is required.");
         if (string.IsNullOrWhiteSpace(externalReference))
@@ -39,7 +39,7 @@ public sealed class CommissionAuthorizationEntity : IGuidEntity
     public string? StripePaymentIntentId { get; private set; }
     public string? StripeSetupIntentId { get; private set; }
 
-    public static CommissionAuthorizationEntity Create(
+    public static CommissionBindingEntity Create(
         Guid commissionConfigurationId,
         string externalReference,
         string payerReference,
@@ -61,7 +61,7 @@ public sealed class CommissionAuthorizationEntity : IGuidEntity
             throw new DomainException("Stripe PaymentIntent id is required.");
         if (StripePaymentIntentId is not null &&
             !string.Equals(StripePaymentIntentId, paymentIntentId, StringComparison.Ordinal))
-            throw new DomainException("Commission authorization is already bound to another PaymentIntent.");
+            throw new DomainException("Commission binding is already bound to another PaymentIntent.");
 
         StripePaymentIntentId = paymentIntentId;
     }

@@ -11,8 +11,7 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionConfigurationRepository configurationRepository;
-    private readonly ICommissionAuthorizationRepository authorizationRepository;
-    private readonly ICommissionAuthorizationClaimRepository claimRepository;
+    private readonly ICommissionBindingRepository bindingRepository;
     private readonly PaymentDbContext context;
     private readonly IUnitOfWork unitOfWork;
     private readonly CommissionCalculator calculator;
@@ -22,8 +21,7 @@ internal sealed class CommissionService : ICommissionService
 
     public CommissionService(
         ICommissionConfigurationRepository configurationRepository,
-        ICommissionAuthorizationRepository authorizationRepository,
-        ICommissionAuthorizationClaimRepository claimRepository,
+        ICommissionBindingRepository bindingRepository,
         PaymentDbContext context,
         IUnitOfWork unitOfWork,
         CommissionCalculator calculator,
@@ -32,8 +30,7 @@ internal sealed class CommissionService : ICommissionService
         TimeProvider timeProvider)
     {
         this.configurationRepository = configurationRepository;
-        this.authorizationRepository = authorizationRepository;
-        this.claimRepository = claimRepository;
+        this.bindingRepository = bindingRepository;
         this.context = context;
         this.unitOfWork = unitOfWork;
         this.calculator = calculator;
@@ -54,7 +51,7 @@ internal sealed class CommissionService : ICommissionService
         return Result.Ok(ToQuote(configuration, Calculate(configuration, grossMinor)));
     }
 
-    public async Task<Result<CommissionAuthorization>> CreateOrBindAuthorizationAsync(
+    public async Task<Result<CommissionBinding>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -79,14 +76,14 @@ internal sealed class CommissionService : ICommissionService
             expectedCommissionMinor,
             expectedPayerTotalMinor);
         if (validation.IsFailed)
-            return validation.ToResult<CommissionAuthorization>();
+            return validation.ToResult<CommissionBinding>();
 
-        var existing = await authorizationRepository.GetByIdentityAsync(
+        var existing = await bindingRepository.GetByIdentityAsync(
             externalReference,
             payerReference,
             ct);
         if (existing is not null)
-            return ExistingAuthorization(
+            return ExistingBinding(
                 existing,
                 configuration,
                 externalReference,
@@ -95,14 +92,14 @@ internal sealed class CommissionService : ICommissionService
                 stripeSetupIntentId,
                 grossMinor);
 
-        var authorization = CommissionAuthorizationEntity.Create(
+        var binding = CommissionBindingEntity.Create(
             configuration.Id,
             externalReference,
             payerReference,
             timeProvider.GetUtcNow(),
             stripePaymentIntentId,
             stripeSetupIntentId);
-        await authorizationRepository.AddAsync(authorization, ct);
+        await bindingRepository.AddAsync(binding, ct);
 
         try
         {
@@ -111,14 +108,14 @@ internal sealed class CommissionService : ICommissionService
         catch (DbUpdateException)
         {
             context.ChangeTracker.Clear();
-            existing = await authorizationRepository.GetByIdentityAsync(
+            existing = await bindingRepository.GetByIdentityAsync(
                 externalReference,
                 payerReference,
                 ct);
             if (existing is null)
                 throw;
 
-            return ExistingAuthorization(
+            return ExistingBinding(
                 existing,
                 configuration,
                 externalReference,
@@ -128,14 +125,14 @@ internal sealed class CommissionService : ICommissionService
                 grossMinor);
         }
 
-        return Result.Ok(ToAuthorization(
-            authorization,
+        return Result.Ok(ToBinding(
+            binding,
             configuration,
             grossMinor is null ? null : Calculate(configuration, grossMinor.Value)));
     }
 
-    public async Task<Result<AuthorizedCommission>> CalculateAuthorizedAsync(
-        Guid authorizationId,
+    public async Task<Result<BoundCommission>> CalculateBoundAsync(
+        Guid bindingId,
         string externalReference,
         string payerReference,
         Currency currency,
@@ -146,71 +143,41 @@ internal sealed class CommissionService : ICommissionService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var authorization = await authorizationRepository.GetByIdAsync(authorizationId, ct);
-        if (authorization is null)
-            return Result.Fail("commission_authorization_not_found");
+        var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
+        if (binding is null)
+            return Result.Fail("commission_binding_not_found");
 
-        if (!string.Equals(authorization.ExternalReference, externalReference, StringComparison.Ordinal) ||
-            !string.Equals(authorization.PayerReference, payerReference, StringComparison.Ordinal))
-            return Result.Fail("commission_authorization_mismatch");
+        if (!string.Equals(binding.ExternalReference, externalReference, StringComparison.Ordinal) ||
+            !string.Equals(binding.PayerReference, payerReference, StringComparison.Ordinal))
+            return Result.Fail("commission_binding_mismatch");
 
-        var configuration = authorization.CommissionConfiguration;
+        var configuration = binding.CommissionConfiguration;
         if (currency != configuration.Currency)
             return Result.Fail("currency_mismatch");
-        if (!IntentMatches(authorization.StripePaymentIntentId, stripePaymentIntentId) ||
-            !IntentMatches(authorization.StripeSetupIntentId, stripeSetupIntentId))
-            return Result.Fail("commission_authorization_intent_mismatch");
+        if (!IntentMatches(binding.StripePaymentIntentId, stripePaymentIntentId) ||
+            !IntentMatches(binding.StripeSetupIntentId, stripeSetupIntentId))
+            return Result.Fail("commission_binding_intent_mismatch");
 
         var calculation = Calculate(configuration, grossMinor);
         if (calculation.CommissionGrossMinor != expectedCommissionMinor ||
             calculation.PayerTotalMinor != expectedPayerTotalMinor)
             return Result.Fail("pricing_changed");
 
-        return Result.Ok(new AuthorizedCommission(authorization, configuration, calculation));
-    }
-
-    public async Task<Result> ClaimAuthorizationAsync(
-        Guid authorizationId,
-        CommissionAuthorizationConsumer consumer,
-        CancellationToken ct = default)
-    {
-        var claim = CommissionAuthorizationClaimEntity.Create(
-            authorizationId,
-            consumer,
-            timeProvider.GetUtcNow());
-        await claimRepository.AddAsync(claim, ct);
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
-        {
-            context.Entry(claim).State = EntityState.Detached;
-            var existing = await claimRepository.GetByCommissionAuthorizationIdAsync(authorizationId, ct);
-            if (existing is null)
-                throw;
-
-            return existing.Consumer == consumer
-                ? Result.Ok()
-                : Result.Fail("commission_authorization_already_consumed");
-        }
-
-        return Result.Ok();
+        return Result.Ok(new BoundCommission(binding, configuration, calculation));
     }
 
     public async Task<string?> FindBoundPaymentIntentAsync(
-        Guid authorizationId,
+        Guid bindingId,
         CancellationToken ct = default)
     {
-        var authorization = await authorizationRepository.GetByIdAsync(authorizationId, ct);
-        return authorization?.StripePaymentIntentId;
+        var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
+        return binding?.StripePaymentIntentId;
     }
 
     public void BindPaymentIntent(
-        CommissionAuthorizationEntity authorization,
+        CommissionBindingEntity binding,
         string paymentIntentId) =>
-        authorization.BindPaymentIntent(paymentIntentId);
+        binding.BindPaymentIntent(paymentIntentId);
 
     private async Task<CommissionConfigurationEntity> GetCurrentConfigurationAsync(CancellationToken ct)
     {
@@ -246,8 +213,8 @@ internal sealed class CommissionService : ICommissionService
             : Result.Fail("pricing_changed");
     }
 
-    private Result<CommissionAuthorization> ExistingAuthorization(
-        CommissionAuthorizationEntity authorization,
+    private Result<CommissionBinding> ExistingBinding(
+        CommissionBindingEntity binding,
         CommissionConfigurationEntity configuration,
         string externalReference,
         string payerReference,
@@ -255,16 +222,16 @@ internal sealed class CommissionService : ICommissionService
         string? stripeSetupIntentId,
         long? grossMinor)
     {
-        if (!authorization.Matches(
+        if (!binding.Matches(
                 configuration.Id,
                 externalReference,
                 payerReference,
                 stripePaymentIntentId,
                 stripeSetupIntentId))
-            return Result.Fail("commission_authorization_mismatch");
+            return Result.Fail("commission_binding_mismatch");
 
-        return Result.Ok(ToAuthorization(
-            authorization,
+        return Result.Ok(ToBinding(
+            binding,
             configuration,
             grossMinor is null ? null : Calculate(configuration, grossMinor.Value)));
     }
@@ -281,12 +248,12 @@ internal sealed class CommissionService : ICommissionService
     private static bool IntentMatches(string? bound, string? supplied) =>
         bound is null || string.Equals(bound, supplied, StringComparison.Ordinal);
 
-    private static CommissionAuthorization ToAuthorization(
-        CommissionAuthorizationEntity authorization,
+    private static CommissionBinding ToBinding(
+        CommissionBindingEntity binding,
         CommissionConfigurationEntity configuration,
         CommissionCalculation? calculation) =>
         new(
-            authorization.Id,
+            binding.Id,
             configuration.Id,
             configuration.Version,
             configuration.RateBasisPoints,

@@ -114,7 +114,7 @@ internal sealed class EscrowService : IEscrowService
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, hold.Value.ClientSecret));
     }
 
-    public async Task<Result<EscrowDeposit>> DepositCommissionAuthorizedAsync(
+    public async Task<Result<EscrowDeposit>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -122,15 +122,15 @@ internal sealed class EscrowService : IEscrowService
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var existing = await escrowRepository.GetByCommissionAuthorizationIdAsync(
-            commissionAuthorizationId,
+        var existing = await escrowRepository.GetByCommissionBindingIdAsync(
+            commissionBindingId,
             ct);
         if (existing is not null)
             return Result.Ok(new EscrowDeposit(
@@ -138,8 +138,8 @@ internal sealed class EscrowService : IEscrowService
                 existing.ChargeId,
                 existing.Status));
 
-        var authorized = await commissionService.CalculateAuthorizedAsync(
-            commissionAuthorizationId,
+        var authorized = await commissionService.CalculateBoundAsync(
+            commissionBindingId,
             externalReference,
             payerId.ToString(),
             currency,
@@ -157,13 +157,6 @@ internal sealed class EscrowService : IEscrowService
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
             throw new BadRequestException("Stripe customer setup is required for off-session payments.");
 
-        var claim = await commissionService.ClaimAuthorizationAsync(
-            commissionAuthorizationId,
-            CommissionAuthorizationConsumer.Escrow,
-            ct);
-        if (claim.IsFailed)
-            return claim.ToResult<EscrowDeposit>();
-
         var calculation = authorized.Value.Calculation;
         var hold = await paymentManager.HoldAsync(
             payerId,
@@ -179,13 +172,13 @@ internal sealed class EscrowService : IEscrowService
             return Result.Fail("Stripe hold response missing PaymentIntent id.");
 
         commissionService.BindPaymentIntent(
-            authorized.Value.Authorization,
+            authorized.Value.Binding,
             hold.Value.TransactionId);
-        var escrow = EscrowEntity.CreateAuthorized(
+        var escrow = EscrowEntity.CreateBound(
             bookingId,
             payerId,
             payeeId,
-            commissionAuthorizationId,
+            commissionBindingId,
             calculation,
             hold.Value.TransactionId);
         await escrowRepository.AddAsync(escrow, ct);
@@ -246,21 +239,21 @@ internal sealed class EscrowService : IEscrowService
         return Result.Ok(new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null));
     }
 
-    public async Task<Result<EscrowDeposit>> CaptureCommissionAuthorizedAsync(
+    public async Task<Result<EscrowDeposit>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
         Currency currency,
         string paymentIntentId,
         int bookingId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor,
         CancellationToken ct = default)
     {
-        var existing = await escrowRepository.GetByCommissionAuthorizationIdAsync(
-            commissionAuthorizationId,
+        var existing = await escrowRepository.GetByCommissionBindingIdAsync(
+            commissionBindingId,
             ct);
         if (existing is not null)
             return Result.Ok(new EscrowDeposit(
@@ -268,8 +261,8 @@ internal sealed class EscrowService : IEscrowService
                 existing.ChargeId,
                 existing.Status));
 
-        var authorized = await commissionService.CalculateAuthorizedAsync(
-            commissionAuthorizationId,
+        var authorized = await commissionService.CalculateBoundAsync(
+            commissionBindingId,
             externalReference,
             payerId.ToString(),
             currency,
@@ -281,13 +274,6 @@ internal sealed class EscrowService : IEscrowService
             ct);
         if (authorized.IsFailed)
             return authorized.ToResult<EscrowDeposit>();
-
-        var claim = await commissionService.ClaimAuthorizationAsync(
-            commissionAuthorizationId,
-            CommissionAuthorizationConsumer.Escrow,
-            ct);
-        if (claim.IsFailed)
-            return claim.ToResult<EscrowDeposit>();
 
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {
@@ -301,13 +287,13 @@ internal sealed class EscrowService : IEscrowService
             return capture.ToResult<EscrowDeposit>();
 
         commissionService.BindPaymentIntent(
-            authorized.Value.Authorization,
+            authorized.Value.Binding,
             paymentIntentId);
-        var escrow = EscrowEntity.CreateAuthorized(
+        var escrow = EscrowEntity.CreateBound(
             bookingId,
             payerId,
             payeeId,
-            commissionAuthorizationId,
+            commissionBindingId,
             authorized.Value.Calculation,
             paymentIntentId);
         escrow.Confirm();
@@ -457,7 +443,7 @@ internal sealed class EscrowService : IEscrowService
             : Result.Ok<Refund?>(refund.Value);
     }
 
-    public async Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+    public async Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,
@@ -471,8 +457,8 @@ internal sealed class EscrowService : IEscrowService
             return Result.Ok<Refund?>(null);
         }
 
-        if (escrow.CommissionAuthorizationId is null)
-            return Result.Fail("commission_authorization_not_found");
+        if (escrow.CommissionBindingId is null)
+            return Result.Fail("commission_binding_not_found");
         if (currency != escrow.Currency)
             return Result.Fail("currency_mismatch");
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
@@ -626,7 +612,7 @@ internal sealed class EscrowService : IEscrowService
     }
 
     private static IReadOnlyDictionary<string, string> CommissionMetadata(
-        AuthorizedCommission authorized,
+        BoundCommission authorized,
         int bookingId,
         string transactionType)
     {
@@ -635,7 +621,7 @@ internal sealed class EscrowService : IEscrowService
         {
             [PaymentMetadataKeys.Type] = transactionType,
             [PaymentMetadataKeys.BookingId] = bookingId.ToString(),
-            [PaymentMetadataKeys.CommissionAuthorizationId] = authorized.Authorization.Id.ToString(),
+            [PaymentMetadataKeys.CommissionBindingId] = authorized.Binding.Id.ToString(),
             [PaymentMetadataKeys.Currency] = calculation.Currency.ToString().ToLowerInvariant(),
             [PaymentMetadataKeys.PayeeGrossMinor] = calculation.PayeeGrossMinor.ToString(),
             [PaymentMetadataKeys.CommissionGrossMinor] = calculation.CommissionGrossMinor.ToString(),
@@ -655,9 +641,9 @@ internal sealed class EscrowService : IEscrowService
             [PaymentMetadataKeys.EscrowId] = escrow.Id.ToString(),
             [PaymentMetadataKeys.BookingId] = escrow.BookingId.ToString()
         };
-        if (escrow.CommissionAuthorizationId is not null)
-            metadata[PaymentMetadataKeys.CommissionAuthorizationId] =
-                escrow.CommissionAuthorizationId.Value.ToString();
+        if (escrow.CommissionBindingId is not null)
+            metadata[PaymentMetadataKeys.CommissionBindingId] =
+                escrow.CommissionBindingId.Value.ToString();
 
         return metadata;
     }

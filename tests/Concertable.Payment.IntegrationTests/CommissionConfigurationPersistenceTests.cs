@@ -88,12 +88,12 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             Currency.Gbp,
             500,
             DateTimeOffset.UtcNow);
-        var first = CommissionAuthorizationEntity.Create(
+        var first = CommissionBindingEntity.Create(
             configuration.Id,
             "booking:1",
             "payer:1",
             DateTimeOffset.UtcNow);
-        var second = CommissionAuthorizationEntity.Create(
+        var second = CommissionBindingEntity.Create(
             configuration.Id,
             "booking:2",
             "payer:2",
@@ -103,15 +103,15 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
         await context.SaveChangesAsync();
 
         context.ChangeTracker.Clear();
-        var authorizations = await context.CommissionAuthorizations
-            .Include(authorization => authorization.CommissionConfiguration)
-            .Where(authorization => authorization.CommissionConfigurationId == configuration.Id)
+        var authorizations = await context.CommissionBindings
+            .Include(binding => binding.CommissionConfiguration)
+            .Where(binding => binding.CommissionConfigurationId == configuration.Id)
             .ToListAsync();
         Assert.Equal(2, authorizations.Count);
-        Assert.All(authorizations, authorization =>
+        Assert.All(authorizations, binding =>
             Assert.Same(
                 authorizations[0].CommissionConfiguration,
-                authorization.CommissionConfiguration));
+                binding.CommissionConfiguration));
     }
 
     private PaymentDbContext CreateContext()

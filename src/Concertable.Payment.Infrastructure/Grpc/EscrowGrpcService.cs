@@ -32,12 +32,12 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         return result.Value.ToProtoEscrowResponse();
     }
 
-    public override async Task<EscrowResponse> DepositCommissionAuthorized(
-        CommissionAuthorizedDepositRequest request,
+    public override async Task<EscrowResponse> DepositBoundCommission(
+        BoundCommissionDepositRequest request,
         ServerCallContext context)
     {
         var command = request.ToCommand();
-        var result = await escrowService.DepositCommissionAuthorizedAsync(
+        var result = await escrowService.DepositBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
             command.Gross.ToMinorUnits(),
@@ -45,7 +45,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.PaymentMethodId,
             command.Session,
             command.BookingId,
-            command.CommissionAuthorizationId,
+            command.CommissionBindingId,
             command.ExternalReference,
             command.ExpectedCommissionMinor,
             command.ExpectedPayerTotalMinor,
@@ -78,19 +78,19 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         return result.Value.ToProtoEscrowResponse();
     }
 
-    public override async Task<EscrowResponse> CaptureCommissionAuthorized(
-        CommissionAuthorizedCaptureRequest request,
+    public override async Task<EscrowResponse> CaptureBoundCommission(
+        BoundCommissionCaptureRequest request,
         ServerCallContext context)
     {
         var command = request.ToCommand();
-        var result = await escrowService.CaptureCommissionAuthorizedAsync(
+        var result = await escrowService.CaptureBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
             command.Gross.ToMinorUnits(),
             command.Gross.Currency,
             command.PaymentIntentId,
             command.BookingId,
-            command.CommissionAuthorizationId,
+            command.CommissionBindingId,
             command.ExternalReference,
             command.ExpectedCommissionMinor,
             command.ExpectedPayerTotalMinor,
@@ -134,11 +134,11 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         };
     }
 
-    public override async Task<RefundByBookingIdResponse> RefundCommissionAuthorizedByBookingId(
-        CommissionAuthorizedRefundByBookingIdRequest request,
+    public override async Task<RefundByBookingIdResponse> RefundBoundCommissionByBookingId(
+        BoundCommissionRefundByBookingIdRequest request,
         ServerCallContext context)
     {
-        var result = await escrowService.RefundCommissionAuthorizedByBookingIdAsync(
+        var result = await escrowService.RefundBoundCommissionByBookingIdAsync(
             request.BookingId,
             request.GrossMinor,
             request.Currency.ToDomainCurrency(),

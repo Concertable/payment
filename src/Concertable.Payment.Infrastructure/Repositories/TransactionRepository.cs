@@ -22,11 +22,11 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
     public Task<TransactionEntity?> GetByPaymentIntentIdAsync(string paymentIntentId) =>
         context.Transactions.FirstOrDefaultAsync(t => t.PaymentIntentId == paymentIntentId);
 
-    public Task<SettlementTransactionEntity?> GetSettlementByCommissionAuthorizationIdAsync(
-        Guid commissionAuthorizationId,
+    public Task<SettlementTransactionEntity?> GetSettlementByCommissionBindingIdAsync(
+        Guid commissionBindingId,
         CancellationToken ct = default) =>
         context.SettlementTransactions.SingleOrDefaultAsync(
-            t => t.CommissionAuthorizationId == commissionAuthorizationId,
+            t => t.CommissionBindingId == commissionBindingId,
             ct);
 
     public Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(

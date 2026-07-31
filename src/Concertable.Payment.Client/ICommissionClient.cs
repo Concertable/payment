@@ -11,7 +11,7 @@ public interface ICommissionClient
         Currency currency,
         CancellationToken ct = default);
 
-    Task<Result<CommissionAuthorization>> CreateOrBindAuthorizationAsync(
+    Task<Result<CommissionBinding>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -23,8 +23,8 @@ public interface ICommissionClient
         long? expectedPayerTotalMinor = null,
         CancellationToken ct = default);
 
-    Task<Result<CommissionQuote>> CalculateAuthorizedAsync(
-        Guid authorizationId,
+    Task<Result<CommissionQuote>> CalculateBoundAsync(
+        Guid bindingId,
         string externalReference,
         string payerReference,
         Currency currency,
