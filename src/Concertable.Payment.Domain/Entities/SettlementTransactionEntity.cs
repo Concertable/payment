@@ -35,6 +35,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         CommissionAuthorizationId = commissionAuthorizationId;
+        ConcurrencyToken = Guid.NewGuid();
     }
 
     public override TransactionType TransactionType => TransactionType.Settlement;
@@ -48,6 +49,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
     public long CommissionVatMinor { get; private set; }
     public int CommissionVatRateBasisPoints { get; private set; }
     public long PayerTotalMinor { get; private set; }
+    public Guid ConcurrencyToken { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
 
     public void RecordRefund(PaymentRefundEntity refund)
@@ -58,6 +60,9 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             throw new DomainException("Refund belongs to another settlement.");
 
         refunds.Add(refund);
+        // Bump the token so a partial refund (which leaves Status unchanged) still forces the parent
+        // into the optimistic-concurrency check; a child-only insert alone never updates the parent row.
+        ConcurrencyToken = Guid.NewGuid();
     }
 
     public static SettlementTransactionEntity Create(

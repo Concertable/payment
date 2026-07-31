@@ -198,6 +198,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ConcurrencyToken = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -240,7 +241,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionNetMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatRateBasisPoints = table.Column<int>(type: "int", nullable: true),
-                    PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true)
+                    PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true),
+                    ConcurrencyToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -274,7 +276,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentRefunds", x => x.Id);
-                    table.CheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)");
+                    table.CheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL AND [SettlementTransactionId] IS NOT NULL) OR ([EscrowId] IS NOT NULL AND [SettlementTransactionId] IS NULL)");
                     table.ForeignKey(
                         name: "FK_PaymentRefunds_Escrows_EscrowId",
                         column: x => x.EscrowId,

@@ -22,6 +22,7 @@ internal sealed class PaymentRefundEntityConfiguration : IEntityTypeConfiguratio
         builder.ToTable(t =>
             t.HasCheckConstraint(
                 "CK_PaymentRefunds_Owner",
-                "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)"));
+                "([EscrowId] IS NULL AND [SettlementTransactionId] IS NOT NULL) OR " +
+                "([EscrowId] IS NOT NULL AND [SettlementTransactionId] IS NULL)"));
     }
 }
