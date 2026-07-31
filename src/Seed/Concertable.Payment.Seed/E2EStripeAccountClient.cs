@@ -236,6 +236,20 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
         return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
     }
 
+    /// <summary>
+    /// Retrieves the existing hold <see cref="PaymentIntent"/> and a fresh customer session so a retried
+    /// hold-session creation returns a real, still-valid client secret rather than minting a second intent.
+    /// </summary>
+    public async Task<CheckoutSession> GetHoldSessionAsync(
+        string stripeCustomerId,
+        string paymentIntentId,
+        CancellationToken ct = default)
+    {
+        var intent = await paymentIntentService.GetAsync(paymentIntentId, cancellationToken: ct);
+        var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId);
+    }
+
     private async Task<string> CreateCustomerSessionAsync(string stripeCustomerId, CancellationToken ct)
     {
         var session = await customerSessionService.CreateAsync(new CustomerSessionCreateOptions
