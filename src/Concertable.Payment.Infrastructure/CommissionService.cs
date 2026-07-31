@@ -1,8 +1,6 @@
-using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using FluentResults;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -10,7 +8,6 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionBindingRepository bindingRepository;
-    private readonly IUnitOfWork unitOfWork;
     private readonly CommissionCalculator calculator;
     private readonly PlatformCommissionOptions options;
     private readonly PlatformCommissionTaxOptions taxOptions;
@@ -18,14 +15,12 @@ internal sealed class CommissionService : ICommissionService
 
     public CommissionService(
         ICommissionBindingRepository bindingRepository,
-        IUnitOfWork unitOfWork,
         CommissionCalculator calculator,
         IOptions<PlatformCommissionOptions> options,
         IOptions<PlatformCommissionTaxOptions> taxOptions,
         TimeProvider timeProvider)
     {
         this.bindingRepository = bindingRepository;
-        this.unitOfWork = unitOfWork;
         this.calculator = calculator;
         this.options = options.Value;
         this.taxOptions = taxOptions.Value;
@@ -70,57 +65,24 @@ internal sealed class CommissionService : ICommissionService
         if (validation.IsFailed)
             return validation.ToResult<CommissionBinding>();
 
-        var existing = await bindingRepository.GetByIdentityAsync(
-            externalReference,
-            payerReference,
+        var binding = await bindingRepository.GetOrCreateAsync(
+            CommissionBindingEntity.Create(
+                terms,
+                externalReference,
+                payerReference,
+                timeProvider.GetUtcNow(),
+                stripePaymentIntentId,
+                stripeSetupIntentId),
             ct);
-        if (existing is not null)
-            return ExistingBinding(
-                existing,
-                terms,
-                externalReference,
-                payerReference,
-                stripePaymentIntentId,
-                stripeSetupIntentId,
-                grossMinor);
 
-        var binding = CommissionBindingEntity.Create(
-            terms,
-            externalReference,
-            payerReference,
-            timeProvider.GetUtcNow(),
-            stripePaymentIntentId,
-            stripeSetupIntentId);
-        await bindingRepository.AddAsync(binding, ct);
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
-        {
-            ex.DiscardFailedChanges();
-            existing = await bindingRepository.GetByIdentityAsync(
-                externalReference,
-                payerReference,
-                ct);
-            if (existing is null)
-                throw;
-
-            return ExistingBinding(
-                existing,
-                terms,
-                externalReference,
-                payerReference,
-                stripePaymentIntentId,
-                stripeSetupIntentId,
-                grossMinor);
-        }
-
-        return Result.Ok(ToBinding(
+        return ExistingBinding(
             binding,
             terms,
-            grossMinor is null ? null : Calculate(terms, grossMinor.Value)));
+            externalReference,
+            payerReference,
+            stripePaymentIntentId,
+            stripeSetupIntentId,
+            grossMinor);
     }
 
     public async Task<Result<BoundCommission>> CalculateBoundAsync(
