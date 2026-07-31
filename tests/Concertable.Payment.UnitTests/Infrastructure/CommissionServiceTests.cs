@@ -1,4 +1,3 @@
-using System.Reflection;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;
@@ -20,22 +19,13 @@ public sealed class CommissionServiceTests
 
     private readonly Guid configurationId = Guid.NewGuid();
 
-    private readonly Mock<ICommissionConfigurationRepository> configurationRepository = new();
     private readonly Mock<ICommissionBindingRepository> authorizationRepository = new();
     private readonly Mock<IUnitOfWork> unitOfWork = new();
     private readonly CommissionCalculator calculator = new();
     private readonly FakeTimeProvider timeProvider = new();
 
-    private readonly CommissionConfigurationEntity configuration;
-
     public CommissionServiceTests()
     {
-        configuration = CommissionConfigurationEntity.Create(
-            configurationId, ConfigurationVersion, Currency.Gbp, RateBasisPoints, timeProvider.GetUtcNow());
-
-        configurationRepository
-            .Setup(r => r.GetByIdAsync(configurationId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(configuration);
         unitOfWork
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -77,8 +67,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CreateOrBindAsync_ExistingMatches_RebindsWithoutInserting()
     {
-        var existing = CommissionBindingEntity.Create(
-            configurationId, "booking:7", "payer:1", timeProvider.GetUtcNow(), "pi_1");
+        var existing = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
@@ -96,8 +85,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CreateOrBindAsync_ExistingIntentDiffers_ReturnsMismatch()
     {
-        var existing = CommissionBindingEntity.Create(
-            configurationId, "booking:7", "payer:1", timeProvider.GetUtcNow(), "pi_1");
+        var existing = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
@@ -128,8 +116,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CreateOrBindAsync_ConcurrentInsertRace_RecoversExisting()
     {
-        var existing = CommissionBindingEntity.Create(
-            configurationId, "booking:7", "payer:1", timeProvider.GetUtcNow(), "pi_1");
+        var existing = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .SetupSequence(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((CommissionBindingEntity?)null)
@@ -163,7 +150,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CalculateBoundAsync_IdentityMismatch_Fails()
     {
-        var binding = BindingWithConfiguration("booking:7", "payer:1", "pi_1");
+        var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
@@ -178,7 +165,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CalculateBoundAsync_BoundIntentDiffersFromSupplied_Fails()
     {
-        var binding = BindingWithConfiguration("booking:7", "payer:1", "pi_1");
+        var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
@@ -193,7 +180,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task CalculateBoundAsync_ExactIdentityAndIntentMatch_ReturnsBoundCommission()
     {
-        var binding = BindingWithConfiguration("booking:7", "payer:1", "pi_1");
+        var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
@@ -205,14 +192,14 @@ public sealed class CommissionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Same(binding, result.Value.Binding);
-        Assert.Same(configuration, result.Value.Configuration);
+        Assert.Equal(Terms(), result.Value.Terms);
         Assert.Equal(expected, result.Value.Calculation);
     }
 
     [Fact]
     public async Task CalculateBoundAsync_CalculationDiffersFromExpected_ReturnsPricingChanged()
     {
-        var binding = BindingWithConfiguration("booking:7", "payer:1", "pi_1");
+        var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
@@ -227,8 +214,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task FindBoundPaymentIntentAsync_ReturnsBoundIntent()
     {
-        var binding = CommissionBindingEntity.Create(
-            configurationId, "booking:7", "payer:1", timeProvider.GetUtcNow(), "pi_1");
+        var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
@@ -251,24 +237,19 @@ public sealed class CommissionServiceTests
         Assert.Null(result);
     }
 
-    private CommissionBindingEntity BindingWithConfiguration(
+    private CommissionTerms Terms() =>
+        new(configurationId, ConfigurationVersion, Currency.Gbp, RateBasisPoints, VatRateBasisPoints);
+
+    private CommissionBindingEntity Binding(
         string externalReference,
         string payerReference,
-        string? stripePaymentIntentId)
-    {
-        var binding = CommissionBindingEntity.Create(
-            configurationId, externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
-        typeof(CommissionBindingEntity)
-            .GetProperty(nameof(CommissionBindingEntity.CommissionConfiguration))!
-            .SetValue(binding, configuration);
-        return binding;
-    }
+        string? stripePaymentIntentId) =>
+        CommissionBindingEntity.Create(
+            Terms(), externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
 
     private CommissionService BuildService() =>
         new(
-            configurationRepository.Object,
             authorizationRepository.Object,
-            TestPaymentDbContext.Unopened(),
             unitOfWork.Object,
             calculator,
             Options.Create(new PlatformCommissionOptions

@@ -1,14 +1,19 @@
 using Concertable.Kernel;
+using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Domain;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class CommissionBindingEntityTests
 {
+    private static CommissionTerms Terms() =>
+        new(Guid.NewGuid(), "2024.1", Currency.Gbp, 1000, 2000);
+
     [Fact]
     public void BindPaymentIntent_PreservesSetupIntentContext()
     {
         var binding = CommissionBindingEntity.Create(
-            Guid.NewGuid(),
+            Terms(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -24,7 +29,7 @@ public sealed class CommissionBindingEntityTests
     public void BindPaymentIntent_RejectsDifferentIntent()
     {
         var binding = CommissionBindingEntity.Create(
-            Guid.NewGuid(),
+            Terms(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -34,11 +39,18 @@ public sealed class CommissionBindingEntityTests
     }
 
     [Fact]
-    public void Entity_DoesNotDuplicateConfigurationTerms()
+    public void Create_SnapshotsConfigurationTermsOntoTheBinding()
     {
-        var properties = typeof(CommissionBindingEntity).GetProperties();
+        var terms = Terms();
 
-        Assert.DoesNotContain(properties, property => property.Name is "Version" or "Currency" or "RateBasisPoints");
-        Assert.Contains(properties, property => property.Name == "CommissionConfigurationId");
+        var binding = CommissionBindingEntity.Create(
+            terms, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+
+        Assert.Equal(terms.ConfigurationId, binding.CommissionConfigurationId);
+        Assert.Equal(terms.Version, binding.Version);
+        Assert.Equal(terms.Currency, binding.Currency);
+        Assert.Equal(terms.RateBasisPoints, binding.RateBasisPoints);
+        Assert.Equal(terms.VatRateBasisPoints, binding.VatRateBasisPoints);
+        Assert.Equal(terms, binding.Terms);
     }
 }
