@@ -31,11 +31,11 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         return result.Value.ToProto();
     }
 
-    public override async Task<CommissionAuthorizationResponse> CreateOrBindCommissionAuthorization(
-        CreateOrBindCommissionAuthorizationRequest request,
+    public override async Task<CommissionBindingResponse> CreateOrBindCommission(
+        CreateOrBindCommissionRequest request,
         ServerCallContext context)
     {
-        var result = await commissionService.CreateOrBindAuthorizationAsync(
+        var result = await commissionService.CreateOrBindAsync(
             request.ExternalReference,
             request.PayerReference,
             request.Currency.ToDomainCurrency(),
@@ -56,12 +56,12 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         return result.Value.ToProto();
     }
 
-    public override async Task<CommissionQuoteResponse> CalculateAuthorizedCommission(
-        CalculateAuthorizedCommissionRequest request,
+    public override async Task<CommissionQuoteResponse> CalculateBoundCommission(
+        CalculateBoundCommissionRequest request,
         ServerCallContext context)
     {
-        var result = await commissionService.CalculateAuthorizedAsync(
-            request.AuthorizationId.ParseOrThrow<Guid>(nameof(request.AuthorizationId)),
+        var result = await commissionService.CalculateBoundAsync(
+            request.BindingId.ParseOrThrow<Guid>(nameof(request.BindingId)),
             request.ExternalReference,
             request.PayerReference,
             request.Currency.ToDomainCurrency(),
@@ -105,15 +105,15 @@ internal static class CommissionPricingGrpcMappers
             PayerTotalMinor = quote.PayerTotalMinor
         };
 
-    public static CommissionAuthorizationResponse ToProto(
-        this CommissionAuthorization authorization) =>
+    public static CommissionBindingResponse ToProto(
+        this CommissionBinding binding) =>
         new()
         {
-            AuthorizationId = authorization.AuthorizationId.ToString(),
-            CommissionConfigurationId = authorization.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = authorization.ConfigurationVersion,
-            RateBasisPoints = authorization.RateBasisPoints,
-            Currency = authorization.Currency.ToProtoCurrency(),
-            Quote = authorization.Quote?.ToProto()
+            BindingId = binding.BindingId.ToString(),
+            CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
+            ConfigurationVersion = binding.ConfigurationVersion,
+            RateBasisPoints = binding.RateBasisPoints,
+            Currency = binding.Currency.ToProtoCurrency(),
+            Quote = binding.Quote?.ToProto()
         };
 }

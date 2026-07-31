@@ -18,7 +18,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         int commissionVatRateBasisPoints,
         TransactionStatus status,
         int bookingId,
-        Guid? commissionAuthorizationId)
+        Guid? commissionBindingId)
         : base(
             payerId,
             payeeId,
@@ -34,14 +34,14 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         CommissionVatMinor = commissionVatMinor;
         CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
-        CommissionAuthorizationId = commissionAuthorizationId;
+        CommissionBindingId = commissionBindingId;
         ConcurrencyToken = Guid.NewGuid();
     }
 
     public override TransactionType TransactionType => TransactionType.Settlement;
     public int BookingId { get; private set; }
-    public Guid? CommissionAuthorizationId { get; private set; }
-    public CommissionAuthorizationEntity? CommissionAuthorization { get; private set; }
+    public Guid? CommissionBindingId { get; private set; }
+    public CommissionBindingEntity? CommissionBinding { get; private set; }
     public Currency Currency { get; private set; }
     public long PayeeGrossMinor { get; private set; }
     public long CommissionGrossMinor { get; private set; }
@@ -106,14 +106,14 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             bookingId,
             null);
 
-    internal static SettlementTransactionEntity CreateAuthorized(
+    internal static SettlementTransactionEntity CreateBound(
         Guid payerId,
         Guid payeeId,
         string paymentIntentId,
         CommissionCalculation calculation,
         TransactionStatus status,
         int bookingId,
-        Guid commissionAuthorizationId) =>
+        Guid commissionBindingId) =>
         new(
             payerId,
             payeeId,
@@ -126,5 +126,5 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             calculation.CommissionVatRateBasisPoints,
             status,
             bookingId,
-            commissionAuthorizationId);
+            commissionBindingId);
 }

@@ -8,12 +8,12 @@ internal static class StripeIdempotency
         IReadOnlyDictionary<string, string> metadata,
         string operation)
     {
-        if (!metadata.TryGetValue(PaymentMetadataKeys.CommissionAuthorizationId, out var authorizationId))
+        if (!metadata.TryGetValue(PaymentMetadataKeys.CommissionBindingId, out var bindingId))
             return null;
 
         return new RequestOptions
         {
-            IdempotencyKey = $"commission:{authorizationId}:{operation}"
+            IdempotencyKey = $"commission:{bindingId}:{operation}"
         };
     }
 }

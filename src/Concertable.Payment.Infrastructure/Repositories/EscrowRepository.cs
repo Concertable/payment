@@ -24,12 +24,12 @@ internal sealed class EscrowRepository
             .Include(e => e.Refunds)
             .FirstOrDefaultAsync(e => e.ChargeId == chargeId, ct);
 
-    public Task<EscrowEntity?> GetByCommissionAuthorizationIdAsync(
-        Guid commissionAuthorizationId,
+    public Task<EscrowEntity?> GetByCommissionBindingIdAsync(
+        Guid commissionBindingId,
         CancellationToken ct = default) =>
         context.Escrows
             .Include(e => e.Refunds)
             .FirstOrDefaultAsync(
-            e => e.CommissionAuthorizationId == commissionAuthorizationId,
+            e => e.CommissionBindingId == commissionBindingId,
             ct);
 }

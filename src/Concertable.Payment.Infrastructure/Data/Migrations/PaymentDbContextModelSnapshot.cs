@@ -92,31 +92,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationClaimEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("ClaimedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("CommissionAuthorizationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Consumer")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommissionAuthorizationId")
-                        .IsUnique();
-
-                    b.ToTable("CommissionAuthorizationClaims", "payment");
-                });
-
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionBindingEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
@@ -160,7 +136,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("ExternalReference", "PayerReference")
                         .IsUnique();
 
-                    b.ToTable("CommissionAuthorizations", "payment");
+                    b.ToTable("CommissionBindings", "payment");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", b =>
@@ -212,7 +188,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<Guid?>("CommissionAuthorizationId")
+                    b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("CommissionGrossMinor")
@@ -278,9 +254,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("ChargeId")
                         .IsUnique();
 
-                    b.HasIndex("CommissionAuthorizationId")
+                    b.HasIndex("CommissionBindingId")
                         .IsUnique()
-                        .HasFilter("[CommissionAuthorizationId] IS NOT NULL");
+                        .HasFilter("[CommissionBindingId] IS NOT NULL");
 
                     b.HasIndex("Status");
 
@@ -551,7 +527,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("ContextId");
 
-                    b.Property<Guid?>("CommissionAuthorizationId")
+                    b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("CommissionGrossMinor")
@@ -581,9 +557,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("PayerTotalMinor")
                         .HasColumnType("bigint");
 
-                    b.HasIndex("CommissionAuthorizationId")
+                    b.HasIndex("CommissionBindingId")
                         .IsUnique()
-                        .HasFilter("[CommissionAuthorizationId] IS NOT NULL");
+                        .HasFilter("[CommissionBindingId] IS NOT NULL");
 
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });
@@ -612,18 +588,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationClaimEntity", b =>
-                {
-                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", "CommissionAuthorization")
-                        .WithMany()
-                        .HasForeignKey("CommissionAuthorizationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CommissionAuthorization");
-                });
-
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionBindingEntity", b =>
                 {
                     b.HasOne("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", "CommissionConfiguration")
                         .WithMany()
@@ -636,12 +601,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>
                 {
-                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", "CommissionAuthorization")
+                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionBindingEntity", "CommissionBinding")
                         .WithMany()
-                        .HasForeignKey("CommissionAuthorizationId")
+                        .HasForeignKey("CommissionBindingId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("CommissionAuthorization");
+                    b.Navigation("CommissionBinding");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerEntryEntity", b =>
@@ -680,12 +645,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
                 {
-                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", "CommissionAuthorization")
+                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionBindingEntity", "CommissionBinding")
                         .WithMany()
-                        .HasForeignKey("CommissionAuthorizationId")
+                        .HasForeignKey("CommissionBindingId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.Navigation("CommissionAuthorization");
+                    b.Navigation("CommissionBinding");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>

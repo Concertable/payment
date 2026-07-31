@@ -20,7 +20,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         long commissionVatMinor,
         int commissionVatRateBasisPoints,
         string chargeId,
-        Guid? commissionAuthorizationId)
+        Guid? commissionBindingId)
     {
         if (payeeGrossMinor < 0)
             throw new DomainException("Payee gross cannot be negative.");
@@ -41,7 +41,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         ChargeId = chargeId;
-        CommissionAuthorizationId = commissionAuthorizationId;
+        CommissionBindingId = commissionBindingId;
         Status = EscrowStatus.Pending;
         ConcurrencyToken = Guid.NewGuid();
     }
@@ -50,8 +50,8 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
     public int BookingId { get; private set; }
     public Guid FromOwnerId { get; private set; }
     public Guid ToOwnerId { get; private set; }
-    public Guid? CommissionAuthorizationId { get; private set; }
-    public CommissionAuthorizationEntity? CommissionAuthorization { get; private set; }
+    public Guid? CommissionBindingId { get; private set; }
+    public CommissionBindingEntity? CommissionBinding { get; private set; }
     public Currency Currency { get; private set; }
     public long PayeeGrossMinor { get; private set; }
     public long CommissionGrossMinor { get; private set; }
@@ -90,11 +90,11 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             chargeId,
             null);
 
-    internal static EscrowEntity CreateAuthorized(
+    internal static EscrowEntity CreateBound(
         int bookingId,
         Guid fromOwnerId,
         Guid toOwnerId,
-        Guid commissionAuthorizationId,
+        Guid commissionBindingId,
         CommissionCalculation calculation,
         string chargeId) =>
         new(
@@ -108,7 +108,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             calculation.CommissionVatMinor,
             calculation.CommissionVatRateBasisPoints,
             chargeId,
-            commissionAuthorizationId);
+            commissionBindingId);
 
     public void Confirm()
     {

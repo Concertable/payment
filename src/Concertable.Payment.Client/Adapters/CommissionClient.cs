@@ -37,7 +37,7 @@ internal sealed class CommissionClient : ICommissionClient
         }
     }
 
-    public async Task<Result<CommissionAuthorization>> CreateOrBindAuthorizationAsync(
+    public async Task<Result<CommissionBinding>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -51,7 +51,7 @@ internal sealed class CommissionClient : ICommissionClient
     {
         try
         {
-            var request = new Proto.CreateOrBindCommissionAuthorizationRequest
+            var request = new Proto.CreateOrBindCommissionRequest
             {
                 ExternalReference = externalReference,
                 PayerReference = payerReference,
@@ -67,10 +67,10 @@ internal sealed class CommissionClient : ICommissionClient
             if (expectedPayerTotalMinor is not null)
                 request.ExpectedPayerTotalMinor = expectedPayerTotalMinor.Value;
 
-            var response = await client.CreateOrBindCommissionAuthorizationAsync(
+            var response = await client.CreateOrBindCommissionAsync(
                 request,
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionAuthorization());
+            return Result.Ok(response.ToCommissionBinding());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -78,8 +78,8 @@ internal sealed class CommissionClient : ICommissionClient
         }
     }
 
-    public async Task<Result<CommissionQuote>> CalculateAuthorizedAsync(
-        Guid authorizationId,
+    public async Task<Result<CommissionQuote>> CalculateBoundAsync(
+        Guid bindingId,
         string externalReference,
         string payerReference,
         Currency currency,
@@ -92,10 +92,10 @@ internal sealed class CommissionClient : ICommissionClient
     {
         try
         {
-            var response = await client.CalculateAuthorizedCommissionAsync(
-                new Proto.CalculateAuthorizedCommissionRequest
+            var response = await client.CalculateBoundCommissionAsync(
+                new Proto.CalculateBoundCommissionRequest
                 {
-                    AuthorizationId = authorizationId.ToString(),
+                    BindingId = bindingId.ToString(),
                     ExternalReference = externalReference,
                     PayerReference = payerReference,
                     Currency = currency.ToProtoCurrency(),

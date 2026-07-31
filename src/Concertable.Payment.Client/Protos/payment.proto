@@ -61,8 +61,8 @@ message CommissionQuoteResponse {
   int64 payer_total_minor = 7;
 }
 
-message CommissionAuthorizationResponse {
-  string authorization_id = 1;
+message CommissionBindingResponse {
+  string binding_id = 1;
   string commission_configuration_id = 2;
   string configuration_version = 3;
   int32 rate_basis_points = 4;
@@ -72,8 +72,8 @@ message CommissionAuthorizationResponse {
 
 service CommissionPricing {
   rpc PreviewCommission(PreviewCommissionRequest) returns (CommissionQuoteResponse);
-  rpc CreateOrBindCommissionAuthorization(CreateOrBindCommissionAuthorizationRequest) returns (CommissionAuthorizationResponse);
-  rpc CalculateAuthorizedCommission(CalculateAuthorizedCommissionRequest) returns (CommissionQuoteResponse);
+  rpc CreateOrBindCommission(CreateOrBindCommissionRequest) returns (CommissionBindingResponse);
+  rpc CalculateBoundCommission(CalculateBoundCommissionRequest) returns (CommissionQuoteResponse);
 }
 
 message PreviewCommissionRequest {
@@ -81,7 +81,7 @@ message PreviewCommissionRequest {
   Currency currency = 2;
 }
 
-message CreateOrBindCommissionAuthorizationRequest {
+message CreateOrBindCommissionRequest {
   string external_reference = 1;
   string payer_reference = 2;
   Currency currency = 3;
@@ -93,8 +93,8 @@ message CreateOrBindCommissionAuthorizationRequest {
   optional int64 expected_payer_total_minor = 9;
 }
 
-message CalculateAuthorizedCommissionRequest {
-  string authorization_id = 1;
+message CalculateBoundCommissionRequest {
+  string binding_id = 1;
   string external_reference = 2;
   string payer_reference = 3;
   Currency currency = 4;
@@ -107,11 +107,11 @@ message CalculateAuthorizedCommissionRequest {
 
 service ManagerPayment {
   rpc Pay(ManagerPayRequest) returns (PaymentResponse);
-  rpc PayCommissionAuthorized(CommissionAuthorizedManagerPayRequest) returns (PaymentResponse);
+  rpc PayBoundCommission(BoundCommissionManagerPayRequest) returns (PaymentResponse);
   rpc CreateSetupSession(CreateSetupSessionRequest) returns (CheckoutSessionResponse);
   rpc CreateVerifySession(CreateVerifySessionRequest) returns (CheckoutSessionResponse);
   rpc CreateHoldSession(CreateHoldSessionRequest) returns (CheckoutSessionResponse);
-  rpc CreateCommissionAuthorizedHoldSession(CreateCommissionAuthorizedHoldSessionRequest) returns (CheckoutSessionResponse);
+  rpc CreateBoundCommissionHoldSession(CreateBoundCommissionHoldSessionRequest) returns (CheckoutSessionResponse);
   rpc FindHeldIntent(FindHeldIntentRequest) returns (FindHeldIntentResponse);
 }
 
@@ -124,7 +124,7 @@ message ManagerPayRequest {
   int32 booking_id = 6;
 }
 
-message CommissionAuthorizedManagerPayRequest {
+message BoundCommissionManagerPayRequest {
   string payer_id = 1;
   string payee_id = 2;
   int64 gross_minor = 3;
@@ -132,7 +132,7 @@ message CommissionAuthorizedManagerPayRequest {
   string payment_method_id = 5;
   PaymentSessionType session = 6;
   int32 booking_id = 7;
-  string commission_authorization_id = 8;
+  string commission_binding_id = 8;
   string external_reference = 9;
   int64 expected_commission_minor = 10;
   int64 expected_payer_total_minor = 11;
@@ -155,12 +155,12 @@ message CreateHoldSessionRequest {
   map<string, string> metadata = 3;
 }
 
-message CreateCommissionAuthorizedHoldSessionRequest {
+message CreateBoundCommissionHoldSessionRequest {
   string payer_id = 1;
   int64 gross_minor = 2;
   Currency currency = 3;
   map<string, string> metadata = 4;
-  string commission_authorization_id = 5;
+  string commission_binding_id = 5;
   string external_reference = 6;
   int64 expected_commission_minor = 7;
   int64 expected_payer_total_minor = 8;
@@ -199,12 +199,12 @@ message CreatePaymentSessionRequest {
 
 service Escrow {
   rpc Deposit(DepositRequest) returns (EscrowResponse);
-  rpc DepositCommissionAuthorized(CommissionAuthorizedDepositRequest) returns (EscrowResponse);
+  rpc DepositBoundCommission(BoundCommissionDepositRequest) returns (EscrowResponse);
   rpc Capture(CaptureRequest) returns (EscrowResponse);
-  rpc CaptureCommissionAuthorized(CommissionAuthorizedCaptureRequest) returns (EscrowResponse);
+  rpc CaptureBoundCommission(BoundCommissionCaptureRequest) returns (EscrowResponse);
   rpc ReleaseByBookingId(ReleaseByBookingIdRequest) returns (ReleaseByBookingIdResponse);
   rpc RefundByBookingId(RefundByBookingIdRequest) returns (RefundByBookingIdResponse);
-  rpc RefundCommissionAuthorizedByBookingId(CommissionAuthorizedRefundByBookingIdRequest) returns (RefundByBookingIdResponse);
+  rpc RefundBoundCommissionByBookingId(BoundCommissionRefundByBookingIdRequest) returns (RefundByBookingIdResponse);
 }
 
 // Payout-account operations a consumer fronts for its own users (B2B's payouts proxy). The
@@ -257,7 +257,7 @@ message DepositRequest {
   int32 booking_id = 6;
 }
 
-message CommissionAuthorizedDepositRequest {
+message BoundCommissionDepositRequest {
   string payer_id = 1;
   string payee_id = 2;
   int64 gross_minor = 3;
@@ -265,7 +265,7 @@ message CommissionAuthorizedDepositRequest {
   string payment_method_id = 5;
   PaymentSessionType session = 6;
   int32 booking_id = 7;
-  string commission_authorization_id = 8;
+  string commission_binding_id = 8;
   string external_reference = 9;
   int64 expected_commission_minor = 10;
   int64 expected_payer_total_minor = 11;
@@ -280,14 +280,14 @@ message CaptureRequest {
   int32 booking_id = 5;
 }
 
-message CommissionAuthorizedCaptureRequest {
+message BoundCommissionCaptureRequest {
   string payer_id = 1;
   string payee_id = 2;
   int64 gross_minor = 3;
   Currency currency = 4;
   string payment_intent_id = 5;
   int32 booking_id = 6;
-  string commission_authorization_id = 7;
+  string commission_binding_id = 7;
   string external_reference = 8;
   int64 expected_commission_minor = 9;
   int64 expected_payer_total_minor = 10;
@@ -309,7 +309,7 @@ message RefundByBookingIdRequest {
   int32 booking_id = 1;
 }
 
-message CommissionAuthorizedRefundByBookingIdRequest {
+message BoundCommissionRefundByBookingIdRequest {
   int32 booking_id = 1;
   int64 gross_minor = 2;
   Currency currency = 3;

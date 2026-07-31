@@ -16,7 +16,7 @@ public static class PaymentMetadataKeys
     public const string ApplicationId = "applicationId";
     public const string VenueManagerId = "venueManagerId";
     public const string OpportunityId = "opportunityId";
-    public const string CommissionAuthorizationId = "commissionAuthorizationId";
+    public const string CommissionBindingId = "commissionBindingId";
     public const string PayeeGrossMinor = "payeeGrossMinor";
     public const string CommissionGrossMinor = "commissionGrossMinor";
     public const string CommissionNetMinor = "commissionNetMinor";
