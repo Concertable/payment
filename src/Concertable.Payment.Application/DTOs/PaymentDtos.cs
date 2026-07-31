@@ -53,3 +53,20 @@ internal sealed record VerifyTransactionDto : ITransaction
     public TransactionStatus Status { get; init; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 }
+
+internal sealed record CheckoutSession(
+    string ClientSecret,
+    string CustomerSession,
+    string CustomerId,
+    string? StripeIntentId = null);
+
+internal sealed record EscrowDto(
+    int Id,
+    int BookingId,
+    Guid FromOwnerId,
+    Guid ToOwnerId,
+    decimal Amount,
+    EscrowStatus Status,
+    string ChargeId,
+    string? TransferId,
+    DateTime? ReleasedAt);
