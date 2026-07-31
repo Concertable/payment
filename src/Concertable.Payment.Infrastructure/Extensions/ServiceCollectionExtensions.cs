@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PaymentConfigurationProvider>();
         services.AddSingleton<IEntityTypeConfigurationProvider>(sp => sp.GetRequiredService<PaymentConfigurationProvider>());
 
-        services.Configure<StripeSettings>(configuration.GetSection("Stripe"));
+        services.Configure<StripeSettings>(configuration.GetSection(StripeSettings.SectionName));
 
         services.AddScoped<IOutboxUnitOfWorkBehavior, OutboxUnitOfWorkBehavior>();
 
