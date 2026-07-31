@@ -3,7 +3,6 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -20,16 +19,8 @@ public sealed class CommissionServiceTests
     private readonly Guid configurationId = Guid.NewGuid();
 
     private readonly Mock<ICommissionBindingRepository> authorizationRepository = new();
-    private readonly Mock<IUnitOfWork> unitOfWork = new();
     private readonly CommissionCalculator calculator = new();
     private readonly FakeTimeProvider timeProvider = new();
-
-    public CommissionServiceTests()
-    {
-        unitOfWork
-            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-    }
 
     [Fact]
     public async Task PreviewAsync_CurrencyMismatch_Fails()
@@ -65,11 +56,11 @@ public sealed class CommissionServiceTests
     }
 
     [Fact]
-    public async Task CreateOrBindAsync_ExistingMatches_RebindsWithoutInserting()
+    public async Task CreateOrBindAsync_ExistingMatches_ReturnsExisting()
     {
         var existing = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
-            .Setup(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetOrCreateAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
         var result = await BuildService().CreateOrBindAsync(
@@ -77,9 +68,6 @@ public sealed class CommissionServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(existing.Id, result.Value.BindingId);
-        authorizationRepository.Verify(
-            r => r.AddAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()),
-            Times.Never);
     }
 
     [Fact]
@@ -87,7 +75,7 @@ public sealed class CommissionServiceTests
     {
         var existing = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
-            .Setup(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetOrCreateAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
         var result = await BuildService().CreateOrBindAsync(
@@ -98,38 +86,19 @@ public sealed class CommissionServiceTests
     }
 
     [Fact]
-    public async Task CreateOrBindAsync_NoExisting_InsertsAndReturns()
+    public async Task CreateOrBindAsync_NoExisting_CreatesAndReturns()
     {
         authorizationRepository
-            .Setup(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CommissionBindingEntity?)null);
+            .Setup(r => r.GetOrCreateAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CommissionBindingEntity candidate, CancellationToken _) => candidate);
 
         var result = await BuildService().CreateOrBindAsync(
             "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null, null, null, null);
 
         Assert.True(result.IsSuccess);
         authorizationRepository.Verify(
-            r => r.AddAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()),
+            r => r.GetOrCreateAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    public async Task CreateOrBindAsync_ConcurrentInsertRace_RecoversExisting()
-    {
-        var existing = Binding("booking:7", "payer:1", "pi_1");
-        authorizationRepository
-            .SetupSequence(r => r.GetByIdentityAsync("booking:7", "payer:1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CommissionBindingEntity?)null)
-            .ReturnsAsync(existing);
-        unitOfWork
-            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new DbUpdateException("duplicate identity"));
-
-        var result = await BuildService().CreateOrBindAsync(
-            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null, null, null, null);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(existing.Id, result.Value.BindingId);
     }
 
     [Fact]
@@ -250,7 +219,6 @@ public sealed class CommissionServiceTests
     private CommissionService BuildService() =>
         new(
             authorizationRepository.Object,
-            unitOfWork.Object,
             calculator,
             Options.Create(new PlatformCommissionOptions
             {
