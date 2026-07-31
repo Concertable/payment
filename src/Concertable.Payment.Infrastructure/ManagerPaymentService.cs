@@ -298,7 +298,9 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (grossMinor <= 0)
             return Result.Fail("refund_gross_must_be_positive");
 
-        var grossAlreadyRefunded = settlement.Refunds.Sum(r => r.GrossRefundedMinor);
+        var grossAlreadyRefunded = settlement.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor);
         var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
         if (cumulativeGrossRefund > settlement.PayeeGrossMinor)
             return Result.Fail("refund_gross_exceeds_remaining_gross");
@@ -312,10 +314,29 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             cumulativeGrossRefund,
             settlement.PayeeGrossMinor);
         var commissionRefundMinor = checked(
-            cumulativeCommissionRefund - settlement.Refunds.Sum(r => r.CommissionRefundedMinor));
+            cumulativeCommissionRefund -
+            settlement.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionRefundedMinor));
         var commissionVatReversedMinor = checked(
-            cumulativeVatReversal - settlement.Refunds.Sum(r => r.CommissionVatReversedMinor));
+            cumulativeVatReversal -
+            settlement.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionVatReversedMinor));
         var payerTotalRefundMinor = checked(grossMinor + commissionRefundMinor);
+
+        var reservation = PaymentRefundEntity.CreatePendingForSettlement(
+            settlement.Id,
+            grossMinor,
+            commissionRefundMinor,
+            commissionVatReversedMinor,
+            timeProvider.GetUtcNow());
+        settlement.RecordRefund(reservation);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            context.ChangeTracker.Clear();
+            return await ReservationConflictAsync(bookingId, grossMinor, ct);
+        }
 
         var metadata = new Dictionary<string, string>
         {
@@ -338,16 +359,13 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             Metadata = metadata
         }, ct);
         if (refund.IsFailed)
+        {
+            settlement.ReleaseRefund(reservation);
+            await unitOfWork.SaveChangesAsync(ct);
             return refund.ToResult<Refund?>();
+        }
 
-        var refundEntity = PaymentRefundEntity.CreateCompletedForSettlement(
-            settlement.Id,
-            refund.Value.RefundId,
-            grossMinor,
-            commissionRefundMinor,
-            commissionVatReversedMinor,
-            timeProvider.GetUtcNow());
-        settlement.RecordRefund(refundEntity);
+        settlement.CompleteRefund(reservation, refund.Value.RefundId, timeProvider.GetUtcNow());
 
         await ledger.StageAsync(
             LedgerPostings.DirectSettlementRefund(
@@ -360,22 +378,23 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 settlement.PaymentIntentId,
                 refund.Value.RefundId),
             ct);
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            context.ChangeTracker.Clear();
-            var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
-            var committedGross = current?.Refunds.Sum(r => r.GrossRefundedMinor) ?? 0;
-            return checked(committedGross + grossMinor) > (current?.PayeeGrossMinor ?? 0)
-                ? Result.Fail("refund_gross_exceeds_remaining_gross")
-                : Result.Fail("refund_conflict");
-        }
+        await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Ok<Refund?>(refund.Value);
+    }
+
+    private async Task<Result<Refund?>> ReservationConflictAsync(
+        int bookingId,
+        long grossMinor,
+        CancellationToken ct)
+    {
+        var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
+        var reservedGross = current?.Refunds
+            .Where(r => r.CountsTowardCumulative)
+            .Sum(r => r.GrossRefundedMinor) ?? 0;
+        return checked(reservedGross + grossMinor) > (current?.PayeeGrossMinor ?? 0)
+            ? Result.Fail("refund_gross_exceeds_remaining_gross")
+            : Result.Fail("refund_conflict");
     }
 
     private async Task<string> EnsureStripeCustomerAsync(Guid ownerId, CancellationToken ct)

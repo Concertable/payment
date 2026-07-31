@@ -394,7 +394,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("CommissionVatReversedMinor")
                         .HasColumnType("bigint");
 
-                    b.Property<DateTimeOffset>("CompletedAt")
+                    b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -416,7 +416,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("StripeRefundId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -427,7 +426,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("SettlementTransactionId");
 
                     b.HasIndex("StripeRefundId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[StripeRefundId] IS NOT NULL");
 
                     b.ToTable("PaymentRefunds", "payment", t =>
                         {
