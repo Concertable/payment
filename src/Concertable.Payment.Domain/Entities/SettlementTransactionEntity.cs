@@ -60,8 +60,27 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             throw new DomainException("Refund belongs to another settlement.");
 
         refunds.Add(refund);
-        // Bump the token so a partial refund (which leaves Status unchanged) still forces the parent
-        // into the optimistic-concurrency check; a child-only insert alone never updates the parent row.
+        // Bump the token so a reservation (which leaves Status unchanged) still forces the parent into the
+        // optimistic-concurrency check; a child-only insert alone never updates the parent row, so two
+        // concurrent reservations would not conflict at SaveChanges without this.
+        ConcurrencyToken = Guid.NewGuid();
+    }
+
+    public void CompleteRefund(PaymentRefundEntity refund, string stripeRefundId, DateTimeOffset completedAt)
+    {
+        if (!refunds.Contains(refund))
+            throw new DomainException("Refund does not belong to this settlement.");
+
+        refund.Complete(stripeRefundId, completedAt);
+        ConcurrencyToken = Guid.NewGuid();
+    }
+
+    public void ReleaseRefund(PaymentRefundEntity refund)
+    {
+        if (!refunds.Contains(refund))
+            throw new DomainException("Refund does not belong to this settlement.");
+
+        refund.Fail();
         ConcurrencyToken = Guid.NewGuid();
     }
 
