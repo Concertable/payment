@@ -1,3 +1,4 @@
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
@@ -11,6 +12,7 @@ internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionConfigurationRepository configurationRepository;
     private readonly ICommissionAuthorizationRepository authorizationRepository;
+    private readonly ICommissionAuthorizationClaimRepository claimRepository;
     private readonly PaymentDbContext context;
     private readonly IUnitOfWork unitOfWork;
     private readonly CommissionCalculator calculator;
@@ -21,6 +23,7 @@ internal sealed class CommissionService : ICommissionService
     public CommissionService(
         ICommissionConfigurationRepository configurationRepository,
         ICommissionAuthorizationRepository authorizationRepository,
+        ICommissionAuthorizationClaimRepository claimRepository,
         PaymentDbContext context,
         IUnitOfWork unitOfWork,
         CommissionCalculator calculator,
@@ -30,6 +33,7 @@ internal sealed class CommissionService : ICommissionService
     {
         this.configurationRepository = configurationRepository;
         this.authorizationRepository = authorizationRepository;
+        this.claimRepository = claimRepository;
         this.context = context;
         this.unitOfWork = unitOfWork;
         this.calculator = calculator;
@@ -163,6 +167,36 @@ internal sealed class CommissionService : ICommissionService
             return Result.Fail("pricing_changed");
 
         return Result.Ok(new AuthorizedCommission(authorization, configuration, calculation));
+    }
+
+    public async Task<Result> ClaimAuthorizationAsync(
+        Guid authorizationId,
+        CommissionAuthorizationConsumer consumer,
+        CancellationToken ct = default)
+    {
+        var claim = CommissionAuthorizationClaimEntity.Create(
+            authorizationId,
+            consumer,
+            timeProvider.GetUtcNow());
+        await claimRepository.AddAsync(claim, ct);
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
+        {
+            context.Entry(claim).State = EntityState.Detached;
+            var existing = await claimRepository.GetByCommissionAuthorizationIdAsync(authorizationId, ct);
+            if (existing is null)
+                throw;
+
+            return existing.Consumer == consumer
+                ? Result.Ok()
+                : Result.Fail("commission_authorization_already_consumed");
+        }
+
+        return Result.Ok();
     }
 
     public void BindPaymentIntent(
