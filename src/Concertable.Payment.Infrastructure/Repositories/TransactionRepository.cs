@@ -1,24 +1,14 @@
-using Concertable.Payment.Infrastructure.Data;
-using Concertable.DataAccess.Infrastructure;
-using Microsoft.EntityFrameworkCore;
 using Concertable.Contracts;
+using Concertable.DataAccess.Infrastructure;
+using Concertable.Payment.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal sealed class TransactionRepository : ITransactionRepository
+internal sealed class TransactionRepository : Repository<TransactionEntity>, ITransactionRepository
 {
-    private readonly PaymentDbContext context;
-
     public TransactionRepository(PaymentDbContext context)
-    {
-        this.context = context;
-    }
-
-    public Task<TransactionEntity?> GetByIdAsync(int id) =>
-        context.Transactions.FirstOrDefaultAsync(t => t.Id == id);
-
-    public bool Exists(int id) =>
-        context.Transactions.Any(t => t.Id == id);
+        : base(context) { }
 
     public Task<IPagination<TransactionEntity>> GetAsync(IPageParams pageParams, Guid userId)
     {
@@ -46,17 +36,9 @@ internal sealed class TransactionRepository : ITransactionRepository
             .Include(t => t.Refunds)
             .FirstOrDefaultAsync(t => t.BookingId == bookingId, ct);
 
-    public Task AddAsync(TransactionEntity entity, CancellationToken ct = default) =>
-        context.Transactions.AddAsync(entity, ct).AsTask();
-
     public async Task CreateAsync(TransactionEntity entity)
     {
         await context.Transactions.AddAsync(entity);
-        await context.SaveChangesAsync();
-    }
-
-    public async Task SaveChangesAsync()
-    {
         await context.SaveChangesAsync();
     }
 }

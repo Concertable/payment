@@ -3,16 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal sealed class CommissionAuthorizationRepository : ICommissionAuthorizationRepository
+internal sealed class CommissionAuthorizationRepository
+    : GuidRepository<CommissionAuthorizationEntity>, ICommissionAuthorizationRepository
 {
-    private readonly PaymentDbContext context;
-
     public CommissionAuthorizationRepository(PaymentDbContext context)
-    {
-        this.context = context;
-    }
+        : base(context) { }
 
-    public Task<CommissionAuthorizationEntity?> GetByIdAsync(
+    public override Task<CommissionAuthorizationEntity?> GetByIdAsync(
         Guid id,
         CancellationToken ct = default) =>
         context.CommissionAuthorizations
@@ -29,9 +26,4 @@ internal sealed class CommissionAuthorizationRepository : ICommissionAuthorizati
                 a => a.ExternalReference == externalReference &&
                      a.PayerReference == payerReference,
                 ct);
-
-    public Task AddAsync(
-        CommissionAuthorizationEntity authorization,
-        CancellationToken ct = default) =>
-        context.CommissionAuthorizations.AddAsync(authorization, ct).AsTask();
 }

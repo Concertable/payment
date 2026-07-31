@@ -1,11 +1,10 @@
 using Concertable.Contracts;
+using Concertable.DataAccess.Application;
 
 namespace Concertable.Payment.Application.Interfaces;
 
-internal interface ITransactionRepository
+internal interface ITransactionRepository : IRepository<TransactionEntity>
 {
-    Task<TransactionEntity?> GetByIdAsync(int id);
-    bool Exists(int id);
     Task<IPagination<TransactionEntity>> GetAsync(IPageParams pageParams, Guid userId);
     Task<TransactionEntity?> GetByPaymentIntentIdAsync(string paymentIntentId);
     Task<SettlementTransactionEntity?> GetSettlementByCommissionAuthorizationIdAsync(
@@ -14,7 +13,5 @@ internal interface ITransactionRepository
     Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default);
-    Task AddAsync(TransactionEntity entity, CancellationToken ct = default);
     Task CreateAsync(TransactionEntity entity);
-    Task SaveChangesAsync();
 }
