@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260730211831_InitialCreate")]
+    [Migration("20260731093901_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -93,6 +93,30 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         {
                             t.ExcludeFromMigrations();
                         });
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationClaimEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CommissionAuthorizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Consumer")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommissionAuthorizationId")
+                        .IsUnique();
+
+                    b.ToTable("CommissionAuthorizationClaims", "payment");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", b =>
@@ -375,7 +399,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<int>("EscrowId")
+                    b.Property<int?>("EscrowId")
                         .HasColumnType("int");
 
                     b.Property<long>("GrossRefundedMinor")
@@ -383,6 +407,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<long>("PayerTotalRefundedMinor")
                         .HasColumnType("bigint");
+
+                    b.Property<int?>("SettlementTransactionId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -396,10 +423,15 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("EscrowId");
 
+                    b.HasIndex("SettlementTransactionId");
+
                     b.HasIndex("StripeRefundId")
                         .IsUnique();
 
-                    b.ToTable("PaymentRefunds", "payment");
+                    b.ToTable("PaymentRefunds", "payment", t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.PayoutAccountEntity", b =>
@@ -575,6 +607,17 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
                 });
 
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationClaimEntity", b =>
+                {
+                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", "CommissionAuthorization")
+                        .WithMany()
+                        .HasForeignKey("CommissionAuthorizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CommissionAuthorization");
+                });
+
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionAuthorizationEntity", b =>
                 {
                     b.HasOne("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", "CommissionConfiguration")
@@ -618,10 +661,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasOne("Concertable.Payment.Domain.Entities.EscrowEntity", "Escrow")
                         .WithMany("Refunds")
                         .HasForeignKey("EscrowId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", "SettlementTransaction")
+                        .WithMany("Refunds")
+                        .HasForeignKey("SettlementTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Escrow");
+
+                    b.Navigation("SettlementTransaction");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
@@ -642,6 +691,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerTransactionEntity", b =>
                 {
                     b.Navigation("Entries");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
+                {
+                    b.Navigation("Refunds");
                 });
 #pragma warning restore 612, 618
         }
