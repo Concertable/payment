@@ -199,6 +199,14 @@ internal sealed class CommissionService : ICommissionService
         return Result.Ok();
     }
 
+    public async Task<string?> FindBoundPaymentIntentAsync(
+        Guid authorizationId,
+        CancellationToken ct = default)
+    {
+        var authorization = await authorizationRepository.GetByIdAsync(authorizationId, ct);
+        return authorization?.StripePaymentIntentId;
+    }
+
     public void BindPaymentIntent(
         CommissionAuthorizationEntity authorization,
         string paymentIntentId) =>

@@ -38,6 +38,10 @@ internal interface ICommissionService
         CommissionAuthorizationConsumer consumer,
         CancellationToken ct = default);
 
+    Task<string?> FindBoundPaymentIntentAsync(
+        Guid authorizationId,
+        CancellationToken ct = default);
+
     void BindPaymentIntent(
         CommissionAuthorizationEntity authorization,
         string paymentIntentId);
