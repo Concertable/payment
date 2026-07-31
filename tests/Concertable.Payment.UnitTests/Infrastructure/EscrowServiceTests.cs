@@ -58,6 +58,7 @@ public sealed class EscrowServiceTests
             new FakeUnitOfWork(),
             commissionService.Object,
             new CommissionCalculator(),
+            TestPaymentDbContext.Unopened(),
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);

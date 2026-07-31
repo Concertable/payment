@@ -9,6 +9,7 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
     {
         builder.ToTable(Schema.Tables.Escrows, Schema.Name);
         builder.Property(e => e.Currency).HasConversion<string>().HasMaxLength(3);
+        builder.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(e => e.BookingId).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
         builder.HasIndex(e => e.CommissionAuthorizationId).IsUnique().HasFilter("[CommissionAuthorizationId] IS NOT NULL");
