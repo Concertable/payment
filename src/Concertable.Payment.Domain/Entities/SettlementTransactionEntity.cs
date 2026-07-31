@@ -2,6 +2,8 @@ namespace Concertable.Payment.Domain.Entities;
 
 public sealed class SettlementTransactionEntity : TransactionEntity
 {
+    private readonly List<PaymentRefundEntity> refunds = [];
+
     private SettlementTransactionEntity() { }
 
     private SettlementTransactionEntity(
@@ -46,6 +48,17 @@ public sealed class SettlementTransactionEntity : TransactionEntity
     public long CommissionVatMinor { get; private set; }
     public int CommissionVatRateBasisPoints { get; private set; }
     public long PayerTotalMinor { get; private set; }
+    public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
+
+    public void RecordRefund(PaymentRefundEntity refund)
+    {
+        if (Status != TransactionStatus.Complete)
+            throw new DomainException("Only a completed settlement can be refunded.");
+        if (refund.SettlementTransactionId != Id)
+            throw new DomainException("Refund belongs to another settlement.");
+
+        refunds.Add(refund);
+    }
 
     public static SettlementTransactionEntity Create(
         Guid payerId,

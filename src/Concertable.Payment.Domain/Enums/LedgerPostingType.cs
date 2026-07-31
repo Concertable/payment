@@ -5,5 +5,6 @@ public enum LedgerPostingType
     DirectSettlement,
     EscrowHold,
     EscrowRelease,
-    EscrowRefund
+    EscrowRefund,
+    DirectSettlementRefund
 }

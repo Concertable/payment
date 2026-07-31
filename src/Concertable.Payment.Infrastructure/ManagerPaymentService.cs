@@ -1,6 +1,7 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
@@ -16,8 +17,10 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ITransactionRepository transactionRepository;
     private readonly ICommissionService commissionService;
+    private readonly CommissionCalculator commissionCalculator;
     private readonly ILedgerService ledger;
     private readonly IUnitOfWork unitOfWork;
+    private readonly TimeProvider timeProvider;
     private readonly Money platformFee;
 
     public ManagerPaymentService(
@@ -27,8 +30,10 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         IPayoutAccountRepository payoutAccountRepository,
         ITransactionRepository transactionRepository,
         ICommissionService commissionService,
+        CommissionCalculator commissionCalculator,
         ILedgerService ledger,
         IUnitOfWork unitOfWork,
+        TimeProvider timeProvider,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
         this.paymentManager = paymentManager;
@@ -37,8 +42,10 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.payoutAccountRepository = payoutAccountRepository;
         this.transactionRepository = transactionRepository;
         this.commissionService = commissionService;
+        this.commissionCalculator = commissionCalculator;
         this.ledger = ledger;
         this.unitOfWork = unitOfWork;
+        this.timeProvider = timeProvider;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
@@ -257,6 +264,93 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         var stripeCustomerId = account?.StripeCustomerId
             ?? throw new NotFoundException($"No Stripe customer for payer {payerId}");
         return await stripeHoldClient.FindHeldIntentAsync(stripeCustomerId, applicationId, ct);
+    }
+
+    public async Task<Result<Refund?>> RefundCommissionAuthorizedByBookingIdAsync(
+        int bookingId,
+        long grossMinor,
+        Currency currency,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        var settlement = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
+        if (settlement is null)
+            return Result.Ok<Refund?>(null);
+
+        if (settlement.CommissionAuthorizationId is null)
+            return Result.Fail("commission_authorization_not_found");
+        if (currency != settlement.Currency)
+            return Result.Fail("currency_mismatch");
+        if (settlement.Status != TransactionStatus.Complete)
+            return Result.Fail($"Settlement {settlement.Id} is {settlement.Status}; cannot refund");
+        if (grossMinor <= 0)
+            return Result.Fail("refund_gross_must_be_positive");
+
+        var grossAlreadyRefunded = settlement.Refunds.Sum(r => r.GrossRefundedMinor);
+        var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
+        if (cumulativeGrossRefund > settlement.PayeeGrossMinor)
+            return Result.Fail("refund_gross_exceeds_remaining_gross");
+
+        var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
+            settlement.CommissionGrossMinor,
+            cumulativeGrossRefund,
+            settlement.PayeeGrossMinor);
+        var cumulativeVatReversal = commissionCalculator.CalculateCumulativeRefund(
+            settlement.CommissionVatMinor,
+            cumulativeGrossRefund,
+            settlement.PayeeGrossMinor);
+        var commissionRefundMinor = checked(
+            cumulativeCommissionRefund - settlement.Refunds.Sum(r => r.CommissionRefundedMinor));
+        var commissionVatReversedMinor = checked(
+            cumulativeVatReversal - settlement.Refunds.Sum(r => r.CommissionVatReversedMinor));
+        var payerTotalRefundMinor = checked(grossMinor + commissionRefundMinor);
+
+        var metadata = new Dictionary<string, string>
+        {
+            [PaymentMetadataKeys.Type] = TransactionTypes.SettlementRefund,
+            [PaymentMetadataKeys.BookingId] = settlement.BookingId.ToString(),
+            [PaymentMetadataKeys.CommissionAuthorizationId] = settlement.CommissionAuthorizationId.Value.ToString(),
+            [PaymentMetadataKeys.PayeeGrossMinor] = grossMinor.ToString(),
+            [PaymentMetadataKeys.CommissionGrossMinor] = commissionRefundMinor.ToString(),
+            [PaymentMetadataKeys.CommissionVatMinor] = commissionVatReversedMinor.ToString(),
+            [PaymentMetadataKeys.PayerTotalMinor] = payerTotalRefundMinor.ToString(),
+            [PaymentMetadataKeys.CumulativeGrossRefundMinor] = cumulativeGrossRefund.ToString()
+        };
+
+        var refund = await paymentManager.RefundAsync(new RefundRequest
+        {
+            Amount = payerTotalRefundMinor.ToMoney(settlement.Currency),
+            PaymentIntentId = settlement.PaymentIntentId,
+            ReverseTransfer = true,
+            Reason = reason,
+            Metadata = metadata
+        }, ct);
+        if (refund.IsFailed)
+            return refund.ToResult<Refund?>();
+
+        var refundEntity = PaymentRefundEntity.CreateCompletedForSettlement(
+            settlement.Id,
+            refund.Value.RefundId,
+            grossMinor,
+            commissionRefundMinor,
+            commissionVatReversedMinor,
+            timeProvider.GetUtcNow());
+        settlement.RecordRefund(refundEntity);
+
+        await ledger.StageAsync(
+            LedgerPostings.DirectSettlementRefund(
+                settlement.PayerId,
+                settlement.PayeeId,
+                grossMinor.ToMoney(settlement.Currency),
+                checked(commissionRefundMinor - commissionVatReversedMinor).ToMoney(settlement.Currency),
+                commissionVatReversedMinor.ToMoney(settlement.Currency),
+                settlement.BookingId,
+                settlement.PaymentIntentId,
+                refund.Value.RefundId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
+
+        return Result.Ok<Refund?>(refund.Value);
     }
 
     private async Task<string> EnsureStripeCustomerAsync(Guid ownerId, CancellationToken ct)

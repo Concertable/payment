@@ -538,7 +538,7 @@ internal sealed class EscrowService : IEscrowService
         if (refund.IsFailed)
             return refund;
 
-        var refundEntity = PaymentRefundEntity.CreateCompleted(
+        var refundEntity = PaymentRefundEntity.CreateCompletedForEscrow(
             escrow.Id,
             refund.Value.RefundId,
             grossRefundMinor,
