@@ -61,4 +61,14 @@ internal interface IStripeAccountClient
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-obtains the checkout session for an already-created hold <see cref="Stripe.PaymentIntent"/>,
+    /// returning its client secret and a fresh customer session. Used to make hold-session creation
+    /// idempotent on retry once the authorisation is already bound to a PaymentIntent.
+    /// </summary>
+    Task<CheckoutSession> GetHoldSessionAsync(
+        string stripeCustomerId,
+        string paymentIntentId,
+        CancellationToken ct = default);
 }

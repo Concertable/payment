@@ -235,6 +235,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
+        var boundIntentId = await commissionService.FindBoundPaymentIntentAsync(commissionAuthorizationId, ct);
+
         var authorized = await commissionService.CalculateAuthorizedAsync(
             commissionAuthorizationId,
             externalReference,
@@ -243,13 +245,17 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             grossMinor,
             expectedCommissionMinor,
             expectedPayerTotalMinor,
-            null,
+            boundIntentId,
             stripeSetupIntentId,
             ct);
         if (authorized.IsFailed)
             return authorized.ToResult<CheckoutSession>();
 
         var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
+
+        if (!string.IsNullOrWhiteSpace(boundIntentId))
+            return Result.Ok(await stripeAccountClient.GetHoldSessionAsync(stripeCustomerId, boundIntentId, ct));
+
         var calculation = authorized.Value.Calculation;
         var session = await stripeAccountClient.CreateHoldSessionAsync(
             stripeCustomerId,

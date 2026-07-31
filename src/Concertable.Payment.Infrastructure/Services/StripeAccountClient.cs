@@ -224,6 +224,16 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
+    public async Task<CheckoutSession> GetHoldSessionAsync(
+        string stripeCustomerId,
+        string paymentIntentId,
+        CancellationToken ct = default)
+    {
+        var intent = await paymentIntentService.GetAsync(paymentIntentId, cancellationToken: ct);
+        var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);
+        return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
+    }
+
     private async Task<string> CreateCustomerSessionAsync(string stripeCustomerId, CancellationToken ct)
     {
         var session = await customerSessionService.CreateAsync(new CustomerSessionCreateOptions
