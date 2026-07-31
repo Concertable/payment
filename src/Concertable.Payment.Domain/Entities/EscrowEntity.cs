@@ -141,10 +141,40 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             throw new DomainException("Refund belongs to another escrow.");
 
         refunds.Add(refund);
-        // Bump the token so a partial refund (which leaves Status unchanged) still forces the parent
-        // into the optimistic-concurrency check; a child-only insert alone never updates the parent row.
+        // Bump the token so a reservation (which leaves Status unchanged) still forces the parent into the
+        // optimistic-concurrency check; a child-only insert alone never updates the parent row, so two
+        // concurrent reservations would not conflict at SaveChanges without this.
         ConcurrencyToken = Guid.NewGuid();
-        if (refunds.Sum(r => r.GrossRefundedMinor) == PayeeGrossMinor)
+        SettleRefundedStatus();
+    }
+
+    public void CompleteRefund(PaymentRefundEntity refund, string stripeRefundId, DateTimeOffset completedAt)
+    {
+        if (!refunds.Contains(refund))
+            throw new DomainException("Refund does not belong to this escrow.");
+
+        refund.Complete(stripeRefundId, completedAt);
+        ConcurrencyToken = Guid.NewGuid();
+        SettleRefundedStatus();
+    }
+
+    public void ReleaseRefund(PaymentRefundEntity refund)
+    {
+        if (!refunds.Contains(refund))
+            throw new DomainException("Refund does not belong to this escrow.");
+
+        refund.Fail();
+        ConcurrencyToken = Guid.NewGuid();
+    }
+
+    private void SettleRefundedStatus()
+    {
+        if (Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
+            return;
+        var completedGross = refunds
+            .Where(r => r.Status == PaymentRefundStatus.Completed)
+            .Sum(r => r.GrossRefundedMinor);
+        if (completedGross == PayeeGrossMinor)
             Status = EscrowStatus.Refunded;
     }
 

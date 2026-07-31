@@ -264,14 +264,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     EscrowId = table.Column<int>(type: "int", nullable: true),
                     SettlementTransactionId = table.Column<int>(type: "int", nullable: true),
-                    StripeRefundId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    StripeRefundId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     GrossRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionVatReversedMinor = table.Column<long>(type: "bigint", nullable: false),
                     PayerTotalRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                    CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -419,7 +419,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment",
                 table: "PaymentRefunds",
                 column: "StripeRefundId",
-                unique: true);
+                unique: true,
+                filter: "[StripeRefundId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_OwnerId",

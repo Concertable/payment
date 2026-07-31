@@ -16,6 +16,12 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## LOW
 
+### A crashed two-phase refund can strand a `Pending` `PaymentRefundEntity` with no reconcile
+
+Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund, and the Stripe idempotency key (`commission:{authId}:refund:{cumulativeGross}`) would collapse a same-amount retry onto the same Stripe refund anyway. But the reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.
+
+**Resolves when:** a reconcile path exists — e.g. a background sweep (or webhook handler) that, for a `Pending` `PaymentRefundEntity` older than some threshold, queries Stripe for a refund under the reservation's idempotency key and either `Complete`s it (Stripe refund exists) or `Fail`s it (none), freeing the reserved gross.
+
 ### Payment.Domain entities are uniformly `public`, violating the `internal`-default rule in `MODULAR_MONOLITH_RULES.md`
 
 All 14 entities in `Concertable.Payment.Domain/Entities` (`EscrowEntity`, `SettlementTransactionEntity`, `TransactionEntity`, `PaymentRefundEntity`, `CommissionAuthorizationEntity`, `CommissionConfigurationEntity`, ledger/payout/stripe entities …) are declared `public`, but `api/agents/MODULAR_MONOLITH_RULES.md` requires Domain entities to default to `internal` with tests using `InternalsVisibleTo`. Surfaced by the Feature/PricingTransparency review (CV1): the finding asked to make the 3 new commission/refund entities `internal`, but doing so for only those would be inconsistent with every existing entity and would cascade compile breakage across Application/Infrastructure that reference them publicly. Deferred rather than singling out the new entities.
