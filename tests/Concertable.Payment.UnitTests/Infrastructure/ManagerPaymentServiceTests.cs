@@ -59,7 +59,6 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
-            TestPaymentDbContext.Unopened(),
             new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
@@ -336,14 +335,13 @@ public sealed class ManagerPaymentServiceTests
 
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)
     {
-        var configuration = CommissionConfigurationEntity.Create(
-            Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, DateTimeOffset.UtcNow);
+        var terms = new CommissionTerms(Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, 2000);
         var binding = CommissionBindingEntity.Create(
-            configuration.Id, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
+            terms, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
         var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000);
-        return new BoundCommission(binding, configuration, calculation);
+        return new BoundCommission(binding, terms, calculation);
     }
 
     private static PayoutAccountEntity PayoutAccountWith(string stripeCustomerId)

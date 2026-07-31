@@ -4,5 +4,5 @@ namespace Concertable.Payment.Application.DTOs;
 
 internal sealed record BoundCommission(
     CommissionBindingEntity Binding,
-    CommissionConfigurationEntity Configuration,
+    CommissionTerms Terms,
     CommissionCalculation Calculation);

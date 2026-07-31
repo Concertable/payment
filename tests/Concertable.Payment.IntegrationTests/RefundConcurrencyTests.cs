@@ -66,7 +66,6 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 new BarrierUnitOfWork(context, barrier),
                 Mock.Of<ICommissionService>(),
                 new CommissionCalculator(),
-                context,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }),
                 TimeProvider.System,
                 NullLogger<EscrowService>.Instance);
@@ -132,7 +131,6 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 new CommissionCalculator(),
                 Mock.Of<ILedgerService>(),
                 new BarrierUnitOfWork(context, barrier),
-                context,
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
             return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
@@ -215,15 +213,17 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
             Func<Task<TResult>> operation,
             CancellationToken cancellationToken = default) =>
             inner.ExecuteAsync(operation, cancellationToken);
+
+        public void Detach(params object[] entities) => inner.Detach(entities);
     }
 
     private static async Task<CommissionBindingEntity> SeedAuthorizationAsync(PaymentDbContext context)
     {
-        var configuration = CommissionConfigurationEntity.Create(
-            Guid.NewGuid(), $"integration-{Guid.NewGuid():N}", Currency.Gbp, 500, DateTimeOffset.UtcNow);
+        var terms = new CommissionTerms(
+            Guid.NewGuid(), $"integration-{Guid.NewGuid():N}", Currency.Gbp, 500, 0);
         var binding = CommissionBindingEntity.Create(
-            configuration.Id, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
-        context.AddRange(configuration, binding);
+            terms, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
+        context.Add(binding);
         await context.SaveChangesAsync();
         return binding;
     }

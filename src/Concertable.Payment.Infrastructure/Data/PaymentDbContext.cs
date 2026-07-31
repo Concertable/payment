@@ -16,7 +16,6 @@ internal sealed class PaymentDbContext(
     public DbSet<LedgerAccountEntity> LedgerAccounts => Set<LedgerAccountEntity>();
     public DbSet<LedgerTransactionEntity> LedgerTransactions => Set<LedgerTransactionEntity>();
     public DbSet<LedgerEntryEntity> LedgerEntries => Set<LedgerEntryEntity>();
-    public DbSet<CommissionConfigurationEntity> CommissionConfigurations => Set<CommissionConfigurationEntity>();
     public DbSet<CommissionBindingEntity> CommissionBindings => Set<CommissionBindingEntity>();
     public DbSet<PaymentRefundEntity> PaymentRefunds => Set<PaymentRefundEntity>();
 
