@@ -152,6 +152,13 @@ internal sealed class EscrowService : IEscrowService
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
             throw new BadRequestException("Stripe customer setup is required for off-session payments.");
 
+        var claim = await commissionService.ClaimAuthorizationAsync(
+            commissionAuthorizationId,
+            CommissionAuthorizationConsumer.Escrow,
+            ct);
+        if (claim.IsFailed)
+            return claim.ToResult<EscrowDeposit>();
+
         var calculation = authorized.Value.Calculation;
         var hold = await paymentManager.HoldAsync(
             payerId,
@@ -269,6 +276,13 @@ internal sealed class EscrowService : IEscrowService
             ct);
         if (authorized.IsFailed)
             return authorized.ToResult<EscrowDeposit>();
+
+        var claim = await commissionService.ClaimAuthorizationAsync(
+            commissionAuthorizationId,
+            CommissionAuthorizationConsumer.Escrow,
+            ct);
+        if (claim.IsFailed)
+            return claim.ToResult<EscrowDeposit>();
 
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {

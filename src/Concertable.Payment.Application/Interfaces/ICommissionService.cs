@@ -33,6 +33,11 @@ internal interface ICommissionService
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
+    Task<Result> ClaimAuthorizationAsync(
+        Guid authorizationId,
+        CommissionAuthorizationConsumer consumer,
+        CancellationToken ct = default);
+
     void BindPaymentIntent(
         CommissionAuthorizationEntity authorization,
         string paymentIntentId);

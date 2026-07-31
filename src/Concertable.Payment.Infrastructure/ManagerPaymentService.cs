@@ -148,6 +148,13 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
             throw new BadRequestException("Stripe customer setup is required for off-session payments.");
 
+        var claim = await commissionService.ClaimAuthorizationAsync(
+            commissionAuthorizationId,
+            CommissionAuthorizationConsumer.Settlement,
+            ct);
+        if (claim.IsFailed)
+            return claim.ToResult<PaymentOutcome>();
+
         var calculation = authorized.Value.Calculation;
         var charge = await paymentManager.SettleAsync(
             payerId,
