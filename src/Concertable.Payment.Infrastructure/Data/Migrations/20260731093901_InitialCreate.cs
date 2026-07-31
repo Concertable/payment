@@ -155,6 +155,28 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CommissionAuthorizationClaims",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CommissionAuthorizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Consumer = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    ClaimedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommissionAuthorizationClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CommissionAuthorizationClaims_CommissionAuthorizations_CommissionAuthorizationId",
+                        column: x => x.CommissionAuthorizationId,
+                        principalSchema: "payment",
+                        principalTable: "CommissionAuthorizations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Escrows",
                 schema: "payment",
                 columns: table => new
@@ -238,7 +260,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    EscrowId = table.Column<int>(type: "int", nullable: false),
+                    EscrowId = table.Column<int>(type: "int", nullable: true),
+                    SettlementTransactionId = table.Column<int>(type: "int", nullable: true),
                     StripeRefundId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     GrossRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
@@ -251,6 +274,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentRefunds", x => x.Id);
+                    table.CheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL) <> ([SettlementTransactionId] IS NULL)");
                     table.ForeignKey(
                         name: "FK_PaymentRefunds_Escrows_EscrowId",
                         column: x => x.EscrowId,
@@ -258,7 +282,21 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         principalTable: "Escrows",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PaymentRefunds_Transactions_SettlementTransactionId",
+                        column: x => x.SettlementTransactionId,
+                        principalSchema: "payment",
+                        principalTable: "Transactions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionAuthorizationClaims_CommissionAuthorizationId",
+                schema: "payment",
+                table: "CommissionAuthorizationClaims",
+                column: "CommissionAuthorizationId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_CommissionAuthorizations_CommissionConfigurationId",
@@ -369,6 +407,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "EscrowId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PaymentRefunds_SettlementTransactionId",
+                schema: "payment",
+                table: "PaymentRefunds",
+                column: "SettlementTransactionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PaymentRefunds_StripeRefundId",
                 schema: "payment",
                 table: "PaymentRefunds",
@@ -426,6 +470,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "CommissionAuthorizationClaims",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
                 name: "LedgerEntries",
                 schema: "payment");
 
@@ -442,10 +490,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment");
 
             migrationBuilder.DropTable(
-                name: "Transactions",
-                schema: "payment");
-
-            migrationBuilder.DropTable(
                 name: "LedgerAccounts",
                 schema: "payment");
 
@@ -455,6 +499,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Escrows",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "Transactions",
                 schema: "payment");
 
             migrationBuilder.DropTable(
