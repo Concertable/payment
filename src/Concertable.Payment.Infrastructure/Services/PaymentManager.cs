@@ -153,6 +153,7 @@ internal sealed class PaymentManager : IPaymentManager
             Amount = r.Amount,
             PaymentIntentId = r.PaymentIntentId,
             TransferReversal = r.TransferReversal,
+            ReverseTransfer = r.ReverseTransfer,
             Reason = r.Reason,
             Metadata = metadata
         });

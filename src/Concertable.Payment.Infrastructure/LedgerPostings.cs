@@ -159,6 +159,43 @@ internal static class LedgerPostings
             legs);
     }
 
+    public static LedgerPosting DirectSettlementRefund(
+        Guid payerId,
+        Guid payeeId,
+        Money gross,
+        Money commissionNet,
+        Money commissionVat,
+        int bookingId,
+        string? paymentIntentId,
+        string refundId)
+    {
+        var legs = new List<PostingLeg>
+        {
+            new(new(LedgerAccountType.Payable, payeeId), LedgerDirection.Debit, gross)
+        };
+        if (commissionNet.ToMinorUnits() > 0)
+            legs.Add(new(
+                new(LedgerAccountType.PlatformRevenue, null),
+                LedgerDirection.Debit,
+                commissionNet));
+        if (commissionVat.ToMinorUnits() > 0)
+            legs.Add(new(
+                new(LedgerAccountType.VatLiability, null),
+                LedgerDirection.Debit,
+                commissionVat));
+        legs.Add(new(
+            new(LedgerAccountType.Receivable, payerId),
+            LedgerDirection.Credit,
+            gross + commissionNet + commissionVat));
+
+        return new LedgerPosting(
+            LedgerPostingType.DirectSettlementRefund,
+            RequireExternalId(refundId),
+            bookingId,
+            paymentIntentId,
+            legs);
+    }
+
     private static string RequireExternalId(string? externalId) =>
         !string.IsNullOrWhiteSpace(externalId)
             ? externalId

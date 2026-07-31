@@ -11,6 +11,9 @@ internal interface ITransactionRepository
     Task<SettlementTransactionEntity?> GetSettlementByCommissionAuthorizationIdAsync(
         Guid commissionAuthorizationId,
         CancellationToken ct = default);
+    Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default);
     Task AddAsync(TransactionEntity entity, CancellationToken ct = default);
     Task CreateAsync(TransactionEntity entity);
     Task SaveChangesAsync();
