@@ -3,16 +3,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
 
-internal sealed class CommissionConfigurationRepository : ICommissionConfigurationRepository
+internal sealed class CommissionConfigurationRepository
+    : GuidRepository<CommissionConfigurationEntity>, ICommissionConfigurationRepository
 {
-    private readonly PaymentDbContext context;
-
     public CommissionConfigurationRepository(PaymentDbContext context)
-    {
-        this.context = context;
-    }
+        : base(context) { }
 
-    public Task<CommissionConfigurationEntity?> GetByIdAsync(
+    public override Task<CommissionConfigurationEntity?> GetByIdAsync(
         Guid id,
         CancellationToken ct = default) =>
         context.CommissionConfigurations
