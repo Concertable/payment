@@ -6,11 +6,7 @@ public sealed class CommissionBindingEntity : IGuidEntity
 
     private CommissionBindingEntity(
         Guid id,
-        Guid commissionConfigurationId,
-        string version,
-        int rateBasisPoints,
-        Currency currency,
-        int vatRateBasisPoints,
+        CommissionConfigurationEntity commissionConfiguration,
         string externalReference,
         string payerReference,
         DateTimeOffset boundAt,
@@ -19,26 +15,14 @@ public sealed class CommissionBindingEntity : IGuidEntity
     {
         if (id == Guid.Empty)
             throw new DomainException("Commission binding id is required.");
-        if (commissionConfigurationId == Guid.Empty)
-            throw new DomainException("Commission configuration id is required.");
-        if (string.IsNullOrWhiteSpace(version))
-            throw new DomainException("Commission version is required.");
-        if (currency != Currency.Gbp)
-            throw new DomainException("Commission currency must be GBP.");
-        if (rateBasisPoints is < 1 or > 10_000)
-            throw new DomainException("Commission rate must be between 1 and 10,000 basis points.");
-        if (vatRateBasisPoints is < 0 or > 10_000)
-            throw new DomainException("Commission VAT rate must be between 0 and 10,000 basis points.");
+        ArgumentNullException.ThrowIfNull(commissionConfiguration);
         if (string.IsNullOrWhiteSpace(externalReference))
             throw new DomainException("External reference is required.");
         if (string.IsNullOrWhiteSpace(payerReference))
             throw new DomainException("Payer reference is required.");
         Id = id;
-        CommissionConfigurationId = commissionConfigurationId;
-        Version = version;
-        RateBasisPoints = rateBasisPoints;
-        Currency = currency;
-        VatRateBasisPoints = vatRateBasisPoints;
+        CommissionConfigurationId = commissionConfiguration.Id;
+        CommissionConfiguration = commissionConfiguration;
         ExternalReference = externalReference;
         PayerReference = payerReference;
         BoundAt = boundAt;
@@ -48,21 +32,17 @@ public sealed class CommissionBindingEntity : IGuidEntity
 
     public Guid Id { get; private set; }
     public Guid CommissionConfigurationId { get; private set; }
-    public string Version { get; private set; } = null!;
-    public int RateBasisPoints { get; private set; }
-    public Currency Currency { get; private set; }
-    public int VatRateBasisPoints { get; private set; }
+    public CommissionConfigurationEntity CommissionConfiguration { get; private set; } = null!;
     public string ExternalReference { get; private set; } = null!;
     public string PayerReference { get; private set; } = null!;
     public DateTimeOffset BoundAt { get; private set; }
     public string? StripePaymentIntentId { get; private set; }
     public string? StripeSetupIntentId { get; private set; }
 
-    public CommissionTerms Terms =>
-        new(CommissionConfigurationId, Version, Currency, RateBasisPoints, VatRateBasisPoints);
+    public CommissionTerms Terms => CommissionConfiguration.Terms;
 
     public static CommissionBindingEntity Create(
-        CommissionTerms terms,
+        CommissionConfigurationEntity commissionConfiguration,
         string externalReference,
         string payerReference,
         DateTimeOffset boundAt,
@@ -70,11 +50,7 @@ public sealed class CommissionBindingEntity : IGuidEntity
         string? stripeSetupIntentId = null) =>
         new(
             Guid.NewGuid(),
-            terms.ConfigurationId,
-            terms.Version,
-            terms.RateBasisPoints,
-            terms.Currency,
-            terms.VatRateBasisPoints,
+            commissionConfiguration,
             externalReference,
             payerReference,
             boundAt,

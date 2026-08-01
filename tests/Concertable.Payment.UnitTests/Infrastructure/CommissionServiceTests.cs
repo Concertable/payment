@@ -19,6 +19,7 @@ public sealed class CommissionServiceTests
     private readonly Guid configurationId = Guid.NewGuid();
 
     private readonly Mock<ICommissionBindingRepository> authorizationRepository = new();
+    private readonly Mock<ICommissionConfigurationRepository> configurationRepository = new();
     private readonly CommissionCalculator calculator = new();
     private readonly FakeTimeProvider timeProvider = new();
 
@@ -34,7 +35,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task PreviewAsync_MatchingCurrency_ReturnsQuote()
     {
-        var expected = calculator.Calculate(GrossMinor, Currency.Gbp, RateBasisPoints, VatRateBasisPoints);
+        var expected = calculator.Calculate(GrossMinor, Terms(), VatRateBasisPoints);
 
         var result = await BuildService().PreviewAsync(GrossMinor, Currency.Gbp);
 
@@ -110,7 +111,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync((CommissionBindingEntity?)null);
 
         var result = await BuildService().CalculateBoundAsync(
-            id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, null, null);
+            id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, null, null);
 
         Assert.True(result.IsFailed);
         Assert.Contains(result.Errors, e => e.Message == "commission_binding_not_found");
@@ -125,7 +126,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:OTHER", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, "pi_1", null);
+            binding.Id, "booking:OTHER", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
 
         Assert.True(result.IsFailed);
         Assert.Contains(result.Errors, e => e.Message == "commission_binding_mismatch");
@@ -140,7 +141,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, "pi_2", null);
+            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_2", null);
 
         Assert.True(result.IsFailed);
         Assert.Contains(result.Errors, e => e.Message == "commission_binding_intent_mismatch");
@@ -153,31 +154,15 @@ public sealed class CommissionServiceTests
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
-        var expected = calculator.Calculate(GrossMinor, Currency.Gbp, RateBasisPoints, VatRateBasisPoints);
+        var expected = calculator.Calculate(GrossMinor, Terms(), VatRateBasisPoints);
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor,
-            expected.CommissionGrossMinor, expected.PayerTotalMinor, "pi_1", null);
+            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
 
         Assert.True(result.IsSuccess);
         Assert.Same(binding, result.Value.Binding);
         Assert.Equal(Terms(), result.Value.Terms);
         Assert.Equal(expected, result.Value.Calculation);
-    }
-
-    [Fact]
-    public async Task CalculateBoundAsync_CalculationDiffersFromExpected_ReturnsPricingChanged()
-    {
-        var binding = Binding("booking:7", "payer:1", "pi_1");
-        authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(binding);
-
-        var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 1, 2, "pi_1", null);
-
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "pricing_changed");
     }
 
     [Fact]
@@ -207,18 +192,32 @@ public sealed class CommissionServiceTests
     }
 
     private CommissionTerms Terms() =>
-        new(configurationId, ConfigurationVersion, Currency.Gbp, RateBasisPoints, VatRateBasisPoints);
+        Configuration().Terms;
+
+    private CommissionConfigurationEntity Configuration() =>
+        CommissionConfigurationEntity.Create(
+            configurationId,
+            ConfigurationVersion,
+            Currency.Gbp,
+            RateBasisPoints,
+            timeProvider.GetUtcNow());
 
     private CommissionBindingEntity Binding(
         string externalReference,
         string payerReference,
         string? stripePaymentIntentId) =>
         CommissionBindingEntity.Create(
-            Terms(), externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
+            Configuration(), externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
 
-    private CommissionService BuildService() =>
-        new(
+    private CommissionService BuildService()
+    {
+        configurationRepository
+            .Setup(r => r.GetByIdAsync(configurationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Configuration());
+
+        return new CommissionService(
             authorizationRepository.Object,
+            configurationRepository.Object,
             calculator,
             Options.Create(new PlatformCommissionOptions
             {
@@ -229,4 +228,5 @@ public sealed class CommissionServiceTests
             }),
             Options.Create(new PlatformCommissionTaxOptions { VatRateBasisPoints = VatRateBasisPoints }),
             timeProvider);
+    }
 }

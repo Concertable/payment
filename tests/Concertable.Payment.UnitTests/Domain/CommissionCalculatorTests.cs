@@ -18,7 +18,7 @@ public sealed class CommissionCalculatorTests
         long expectedCommissionMinor,
         long expectedPayerTotalMinor)
     {
-        var result = sut.Calculate(grossMinor, Currency.Gbp, rateBasisPoints, 0);
+        var result = sut.Calculate(grossMinor, Terms(rateBasisPoints), 0);
 
         Assert.Equal(expectedCommissionMinor, result.CommissionGrossMinor);
         Assert.Equal(expectedCommissionMinor, result.CommissionNetMinor);
@@ -29,7 +29,7 @@ public sealed class CommissionCalculatorTests
     [Fact]
     public void Calculate_DecomposesVatInclusiveCommission()
     {
-        var result = sut.Calculate(24_000, Currency.Gbp, 500, 2_000);
+        var result = sut.Calculate(24_000, Terms(500), 2_000);
 
         Assert.Equal(1_200, result.CommissionGrossMinor);
         Assert.Equal(1_000, result.CommissionNetMinor);
@@ -42,13 +42,13 @@ public sealed class CommissionCalculatorTests
     {
         var unsupported = (Currency)978;
 
-        Assert.Throws<DomainException>(() => sut.Calculate(10_000, unsupported, 500, 0));
+        Assert.Throws<DomainException>(() => sut.Calculate(10_000, Terms(500, unsupported), 0));
     }
 
     [Fact]
     public void Calculate_UsesCheckedArithmetic()
     {
-        Assert.Throws<OverflowException>(() => sut.Calculate(long.MaxValue, Currency.Gbp, 10_000, 0));
+        Assert.Throws<OverflowException>(() => sut.Calculate(long.MaxValue, Terms(10_000), 0));
     }
 
     [Fact]
@@ -63,4 +63,7 @@ public sealed class CommissionCalculatorTests
         Assert.Equal(503, finalCumulative);
         Assert.Equal(503, firstCumulative + (secondCumulative - firstCumulative) + (finalCumulative - secondCumulative));
     }
+
+    private static CommissionTerms Terms(int rateBasisPoints, Currency currency = Currency.Gbp) =>
+        new(Guid.NewGuid(), "test", currency, rateBasisPoints);
 }

@@ -66,8 +66,6 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.PayerReference,
             request.Currency.ToDomainCurrency(),
             request.GrossMinor,
-            request.ExpectedCommissionMinor,
-            request.ExpectedPayerTotalMinor,
             EmptyToNull(request.StripePaymentIntentId),
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);

@@ -84,27 +84,25 @@ internal sealed class CommissionClient : ICommissionClient
         string payerReference,
         Currency currency,
         long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default)
     {
         try
         {
+            var request = new Proto.CalculateBoundCommissionRequest
+            {
+                BindingId = bindingId.ToString(),
+                ExternalReference = externalReference,
+                PayerReference = payerReference,
+                Currency = currency.ToProtoCurrency(),
+                GrossMinor = grossMinor,
+                StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
+                StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+            };
+
             var response = await client.CalculateBoundCommissionAsync(
-                new Proto.CalculateBoundCommissionRequest
-                {
-                    BindingId = bindingId.ToString(),
-                    ExternalReference = externalReference,
-                    PayerReference = payerReference,
-                    Currency = currency.ToProtoCurrency(),
-                    GrossMinor = grossMinor,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
-                    StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
-                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-                },
+                request,
                 cancellationToken: ct);
             return Result.Ok(response.ToCommissionQuote());
         }

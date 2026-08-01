@@ -47,8 +47,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             command.StripeSetupIntentId,
             context.CancellationToken);
 
@@ -92,8 +90,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             context.CancellationToken);
 
         if (result.IsFailed)
