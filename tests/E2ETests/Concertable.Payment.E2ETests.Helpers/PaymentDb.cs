@@ -37,7 +37,14 @@ public sealed class PaymentDb
 
     public Task<string?> GetEscrowRefundIdAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<string?>(
-            "SELECT RefundId FROM payment.Escrows WHERE BookingId = @bookingId",
+            """
+            SELECT TOP 1 r.StripeRefundId
+            FROM payment.PaymentRefunds r
+            JOIN payment.Escrows e ON e.Id = r.EscrowId
+            WHERE e.BookingId = @bookingId
+              AND r.StripeRefundId IS NOT NULL
+            ORDER BY r.CompletedAt DESC
+            """,
             new { bookingId });
 
     public Task<int> GetLedgerTransactionCountAsync(int bookingId) =>
