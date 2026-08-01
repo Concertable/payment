@@ -56,29 +56,27 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default)
     {
         try
         {
+            var request = new Proto.BoundCommissionManagerPayRequest
+            {
+                PayerId = payerId.ToString(),
+                PayeeId = payeeId.ToString(),
+                GrossMinor = grossMinor,
+                Currency = currency.ToProtoCurrency(),
+                PaymentMethodId = paymentMethodId,
+                Session = session.ToProtoSession(),
+                BookingId = bookingId,
+                CommissionBindingId = commissionBindingId.ToString(),
+                ExternalReference = externalReference,
+                StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+            };
+
             var response = await client.PayBoundCommissionAsync(
-                new Proto.BoundCommissionManagerPayRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
-                    PaymentMethodId = paymentMethodId,
-                    Session = session.ToProtoSession(),
-                    BookingId = bookingId,
-                    CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
-                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-                },
+                request,
                 cancellationToken: ct);
             return Result.Ok(response.ToPaymentOutcome());
         }
@@ -134,8 +132,6 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         IDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default)
     {
@@ -148,8 +144,6 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                 Currency = currency.ToProtoCurrency(),
                 CommissionBindingId = commissionBindingId.ToString(),
                 ExternalReference = externalReference,
-                ExpectedCommissionMinor = expectedCommissionMinor,
-                ExpectedPayerTotalMinor = expectedPayerTotalMinor,
                 StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
             };
             request.Metadata.Add(metadata);

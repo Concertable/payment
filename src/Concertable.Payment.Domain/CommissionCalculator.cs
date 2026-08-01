@@ -4,21 +4,20 @@ internal sealed class CommissionCalculator
 {
     public CommissionCalculation Calculate(
         long payeeGrossMinor,
-        Currency currency,
-        int rateBasisPoints,
+        CommissionTerms terms,
         int vatRateBasisPoints)
     {
         if (payeeGrossMinor < 0)
             throw new DomainException("Payee gross cannot be negative.");
-        if (currency != Currency.Gbp)
+        if (terms.Currency != Currency.Gbp)
             throw new DomainException("Commission currency must be GBP.");
-        if (rateBasisPoints is < 1 or > 10_000)
+        if (terms.RateBasisPoints is < 1 or > 10_000)
             throw new DomainException("Commission rate must be between 1 and 10,000 basis points.");
         if (vatRateBasisPoints is < 0 or > 10_000)
             throw new DomainException("Commission VAT rate must be between 0 and 10,000 basis points.");
 
         var commissionGrossMinor = DivideHalfUp(
-            checked(payeeGrossMinor * rateBasisPoints),
+            checked(payeeGrossMinor * terms.RateBasisPoints),
             10_000);
         var commissionNetMinor = vatRateBasisPoints == 0
             ? commissionGrossMinor
@@ -28,7 +27,7 @@ internal sealed class CommissionCalculator
         var commissionVatMinor = checked(commissionGrossMinor - commissionNetMinor);
 
         return new CommissionCalculation(
-            currency,
+            terms.Currency,
             payeeGrossMinor,
             commissionGrossMinor,
             commissionNetMinor,
