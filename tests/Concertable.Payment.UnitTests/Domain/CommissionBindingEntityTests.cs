@@ -6,14 +6,15 @@ namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class CommissionBindingEntityTests
 {
-    private static CommissionTerms Terms() =>
-        new(Guid.NewGuid(), "2024.1", Currency.Gbp, 1000, 2000);
+    private static CommissionConfigurationEntity Configuration() =>
+        CommissionConfigurationEntity.Create(
+            Guid.NewGuid(), "2024.1", Currency.Gbp, 1000, DateTimeOffset.UtcNow);
 
     [Fact]
     public void BindPaymentIntent_PreservesSetupIntentContext()
     {
         var binding = CommissionBindingEntity.Create(
-            Terms(),
+            Configuration(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -29,7 +30,7 @@ public sealed class CommissionBindingEntityTests
     public void BindPaymentIntent_RejectsDifferentIntent()
     {
         var binding = CommissionBindingEntity.Create(
-            Terms(),
+            Configuration(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -39,18 +40,15 @@ public sealed class CommissionBindingEntityTests
     }
 
     [Fact]
-    public void Create_SnapshotsConfigurationTermsOntoTheBinding()
+    public void Create_ReferencesConfigurationWithoutCopyingItsTerms()
     {
-        var terms = Terms();
+        var configuration = Configuration();
 
         var binding = CommissionBindingEntity.Create(
-            terms, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            configuration, "booking:42", "payer:7", DateTimeOffset.UtcNow);
 
-        Assert.Equal(terms.ConfigurationId, binding.CommissionConfigurationId);
-        Assert.Equal(terms.Version, binding.Version);
-        Assert.Equal(terms.Currency, binding.Currency);
-        Assert.Equal(terms.RateBasisPoints, binding.RateBasisPoints);
-        Assert.Equal(terms.VatRateBasisPoints, binding.VatRateBasisPoints);
-        Assert.Equal(terms, binding.Terms);
+        Assert.Equal(configuration.Id, binding.CommissionConfigurationId);
+        Assert.Same(configuration, binding.CommissionConfiguration);
+        Assert.Equal(configuration.Terms, binding.Terms);
     }
 }

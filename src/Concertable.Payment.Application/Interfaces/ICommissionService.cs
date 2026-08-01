@@ -27,8 +27,6 @@ internal interface ICommissionService
         string payerReference,
         Currency currency,
         long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripePaymentIntentId,
         string? stripeSetupIntentId,
         CancellationToken ct = default);

@@ -124,8 +124,6 @@ internal sealed class EscrowService : IEscrowService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
@@ -144,8 +142,6 @@ internal sealed class EscrowService : IEscrowService
             payerId.ToString(),
             currency,
             grossMinor,
-            expectedCommissionMinor,
-            expectedPayerTotalMinor,
             null,
             stripeSetupIntentId,
             ct);
@@ -248,8 +244,6 @@ internal sealed class EscrowService : IEscrowService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         CancellationToken ct = default)
     {
         var existing = await escrowRepository.GetByCommissionBindingIdAsync(
@@ -267,8 +261,6 @@ internal sealed class EscrowService : IEscrowService
             payerId.ToString(),
             currency,
             grossMinor,
-            expectedCommissionMinor,
-            expectedPayerTotalMinor,
             paymentIntentId,
             null,
             ct);

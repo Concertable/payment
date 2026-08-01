@@ -219,10 +219,18 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
 
     private static async Task<CommissionBindingEntity> SeedAuthorizationAsync(PaymentDbContext context)
     {
-        var terms = new CommissionTerms(
-            Guid.NewGuid(), $"integration-{Guid.NewGuid():N}", Currency.Gbp, 500, 0);
+        var configuration = CommissionConfigurationEntity.Create(
+            Guid.NewGuid(),
+            $"integration-{Guid.NewGuid():N}",
+            Currency.Gbp,
+            500,
+            DateTimeOffset.UtcNow);
         var binding = CommissionBindingEntity.Create(
-            terms, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
+            configuration,
+            $"booking:{Guid.NewGuid():N}",
+            $"payer:{Guid.NewGuid():N}",
+            DateTimeOffset.UtcNow);
+        context.Add(configuration);
         context.Add(binding);
         await context.SaveChangesAsync();
         return binding;
