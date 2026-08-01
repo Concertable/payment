@@ -15,28 +15,21 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 name: "payment");
 
             migrationBuilder.CreateTable(
-                name: "CommissionBindings",
+                name: "CommissionConfigurations",
                 schema: "payment",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CommissionConfigurationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Version = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    RateBasisPoints = table.Column<int>(type: "int", nullable: false),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
-                    VatRateBasisPoints = table.Column<int>(type: "int", nullable: false),
-                    ExternalReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    PayerReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    BoundAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    StripePaymentIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    StripeSetupIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    RateBasisPoints = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CommissionBindings", x => x.Id);
-                    table.CheckConstraint("CK_CommissionBindings_Currency", "[Currency] = 'Gbp'");
-                    table.CheckConstraint("CK_CommissionBindings_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
-                    table.CheckConstraint("CK_CommissionBindings_VatRateBasisPoints", "[VatRateBasisPoints] >= 0 AND [VatRateBasisPoints] <= 10000");
+                    table.PrimaryKey("PK_CommissionConfigurations", x => x.Id);
+                    table.CheckConstraint("CK_CommissionConfigurations_Currency", "[Currency] = 'Gbp'");
+                    table.CheckConstraint("CK_CommissionConfigurations_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
                 });
 
             migrationBuilder.CreateTable(
@@ -102,6 +95,63 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_StripeEvents", x => x.EventId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CommissionBindings",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CommissionConfigurationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExternalReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    PayerReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    BoundAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    StripePaymentIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    StripeSetupIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommissionBindings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CommissionBindings_CommissionConfigurations_CommissionConfigurationId",
+                        column: x => x.CommissionConfigurationId,
+                        principalSchema: "payment",
+                        principalTable: "CommissionConfigurations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LedgerEntries",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LedgerTransactionId = table.Column<int>(type: "int", nullable: false),
+                    LedgerAccountId = table.Column<int>(type: "int", nullable: false),
+                    Direction = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<long>(type: "bigint", nullable: false),
+                    Currency = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LedgerEntries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LedgerEntries_LedgerAccounts_LedgerAccountId",
+                        column: x => x.LedgerAccountId,
+                        principalSchema: "payment",
+                        principalTable: "LedgerAccounts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_LedgerEntries_LedgerTransactions_LedgerTransactionId",
+                        column: x => x.LedgerTransactionId,
+                        principalSchema: "payment",
+                        principalTable: "LedgerTransactions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -185,38 +235,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "LedgerEntries",
-                schema: "payment",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    LedgerTransactionId = table.Column<int>(type: "int", nullable: false),
-                    LedgerAccountId = table.Column<int>(type: "int", nullable: false),
-                    Direction = table.Column<int>(type: "int", nullable: false),
-                    Amount = table.Column<long>(type: "bigint", nullable: false),
-                    Currency = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_LedgerEntries", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_LedgerEntries_LedgerAccounts_LedgerAccountId",
-                        column: x => x.LedgerAccountId,
-                        principalSchema: "payment",
-                        principalTable: "LedgerAccounts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_LedgerEntries_LedgerTransactions_LedgerTransactionId",
-                        column: x => x.LedgerTransactionId,
-                        principalSchema: "payment",
-                        principalTable: "LedgerTransactions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "PaymentRefunds",
                 schema: "payment",
                 columns: table => new
@@ -254,6 +272,12 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CommissionBindings_CommissionConfigurationId",
+                schema: "payment",
+                table: "CommissionBindings",
+                column: "CommissionConfigurationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CommissionBindings_ExternalReference_PayerReference",
                 schema: "payment",
                 table: "CommissionBindings",
@@ -275,6 +299,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "StripeSetupIntentId",
                 unique: true,
                 filter: "[StripeSetupIntentId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CommissionConfigurations_Version",
+                schema: "payment",
+                table: "CommissionConfigurations",
+                column: "Version",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Escrows_BookingId",
@@ -446,6 +477,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "CommissionBindings",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "CommissionConfigurations",
                 schema: "payment");
         }
     }

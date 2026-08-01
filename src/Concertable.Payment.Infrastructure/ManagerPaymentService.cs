@@ -119,8 +119,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
@@ -140,8 +138,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             payerId.ToString(),
             currency,
             grossMinor,
-            expectedCommissionMinor,
-            expectedPayerTotalMinor,
             null,
             stripeSetupIntentId,
             ct);
@@ -223,8 +219,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
@@ -236,8 +230,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             payerId.ToString(),
             currency,
             grossMinor,
-            expectedCommissionMinor,
-            expectedPayerTotalMinor,
             boundIntentId,
             stripeSetupIntentId,
             ct);

@@ -23,8 +23,6 @@ internal interface IManagerPaymentService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
@@ -64,8 +62,6 @@ internal interface IManagerPaymentService
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 

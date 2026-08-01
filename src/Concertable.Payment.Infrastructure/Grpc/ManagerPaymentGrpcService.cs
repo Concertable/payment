@@ -47,8 +47,6 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.BookingId,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             command.StripeSetupIntentId,
             context.CancellationToken);
 
@@ -109,8 +107,6 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.Metadata,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             command.StripeSetupIntentId,
             context.CancellationToken);
 

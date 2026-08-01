@@ -99,8 +99,8 @@ message CalculateBoundCommissionRequest {
   string payer_reference = 3;
   Currency currency = 4;
   int64 gross_minor = 5;
-  int64 expected_commission_minor = 6;
-  int64 expected_payer_total_minor = 7;
+  reserved 6, 7;
+  reserved "expected_commission_minor", "expected_payer_total_minor";
   string stripe_payment_intent_id = 8;
   string stripe_setup_intent_id = 9;
 }
@@ -134,8 +134,8 @@ message BoundCommissionManagerPayRequest {
   int32 booking_id = 7;
   string commission_binding_id = 8;
   string external_reference = 9;
-  int64 expected_commission_minor = 10;
-  int64 expected_payer_total_minor = 11;
+  reserved 10, 11;
+  reserved "expected_commission_minor", "expected_payer_total_minor";
   string stripe_setup_intent_id = 12;
 }
 
@@ -162,8 +162,8 @@ message CreateBoundCommissionHoldSessionRequest {
   map<string, string> metadata = 4;
   string commission_binding_id = 5;
   string external_reference = 6;
-  int64 expected_commission_minor = 7;
-  int64 expected_payer_total_minor = 8;
+  reserved 7, 8;
+  reserved "expected_commission_minor", "expected_payer_total_minor";
   string stripe_setup_intent_id = 9;
 }
 
@@ -267,8 +267,8 @@ message BoundCommissionDepositRequest {
   int32 booking_id = 7;
   string commission_binding_id = 8;
   string external_reference = 9;
-  int64 expected_commission_minor = 10;
-  int64 expected_payer_total_minor = 11;
+  reserved 10, 11;
+  reserved "expected_commission_minor", "expected_payer_total_minor";
   string stripe_setup_intent_id = 12;
 }
 
@@ -289,8 +289,8 @@ message BoundCommissionCaptureRequest {
   int32 booking_id = 6;
   string commission_binding_id = 7;
   string external_reference = 8;
-  int64 expected_commission_minor = 9;
-  int64 expected_payer_total_minor = 10;
+  reserved 9, 10;
+  reserved "expected_commission_minor", "expected_payer_total_minor";
 }
 
 message ReleaseByBookingIdRequest {
