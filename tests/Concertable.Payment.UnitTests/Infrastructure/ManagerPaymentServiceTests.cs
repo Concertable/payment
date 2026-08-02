@@ -46,6 +46,10 @@ public sealed class ManagerPaymentServiceTests
         payoutAccountRepository
             .Setup(r => r.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PayoutAccountWith("cus_test"));
+
+        transactionRepository
+            .Setup(r => r.TryReserveSettlementRefundGrossAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     private ManagerPaymentService SutWithFee(decimal fee) =>
@@ -59,7 +63,6 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
-            TestPaymentDbContext.Unopened(),
             new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 

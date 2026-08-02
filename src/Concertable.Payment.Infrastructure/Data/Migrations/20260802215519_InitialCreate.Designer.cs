@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260731151513_InitialCreate")]
+    [Migration("20260802215519_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -193,10 +193,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("CommissionVatRateBasisPoints")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -222,6 +218,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ReleasedAt")
@@ -532,10 +531,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<int>("CommissionVatRateBasisPoints")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -545,6 +540,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.HasIndex("CommissionBindingId")

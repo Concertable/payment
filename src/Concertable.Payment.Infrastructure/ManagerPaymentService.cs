@@ -2,11 +2,9 @@ using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
-using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -22,7 +20,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly CommissionCalculator commissionCalculator;
     private readonly ILedgerService ledger;
     private readonly IUnitOfWork unitOfWork;
-    private readonly PaymentDbContext context;
     private readonly TimeProvider timeProvider;
     private readonly Money platformFee;
 
@@ -36,7 +33,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         CommissionCalculator commissionCalculator,
         ILedgerService ledger,
         IUnitOfWork unitOfWork,
-        PaymentDbContext context,
         TimeProvider timeProvider,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
@@ -49,7 +45,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.commissionCalculator = commissionCalculator;
         this.ledger = ledger;
         this.unitOfWork = unitOfWork;
-        this.context = context;
         this.timeProvider = timeProvider;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
@@ -320,6 +315,9 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             settlement.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionVatReversedMinor));
         var payerTotalRefundMinor = checked(grossMinor + commissionRefundMinor);
 
+        if (!await transactionRepository.TryReserveSettlementRefundGrossAsync(settlement.Id, grossMinor, ct))
+            return Result.Fail("refund_gross_exceeds_remaining_gross");
+
         var reservation = PaymentRefundEntity.CreatePendingForSettlement(
             settlement.Id,
             grossMinor,
@@ -327,15 +325,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionVatReversedMinor,
             timeProvider.GetUtcNow());
         settlement.RecordRefund(reservation);
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            context.ChangeTracker.Clear();
-            return await ReservationConflictAsync(bookingId, grossMinor, ct);
-        }
+        await unitOfWork.SaveChangesAsync(ct);
 
         var metadata = new Dictionary<string, string>
         {
@@ -361,6 +351,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         {
             settlement.ReleaseRefund(reservation);
             await unitOfWork.SaveChangesAsync(ct);
+            await transactionRepository.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, grossMinor, ct);
             return refund.ToResult<Refund?>();
         }
 
@@ -380,20 +371,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await unitOfWork.SaveChangesAsync(ct);
 
         return Result.Ok<Refund?>(refund.Value);
-    }
-
-    private async Task<Result<Refund?>> ReservationConflictAsync(
-        int bookingId,
-        long grossMinor,
-        CancellationToken ct)
-    {
-        var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
-        var reservedGross = current?.Refunds
-            .Where(r => r.CountsTowardCumulative)
-            .Sum(r => r.GrossRefundedMinor) ?? 0;
-        return checked(reservedGross + grossMinor) > (current?.PayeeGrossMinor ?? 0)
-            ? Result.Fail("refund_gross_exceeds_remaining_gross")
-            : Result.Fail("refund_conflict");
     }
 
     private async Task<string> EnsureStripeCustomerAsync(Guid ownerId, CancellationToken ct)
