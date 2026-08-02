@@ -8,20 +8,20 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionBindingRepository bindingRepository;
-    private readonly CommissionPricingCatalog pricingCatalog;
+    private readonly CommissionTermsProvider termsProvider;
     private readonly CommissionCalculator calculator;
     private readonly PlatformCommissionTaxOptions taxOptions;
     private readonly TimeProvider timeProvider;
 
     public CommissionService(
         ICommissionBindingRepository bindingRepository,
-        CommissionPricingCatalog pricingCatalog,
+        CommissionTermsProvider termsProvider,
         CommissionCalculator calculator,
         IOptions<PlatformCommissionTaxOptions> taxOptions,
         TimeProvider timeProvider)
     {
         this.bindingRepository = bindingRepository;
-        this.pricingCatalog = pricingCatalog;
+        this.termsProvider = termsProvider;
         this.calculator = calculator;
         this.taxOptions = taxOptions.Value;
         this.timeProvider = timeProvider;
@@ -32,7 +32,7 @@ internal sealed class CommissionService : ICommissionService
         Currency currency,
         CancellationToken ct = default)
     {
-        var terms = pricingCatalog.Current;
+        var terms = termsProvider.Current;
         var result = currency != terms.Currency
             ? Result.Fail<CommissionQuote>("currency_mismatch")
             : Result.Ok(ToQuote(terms, Calculate(terms, grossMinor)));
@@ -51,10 +51,10 @@ internal sealed class CommissionService : ICommissionService
         long? expectedPayerTotalMinor,
         CancellationToken ct = default)
     {
-        if (reviewedCommissionConfigurationId != pricingCatalog.Current.ConfigurationId)
+        if (reviewedCommissionConfigurationId != termsProvider.Current.ConfigurationId)
             return Result.Fail("pricing_changed");
 
-        var terms = pricingCatalog.Current;
+        var terms = termsProvider.Current;
         if (currency != terms.Currency)
             return Result.Fail("currency_mismatch");
 
@@ -104,7 +104,7 @@ internal sealed class CommissionService : ICommissionService
             !string.Equals(binding.PayerReference, payerReference, StringComparison.Ordinal))
             return Result.Fail("commission_binding_mismatch");
 
-        var terms = pricingCatalog.GetRequired(binding.CommissionConfigurationId);
+        var terms = termsProvider.GetRequired(binding.CommissionConfigurationId);
         if (currency != terms.Currency)
             return Result.Fail("currency_mismatch");
         if (!IntentMatches(binding.StripePaymentIntentId, stripePaymentIntentId) ||
@@ -165,7 +165,7 @@ internal sealed class CommissionService : ICommissionService
                 stripeSetupIntentId))
             return Result.Fail("commission_binding_mismatch");
 
-        var terms = pricingCatalog.GetRequired(binding.CommissionConfigurationId);
+        var terms = termsProvider.GetRequired(binding.CommissionConfigurationId);
         return Result.Ok(ToBinding(
             binding,
             terms,
