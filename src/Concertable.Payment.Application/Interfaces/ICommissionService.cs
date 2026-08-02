@@ -4,7 +4,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ICommissionService
 {
-    Task<Result<CommissionQuote>> PreviewAsync(
+    Task<Result<CommissionCalculation>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default);

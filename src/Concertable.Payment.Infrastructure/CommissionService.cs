@@ -30,7 +30,7 @@ internal sealed class CommissionService : ICommissionService
         this.timeProvider = timeProvider;
     }
 
-    public async Task<Result<CommissionQuote>> PreviewAsync(
+    public async Task<Result<Concertable.Payment.Contracts.CommissionCalculation>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default)
@@ -39,7 +39,7 @@ internal sealed class CommissionService : ICommissionService
             return Result.Fail("currency_mismatch");
 
         var terms = (await GetCurrentConfigurationAsync(ct)).Terms;
-        return Result.Ok(ToQuote(terms, Calculate(terms, grossMinor, currency)));
+        return Result.Ok(ToCalculation(terms, Calculate(terms, grossMinor, currency)));
     }
 
     public async Task<Result<CommissionBinding>> CreateOrBindAsync(
@@ -191,7 +191,7 @@ internal sealed class CommissionService : ICommissionService
             grossMinor is null ? null : Calculate(terms, grossMinor.Value, binding.Currency)));
     }
 
-    private CommissionCalculation Calculate(
+    private Concertable.Payment.Domain.CommissionCalculation Calculate(
         CommissionTerms terms,
         long grossMinor,
         Currency currency) =>
@@ -207,17 +207,17 @@ internal sealed class CommissionService : ICommissionService
     private static CommissionBinding ToBinding(
         CommissionBindingEntity binding,
         CommissionTerms terms,
-        CommissionCalculation? calculation) =>
+        Concertable.Payment.Domain.CommissionCalculation? calculation) =>
         new(
             binding.Id,
             terms.ConfigurationId,
             terms.Rate.Value,
             binding.Currency,
-            calculation is null ? null : ToQuote(terms, calculation.Value));
+            calculation is null ? null : ToCalculation(terms, calculation.Value));
 
-    private static CommissionQuote ToQuote(
+    private static Concertable.Payment.Contracts.CommissionCalculation ToCalculation(
         CommissionTerms terms,
-        CommissionCalculation calculation) =>
+        Concertable.Payment.Domain.CommissionCalculation calculation) =>
         new(
             terms.ConfigurationId,
             terms.Rate.Value,

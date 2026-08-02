@@ -43,7 +43,14 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 binding.Id,
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
+                new Concertable.Payment.Domain.CommissionCalculation(
+                    Currency.Gbp,
+                    5000,
+                    1000,
+                    800,
+                    200,
+                    Percentage.From(20m),
+                    6000),
                 $"pi_escrow_{Guid.NewGuid():N}");
             escrow.Confirm();
             escrow.CreatedBy = "integration";
@@ -106,7 +113,14 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 $"pi_settlement_{Guid.NewGuid():N}",
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
+                new Concertable.Payment.Domain.CommissionCalculation(
+                    Currency.Gbp,
+                    5000,
+                    1000,
+                    800,
+                    200,
+                    Percentage.From(20m),
+                    6000),
                 TransactionStatus.Complete,
                 bookingId,
                 binding.Id);

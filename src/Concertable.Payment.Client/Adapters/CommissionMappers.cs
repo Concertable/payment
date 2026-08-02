@@ -7,7 +7,8 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class CommissionMappers
 {
-    public static CommissionQuote ToCommissionQuote(this Proto.CommissionQuoteResponse response) =>
+    public static CommissionCalculation ToCommissionCalculation(
+        this Proto.CommissionCalculationResponse response) =>
         new(
             Guid.Parse(response.CommissionConfigurationId),
             decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
@@ -23,7 +24,7 @@ internal static class CommissionMappers
             Guid.Parse(response.CommissionConfigurationId),
             decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
             response.Currency.ToCurrency(),
-            response.Quote?.ToCommissionQuote());
+            response.Calculation?.ToCommissionCalculation());
 
     private static Currency ToCurrency(this Proto.Currency currency) => currency switch
     {
