@@ -68,7 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
         services.AddSingleton<CommissionCalculator>();
-        services.AddSingleton<CommissionPricingCatalog>();
+        services.AddSingleton<CommissionTermsProvider>();
         services.AddScoped<ICommissionService, CommissionService>();
 
         services.AddScoped<ITransactionService, TransactionService>();

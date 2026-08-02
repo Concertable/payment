@@ -230,7 +230,7 @@ public sealed class CommissionServiceTests
     {
         return new CommissionService(
             authorizationRepository.Object,
-            new CommissionPricingCatalog(Options.Create(new PlatformCommissionOptions
+            new CommissionTermsProvider(Options.Create(new PlatformCommissionOptions
             {
                 CurrentConfigurationId = configurationId,
                 Configurations =
