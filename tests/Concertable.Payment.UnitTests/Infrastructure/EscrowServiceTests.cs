@@ -40,6 +40,10 @@ public sealed class EscrowServiceTests
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
+        escrowRepository
+            .Setup(r => r.TryReserveRefundGrossAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         this.timeProvider = new FakeTimeProvider();
 
         this.sut = SutWithFee(0m);
@@ -58,7 +62,6 @@ public sealed class EscrowServiceTests
             new FakeUnitOfWork(),
             commissionService.Object,
             new CommissionCalculator(),
-            TestPaymentDbContext.Unopened(),
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);

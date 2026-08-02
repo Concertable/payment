@@ -135,25 +135,6 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
-    public void RecordRefund_PartialGross_BumpsConcurrencyToken()
-    {
-        var escrow = NewPending();
-        escrow.Confirm();
-        var before = escrow.ConcurrencyToken;
-        var refund = PaymentRefundEntity.CreateCompletedForEscrow(
-            escrow.Id,
-            "re_partial",
-            grossRefundedMinor: 1000,
-            commissionRefundedMinor: 0,
-            commissionVatReversedMinor: 0,
-            DateTimeOffset.UtcNow);
-
-        escrow.RecordRefund(refund);
-
-        Assert.NotEqual(before, escrow.ConcurrencyToken);
-    }
-
-    [Fact]
     public void RecordRefund_FromReleasedWithFullGross_TransitionsToRefunded()
     {
         var escrow = NewPending();
@@ -209,20 +190,18 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
-    public void CompleteRefund_FullGross_TransitionsToRefundedAndBumpsToken()
+    public void CompleteRefund_FullGross_TransitionsToRefunded()
     {
         var escrow = NewPending();
         escrow.Confirm();
         var reservation = PaymentRefundEntity.CreatePendingForEscrow(
             escrow.Id, escrow.PayeeGrossMinor, escrow.CommissionGrossMinor, escrow.CommissionVatMinor, DateTimeOffset.UtcNow);
         escrow.RecordRefund(reservation);
-        var afterReserve = escrow.ConcurrencyToken;
 
         escrow.CompleteRefund(reservation, "re_done", DateTimeOffset.UtcNow);
 
         Assert.Equal(EscrowStatus.Refunded, escrow.Status);
         Assert.Equal("re_done", reservation.StripeRefundId);
-        Assert.NotEqual(afterReserve, escrow.ConcurrencyToken);
     }
 
     [Fact]
@@ -233,14 +212,12 @@ public sealed class EscrowEntityTests
         var reservation = PaymentRefundEntity.CreatePendingForEscrow(
             escrow.Id, escrow.PayeeGrossMinor, escrow.CommissionGrossMinor, escrow.CommissionVatMinor, DateTimeOffset.UtcNow);
         escrow.RecordRefund(reservation);
-        var afterReserve = escrow.ConcurrencyToken;
 
         escrow.ReleaseRefund(reservation);
 
         Assert.Equal(EscrowStatus.Held, escrow.Status);
         Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
         Assert.False(reservation.CountsTowardCumulative);
-        Assert.NotEqual(afterReserve, escrow.ConcurrencyToken);
     }
 
     [Fact]
