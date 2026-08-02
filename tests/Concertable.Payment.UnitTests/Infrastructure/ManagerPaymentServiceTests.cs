@@ -333,9 +333,11 @@ public sealed class ManagerPaymentServiceTests
 
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)
     {
-        var terms = new CommissionTerms(Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000);
+        var configuration = CommissionConfigurationEntity.Create(
+            Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, DateTimeOffset.UtcNow);
+        var terms = configuration.Terms;
         var binding = CommissionBindingEntity.Create(
-            terms.ConfigurationId, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
+            configuration, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
         var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000);
