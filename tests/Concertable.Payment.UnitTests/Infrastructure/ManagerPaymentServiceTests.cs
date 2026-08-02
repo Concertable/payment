@@ -323,7 +323,7 @@ public sealed class ManagerPaymentServiceTests
             payerId,
             payeeId,
             "pi_settlement",
-            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
             TransactionStatus.Pending,
             bookingId: 7,
             commissionBindingId: Guid.NewGuid());
@@ -334,13 +334,15 @@ public sealed class ManagerPaymentServiceTests
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)
     {
         var configuration = CommissionConfigurationEntity.Create(
-            Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, DateTimeOffset.UtcNow);
+            Guid.NewGuid(),
+            Percentage.From(20m),
+            DateTimeOffset.UtcNow);
         var terms = configuration.Terms;
         var binding = CommissionBindingEntity.Create(
-            configuration, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
+            configuration, Currency.Gbp, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
-        var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000);
+        var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000);
         return new BoundCommission(binding, terms, calculation);
     }
 

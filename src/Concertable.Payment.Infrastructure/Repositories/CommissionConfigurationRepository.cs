@@ -14,7 +14,7 @@ internal sealed class CommissionConfigurationRepository
         CancellationToken ct = default) =>
         context.CommissionConfigurations.GetOrCreateAsync(
             candidate,
-            c => new { c.Id, c.Version },
-            c => c.Id == candidate.Id || c.Version == candidate.Version,
+            c => c.Id,
+            c => c.Id == candidate.Id,
             ct);
 }

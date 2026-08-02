@@ -20,16 +20,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Version = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
-                    RateBasisPoints = table.Column<int>(type: "int", nullable: false),
+                    RatePercentage = table.Column<decimal>(type: "decimal(7,4)", precision: 7, scale: 4, nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CommissionConfigurations", x => x.Id);
-                    table.CheckConstraint("CK_CommissionConfigurations_Currency", "[Currency] = 'Gbp'");
-                    table.CheckConstraint("CK_CommissionConfigurations_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
+                    table.CheckConstraint("CK_CommissionConfigurations_RatePercentage", "[RatePercentage] > 0 AND [RatePercentage] <= 100");
                 });
 
             migrationBuilder.CreateTable(
@@ -104,6 +101,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CommissionConfigurationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
                     ExternalReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     PayerReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     BoundAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
@@ -170,7 +168,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionGrossMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionNetMinor = table.Column<long>(type: "bigint", nullable: false),
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: false),
-                    CommissionVatRateBasisPoints = table.Column<int>(type: "int", nullable: false),
+                    CommissionVatRatePercentage = table.Column<decimal>(type: "decimal(7,4)", precision: 7, scale: 4, nullable: false),
                     PayerTotalMinor = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -218,7 +216,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionGrossMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionNetMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: true),
-                    CommissionVatRateBasisPoints = table.Column<int>(type: "int", nullable: true),
+                    CommissionVatRatePercentage = table.Column<decimal>(type: "decimal(7,4)", precision: 7, scale: 4, nullable: true),
                     PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true),
                     ConcurrencyToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
@@ -299,13 +297,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "StripeSetupIntentId",
                 unique: true,
                 filter: "[StripeSetupIntentId] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_CommissionConfigurations_Version",
-                schema: "payment",
-                table: "CommissionConfigurations",
-                column: "Version",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Escrows_BookingId",

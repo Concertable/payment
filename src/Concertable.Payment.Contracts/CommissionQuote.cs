@@ -4,8 +4,7 @@ namespace Concertable.Payment.Contracts;
 
 public sealed record CommissionQuote(
     Guid CommissionConfigurationId,
-    string ConfigurationVersion,
-    int RateBasisPoints,
+    decimal RatePercentage,
     Currency Currency,
     long GrossMinor,
     long CommissionMinor,
