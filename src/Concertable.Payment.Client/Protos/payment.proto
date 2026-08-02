@@ -51,7 +51,7 @@ message TransferResponse {
   string transfer_id = 1;
 }
 
-message CommissionQuoteResponse {
+message CommissionCalculationResponse {
   string commission_configuration_id = 1;
   reserved 2;
   reserved "configuration_version";
@@ -69,13 +69,13 @@ message CommissionBindingResponse {
   reserved "configuration_version";
   string rate_percentage = 4;
   Currency currency = 5;
-  CommissionQuoteResponse quote = 6;
+  CommissionCalculationResponse calculation = 6;
 }
 
 service CommissionPricing {
-  rpc PreviewCommission(PreviewCommissionRequest) returns (CommissionQuoteResponse);
+  rpc PreviewCommission(PreviewCommissionRequest) returns (CommissionCalculationResponse);
   rpc CreateOrBindCommission(CreateOrBindCommissionRequest) returns (CommissionBindingResponse);
-  rpc CalculateBoundCommission(CalculateBoundCommissionRequest) returns (CommissionQuoteResponse);
+  rpc CalculateBoundCommission(CalculateBoundCommissionRequest) returns (CommissionCalculationResponse);
 }
 
 message PreviewCommissionRequest {
