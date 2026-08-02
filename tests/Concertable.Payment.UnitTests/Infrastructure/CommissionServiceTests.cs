@@ -17,9 +17,9 @@ public sealed class CommissionServiceTests
     private const long GrossMinor = 5000;
 
     private readonly Guid configurationId = Guid.NewGuid();
-    private readonly Guid previousConfigurationId = Guid.NewGuid();
 
     private readonly Mock<ICommissionBindingRepository> authorizationRepository = new();
+    private readonly Mock<ICommissionConfigurationRepository> configurationRepository = new();
     private readonly CommissionCalculator calculator = new();
     private readonly FakeTimeProvider timeProvider = new();
 
@@ -166,26 +166,6 @@ public sealed class CommissionServiceTests
     }
 
     [Fact]
-    public async Task CalculateBoundAsync_PreviousConfiguration_UsesBoundRevision()
-    {
-        var binding = Binding(
-            "booking:7",
-            "payer:1",
-            "pi_1",
-            previousConfigurationId);
-        authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(binding);
-
-        var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal(previousConfigurationId, result.Value.Terms.ConfigurationId);
-        Assert.Equal(2000, result.Value.Terms.RateBasisPoints);
-    }
-
-    [Fact]
     public async Task FindBoundPaymentIntentAsync_ReturnsBoundIntent()
     {
         var binding = Binding("booking:7", "payer:1", "pi_1");
@@ -212,46 +192,40 @@ public sealed class CommissionServiceTests
     }
 
     private CommissionTerms Terms() =>
-        new(configurationId, ConfigurationVersion, Currency.Gbp, RateBasisPoints);
+        Configuration().Terms;
+
+    private CommissionConfigurationEntity Configuration() =>
+        CommissionConfigurationEntity.Create(
+            configurationId,
+            ConfigurationVersion,
+            Currency.Gbp,
+            RateBasisPoints,
+            timeProvider.GetUtcNow());
 
     private CommissionBindingEntity Binding(
         string externalReference,
         string payerReference,
-        string? stripePaymentIntentId,
-        Guid? boundConfigurationId = null) =>
+        string? stripePaymentIntentId) =>
         CommissionBindingEntity.Create(
-            boundConfigurationId ?? configurationId,
-            externalReference,
-            payerReference,
-            timeProvider.GetUtcNow(),
-            stripePaymentIntentId);
+            Configuration(), externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
 
     private CommissionService BuildService()
     {
+        configurationRepository
+            .Setup(r => r.GetByIdAsync(configurationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Configuration());
+
         return new CommissionService(
             authorizationRepository.Object,
-            new CommissionTermsProvider(Options.Create(new PlatformCommissionOptions
-            {
-                CurrentConfigurationId = configurationId,
-                Configurations =
-                [
-                    new PlatformCommissionRevisionOptions
-                    {
-                        Id = previousConfigurationId,
-                        Version = "2023.1",
-                        Currency = nameof(Currency.Gbp),
-                        RateBasisPoints = 2000
-                    },
-                    new PlatformCommissionRevisionOptions
-                    {
-                        Id = configurationId,
-                        Version = ConfigurationVersion,
-                        Currency = nameof(Currency.Gbp),
-                        RateBasisPoints = RateBasisPoints
-                    }
-                ]
-            })),
+            configurationRepository.Object,
             calculator,
+            Options.Create(new PlatformCommissionOptions
+            {
+                ConfigurationId = configurationId,
+                Version = ConfigurationVersion,
+                Currency = nameof(Currency.Gbp),
+                RateBasisPoints = RateBasisPoints,
+            }),
             Options.Create(new PlatformCommissionTaxOptions { VatRateBasisPoints = VatRateBasisPoints }),
             timeProvider);
     }
