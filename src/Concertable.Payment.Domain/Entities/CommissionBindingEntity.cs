@@ -6,7 +6,7 @@ public sealed class CommissionBindingEntity : IGuidEntity
 
     private CommissionBindingEntity(
         Guid id,
-        CommissionConfigurationEntity commissionConfiguration,
+        Guid commissionConfigurationId,
         string externalReference,
         string payerReference,
         DateTimeOffset boundAt,
@@ -15,14 +15,14 @@ public sealed class CommissionBindingEntity : IGuidEntity
     {
         if (id == Guid.Empty)
             throw new DomainException("Commission binding id is required.");
-        ArgumentNullException.ThrowIfNull(commissionConfiguration);
+        if (commissionConfigurationId == Guid.Empty)
+            throw new DomainException("Commission configuration id is required.");
         if (string.IsNullOrWhiteSpace(externalReference))
             throw new DomainException("External reference is required.");
         if (string.IsNullOrWhiteSpace(payerReference))
             throw new DomainException("Payer reference is required.");
         Id = id;
-        CommissionConfigurationId = commissionConfiguration.Id;
-        CommissionConfiguration = commissionConfiguration;
+        CommissionConfigurationId = commissionConfigurationId;
         ExternalReference = externalReference;
         PayerReference = payerReference;
         BoundAt = boundAt;
@@ -32,17 +32,14 @@ public sealed class CommissionBindingEntity : IGuidEntity
 
     public Guid Id { get; private set; }
     public Guid CommissionConfigurationId { get; private set; }
-    public CommissionConfigurationEntity CommissionConfiguration { get; private set; } = null!;
     public string ExternalReference { get; private set; } = null!;
     public string PayerReference { get; private set; } = null!;
     public DateTimeOffset BoundAt { get; private set; }
     public string? StripePaymentIntentId { get; private set; }
     public string? StripeSetupIntentId { get; private set; }
 
-    public CommissionTerms Terms => CommissionConfiguration.Terms;
-
     public static CommissionBindingEntity Create(
-        CommissionConfigurationEntity commissionConfiguration,
+        Guid commissionConfigurationId,
         string externalReference,
         string payerReference,
         DateTimeOffset boundAt,
@@ -50,7 +47,7 @@ public sealed class CommissionBindingEntity : IGuidEntity
         string? stripeSetupIntentId = null) =>
         new(
             Guid.NewGuid(),
-            commissionConfiguration,
+            commissionConfigurationId,
             externalReference,
             payerReference,
             boundAt,
