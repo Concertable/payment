@@ -4,13 +4,13 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
 
-internal sealed class CommissionPricingCatalog
+internal sealed class CommissionTermsProvider
 {
-    private readonly IReadOnlyDictionary<Guid, CommissionTerms> configurations;
+    private readonly IReadOnlyDictionary<Guid, CommissionTerms> termsByConfigurationId;
 
-    public CommissionPricingCatalog(IOptions<PlatformCommissionOptions> options)
+    public CommissionTermsProvider(IOptions<PlatformCommissionOptions> options)
     {
-        configurations = options.Value.Configurations.ToDictionary(
+        termsByConfigurationId = options.Value.Configurations.ToDictionary(
             configuration => configuration.Id,
             configuration => new CommissionTerms(
                 configuration.Id,
@@ -23,7 +23,7 @@ internal sealed class CommissionPricingCatalog
     public CommissionTerms Current { get; }
 
     public CommissionTerms GetRequired(Guid configurationId) =>
-        configurations.TryGetValue(configurationId, out var terms)
+        termsByConfigurationId.TryGetValue(configurationId, out var terms)
             ? terms
             : throw new InvalidOperationException($"Commission configuration {configurationId} is not configured.");
 }
