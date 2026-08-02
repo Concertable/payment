@@ -126,7 +126,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ConcurrencyToken = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -170,7 +170,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatRateBasisPoints = table.Column<int>(type: "int", nullable: true),
                     PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true),
-                    ConcurrencyToken = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
