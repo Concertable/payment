@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
-public sealed class CommissionPricingCatalogTests
+public sealed class CommissionTermsProviderTests
 {
     private readonly Guid currentId = Guid.NewGuid();
     private readonly Guid previousId = Guid.NewGuid();
@@ -14,28 +14,28 @@ public sealed class CommissionPricingCatalogTests
     [Fact]
     public void Current_ReturnsConfiguredCurrentRevision()
     {
-        var catalog = BuildCatalog();
+        var provider = BuildProvider();
 
-        Assert.Equal(new CommissionTerms(currentId, "2026.2", Currency.Gbp, 500), catalog.Current);
+        Assert.Equal(new CommissionTerms(currentId, "2026.2", Currency.Gbp, 500), provider.Current);
     }
 
     [Fact]
     public void GetRequired_ReturnsHistoricalRevision()
     {
-        var catalog = BuildCatalog();
+        var provider = BuildProvider();
 
-        Assert.Equal(new CommissionTerms(previousId, "2026.1", Currency.Gbp, 1000), catalog.GetRequired(previousId));
+        Assert.Equal(new CommissionTerms(previousId, "2026.1", Currency.Gbp, 1000), provider.GetRequired(previousId));
     }
 
     [Fact]
     public void GetRequired_UnconfiguredRevision_Throws()
     {
-        var catalog = BuildCatalog();
+        var provider = BuildProvider();
 
-        Assert.Throws<InvalidOperationException>(() => catalog.GetRequired(Guid.NewGuid()));
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequired(Guid.NewGuid()));
     }
 
-    private CommissionPricingCatalog BuildCatalog() =>
+    private CommissionTermsProvider BuildProvider() =>
         new(Options.Create(new PlatformCommissionOptions
         {
             CurrentConfigurationId = currentId,
