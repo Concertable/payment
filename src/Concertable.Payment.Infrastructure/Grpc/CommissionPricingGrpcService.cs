@@ -1,3 +1,4 @@
+using System.Globalization;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Grpc;
@@ -77,9 +78,8 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
 
         return new CommissionQuote(
             result.Value.Terms.ConfigurationId,
-            result.Value.Terms.Version,
-            result.Value.Terms.RateBasisPoints,
-            result.Value.Terms.Currency,
+            result.Value.Terms.Rate.Value,
+            result.Value.Binding.Currency,
             result.Value.Calculation.PayeeGrossMinor,
             result.Value.Calculation.CommissionGrossMinor,
             result.Value.Calculation.PayerTotalMinor).ToProto();
@@ -95,8 +95,7 @@ internal static class CommissionPricingGrpcMappers
         new()
         {
             CommissionConfigurationId = quote.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = quote.ConfigurationVersion,
-            RateBasisPoints = quote.RateBasisPoints,
+            RatePercentage = quote.RatePercentage.ToString(CultureInfo.InvariantCulture),
             Currency = quote.Currency.ToProtoCurrency(),
             GrossMinor = quote.GrossMinor,
             CommissionMinor = quote.CommissionMinor,
@@ -109,8 +108,7 @@ internal static class CommissionPricingGrpcMappers
         {
             BindingId = binding.BindingId.ToString(),
             CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = binding.ConfigurationVersion,
-            RateBasisPoints = binding.RateBasisPoints,
+            RatePercentage = binding.RatePercentage.ToString(CultureInfo.InvariantCulture),
             Currency = binding.Currency.ToProtoCurrency(),
             Quote = binding.Quote?.ToProto()
         };

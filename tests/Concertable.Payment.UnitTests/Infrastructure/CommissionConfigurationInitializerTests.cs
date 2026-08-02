@@ -1,5 +1,5 @@
-using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
@@ -29,9 +29,7 @@ public sealed class CommissionConfigurationInitializerTests
 
         Assert.NotNull(candidate);
         Assert.Equal(configurationId, candidate.Id);
-        Assert.Equal("2026.1", candidate.Version);
-        Assert.Equal(Currency.Gbp, candidate.Currency);
-        Assert.Equal(500, candidate.RateBasisPoints);
+        Assert.Equal(Percentage.From(5m), candidate.Rate);
         repository.Verify(
             r => r.GetOrCreateAsync(
                 It.IsAny<CommissionConfigurationEntity>(),
@@ -47,7 +45,9 @@ public sealed class CommissionConfigurationInitializerTests
                 It.IsAny<CommissionConfigurationEntity>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(CommissionConfigurationEntity.Create(
-                configurationId, "2026.1", Currency.Gbp, 750, timeProvider.GetUtcNow()));
+                configurationId,
+                Percentage.From(7.5m),
+                timeProvider.GetUtcNow()));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => BuildInitializer().InitializeAsync());
@@ -59,9 +59,7 @@ public sealed class CommissionConfigurationInitializerTests
             Options.Create(new PlatformCommissionOptions
             {
                 ConfigurationId = configurationId,
-                Version = "2026.1",
-                Currency = nameof(Currency.Gbp),
-                RateBasisPoints = 500
+                RatePercentage = 5m
             }),
             timeProvider);
 }

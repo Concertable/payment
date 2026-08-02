@@ -18,7 +18,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         long commissionGrossMinor,
         long commissionNetMinor,
         long commissionVatMinor,
-        int commissionVatRateBasisPoints,
+        Percentage commissionVatRate,
         string chargeId,
         Guid? commissionBindingId)
     {
@@ -38,7 +38,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         CommissionGrossMinor = commissionGrossMinor;
         CommissionNetMinor = commissionNetMinor;
         CommissionVatMinor = commissionVatMinor;
-        CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
+        CommissionVatRate = commissionVatRate;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         ChargeId = chargeId;
         CommissionBindingId = commissionBindingId;
@@ -57,7 +57,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
     public long CommissionGrossMinor { get; private set; }
     public long CommissionNetMinor { get; private set; }
     public long CommissionVatMinor { get; private set; }
-    public int CommissionVatRateBasisPoints { get; private set; }
+    public Percentage CommissionVatRate { get; private set; }
     public long PayerTotalMinor { get; private set; }
     public EscrowStatus Status { get; private set; }
     public string ChargeId { get; private set; } = null!;
@@ -86,7 +86,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             platformFee.ToMinorUnits(),
             platformFee.ToMinorUnits(),
             0,
-            0,
+            Percentage.From(0m),
             chargeId,
             null);
 
@@ -106,7 +106,7 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             calculation.CommissionGrossMinor,
             calculation.CommissionNetMinor,
             calculation.CommissionVatMinor,
-            calculation.CommissionVatRateBasisPoints,
+            calculation.CommissionVatRate,
             chargeId,
             commissionBindingId);
 

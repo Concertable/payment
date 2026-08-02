@@ -1,3 +1,4 @@
+using System.Globalization;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using Proto = Concertable.Payment.Grpc;
@@ -9,8 +10,7 @@ internal static class CommissionMappers
     public static CommissionQuote ToCommissionQuote(this Proto.CommissionQuoteResponse response) =>
         new(
             Guid.Parse(response.CommissionConfigurationId),
-            response.ConfigurationVersion,
-            response.RateBasisPoints,
+            decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
             response.Currency.ToCurrency(),
             response.GrossMinor,
             response.CommissionMinor,
@@ -21,8 +21,7 @@ internal static class CommissionMappers
         new(
             Guid.Parse(response.BindingId),
             Guid.Parse(response.CommissionConfigurationId),
-            response.ConfigurationVersion,
-            response.RateBasisPoints,
+            decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
             response.Currency.ToCurrency(),
             response.Quote?.ToCommissionQuote());
 

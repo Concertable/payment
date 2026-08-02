@@ -4,5 +4,5 @@ internal sealed class PlatformCommissionTaxOptions
 {
     public const string SectionName = "PlatformCommissionTax";
 
-    public int VatRateBasisPoints { get; set; }
+    public decimal VatRatePercentage { get; set; }
 }

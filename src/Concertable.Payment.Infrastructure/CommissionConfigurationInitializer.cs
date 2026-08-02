@@ -1,3 +1,4 @@
+using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 
@@ -21,19 +22,17 @@ internal sealed class CommissionConfigurationInitializer
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        var currency = Enum.Parse<Currency>(options.Currency, ignoreCase: true);
+        var rate = Percentage.From(options.RatePercentage);
         var configuration = await configurationRepository.GetOrCreateAsync(
             CommissionConfigurationEntity.Create(
                 options.ConfigurationId,
-                options.Version,
-                currency,
-                options.RateBasisPoints,
+                rate,
                 timeProvider.GetUtcNow()),
             ct);
 
         if (configuration.Id != options.ConfigurationId ||
-            !configuration.Matches(options.Version, currency, options.RateBasisPoints))
+            !configuration.Matches(rate))
             throw new InvalidOperationException(
-                "Configured commission id or version identifies different immutable terms.");
+                "Configured commission id identifies a different immutable percentage.");
     }
 }

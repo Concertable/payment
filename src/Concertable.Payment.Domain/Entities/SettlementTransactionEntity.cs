@@ -15,7 +15,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         long commissionGrossMinor,
         long commissionNetMinor,
         long commissionVatMinor,
-        int commissionVatRateBasisPoints,
+        Percentage commissionVatRate,
         TransactionStatus status,
         int bookingId,
         Guid? commissionBindingId)
@@ -32,7 +32,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         CommissionGrossMinor = commissionGrossMinor;
         CommissionNetMinor = commissionNetMinor;
         CommissionVatMinor = commissionVatMinor;
-        CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
+        CommissionVatRate = commissionVatRate;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         CommissionBindingId = commissionBindingId;
         ConcurrencyToken = Guid.NewGuid();
@@ -47,7 +47,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
     public long CommissionGrossMinor { get; private set; }
     public long CommissionNetMinor { get; private set; }
     public long CommissionVatMinor { get; private set; }
-    public int CommissionVatRateBasisPoints { get; private set; }
+    public Percentage CommissionVatRate { get; private set; }
     public long PayerTotalMinor { get; private set; }
     public Guid ConcurrencyToken { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
@@ -101,7 +101,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             platformFee,
             platformFee,
             0,
-            0,
+            Percentage.From(0m),
             status,
             bookingId,
             null);
@@ -123,7 +123,7 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             calculation.CommissionGrossMinor,
             calculation.CommissionNetMinor,
             calculation.CommissionVatMinor,
-            calculation.CommissionVatRateBasisPoints,
+            calculation.CommissionVatRate,
             status,
             bookingId,
             commissionBindingId);

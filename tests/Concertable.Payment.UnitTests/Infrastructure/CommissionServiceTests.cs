@@ -11,9 +11,8 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class CommissionServiceTests
 {
-    private const int RateBasisPoints = 1000;
-    private const int VatRateBasisPoints = 2000;
-    private const string ConfigurationVersion = "2024.1";
+    private const decimal RatePercentage = 10m;
+    private const decimal VatRatePercentage = 20m;
     private const long GrossMinor = 5000;
 
     private readonly Guid configurationId = Guid.NewGuid();
@@ -35,7 +34,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task PreviewAsync_MatchingCurrency_ReturnsQuote()
     {
-        var expected = calculator.Calculate(GrossMinor, Terms(), VatRateBasisPoints);
+        var expected = calculator.Calculate(GrossMinor, Currency.Gbp, Terms(), Percentage.From(VatRatePercentage));
 
         var result = await BuildService().PreviewAsync(GrossMinor, Currency.Gbp);
 
@@ -154,7 +153,7 @@ public sealed class CommissionServiceTests
         authorizationRepository
             .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
-        var expected = calculator.Calculate(GrossMinor, Terms(), VatRateBasisPoints);
+        var expected = calculator.Calculate(GrossMinor, Currency.Gbp, Terms(), Percentage.From(VatRatePercentage));
 
         var result = await BuildService().CalculateBoundAsync(
             binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
@@ -197,9 +196,7 @@ public sealed class CommissionServiceTests
     private CommissionConfigurationEntity Configuration() =>
         CommissionConfigurationEntity.Create(
             configurationId,
-            ConfigurationVersion,
-            Currency.Gbp,
-            RateBasisPoints,
+            Percentage.From(RatePercentage),
             timeProvider.GetUtcNow());
 
     private CommissionBindingEntity Binding(
@@ -207,7 +204,7 @@ public sealed class CommissionServiceTests
         string payerReference,
         string? stripePaymentIntentId) =>
         CommissionBindingEntity.Create(
-            Configuration(), externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
+            Configuration(), Currency.Gbp, externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
 
     private CommissionService BuildService()
     {
@@ -222,11 +219,9 @@ public sealed class CommissionServiceTests
             Options.Create(new PlatformCommissionOptions
             {
                 ConfigurationId = configurationId,
-                Version = ConfigurationVersion,
-                Currency = nameof(Currency.Gbp),
-                RateBasisPoints = RateBasisPoints,
+                RatePercentage = RatePercentage
             }),
-            Options.Create(new PlatformCommissionTaxOptions { VatRateBasisPoints = VatRateBasisPoints }),
+            Options.Create(new PlatformCommissionTaxOptions { VatRatePercentage = VatRatePercentage }),
             timeProvider);
     }
 }

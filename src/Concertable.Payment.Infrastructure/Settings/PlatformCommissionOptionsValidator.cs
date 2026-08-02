@@ -19,14 +19,11 @@ internal sealed class PlatformCommissionOptionsValidator : IValidateOptions<Plat
             options.ConfigurationId == Guid.Empty)
             return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.ConfigurationId)} must be a non-empty Guid.");
 
-        if (string.IsNullOrWhiteSpace(options.Version))
-            return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.Version)} must be configured.");
+        if (options.RatePercentage is <= 0m or > 100m)
+            return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.RatePercentage)} must be greater than 0 and no more than 100.");
 
-        if (!string.Equals(options.Currency, "GBP", StringComparison.OrdinalIgnoreCase))
-            return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.Currency)} must be GBP.");
-
-        if (options.RateBasisPoints is < 1 or > 10_000)
-            return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.RateBasisPoints)} must be between 1 and 10,000.");
+        if (decimal.Round(options.RatePercentage, 4) != options.RatePercentage)
+            return ValidateOptionsResult.Fail($"{prefix}:{nameof(options.RatePercentage)} cannot have more than four decimal places.");
 
         return ValidateOptionsResult.Success;
     }

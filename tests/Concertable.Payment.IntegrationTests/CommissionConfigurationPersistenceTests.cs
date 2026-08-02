@@ -1,4 +1,5 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Repositories;
@@ -23,7 +24,7 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             await migrate.Database.MigrateAsync();
 
         var configurationId = Guid.NewGuid();
-        var version = $"integration-{Guid.NewGuid():N}";
+        var rate = Percentage.From(5m);
         Guid firstBindingId;
 
         await using (var context = CreateContext())
@@ -32,14 +33,20 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             var configuration = await configurations.GetOrCreateAsync(
                 CommissionConfigurationEntity.Create(
                     configurationId,
-                    version,
-                    Currency.Gbp,
-                    500,
+                    rate,
                     DateTimeOffset.UtcNow));
             var first = CommissionBindingEntity.Create(
-                configuration, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
+                configuration,
+                Currency.Gbp,
+                $"booking:{Guid.NewGuid():N}",
+                $"payer:{Guid.NewGuid():N}",
+                DateTimeOffset.UtcNow);
             var second = CommissionBindingEntity.Create(
-                configuration, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
+                configuration,
+                Currency.Gbp,
+                $"booking:{Guid.NewGuid():N}",
+                $"payer:{Guid.NewGuid():N}",
+                DateTimeOffset.UtcNow);
             context.CommissionBindings.AddRange(first, second);
             await context.SaveChangesAsync();
             firstBindingId = first.Id;
@@ -50,8 +57,9 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
 
         Assert.NotNull(loaded);
         Assert.Equal(configurationId, loaded.CommissionConfigurationId);
-        Assert.Equal(version, loaded.CommissionConfiguration.Version);
-        Assert.Equal(500, loaded.Terms.RateBasisPoints);
+        Assert.Equal(rate, loaded.CommissionConfiguration.Rate);
+        Assert.Equal(Currency.Gbp, loaded.Currency);
+        Assert.Equal(rate, loaded.Terms.Rate);
         Assert.Equal(
             1,
             await verification.CommissionConfigurations.CountAsync(c => c.Id == configurationId));
