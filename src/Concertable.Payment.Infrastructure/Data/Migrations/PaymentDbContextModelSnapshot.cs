@@ -103,6 +103,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<Guid>("CommissionConfigurationId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
                     b.Property<string>("ExternalReference")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -147,29 +152,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
-
-                    b.Property<int>("RateBasisPoints")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("RatePercentage");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Version")
-                        .IsUnique();
-
                     b.ToTable("CommissionConfigurations", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_CommissionConfigurations_Currency", "[Currency] = 'Gbp'");
-
-                            t.HasCheckConstraint("CK_CommissionConfigurations_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
+                            t.HasCheckConstraint("CK_CommissionConfigurations_RatePercentage", "[RatePercentage] > 0 AND [RatePercentage] <= 100");
                         });
                 });
 
@@ -200,8 +192,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("CommissionVatMinor")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("CommissionVatRateBasisPoints")
-                        .HasColumnType("int");
+                    b.Property<decimal>("CommissionVatRate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()
@@ -539,8 +533,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("CommissionVatMinor")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("CommissionVatRateBasisPoints")
-                        .HasColumnType("int");
+                    b.Property<decimal>("CommissionVatRate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<Guid>("ConcurrencyToken")
                         .IsConcurrencyToken()

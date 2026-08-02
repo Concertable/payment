@@ -1,3 +1,4 @@
+using Concertable.Payment.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,17 +11,13 @@ internal sealed class CommissionConfigurationEntityConfiguration
     {
         builder.ToTable(Schema.Tables.CommissionConfigurations, Schema.Name);
         builder.Property(c => c.Id).ValueGeneratedNever();
-        builder.Property(c => c.Version).HasMaxLength(100);
-        builder.Property(c => c.Currency).HasConversion<string>().HasMaxLength(3);
-        builder.HasIndex(c => c.Version).IsUnique();
+        builder.Property(c => c.Rate)
+            .HasConversion(rate => rate.Value, value => Percentage.From(value))
+            .HasColumnName("RatePercentage")
+            .HasPrecision(7, 4);
         builder.ToTable(t =>
-        {
             t.HasCheckConstraint(
-                "CK_CommissionConfigurations_RateBasisPoints",
-                "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
-            t.HasCheckConstraint(
-                "CK_CommissionConfigurations_Currency",
-                "[Currency] = 'Gbp'");
-        });
+                "CK_CommissionConfigurations_RatePercentage",
+                "[RatePercentage] > 0 AND [RatePercentage] <= 100"));
     }
 }

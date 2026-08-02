@@ -43,7 +43,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 binding.Id,
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
                 $"pi_escrow_{Guid.NewGuid():N}");
             escrow.Confirm();
             escrow.CreatedBy = "integration";
@@ -106,7 +106,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 $"pi_settlement_{Guid.NewGuid():N}",
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
                 TransactionStatus.Complete,
                 bookingId,
                 binding.Id);
@@ -221,12 +221,11 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
     {
         var configuration = CommissionConfigurationEntity.Create(
             Guid.NewGuid(),
-            $"integration-{Guid.NewGuid():N}",
-            Currency.Gbp,
-            500,
+            Percentage.From(5m),
             DateTimeOffset.UtcNow);
         var binding = CommissionBindingEntity.Create(
             configuration,
+            Currency.Gbp,
             $"booking:{Guid.NewGuid():N}",
             $"payer:{Guid.NewGuid():N}",
             DateTimeOffset.UtcNow);

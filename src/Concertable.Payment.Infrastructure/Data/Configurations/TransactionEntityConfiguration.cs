@@ -1,3 +1,4 @@
+using Concertable.Payment.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -29,6 +30,10 @@ internal sealed class SettlementTransactionEntityConfiguration : IEntityTypeConf
     {
         builder.Property(t => t.BookingId).HasColumnName("ContextId");
         builder.Property(t => t.Currency).HasConversion<string>().HasMaxLength(3);
+        builder.Property(t => t.CommissionVatRate)
+            .HasConversion(rate => rate.Value, value => Percentage.From(value))
+            .HasColumnName("CommissionVatRatePercentage")
+            .HasPrecision(7, 4);
         builder.Property(t => t.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(t => t.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
         builder.HasOne(t => t.CommissionBinding)
