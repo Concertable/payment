@@ -323,7 +323,14 @@ public sealed class ManagerPaymentServiceTests
             payerId,
             payeeId,
             "pi_settlement",
-            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000),
+            new Concertable.Payment.Domain.CommissionCalculation(
+                Currency.Gbp,
+                5000,
+                1000,
+                800,
+                200,
+                Percentage.From(20m),
+                6000),
             TransactionStatus.Pending,
             bookingId: 7,
             commissionBindingId: Guid.NewGuid());
@@ -342,7 +349,14 @@ public sealed class ManagerPaymentServiceTests
             configuration, Currency.Gbp, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
-        var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, Percentage.From(20m), 6000);
+        var calculation = new Concertable.Payment.Domain.CommissionCalculation(
+            Currency.Gbp,
+            5000,
+            1000,
+            800,
+            200,
+            Percentage.From(20m),
+            6000);
         return new BoundCommission(binding, terms, calculation);
     }
 
