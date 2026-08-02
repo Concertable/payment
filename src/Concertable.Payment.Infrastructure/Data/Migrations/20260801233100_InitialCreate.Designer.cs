@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260801193656_InitialCreate")]
+    [Migration("20260801233100_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -126,8 +126,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommissionConfigurationId");
-
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique()
                         .HasFilter("[StripePaymentIntentId] IS NOT NULL");
@@ -140,40 +138,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("CommissionBindings", "payment");
-                });
-
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
-
-                    b.Property<int>("RateBasisPoints")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Version")
-                        .IsUnique();
-
-                    b.ToTable("CommissionConfigurations", "payment", t =>
-                        {
-                            t.HasCheckConstraint("CK_CommissionConfigurations_Currency", "[Currency] = 'Gbp'");
-
-                            t.HasCheckConstraint("CK_CommissionConfigurations_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
-                        });
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>
@@ -589,17 +553,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnName("ContextId");
 
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
-                });
-
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionBindingEntity", b =>
-                {
-                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", "CommissionConfiguration")
-                        .WithMany()
-                        .HasForeignKey("CommissionConfigurationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CommissionConfiguration");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>
