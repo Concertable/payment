@@ -10,6 +10,7 @@ internal sealed class CommissionBindingEntityConfiguration
     {
         builder.ToTable(Schema.Tables.CommissionBindings, Schema.Name);
         builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.Property(a => a.Currency).HasConversion<string>().HasMaxLength(3);
         builder.Property(a => a.ExternalReference).HasMaxLength(200);
         builder.Property(a => a.PayerReference).HasMaxLength(200);
         builder.Property(a => a.StripePaymentIntentId).HasMaxLength(100);

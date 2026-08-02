@@ -1,4 +1,3 @@
-using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Domain;
 
 namespace Concertable.Payment.UnitTests.Domain;
@@ -10,15 +9,13 @@ public sealed class CommissionConfigurationEntityTests
     {
         var id = Guid.NewGuid();
         var createdAt = DateTimeOffset.UtcNow;
+        var rate = Percentage.From(5m);
 
-        var configuration = CommissionConfigurationEntity.Create(
-            id, "2026.1", Currency.Gbp, 500, createdAt);
+        var configuration = CommissionConfigurationEntity.Create(id, rate, createdAt);
 
         Assert.Equal(id, configuration.Id);
-        Assert.Equal("2026.1", configuration.Version);
-        Assert.Equal(Currency.Gbp, configuration.Currency);
-        Assert.Equal(500, configuration.RateBasisPoints);
+        Assert.Equal(rate, configuration.Rate);
         Assert.Equal(createdAt, configuration.CreatedAt);
-        Assert.Equal(configuration.Terms, new CommissionTerms(id, "2026.1", Currency.Gbp, 500));
+        Assert.Equal(configuration.Terms, new CommissionTerms(id, rate));
     }
 }

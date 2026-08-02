@@ -8,13 +8,16 @@ public sealed class CommissionBindingEntityTests
 {
     private static CommissionConfigurationEntity Configuration() =>
         CommissionConfigurationEntity.Create(
-            Guid.NewGuid(), "2024.1", Currency.Gbp, 1000, DateTimeOffset.UtcNow);
+            Guid.NewGuid(),
+            Percentage.From(10m),
+            DateTimeOffset.UtcNow);
 
     [Fact]
     public void BindPaymentIntent_PreservesSetupIntentContext()
     {
         var binding = CommissionBindingEntity.Create(
             Configuration(),
+            Currency.Gbp,
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -31,6 +34,7 @@ public sealed class CommissionBindingEntityTests
     {
         var binding = CommissionBindingEntity.Create(
             Configuration(),
+            Currency.Gbp,
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -45,10 +49,15 @@ public sealed class CommissionBindingEntityTests
         var configuration = Configuration();
 
         var binding = CommissionBindingEntity.Create(
-            configuration, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            configuration,
+            Currency.Gbp,
+            "booking:42",
+            "payer:7",
+            DateTimeOffset.UtcNow);
 
         Assert.Equal(configuration.Id, binding.CommissionConfigurationId);
         Assert.Same(configuration, binding.CommissionConfiguration);
         Assert.Equal(configuration.Terms, binding.Terms);
+        Assert.Equal(Currency.Gbp, binding.Currency);
     }
 }
