@@ -29,7 +29,6 @@ internal sealed class SettlementTransactionEntityConfiguration : IEntityTypeConf
     {
         builder.Property(t => t.BookingId).HasColumnName("ContextId");
         builder.Property(t => t.Currency).HasConversion<string>().HasMaxLength(3);
-        builder.Property(t => t.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(t => t.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
         builder.HasOne(t => t.CommissionBinding)
             .WithMany()

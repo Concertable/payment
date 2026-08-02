@@ -40,6 +40,10 @@ public sealed class EscrowServiceTests
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
+        escrowRepository
+            .Setup(r => r.TryReserveRefundGrossAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         this.timeProvider = new FakeTimeProvider();
 
         this.sut = SutWithFee(0m);
@@ -58,7 +62,6 @@ public sealed class EscrowServiceTests
             new FakeUnitOfWork(),
             commissionService.Object,
             new CommissionCalculator(),
-            TestPaymentDbContext.Unopened(),
             Options.Create(new PlatformFeeOptions { Fee = fee }),
             timeProvider,
             NullLogger<EscrowService>.Instance);
@@ -266,6 +269,36 @@ public sealed class EscrowServiceTests
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(5000, posting.DebitMinorUnits(LedgerAccountType.StripeClearing));
         Assert.Equal(5000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
+    }
+
+    [Fact]
+    public async Task RefundByBookingIdAsync_StripeRefundFails_ReleasesReservationAndFreesReservedGross()
+    {
+        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
+        heldEscrow.Confirm();
+
+        escrowRepository
+            .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+        escrowRepository
+            .Setup(r => r.GetWithRefundsByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<Refund>("stripe_declined"));
+
+        var result = await sut.RefundByBookingIdAsync(7);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal(EscrowStatus.Held, heldEscrow.Status);
+        var reservation = Assert.Single(heldEscrow.Refunds);
+        Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
+        Assert.False(reservation.CountsTowardCumulative);
+        escrowRepository.Verify(
+            r => r.ReleaseReservedRefundGrossAsync(heldEscrow.Id, 5000, It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.Empty(postings);
     }
 
     [Fact]

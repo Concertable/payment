@@ -17,10 +17,9 @@ public sealed class SettlementTransactionEntityTests
     }
 
     [Fact]
-    public void RecordRefund_PartialGross_BumpsConcurrencyToken()
+    public void RecordRefund_PartialGross_AddsReservationToRefunds()
     {
         var settlement = NewComplete();
-        var before = settlement.ConcurrencyToken;
         var refund = PaymentRefundEntity.CreateCompletedForSettlement(
             settlement.Id,
             "re_partial",
@@ -31,7 +30,6 @@ public sealed class SettlementTransactionEntityTests
 
         settlement.RecordRefund(refund);
 
-        Assert.NotEqual(before, settlement.ConcurrencyToken);
         Assert.Same(refund, Assert.Single(settlement.Refunds));
     }
 }
