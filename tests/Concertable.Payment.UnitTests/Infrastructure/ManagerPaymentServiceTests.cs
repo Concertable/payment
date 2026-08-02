@@ -287,6 +287,32 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
+    public async Task RefundBoundCommissionByBookingIdAsync_StripeRefundFails_ReleasesReservationAndFreesReservedGross()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<Refund>("stripe_declined"));
+
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp);
+
+        Assert.True(result.IsFailed);
+        var reservation = Assert.Single(settlement.Refunds);
+        Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
+        Assert.False(reservation.CountsTowardCumulative);
+        transactionRepository.Verify(
+            r => r.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, 5000, It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.Empty(postings);
+    }
+
+    [Fact]
     public async Task RefundBoundCommissionByBookingIdAsync_ExceedsRemainingGross_Fails()
     {
         var sut = SutWithFee(0m);
