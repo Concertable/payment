@@ -32,4 +32,23 @@ internal sealed class EscrowRepository
             .FirstOrDefaultAsync(
             e => e.CommissionBindingId == commissionBindingId,
             ct);
+
+    public async Task<bool> TryReserveRefundGrossAsync(int escrowId, long grossMinor, CancellationToken ct = default)
+    {
+        var affected = await context.Escrows
+            .Where(e => e.Id == escrowId
+                && (e.Status == EscrowStatus.Held || e.Status == EscrowStatus.Released || e.Status == EscrowStatus.Disputed)
+                && e.RefundedGrossMinor + grossMinor <= e.PayeeGrossMinor)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(e => e.RefundedGrossMinor, e => e.RefundedGrossMinor + grossMinor),
+                ct);
+        return affected == 1;
+    }
+
+    public Task ReleaseReservedRefundGrossAsync(int escrowId, long grossMinor, CancellationToken ct = default) =>
+        context.Escrows
+            .Where(e => e.Id == escrowId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(e => e.RefundedGrossMinor, e => e.RefundedGrossMinor - grossMinor),
+                ct);
 }

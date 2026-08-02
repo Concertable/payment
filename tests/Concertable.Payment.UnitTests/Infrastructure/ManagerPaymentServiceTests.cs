@@ -46,6 +46,10 @@ public sealed class ManagerPaymentServiceTests
         payoutAccountRepository
             .Setup(r => r.GetByOwnerIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PayoutAccountWith("cus_test"));
+
+        transactionRepository
+            .Setup(r => r.TryReserveSettlementRefundGrossAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
     }
 
     private ManagerPaymentService SutWithFee(decimal fee) =>
@@ -59,7 +63,6 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
-            TestPaymentDbContext.Unopened(),
             new FakeTimeProvider(),
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
@@ -281,6 +284,32 @@ public sealed class ManagerPaymentServiceTests
         Assert.Equal(800, posting.DebitMinorUnits(LedgerAccountType.PlatformRevenue));
         Assert.Equal(200, posting.DebitMinorUnits(LedgerAccountType.VatLiability));
         Assert.Equal(6000, posting.CreditMinorUnits(LedgerAccountType.Receivable));
+    }
+
+    [Fact]
+    public async Task RefundBoundCommissionByBookingIdAsync_StripeRefundFails_ReleasesReservationAndFreesReservedGross()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<Refund>("stripe_declined"));
+
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp);
+
+        Assert.True(result.IsFailed);
+        var reservation = Assert.Single(settlement.Refunds);
+        Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
+        Assert.False(reservation.CountsTowardCumulative);
+        transactionRepository.Verify(
+            r => r.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, 5000, It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.Empty(postings);
     }
 
     [Fact]

@@ -4,14 +4,6 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
-## MEDIUM
-
-### Refund concurrency uses `ChangeTracker.Clear()` on the shared context, leaking `DbContext` into `EscrowService`/`ManagerPaymentService` and risking outbox-message loss
-
-`EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundBoundCommissionByBookingIdAsync` enforce "cumulative gross refund ≤ original gross" with optimistic concurrency: reserve a `PaymentRefundEntity` (bumps the aggregate `ConcurrencyToken`) → `SaveChanges` → on `DbUpdateConcurrencyException`, `context.ChangeTracker.Clear()` → re-read → return a conflict. This forces both services to inject the raw `PaymentDbContext` **solely** to run that `Clear()` — an abstraction leak in a codebase that otherwise funnels writes through repositories + `IUnitOfWork`. Worse, the context is request-scoped and **shared with the transactional outbox** (which saves again at end-of-request), so `ChangeTracker.Clear()` also detaches any outbox/domain-event entries staged earlier in the request — a refund conflict coinciding with unsaved outbox messages silently drops them. EF's maintainers only bless `Clear()` for a dedicated retry loop on a context doing nothing else, which this is not. (`CommissionService` had the sibling insert-or-get version of this and was fixed by moving to the atomic `GetOrCreateAsync` upsert; the refund path is the remaining case.)
-
-**Resolves when:** the ceiling invariant is enforced by an **atomic conditional DB write** — a running-total `UPDATE … SET RefundedGross = RefundedGross + @amount WHERE … AND RefundedGross + @amount <= OriginalGross` (affected-rows = 0 → reject), exposed as a repository method returning success-or-conflict — mirroring the `GetOrCreateAsync` upsert. That removes the concurrency token, the `DbUpdateConcurrencyException`, the `ChangeTracker.Clear()`, and the `PaymentDbContext` injection from both services. Needs a `RefundedGross` running-total column + migration. If reservation domain events must ride the same `SaveChanges`, keep the tracked insert and put only the guard in the atomic same-transaction update; never `Clear()` the shared context.
-
 ## LOW
 
 ### A crashed two-phase refund can strand a `Pending` `PaymentRefundEntity` with no reconcile
