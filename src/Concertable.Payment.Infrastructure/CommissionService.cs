@@ -8,35 +8,37 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionBindingRepository bindingRepository;
-    private readonly CommissionTermsProvider termsProvider;
+    private readonly ICommissionConfigurationRepository configurationRepository;
     private readonly CommissionCalculator calculator;
+    private readonly Guid currentConfigurationId;
     private readonly PlatformCommissionTaxOptions taxOptions;
     private readonly TimeProvider timeProvider;
 
     public CommissionService(
         ICommissionBindingRepository bindingRepository,
-        CommissionTermsProvider termsProvider,
+        ICommissionConfigurationRepository configurationRepository,
         CommissionCalculator calculator,
+        IOptions<PlatformCommissionOptions> options,
         IOptions<PlatformCommissionTaxOptions> taxOptions,
         TimeProvider timeProvider)
     {
         this.bindingRepository = bindingRepository;
-        this.termsProvider = termsProvider;
+        this.configurationRepository = configurationRepository;
         this.calculator = calculator;
+        this.currentConfigurationId = options.Value.ConfigurationId;
         this.taxOptions = taxOptions.Value;
         this.timeProvider = timeProvider;
     }
 
-    public Task<Result<CommissionQuote>> PreviewAsync(
+    public async Task<Result<CommissionQuote>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default)
     {
-        var terms = termsProvider.Current;
-        var result = currency != terms.Currency
+        var terms = (await GetCurrentConfigurationAsync(ct)).Terms;
+        return currency != terms.Currency
             ? Result.Fail<CommissionQuote>("currency_mismatch")
             : Result.Ok(ToQuote(terms, Calculate(terms, grossMinor)));
-        return Task.FromResult(result);
     }
 
     public async Task<Result<CommissionBinding>> CreateOrBindAsync(
@@ -51,10 +53,11 @@ internal sealed class CommissionService : ICommissionService
         long? expectedPayerTotalMinor,
         CancellationToken ct = default)
     {
-        if (reviewedCommissionConfigurationId != termsProvider.Current.ConfigurationId)
+        if (reviewedCommissionConfigurationId != currentConfigurationId)
             return Result.Fail("pricing_changed");
 
-        var terms = termsProvider.Current;
+        var configuration = await GetCurrentConfigurationAsync(ct);
+        var terms = configuration.Terms;
         if (currency != terms.Currency)
             return Result.Fail("currency_mismatch");
 
@@ -68,7 +71,7 @@ internal sealed class CommissionService : ICommissionService
 
         var binding = await bindingRepository.GetOrCreateAsync(
             CommissionBindingEntity.Create(
-                terms.ConfigurationId,
+                configuration,
                 externalReference,
                 payerReference,
                 timeProvider.GetUtcNow(),
@@ -104,7 +107,7 @@ internal sealed class CommissionService : ICommissionService
             !string.Equals(binding.PayerReference, payerReference, StringComparison.Ordinal))
             return Result.Fail("commission_binding_mismatch");
 
-        var terms = termsProvider.GetRequired(binding.CommissionConfigurationId);
+        var terms = binding.Terms;
         if (currency != terms.Currency)
             return Result.Fail("currency_mismatch");
         if (!IntentMatches(binding.StripePaymentIntentId, stripePaymentIntentId) ||
@@ -126,6 +129,14 @@ internal sealed class CommissionService : ICommissionService
         CommissionBindingEntity binding,
         string paymentIntentId) =>
         binding.BindPaymentIntent(paymentIntentId);
+
+    private async Task<CommissionConfigurationEntity> GetCurrentConfigurationAsync(
+        CancellationToken ct)
+    {
+        var configuration = await configurationRepository.GetByIdAsync(currentConfigurationId, ct);
+        return configuration ?? throw new InvalidOperationException(
+            "Configured commission revision has not been initialized.");
+    }
 
     private Result ValidateExpected(
         CommissionTerms terms,
@@ -165,7 +176,7 @@ internal sealed class CommissionService : ICommissionService
                 stripeSetupIntentId))
             return Result.Fail("commission_binding_mismatch");
 
-        var terms = termsProvider.GetRequired(binding.CommissionConfigurationId);
+        var terms = binding.Terms;
         return Result.Ok(ToBinding(
             binding,
             terms,
