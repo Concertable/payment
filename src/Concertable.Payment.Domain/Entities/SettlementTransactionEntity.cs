@@ -35,7 +35,6 @@ public sealed class SettlementTransactionEntity : TransactionEntity
         CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         CommissionBindingId = commissionBindingId;
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     public override TransactionType TransactionType => TransactionType.Settlement;
@@ -49,7 +48,14 @@ public sealed class SettlementTransactionEntity : TransactionEntity
     public long CommissionVatMinor { get; private set; }
     public int CommissionVatRateBasisPoints { get; private set; }
     public long PayerTotalMinor { get; private set; }
-    public Guid ConcurrencyToken { get; private set; }
+
+    /// <summary>
+    /// Running total of cumulative gross reserved across non-failed refunds. Maintained by the
+    /// repository's atomic conditional write (<c>ITransactionRepository.TryReserveSettlementRefundGrossAsync</c>),
+    /// never by domain code — it is the concurrency guard that keeps cumulative gross refunds within
+    /// <see cref="PayeeGrossMinor"/> under concurrent reservations.
+    /// </summary>
+    public long RefundedGrossMinor { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
 
     public void RecordRefund(PaymentRefundEntity refund)
@@ -60,10 +66,6 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             throw new DomainException("Refund belongs to another settlement.");
 
         refunds.Add(refund);
-        // Bump the token so a reservation (which leaves Status unchanged) still forces the parent into the
-        // optimistic-concurrency check; a child-only insert alone never updates the parent row, so two
-        // concurrent reservations would not conflict at SaveChanges without this.
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     public void CompleteRefund(PaymentRefundEntity refund, string stripeRefundId, DateTimeOffset completedAt)
@@ -72,7 +74,6 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             throw new DomainException("Refund does not belong to this settlement.");
 
         refund.Complete(stripeRefundId, completedAt);
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     public void ReleaseRefund(PaymentRefundEntity refund)
@@ -81,7 +82,6 @@ public sealed class SettlementTransactionEntity : TransactionEntity
             throw new DomainException("Refund does not belong to this settlement.");
 
         refund.Fail();
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     public static SettlementTransactionEntity Create(
