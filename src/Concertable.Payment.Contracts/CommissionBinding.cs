@@ -7,4 +7,4 @@ public sealed record CommissionBinding(
     Guid CommissionConfigurationId,
     decimal RatePercentage,
     Currency Currency,
-    CommissionQuote? Quote);
+    CommissionCalculation? Calculation);

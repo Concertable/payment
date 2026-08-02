@@ -15,7 +15,7 @@ internal sealed class CommissionClient : ICommissionClient
         this.client = client;
     }
 
-    public async Task<Result<CommissionQuote>> PreviewAsync(
+    public async Task<Result<CommissionCalculation>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default)
@@ -29,7 +29,7 @@ internal sealed class CommissionClient : ICommissionClient
                     Currency = currency.ToProtoCurrency()
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
+            return Result.Ok(response.ToCommissionCalculation());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
@@ -78,7 +78,7 @@ internal sealed class CommissionClient : ICommissionClient
         }
     }
 
-    public async Task<Result<CommissionQuote>> CalculateBoundAsync(
+    public async Task<Result<CommissionCalculation>> CalculateBoundAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
@@ -104,7 +104,7 @@ internal sealed class CommissionClient : ICommissionClient
             var response = await client.CalculateBoundCommissionAsync(
                 request,
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
+            return Result.Ok(response.ToCommissionCalculation());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {

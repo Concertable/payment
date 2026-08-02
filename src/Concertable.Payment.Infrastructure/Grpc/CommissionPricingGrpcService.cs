@@ -15,7 +15,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         this.commissionService = commissionService;
     }
 
-    public override async Task<CommissionQuoteResponse> PreviewCommission(
+    public override async Task<CommissionCalculationResponse> PreviewCommission(
         PreviewCommissionRequest request,
         ServerCallContext context)
     {
@@ -57,7 +57,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         return result.Value.ToProto();
     }
 
-    public override async Task<CommissionQuoteResponse> CalculateBoundCommission(
+    public override async Task<CommissionCalculationResponse> CalculateBoundCommission(
         CalculateBoundCommissionRequest request,
         ServerCallContext context)
     {
@@ -76,7 +76,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
                 StatusCode.FailedPrecondition,
                 result.Errors[0].Message));
 
-        return new CommissionQuote(
+        return new CommissionCalculation(
             result.Value.Terms.ConfigurationId,
             result.Value.Terms.Rate.Value,
             result.Value.Binding.Currency,
@@ -91,15 +91,16 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
 
 internal static class CommissionPricingGrpcMappers
 {
-    public static CommissionQuoteResponse ToProto(this CommissionQuote quote) =>
+    public static CommissionCalculationResponse ToProto(
+        this CommissionCalculation calculation) =>
         new()
         {
-            CommissionConfigurationId = quote.CommissionConfigurationId.ToString(),
-            RatePercentage = quote.RatePercentage.ToString(CultureInfo.InvariantCulture),
-            Currency = quote.Currency.ToProtoCurrency(),
-            GrossMinor = quote.GrossMinor,
-            CommissionMinor = quote.CommissionMinor,
-            PayerTotalMinor = quote.PayerTotalMinor
+            CommissionConfigurationId = calculation.CommissionConfigurationId.ToString(),
+            RatePercentage = calculation.RatePercentage.ToString(CultureInfo.InvariantCulture),
+            Currency = calculation.Currency.ToProtoCurrency(),
+            GrossMinor = calculation.GrossMinor,
+            CommissionMinor = calculation.CommissionMinor,
+            PayerTotalMinor = calculation.PayerTotalMinor
         };
 
     public static CommissionBindingResponse ToProto(
@@ -110,6 +111,6 @@ internal static class CommissionPricingGrpcMappers
             CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
             RatePercentage = binding.RatePercentage.ToString(CultureInfo.InvariantCulture),
             Currency = binding.Currency.ToProtoCurrency(),
-            Quote = binding.Quote?.ToProto()
+            Calculation = binding.Calculation?.ToProto()
         };
 }

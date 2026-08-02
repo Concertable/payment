@@ -6,7 +6,7 @@ namespace Concertable.Payment.Client;
 
 public interface ICommissionClient
 {
-    Task<Result<CommissionQuote>> PreviewAsync(
+    Task<Result<CommissionCalculation>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default);
@@ -23,7 +23,7 @@ public interface ICommissionClient
         long? expectedPayerTotalMinor = null,
         CancellationToken ct = default);
 
-    Task<Result<CommissionQuote>> CalculateBoundAsync(
+    Task<Result<CommissionCalculation>> CalculateBoundAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
