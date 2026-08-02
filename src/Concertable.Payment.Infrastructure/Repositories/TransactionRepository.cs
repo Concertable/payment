@@ -41,4 +41,29 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
         await context.Transactions.AddAsync(entity);
         await context.SaveChangesAsync();
     }
+
+    public async Task<bool> TryReserveSettlementRefundGrossAsync(
+        int settlementId,
+        long grossMinor,
+        CancellationToken ct = default)
+    {
+        var affected = await context.SettlementTransactions
+            .Where(t => t.Id == settlementId
+                && t.Status == TransactionStatus.Complete
+                && t.RefundedGrossMinor + grossMinor <= t.PayeeGrossMinor)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(t => t.RefundedGrossMinor, t => t.RefundedGrossMinor + grossMinor),
+                ct);
+        return affected == 1;
+    }
+
+    public Task ReleaseReservedSettlementRefundGrossAsync(
+        int settlementId,
+        long grossMinor,
+        CancellationToken ct = default) =>
+        context.SettlementTransactions
+            .Where(t => t.Id == settlementId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(t => t.RefundedGrossMinor, t => t.RefundedGrossMinor - grossMinor),
+                ct);
 }

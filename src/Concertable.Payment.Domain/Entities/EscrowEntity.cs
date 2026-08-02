@@ -43,7 +43,6 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
         ChargeId = chargeId;
         CommissionBindingId = commissionBindingId;
         Status = EscrowStatus.Pending;
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     public int Id { get; private set; }
@@ -63,7 +62,14 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
     public string ChargeId { get; private set; } = null!;
     public string? TransferId { get; private set; }
     public DateTime? ReleasedAt { get; private set; }
-    public Guid ConcurrencyToken { get; private set; }
+
+    /// <summary>
+    /// Running total of cumulative gross reserved across non-failed refunds. Maintained by the
+    /// repository's atomic conditional write (<c>IEscrowRepository.TryReserveRefundGrossAsync</c>), never
+    /// by domain code — it is the concurrency guard that keeps cumulative gross refunds within
+    /// <see cref="PayeeGrossMinor"/> under concurrent reservations.
+    /// </summary>
+    public long RefundedGrossMinor { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
@@ -141,10 +147,6 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             throw new DomainException("Refund belongs to another escrow.");
 
         refunds.Add(refund);
-        // Bump the token so a reservation (which leaves Status unchanged) still forces the parent into the
-        // optimistic-concurrency check; a child-only insert alone never updates the parent row, so two
-        // concurrent reservations would not conflict at SaveChanges without this.
-        ConcurrencyToken = Guid.NewGuid();
         SettleRefundedStatus();
     }
 
@@ -154,7 +156,6 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             throw new DomainException("Refund does not belong to this escrow.");
 
         refund.Complete(stripeRefundId, completedAt);
-        ConcurrencyToken = Guid.NewGuid();
         SettleRefundedStatus();
     }
 
@@ -164,7 +165,6 @@ public sealed class EscrowEntity : IIdEntity, IAuditable
             throw new DomainException("Refund does not belong to this escrow.");
 
         refund.Fail();
-        ConcurrencyToken = Guid.NewGuid();
     }
 
     private void SettleRefundedStatus()
