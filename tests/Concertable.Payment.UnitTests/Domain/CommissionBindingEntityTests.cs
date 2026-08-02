@@ -6,13 +6,15 @@ namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class CommissionBindingEntityTests
 {
-    private static Guid ConfigurationId() => Guid.NewGuid();
+    private static CommissionConfigurationEntity Configuration() =>
+        CommissionConfigurationEntity.Create(
+            Guid.NewGuid(), "2024.1", Currency.Gbp, 1000, DateTimeOffset.UtcNow);
 
     [Fact]
     public void BindPaymentIntent_PreservesSetupIntentContext()
     {
         var binding = CommissionBindingEntity.Create(
-            ConfigurationId(),
+            Configuration(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -28,7 +30,7 @@ public sealed class CommissionBindingEntityTests
     public void BindPaymentIntent_RejectsDifferentIntent()
     {
         var binding = CommissionBindingEntity.Create(
-            ConfigurationId(),
+            Configuration(),
             "booking:42",
             "payer:7",
             DateTimeOffset.UtcNow,
@@ -40,11 +42,13 @@ public sealed class CommissionBindingEntityTests
     [Fact]
     public void Create_ReferencesConfigurationWithoutCopyingItsTerms()
     {
-        var configurationId = ConfigurationId();
+        var configuration = Configuration();
 
         var binding = CommissionBindingEntity.Create(
-            configurationId, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            configuration, "booking:42", "payer:7", DateTimeOffset.UtcNow);
 
-        Assert.Equal(configurationId, binding.CommissionConfigurationId);
+        Assert.Equal(configuration.Id, binding.CommissionConfigurationId);
+        Assert.Same(configuration, binding.CommissionConfiguration);
+        Assert.Equal(configuration.Terms, binding.Terms);
     }
 }
