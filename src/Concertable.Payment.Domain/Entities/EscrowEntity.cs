@@ -3,7 +3,7 @@ using Concertable.Payment.Contracts.Enums;
 
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class EscrowEntity : IIdEntity, IAuditable
+internal sealed class EscrowEntity : IIdEntity, IAuditable
 {
     private readonly List<PaymentRefundEntity> refunds = [];
 

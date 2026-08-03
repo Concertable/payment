@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class LedgerTransactionEntity : IIdEntity
+internal sealed class LedgerTransactionEntity : IIdEntity
 {
     private readonly List<LedgerEntryEntity> entries = [];
 

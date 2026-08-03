@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain;
 
-public readonly record struct Percentage
+internal readonly record struct Percentage
 {
     private Percentage(decimal value)
     {
