@@ -1,5 +1,5 @@
 namespace Concertable.Payment.Domain;
 
-public sealed record CommissionTerms(
+internal sealed record CommissionTerms(
     Guid ConfigurationId,
     Percentage Rate);

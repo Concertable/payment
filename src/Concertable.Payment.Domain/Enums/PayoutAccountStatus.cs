@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Enums;
 
-public enum PayoutAccountStatus
+internal enum PayoutAccountStatus
 {
     NotVerified,
     Pending,
