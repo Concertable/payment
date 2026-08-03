@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Enums;
 
-public enum LedgerAccountType
+internal enum LedgerAccountType
 {
     PlatformRevenue,
     StripeClearing,
