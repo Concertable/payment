@@ -197,10 +197,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -226,6 +222,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ReleasedAt")
@@ -538,10 +537,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -551,6 +546,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.HasIndex("CommissionBindingId")
