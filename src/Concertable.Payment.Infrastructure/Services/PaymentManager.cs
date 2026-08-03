@@ -1,8 +1,5 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
-using Concertable.Payment.Infrastructure;
-using Concertable.Kernel.Exceptions;
-using FluentResults;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Transfer = Concertable.Payment.Contracts.Transfer;
@@ -32,7 +29,7 @@ internal sealed class PaymentManager : IPaymentManager
         this.logger = logger;
     }
 
-    public Task<Result<PaymentOutcome>> ChargeAsync(
+    public Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -40,9 +37,9 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, amount, transferAmount: null, paymentMethodId, session, metadata, ct);
+        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, ct);
 
-    public Task<Result<PaymentOutcome>> SettleAsync(
+    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -53,7 +50,102 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, ct);
 
-    private async Task<Result<PaymentOutcome>> ChargeInternalAsync(
+    public async Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        CancellationToken ct = default)
+    {
+        var accounts = await ResolveChargeAccountsAsync(payerId, payeeId, ct);
+        if (!accounts.TryGetValue(out var resolved))
+        {
+            accounts.TryGetError(out var error);
+            return Result<PaymentOutcome, PaymentError>.Failure(error!);
+        }
+
+        var merged = BuildMetadata(payerId, payeeId, resolved.email, amount, metadata);
+        logger.HoldingPayment(amount.Amount, payerId, payeeId, resolved.destinationStripeId, metadata[PaymentMetadataKeys.Type]);
+
+        return await intentClientFactory.Create(session).HoldAsync(new StripeHoldOptions
+        {
+            Amount = amount,
+            PaymentMethodId = paymentMethodId,
+            StripeCustomerId = resolved.stripeCustomerId,
+            DestinationStripeId = resolved.destinationStripeId,
+            ReceiptEmail = resolved.email,
+            Metadata = merged
+        }, ct);
+    }
+
+    public async Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default)
+    {
+        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(request.PayeeId, ct);
+        if (payeeAccount is null)
+            return Result<Transfer, PaymentError>.Failure(PaymentError.PayeeNotFound());
+        if (payeeAccount.StripeAccountId is null)
+            return Result<Transfer, PaymentError>.Failure(PaymentError.PayeeNotConfigured());
+
+        var metadata = new Dictionary<string, string>
+        {
+            [PaymentMetadataKeys.ToUserId] = request.PayeeId.ToString(),
+            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+        }.Merge(request.Metadata);
+
+        logger.ReleasingPayment(request.Amount.Amount, request.PayeeId, payeeAccount.StripeAccountId, request.ChargeId);
+
+        return await transferClient.ReleaseAsync(new StripeReleaseOptions
+        {
+            Amount = request.Amount,
+            ChargeId = request.ChargeId,
+            DestinationStripeId = payeeAccount.StripeAccountId,
+            Metadata = metadata
+        }, ct);
+    }
+
+    public async Task<Result<Refund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default)
+    {
+        var metadata = new Dictionary<string, string>
+        {
+            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+        }.Merge(request.Metadata);
+
+        logger.RefundingPayment(
+            request.Amount.Amount,
+            request.PaymentIntentId,
+            request.TransferReversal is null ? string.Empty : $" (reversing transfer {request.TransferReversal.TransferId})");
+
+        return await transferClient.RefundAsync(new StripeRefundOptions
+        {
+            Amount = request.Amount,
+            PaymentIntentId = request.PaymentIntentId,
+            TransferReversal = request.TransferReversal,
+            ReverseTransfer = request.ReverseTransfer,
+            Reason = request.Reason,
+            Metadata = metadata
+        }, ct);
+    }
+
+    public async Task<UnitResult<PaymentError>> CaptureAsync(CaptureRequest request, CancellationToken ct = default)
+    {
+        try
+        {
+            logger.CapturingPaymentIntent(request.PaymentIntentId, request.Metadata[PaymentMetadataKeys.Type]);
+            await stripeHoldClient.CaptureAsync(request.PaymentIntentId, request.Metadata, ct);
+            return UnitResult.Success<PaymentError>();
+        }
+        catch (StripeException ex)
+        {
+            logger.StripeCaptureFailedForPaymentIntent(request.PaymentIntentId, ex.StripeError?.Code, ex);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return UnitResult.Failure(error);
+            throw;
+        }
+    }
+
+    private async Task<Result<PaymentOutcome, PaymentError>> ChargeInternalAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -63,139 +155,48 @@ internal sealed class PaymentManager : IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct)
     {
-        var (stripeCustomerId, destinationStripeId, receiptEmail) = await ResolveChargeAccountsAsync(payerId, payeeId, ct);
+        var accounts = await ResolveChargeAccountsAsync(payerId, payeeId, ct);
+        if (!accounts.TryGetValue(out var resolved))
+        {
+            accounts.TryGetError(out var error);
+            return Result<PaymentOutcome, PaymentError>.Failure(error!);
+        }
 
         var payeeAmount = transferAmount ?? chargeAmount;
-
-        var merged = BuildMetadata(payerId, payeeId, receiptEmail, payeeAmount, metadata);
-
-        logger.ChargingPayment(payerId, payeeAmount.Amount, payeeId, destinationStripeId, metadata[PaymentMetadataKeys.Type]);
+        var merged = BuildMetadata(payerId, payeeId, resolved.email, payeeAmount, metadata);
+        logger.ChargingPayment(payerId, payeeAmount.Amount, payeeId, resolved.destinationStripeId, metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(session).ChargeAsync(new StripeChargeOptions
         {
             Amount = chargeAmount,
             TransferAmount = transferAmount,
             PaymentMethodId = paymentMethodId,
-            StripeCustomerId = stripeCustomerId,
-            DestinationStripeId = destinationStripeId,
-            ReceiptEmail = receiptEmail,
+            StripeCustomerId = resolved.stripeCustomerId,
+            DestinationStripeId = resolved.destinationStripeId,
+            ReceiptEmail = resolved.email,
             Metadata = merged
-        });
+        }, ct);
     }
 
-    public async Task<Result<PaymentOutcome>> HoldAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentMethodId,
-        PaymentSession session,
-        IReadOnlyDictionary<string, string> metadata,
-        CancellationToken ct = default)
-    {
-        var (stripeCustomerId, destinationStripeId, receiptEmail) = await ResolveChargeAccountsAsync(payerId, payeeId, ct);
-
-        var merged = BuildMetadata(payerId, payeeId, receiptEmail, amount, metadata);
-
-        logger.HoldingPayment(amount.Amount, payerId, payeeId, destinationStripeId, metadata[PaymentMetadataKeys.Type]);
-
-        return await intentClientFactory.Create(session).HoldAsync(new StripeHoldOptions
-        {
-            Amount = amount,
-            PaymentMethodId = paymentMethodId,
-            StripeCustomerId = stripeCustomerId,
-            DestinationStripeId = destinationStripeId,
-            ReceiptEmail = receiptEmail,
-            Metadata = merged
-        });
-    }
-
-    public async Task<Result<Transfer>> ReleaseAsync(ReleaseRequest r, CancellationToken ct = default)
-    {
-        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(r.PayeeId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payee {r.PayeeId}");
-
-        var destinationStripeId = payeeAccount.StripeAccountId
-            ?? throw new BadRequestException("Payee has no Stripe Connect account");
-
-        var metadata = new Dictionary<string, string>
-        {
-            [PaymentMetadataKeys.ToUserId] = r.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
-        }
-        .Merge(r.Metadata);
-
-        logger.ReleasingPayment(r.Amount.Amount, r.PayeeId, destinationStripeId, r.ChargeId);
-
-        return await transferClient.ReleaseAsync(new StripeReleaseOptions
-        {
-            Amount = r.Amount,
-            ChargeId = r.ChargeId,
-            DestinationStripeId = destinationStripeId,
-            Metadata = metadata
-        });
-    }
-
-    public async Task<Result<Refund>> RefundAsync(RefundRequest r, CancellationToken ct = default)
-    {
-        var metadata = new Dictionary<string, string>
-        {
-            [PaymentMetadataKeys.Amount] = r.Amount.ToMinorUnits().ToString()
-        }
-        .Merge(r.Metadata);
-
-        logger.RefundingPayment(
-            r.Amount.Amount,
-            r.PaymentIntentId,
-            r.TransferReversal is null ? string.Empty : $" (reversing transfer {r.TransferReversal.TransferId})");
-
-        return await transferClient.RefundAsync(new StripeRefundOptions
-        {
-            Amount = r.Amount,
-            PaymentIntentId = r.PaymentIntentId,
-            TransferReversal = r.TransferReversal,
-            ReverseTransfer = r.ReverseTransfer,
-            Reason = r.Reason,
-            Metadata = metadata
-        });
-    }
-
-    public async Task<Result> CaptureAsync(CaptureRequest r, CancellationToken ct = default)
-    {
-        try
-        {
-            logger.CapturingPaymentIntent(r.PaymentIntentId, r.Metadata[PaymentMetadataKeys.Type]);
-
-            await stripeHoldClient.CaptureAsync(r.PaymentIntentId, r.Metadata, ct);
-            return Result.Ok();
-        }
-        catch (StripeException ex)
-        {
-            logger.StripeCaptureFailedForPaymentIntent(r.PaymentIntentId, ex.StripeError?.Code, ex);
-            return Result.Fail($"Stripe Error: {ex.Message}");
-        }
-        catch (Exception ex)
-        {
-            logger.CaptureFailedForPaymentIntent(r.PaymentIntentId, ex);
-            return Result.Fail($"General Error: {ex.Message}");
-        }
-    }
-
-    private async Task<(string stripeCustomerId, string destinationStripeId, string email)> ResolveChargeAccountsAsync(
+    private async Task<Result<(string stripeCustomerId, string destinationStripeId, string email), PaymentError>> ResolveChargeAccountsAsync(
         Guid payerId,
         Guid payeeId,
         CancellationToken ct)
     {
-        var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
-        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(payeeId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payee {payeeId}");
+        var payerAccount = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
+        if (payerAccount is null)
+            return Result<(string, string, string), PaymentError>.Failure(PaymentError.PayerNotFound());
 
-        var stripeCustomerId = payerAccount.StripeCustomerId
-            ?? throw new BadRequestException("Payer has no Stripe customer ID");
-        var destinationStripeId = payeeAccount.StripeAccountId
-            ?? throw new BadRequestException("Payee has no Stripe Connect account");
+        var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(payeeId, ct);
+        if (payeeAccount is null)
+            return Result<(string, string, string), PaymentError>.Failure(PaymentError.PayeeNotFound());
+        if (payerAccount.StripeCustomerId is null)
+            return Result<(string, string, string), PaymentError>.Failure(PaymentError.PayerNotConfigured());
+        if (payeeAccount.StripeAccountId is null)
+            return Result<(string, string, string), PaymentError>.Failure(PaymentError.PayeeNotConfigured());
 
-        return (stripeCustomerId, destinationStripeId, payerAccount.Email);
+        return Result<(string, string, string), PaymentError>.Success(
+            (payerAccount.StripeCustomerId, payeeAccount.StripeAccountId, payerAccount.Email));
     }
 
     private static Dictionary<string, string> BuildMetadata(
@@ -210,6 +211,5 @@ internal sealed class PaymentManager : IPaymentManager
             [PaymentMetadataKeys.FromUserEmail] = payerEmail,
             [PaymentMetadataKeys.ToUserId] = payeeId.ToString(),
             [PaymentMetadataKeys.Amount] = settledAmount.ToMinorUnits().ToString()
-        }
-        .Merge(metadata);
+        }.Merge(metadata);
 }

@@ -1,10 +1,14 @@
 using Concertable.Payment.Application.Requests;
-using FluentResults;
 
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripePaymentIntentClient
 {
-    Task<Result<PaymentOutcome>> ChargeAsync(StripeChargeOptions options);
-    Task<Result<PaymentOutcome>> HoldAsync(StripeHoldOptions options);
+    Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+        StripeChargeOptions options,
+        CancellationToken ct = default);
+
+    Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+        StripeHoldOptions options,
+        CancellationToken ct = default);
 }

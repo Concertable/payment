@@ -16,7 +16,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     public override async Task<EscrowResponse> Deposit(DepositRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var result = await escrowService.DepositAsync(
             command.PayerId,
             command.PayeeId,
@@ -25,11 +24,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.Session,
             command.BookingId,
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> DepositBoundCommission(
@@ -49,19 +44,12 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.ExternalReference,
             command.StripeSetupIntentId,
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var result = await escrowService.CaptureAsync(
             command.PayerId,
             command.PayeeId,
@@ -69,11 +57,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.PaymentIntentId,
             command.BookingId,
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> CaptureBoundCommission(
@@ -91,43 +75,31 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.CommissionBindingId,
             command.ExternalReference,
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
-    public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(ReleaseByBookingIdRequest request, ServerCallContext context)
+    public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(
+        ReleaseByBookingIdRequest request,
+        ServerCallContext context)
     {
         var result = await escrowService.ReleaseByBookingIdAsync(request.BookingId, context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
+        var transfer = result.ValueOrRpcException();
         return new ReleaseByBookingIdResponse
         {
-            Transfer = result.Value is not null
-                ? new TransferResponse { TransferId = result.Value.TransferId }
-                : null
+            Transfer = transfer.Match<TransferResponse?>(
+                value => new TransferResponse { TransferId = value.TransferId },
+                () => null)
         };
     }
 
-    public override async Task<RefundByBookingIdResponse> RefundByBookingId(RefundByBookingIdRequest request, ServerCallContext context)
+    public override async Task<RefundByBookingIdResponse> RefundByBookingId(
+        RefundByBookingIdRequest request,
+        ServerCallContext context)
     {
-        var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return new RefundByBookingIdResponse
-        {
-            Refund = result.Value is not null
-                ? new RefundResponse { RefundId = result.Value.RefundId }
-                : null
-        };
+        var result = await escrowService.RefundByBookingIdAsync(
+            request.BookingId,
+            ct: context.CancellationToken);
+        return ToResponse(result.ValueOrRpcException());
     }
 
     public override async Task<RefundByBookingIdResponse> RefundBoundCommissionByBookingId(
@@ -139,17 +111,14 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             request.GrossMinor,
             request.Currency.ToDomainCurrency(),
             ct: context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return new RefundByBookingIdResponse
-        {
-            Refund = result.Value is not null
-                ? new RefundResponse { RefundId = result.Value.RefundId }
-                : null
-        };
+        return ToResponse(result.ValueOrRpcException());
     }
+
+    private static RefundByBookingIdResponse ToResponse(Option<Refund> refund) =>
+        new()
+        {
+            Refund = refund.Match<RefundResponse?>(
+                value => new RefundResponse { RefundId = value.RefundId },
+                () => null)
+        };
 }

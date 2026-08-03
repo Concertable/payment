@@ -1,11 +1,16 @@
-namespace Concertable.Payment.Application.Interfaces;
+using Concertable.Kernel.Functional;
+using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 
-internal interface IEscrowService
+namespace Concertable.Payment.Client;
+
+public interface IEscrowOperationsClient
 {
     Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        Money amount,
+        decimal amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -21,13 +26,13 @@ internal interface IEscrowService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        string? stripeSetupIntentId,
+        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
     Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        Money amount,
+        decimal amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default);
@@ -43,27 +48,17 @@ internal interface IEscrowService
         string externalReference,
         CancellationToken ct = default);
 
-    Task<Result<Transfer, EscrowReleaseError>> ReleaseAsync(int escrowId, CancellationToken ct = default);
-    Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default);
 
     Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
         int bookingId,
-        Money? amount = null,
-        string? reason = null,
         CancellationToken ct = default);
 
     Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,
-        string? reason = null,
         CancellationToken ct = default);
-
-    Task<Result<Refund, EscrowRefundError>> RefundAsync(
-        int escrowId,
-        Money? amount = null,
-        string? reason = null,
-        CancellationToken ct = default);
-
-    Task<Option<EscrowDto>> GetByBookingIdAsync(int bookingId, CancellationToken ct = default);
 }

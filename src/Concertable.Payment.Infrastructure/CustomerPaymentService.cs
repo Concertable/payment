@@ -2,7 +2,6 @@ using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Kernel.Exceptions;
-using FluentResults;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -22,7 +21,7 @@ internal sealed class CustomerPaymentService : ICustomerPaymentService
         this.payoutAccountRepository = payoutAccountRepository;
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public async Task<Result<PaymentOutcome, PaymentError>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,

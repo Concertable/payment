@@ -23,13 +23,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.GrossMinor,
             request.Currency.ToDomainCurrency(),
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
     public override async Task<CommissionBindingResponse> CreateOrBindCommission(
@@ -48,13 +42,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.HasExpectedCommissionMinor ? request.ExpectedCommissionMinor : null,
             request.HasExpectedPayerTotalMinor ? request.ExpectedPayerTotalMinor : null,
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
     public override async Task<CommissionCalculationResponse> CalculateBoundCommission(
@@ -70,19 +58,14 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             EmptyToNull(request.StripePaymentIntentId),
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);
-
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
+        var bound = result.ValueOrRpcException();
         return new CommissionCalculation(
-            result.Value.Terms.ConfigurationId,
-            result.Value.Terms.Rate.Value,
-            result.Value.Binding.Currency,
-            result.Value.Calculation.PayeeGrossMinor,
-            result.Value.Calculation.CommissionGrossMinor,
-            result.Value.Calculation.PayerTotalMinor).ToProto();
+            bound.Terms.ConfigurationId,
+            bound.Terms.Rate.Value,
+            bound.Binding.Currency,
+            bound.Calculation.PayeeGrossMinor,
+            bound.Calculation.CommissionGrossMinor,
+            bound.Calculation.PayerTotalMinor).ToProto();
     }
 
     private static string? EmptyToNull(string value) =>
@@ -103,8 +86,7 @@ internal static class CommissionPricingGrpcMappers
             PayerTotalMinor = calculation.PayerTotalMinor
         };
 
-    public static CommissionBindingResponse ToProto(
-        this CommissionBinding binding) =>
+    public static CommissionBindingResponse ToProto(this CommissionBinding binding) =>
         new()
         {
             BindingId = binding.BindingId.ToString(),
