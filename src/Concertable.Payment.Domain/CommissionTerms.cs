@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain;
 
-public sealed record CommissionTerms(
+internal sealed record CommissionTerms(
     Guid ConfigurationId,
     string Version,
     Currency Currency,

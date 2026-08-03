@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class SettlementTransactionEntity : TransactionEntity
+internal sealed class SettlementTransactionEntity : TransactionEntity
 {
     private readonly List<PaymentRefundEntity> refunds = [];
 
