@@ -1,3 +1,5 @@
+using PayoutAccountStatus = Concertable.Payment.Application.Enums.PayoutAccountStatus;
+
 namespace Concertable.Payment.Application.Interfaces;
 
 /// <summary>The payout-account operations a consumer fronts for its own users, keyed on the opaque owner id

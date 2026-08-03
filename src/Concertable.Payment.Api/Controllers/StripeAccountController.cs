@@ -1,6 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Payment.Domain.Enums;
+using Concertable.Payment.Application.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Concertable.Payment.Api.Identity;
