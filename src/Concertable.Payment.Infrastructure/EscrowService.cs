@@ -1,11 +1,9 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
-using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using FluentResults;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Concertable.Payment.Domain;
@@ -22,7 +20,6 @@ internal sealed class EscrowService : IEscrowService
     private readonly IUnitOfWork unitOfWork;
     private readonly ICommissionService commissionService;
     private readonly CommissionCalculator commissionCalculator;
-    private readonly PaymentDbContext context;
     private readonly TimeProvider timeProvider;
     private readonly ILogger<EscrowService> logger;
     private readonly Money platformFee;
@@ -35,7 +32,6 @@ internal sealed class EscrowService : IEscrowService
         IUnitOfWork unitOfWork,
         ICommissionService commissionService,
         CommissionCalculator commissionCalculator,
-        PaymentDbContext context,
         IOptions<PlatformFeeOptions> platformFeeOptions,
         TimeProvider timeProvider,
         ILogger<EscrowService> logger)
@@ -47,7 +43,6 @@ internal sealed class EscrowService : IEscrowService
         this.unitOfWork = unitOfWork;
         this.commissionService = commissionService;
         this.commissionCalculator = commissionCalculator;
-        this.context = context;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
         this.timeProvider = timeProvider;
         this.logger = logger;
@@ -520,6 +515,9 @@ internal sealed class EscrowService : IEscrowService
     {
         var payerTotalRefundMinor = checked(grossRefundMinor + commissionRefundMinor);
 
+        if (!await escrowRepository.TryReserveRefundGrossAsync(escrow.Id, grossRefundMinor, ct))
+            return Result.Fail("refund_gross_exceeds_remaining_gross");
+
         var reservation = PaymentRefundEntity.CreatePendingForEscrow(
             escrow.Id,
             grossRefundMinor,
@@ -527,15 +525,7 @@ internal sealed class EscrowService : IEscrowService
             commissionVatReversedMinor,
             timeProvider.GetUtcNow());
         escrow.RecordRefund(reservation);
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            context.ChangeTracker.Clear();
-            return await ReservationConflictAsync(escrow.Id, grossRefundMinor, ct);
-        }
+        await unitOfWork.SaveChangesAsync(ct);
 
         var cumulativeGrossRefundMinor = escrow.Refunds
             .Where(r => r.CountsTowardCumulative)
@@ -562,6 +552,7 @@ internal sealed class EscrowService : IEscrowService
         {
             escrow.ReleaseRefund(reservation);
             await unitOfWork.SaveChangesAsync(ct);
+            await escrowRepository.ReleaseReservedRefundGrossAsync(escrow.Id, grossRefundMinor, ct);
             return refund;
         }
 
@@ -587,20 +578,6 @@ internal sealed class EscrowService : IEscrowService
         await unitOfWork.SaveChangesAsync(ct);
 
         return refund;
-    }
-
-    private async Task<Result<Refund>> ReservationConflictAsync(
-        int escrowId,
-        long grossRefundMinor,
-        CancellationToken ct)
-    {
-        var current = await escrowRepository.GetWithRefundsByIdAsync(escrowId, ct);
-        var reservedGross = current?.Refunds
-            .Where(r => r.CountsTowardCumulative)
-            .Sum(r => r.GrossRefundedMinor) ?? 0;
-        return checked(reservedGross + grossRefundMinor) > (current?.PayeeGrossMinor ?? 0)
-            ? Result.Fail("refund_gross_exceeds_remaining_gross")
-            : Result.Fail("refund_conflict");
     }
 
     private static IReadOnlyDictionary<string, string> CommissionMetadata(
