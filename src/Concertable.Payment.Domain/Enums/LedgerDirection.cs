@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Enums;
 
-public enum LedgerDirection
+internal enum LedgerDirection
 {
     Debit,
     Credit
