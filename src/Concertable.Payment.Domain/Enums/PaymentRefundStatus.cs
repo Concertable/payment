@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Enums;
 
-public enum PaymentRefundStatus
+internal enum PaymentRefundStatus
 {
     Pending,
     Completed,

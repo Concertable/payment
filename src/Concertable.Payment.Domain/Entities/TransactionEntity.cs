@@ -2,7 +2,7 @@ using Concertable.Kernel;
 
 namespace Concertable.Payment.Domain.Entities;
 
-public abstract class TransactionEntity : IIdEntity, IAuditable
+internal abstract class TransactionEntity : IIdEntity, IAuditable
 {
     protected TransactionEntity() { }
 

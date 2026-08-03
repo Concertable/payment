@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Enums;
 
-public enum LedgerPostingType
+internal enum LedgerPostingType
 {
     DirectSettlement,
     EscrowHold,
