@@ -5,7 +5,7 @@ using Dunet;
 namespace Concertable.Payment.Domain.Errors;
 
 [Union(EnableImplicitConversions = false)]
-public partial record TransactionTransitionError : IError
+internal partial record TransactionTransitionError : IError
 {
     public partial record NotPendingCase(TransactionStatus Status);
     public partial record NotCompleteCase(TransactionStatus Status);
@@ -26,7 +26,7 @@ public partial record TransactionTransitionError : IError
 }
 
 [Union(EnableImplicitConversions = false)]
-public partial record EscrowTransitionError : IError
+internal partial record EscrowTransitionError : IError
 {
     public partial record NotPendingCase(EscrowStatus Status);
     public partial record NotHeldCase(EscrowStatus Status);
@@ -54,7 +54,7 @@ public partial record EscrowTransitionError : IError
 }
 
 [Union(EnableImplicitConversions = false)]
-public partial record PaymentRefundTransitionError : IError
+internal partial record PaymentRefundTransitionError : IError
 {
     public partial record NotPendingCase(PaymentRefundStatus Status);
 

@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class LedgerAccountEntity : IIdEntity
+internal sealed class LedgerAccountEntity : IIdEntity
 {
     private LedgerAccountEntity() { }
 
