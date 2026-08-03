@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class PaymentRefundEntity : IGuidEntity
+internal sealed class PaymentRefundEntity : IGuidEntity
 {
     private PaymentRefundEntity() { }
 

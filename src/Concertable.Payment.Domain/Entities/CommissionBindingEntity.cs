@@ -1,6 +1,6 @@
 namespace Concertable.Payment.Domain.Entities;
 
-public sealed class CommissionBindingEntity : IGuidEntity
+internal sealed class CommissionBindingEntity : IGuidEntity
 {
     private CommissionBindingEntity() { }
 
