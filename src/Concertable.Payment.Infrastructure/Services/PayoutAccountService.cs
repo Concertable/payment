@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
+using PayoutAccountStatus = Concertable.Payment.Application.Enums.PayoutAccountStatus;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -26,7 +27,9 @@ internal sealed class PayoutAccountService : IPayoutAccountService
     public async Task<PayoutAccountStatus> GetAccountStatusAsync(Guid ownerId, CancellationToken ct = default)
     {
         var account = await repository.GetByOwnerIdAsync(ownerId, ct);
-        return account?.StripeAccountId is null ? PayoutAccountStatus.NotVerified : await stripeAccountClient.GetAccountStatusAsync(account.StripeAccountId);
+        return account?.StripeAccountId is null
+            ? PayoutAccountStatus.NotVerified
+            : (await stripeAccountClient.GetAccountStatusAsync(account.StripeAccountId)).ToApiStatus();
     }
 
     public async Task<PaymentMethodDto?> GetPaymentMethodAsync(Guid ownerId, CancellationToken ct = default)

@@ -1,4 +1,5 @@
 using Concertable.Payment.Grpc;
+using PayoutAccountStatus = Concertable.Payment.Application.Enums.PayoutAccountStatus;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
