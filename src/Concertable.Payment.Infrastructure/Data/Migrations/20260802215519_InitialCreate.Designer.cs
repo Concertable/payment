@@ -12,7 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
+<<<<<<<< HEAD:api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Data/Migrations/20260802184009_InitialCreate.Designer.cs
     [Migration("20260802184009_InitialCreate")]
+========
+    [Migration("20260802215519_InitialCreate")]
+>>>>>>>> origin/main:api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Data/Migrations/20260802215519_InitialCreate.Designer.cs
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -200,10 +204,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -229,6 +229,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ReleasedAt")
@@ -541,10 +544,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
-                    b.Property<Guid>("ConcurrencyToken")
-                        .IsConcurrencyToken()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -554,6 +553,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<long>("PayerTotalMinor")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.HasIndex("CommissionBindingId")
