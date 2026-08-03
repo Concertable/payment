@@ -30,22 +30,26 @@ internal sealed class StripeApiClient : IStripeApiClient
 
     public Task<PaymentIntent> CreatePaymentIntentAsync(
         PaymentIntentCreateOptions options,
-        RequestOptions? requestOptions = null) =>
-        paymentIntentService.CreateAsync(options, requestOptions);
+        RequestOptions? requestOptions = null,
+        CancellationToken ct = default) =>
+        paymentIntentService.CreateAsync(options, requestOptions, ct);
 
     public Task<Transfer> CreateTransferAsync(
         TransferCreateOptions options,
-        RequestOptions? requestOptions = null) =>
-        transferService.CreateAsync(options, requestOptions);
+        RequestOptions? requestOptions = null,
+        CancellationToken ct = default) =>
+        transferService.CreateAsync(options, requestOptions, ct);
 
     public Task<Refund> CreateRefundAsync(
         RefundCreateOptions options,
-        RequestOptions? requestOptions = null) =>
-        refundService.CreateAsync(options, requestOptions);
+        RequestOptions? requestOptions = null,
+        CancellationToken ct = default) =>
+        refundService.CreateAsync(options, requestOptions, ct);
 
     public Task<TransferReversal> CreateTransferReversalAsync(
         string transferId,
         TransferReversalCreateOptions options,
-        RequestOptions? requestOptions = null) =>
-        transferReversalService.CreateAsync(transferId, options, requestOptions);
+        RequestOptions? requestOptions = null,
+        CancellationToken ct = default) =>
+        transferReversalService.CreateAsync(transferId, options, requestOptions, ct);
 }

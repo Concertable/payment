@@ -1,10 +1,8 @@
-using FluentResults;
-
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ICustomerPaymentService
 {
-    Task<Result<PaymentOutcome>> PayAsync(
+    Task<Result<PaymentOutcome, PaymentError>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,

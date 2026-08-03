@@ -1,15 +1,13 @@
-using FluentResults;
-
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ICommissionService
 {
-    Task<Result<CommissionCalculation>> PreviewAsync(
+    Task<Result<CommissionCalculation, CommissionError>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default);
 
-    Task<Result<CommissionBinding>> CreateOrBindAsync(
+    Task<Result<CommissionBinding, CommissionError>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -21,7 +19,7 @@ internal interface ICommissionService
         long? expectedPayerTotalMinor,
         CancellationToken ct = default);
 
-    Task<Result<BoundCommission>> CalculateBoundAsync(
+    Task<Result<BoundCommission, CommissionError>> CalculateBoundAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
@@ -31,11 +29,9 @@ internal interface ICommissionService
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
-    Task<string?> FindBoundPaymentIntentAsync(
+    Task<Option<string>> FindBoundPaymentIntentAsync(
         Guid bindingId,
         CancellationToken ct = default);
 
-    void BindPaymentIntent(
-        CommissionBindingEntity binding,
-        string paymentIntentId);
+    void BindPaymentIntent(CommissionBindingEntity binding, string paymentIntentId);
 }
