@@ -1,10 +1,14 @@
 using Concertable.Payment.Application.Requests;
-using FluentResults;
 
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripeTransferClient
 {
-    Task<Result<Transfer>> ReleaseAsync(StripeReleaseOptions options);
-    Task<Result<Refund>> RefundAsync(StripeRefundOptions options);
+    Task<Result<Transfer, PaymentError>> ReleaseAsync(
+        StripeReleaseOptions options,
+        CancellationToken ct = default);
+
+    Task<Result<Refund, PaymentError>> RefundAsync(
+        StripeRefundOptions options,
+        CancellationToken ct = default);
 }

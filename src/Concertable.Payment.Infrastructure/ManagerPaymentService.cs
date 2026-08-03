@@ -1,10 +1,8 @@
 using Concertable.Payment.Application.DTOs;
-using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
-using FluentResults;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -49,7 +47,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -58,11 +56,13 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         int bookingId,
         CancellationToken ct = default)
     {
-        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
-
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
+        if (payer is null)
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(
+                ManagerPaymentError.Payment(PaymentError.PayerNotFound()));
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
-            throw new BadRequestException("Stripe customer setup is required for off-session payments.");
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(
+                ManagerPaymentError.Payment(PaymentError.PayerNotConfigured()));
 
         var charge = await paymentManager.SettleAsync(
             payerId,
@@ -77,34 +77,34 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             },
             ct);
-
-        if (charge.IsFailed)
-            return charge;
-
-        if (string.IsNullOrEmpty(charge.Value.TransactionId))
-            return Result.Fail("Stripe charge response missing PaymentIntent id.");
+        if (!charge.TryGetValue(out var outcome))
+        {
+            charge.TryGetError(out var error);
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(ManagerPaymentError.Payment(error!));
+        }
+        if (string.IsNullOrEmpty(outcome.TransactionId))
+            throw new InvalidOperationException("Stripe charge response missing PaymentIntent id.");
 
         var transaction = SettlementTransactionEntity.Create(
             payerId,
             payeeId,
-            charge.Value.TransactionId,
+            outcome.TransactionId,
             (amount + platformFee).ToMinorUnits(),
             platformFee.ToMinorUnits(),
             TransactionStatus.Pending,
             bookingId);
-
         await transactionRepository.CreateAsync(transaction);
 
-        if (!charge.Value.RequiresAction && transaction.Complete())
+        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
         {
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
             await unitOfWork.SaveChangesAsync(ct);
         }
 
-        return charge;
+        return Result<PaymentOutcome, ManagerPaymentError>.Success(outcome);
     }
 
-    public async Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
+    public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -117,11 +117,9 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var existing = await transactionRepository.GetSettlementByCommissionBindingIdAsync(
-            commissionBindingId,
-            ct);
+        var existing = await transactionRepository.GetSettlementByCommissionBindingIdAsync(commissionBindingId, ct);
         if (existing is not null)
-            return Result.Ok(new PaymentOutcome
+            return Result<PaymentOutcome, ManagerPaymentError>.Success(new PaymentOutcome
             {
                 TransactionId = existing.PaymentIntentId,
                 RequiresAction = existing.Status == TransactionStatus.Pending
@@ -136,15 +134,21 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             null,
             stripeSetupIntentId,
             ct);
-        if (authorized.IsFailed)
-            return authorized.ToResult<PaymentOutcome>();
+        if (!authorized.TryGetValue(out var bound))
+        {
+            authorized.TryGetError(out var error);
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(ManagerPaymentError.Commission(error!));
+        }
 
-        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct)
-            ?? throw new NotFoundException($"Payout account not found for payer {payerId}");
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
+        if (payer is null)
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(
+                ManagerPaymentError.Payment(PaymentError.PayerNotFound()));
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
-            throw new BadRequestException("Stripe customer setup is required for off-session payments.");
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(
+                ManagerPaymentError.Payment(PaymentError.PayerNotConfigured()));
 
-        var calculation = authorized.Value.Calculation;
+        var calculation = bound.Calculation;
         var charge = await paymentManager.SettleAsync(
             payerId,
             payeeId,
@@ -152,31 +156,32 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             Money.FromMinorUnits(calculation.PayeeGrossMinor, calculation.Currency),
             paymentMethodId,
             session,
-            CommissionMetadata(authorized.Value, bookingId),
+            CommissionMetadata(bound, bookingId),
             ct);
-        if (charge.IsFailed)
-            return charge;
-        if (string.IsNullOrEmpty(charge.Value.TransactionId))
-            return Result.Fail("Stripe charge response missing PaymentIntent id.");
+        if (!charge.TryGetValue(out var outcome))
+        {
+            charge.TryGetError(out var error);
+            return Result<PaymentOutcome, ManagerPaymentError>.Failure(ManagerPaymentError.Payment(error!));
+        }
+        if (string.IsNullOrEmpty(outcome.TransactionId))
+            throw new InvalidOperationException("Stripe charge response missing PaymentIntent id.");
 
-        commissionService.BindPaymentIntent(
-            authorized.Value.Binding,
-            charge.Value.TransactionId);
+        commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);
         var transaction = SettlementTransactionEntity.CreateBound(
             payerId,
             payeeId,
-            charge.Value.TransactionId,
+            outcome.TransactionId,
             calculation,
             TransactionStatus.Pending,
             bookingId,
             commissionBindingId);
         await transactionRepository.AddAsync(transaction, ct);
 
-        if (!charge.Value.RequiresAction && transaction.Complete())
+        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         await unitOfWork.SaveChangesAsync(ct);
-        return charge;
+        return Result<PaymentOutcome, ManagerPaymentError>.Success(outcome);
     }
 
     public async Task<CheckoutSession> CreateSetupSessionAsync(
@@ -207,7 +212,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         return await stripeAccountClient.CreateHoldSessionAsync(stripeCustomerId, amount + platformFee, metadata, ct);
     }
 
-    public async Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
+    public async Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
@@ -217,7 +222,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var boundIntentId = await commissionService.FindBoundPaymentIntentAsync(commissionBindingId, ct);
+        var boundIntent = await commissionService.FindBoundPaymentIntentAsync(commissionBindingId, ct);
+        boundIntent.TryGetValue(out var boundIntentId);
 
         var authorized = await commissionService.CalculateBoundAsync(
             commissionBindingId,
@@ -228,35 +234,38 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             boundIntentId,
             stripeSetupIntentId,
             ct);
-        if (authorized.IsFailed)
-            return authorized.ToResult<CheckoutSession>();
+        if (!authorized.TryGetValue(out var bound))
+        {
+            authorized.TryGetError(out var error);
+            return Result<CheckoutSession, HoldSessionError>.Failure(HoldSessionError.Commission(error!));
+        }
 
-        var stripeCustomerId = await EnsureStripeCustomerAsync(payerId, ct);
+        var customer = await ResolveStripeCustomerAsync(payerId, ct);
+        if (!customer.TryGetValue(out var stripeCustomerId))
+        {
+            customer.TryGetError(out var error);
+            return Result<CheckoutSession, HoldSessionError>.Failure(HoldSessionError.Payment(error!));
+        }
 
-        if (!string.IsNullOrWhiteSpace(boundIntentId))
-            return Result.Ok(await stripeAccountClient.GetHoldSessionAsync(stripeCustomerId, boundIntentId, ct));
+        if (boundIntentId is not null)
+            return Result<CheckoutSession, HoldSessionError>.Success(
+                await stripeAccountClient.GetHoldSessionAsync(stripeCustomerId, boundIntentId, ct));
 
-        var calculation = authorized.Value.Calculation;
-        var session = await stripeAccountClient.CreateHoldSessionAsync(
+        var calculation = bound.Calculation;
+        var checkoutSession = await stripeAccountClient.CreateHoldSessionAsync(
             stripeCustomerId,
             Money.FromMinorUnits(calculation.PayerTotalMinor, calculation.Currency),
-            new Dictionary<string, string>(CommissionMetadata(authorized.Value, bookingId: null))
-                .Merge(metadata),
+            new Dictionary<string, string>(CommissionMetadata(bound, null)).Merge(metadata),
             ct);
-        if (string.IsNullOrWhiteSpace(session.StripeIntentId))
-            return Result.Fail("Stripe hold session response missing PaymentIntent id.");
+        if (string.IsNullOrWhiteSpace(checkoutSession.StripeIntentId))
+            throw new InvalidOperationException("Stripe hold session response missing PaymentIntent id.");
 
-        commissionService.BindPaymentIntent(
-            authorized.Value.Binding,
-            session.StripeIntentId);
+        commissionService.BindPaymentIntent(bound.Binding, checkoutSession.StripeIntentId);
         await unitOfWork.SaveChangesAsync(ct);
-        return Result.Ok(session);
+        return Result<CheckoutSession, HoldSessionError>.Success(checkoutSession);
     }
 
-    public async Task<string> FindHeldIntentAsync(
-        Guid payerId,
-        int applicationId,
-        CancellationToken ct = default)
+    public async Task<string> FindHeldIntentAsync(Guid payerId, int applicationId, CancellationToken ct = default)
     {
         var account = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
         var stripeCustomerId = account?.StripeCustomerId
@@ -264,7 +273,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         return await stripeHoldClient.FindHeldIntentAsync(stripeCustomerId, applicationId, ct);
     }
 
-    public async Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
+    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,
@@ -273,23 +282,22 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     {
         var settlement = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
         if (settlement is null)
-            return Result.Ok<Refund?>(null);
-
+            return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
         if (settlement.CommissionBindingId is null)
-            return Result.Fail("commission_binding_not_found");
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.CommissionBindingNotFound());
         if (currency != settlement.Currency)
-            return Result.Fail("currency_mismatch");
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.CurrencyMismatch());
         if (settlement.Status != TransactionStatus.Complete)
-            return Result.Fail($"Settlement {settlement.Id} is {settlement.Status}; cannot refund");
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.EscrowNotRefundable());
         if (grossMinor <= 0)
-            return Result.Fail("refund_gross_must_be_positive");
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.AmountMustBePositive());
 
         var grossAlreadyRefunded = settlement.Refunds
-            .Where(r => r.CountsTowardCumulative)
-            .Sum(r => r.GrossRefundedMinor);
+            .Where(refund => refund.CountsTowardCumulative)
+            .Sum(refund => refund.GrossRefundedMinor);
         var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
         if (cumulativeGrossRefund > settlement.PayeeGrossMinor)
-            return Result.Fail("refund_gross_exceeds_remaining_gross");
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.AmountExceedsRemaining());
 
         var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
             settlement.CommissionGrossMinor,
@@ -301,14 +309,14 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             settlement.PayeeGrossMinor);
         var commissionRefundMinor = checked(
             cumulativeCommissionRefund -
-            settlement.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionRefundedMinor));
+            settlement.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionRefundedMinor));
         var commissionVatReversedMinor = checked(
             cumulativeVatReversal -
-            settlement.Refunds.Where(r => r.CountsTowardCumulative).Sum(r => r.CommissionVatReversedMinor));
+            settlement.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionVatReversedMinor));
         var payerTotalRefundMinor = checked(grossMinor + commissionRefundMinor);
 
         if (!await transactionRepository.TryReserveSettlementRefundGrossAsync(settlement.Id, grossMinor, ct))
-            return Result.Fail("refund_gross_exceeds_remaining_gross");
+            return await ReservationConflictAsync(bookingId, grossMinor, ct);
 
         var reservation = PaymentRefundEntity.CreatePendingForSettlement(
             settlement.Id,
@@ -316,7 +324,12 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionRefundMinor,
             commissionVatReversedMinor,
             timeProvider.GetUtcNow());
-        settlement.RecordRefund(reservation);
+        if (settlement.RecordRefund(reservation).IsFailure)
+        {
+            await transactionRepository.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, grossMinor, ct);
+            throw new InvalidOperationException("Settlement refund reservation could not be recorded.");
+        }
+
         await unitOfWork.SaveChangesAsync(ct);
 
         var metadata = new Dictionary<string, string>
@@ -339,15 +352,18 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             Reason = reason,
             Metadata = metadata
         }, ct);
-        if (refund.IsFailed)
+        if (!refund.TryGetValue(out var completedRefund))
         {
-            settlement.ReleaseRefund(reservation);
+            if (settlement.ReleaseRefund(reservation).IsFailure)
+                throw new InvalidOperationException("Settlement refund reservation could not be released.");
             await unitOfWork.SaveChangesAsync(ct);
             await transactionRepository.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, grossMinor, ct);
-            return refund.ToResult<Refund?>();
+            refund.TryGetError(out var error);
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.Payment(error!));
         }
 
-        settlement.CompleteRefund(reservation, refund.Value.RefundId, timeProvider.GetUtcNow());
+        if (settlement.CompleteRefund(reservation, completedRefund.RefundId, timeProvider.GetUtcNow()).IsFailure)
+            throw new InvalidOperationException("Settlement refund reservation could not be completed.");
 
         await ledger.StageAsync(
             LedgerPostings.DirectSettlementRefund(
@@ -358,23 +374,52 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 commissionVatReversedMinor.ToMoney(settlement.Currency),
                 settlement.BookingId,
                 settlement.PaymentIntentId,
-                refund.Value.RefundId),
+                completedRefund.RefundId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result.Ok<Refund?>(refund.Value);
+        return Result<Option<Refund>, EscrowRefundError>.Success(Option.Some(completedRefund));
+    }
+
+    private async Task<Result<Option<Refund>, EscrowRefundError>> ReservationConflictAsync(
+        int bookingId,
+        long grossMinor,
+        CancellationToken ct)
+    {
+        var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
+        if (current is null)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.EscrowNotFound());
+        if (current.Status != TransactionStatus.Complete)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.EscrowNotRefundable());
+        return checked(current.RefundedGrossMinor + grossMinor) > current.PayeeGrossMinor
+            ? Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.AmountExceedsRemaining())
+            : Result<Option<Refund>, EscrowRefundError>.Failure(EscrowRefundError.Conflict());
+    }
+
+    private async Task<Result<string, PaymentError>> ResolveStripeCustomerAsync(Guid ownerId, CancellationToken ct)
+    {
+        var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct);
+        if (account is null)
+            return Result<string, PaymentError>.Failure(PaymentError.PayerNotFound());
+        if (account.StripeCustomerId is not null)
+            return Result<string, PaymentError>.Success(account.StripeCustomerId);
+
+        await stripeAccountClient.ProvisionCustomerAsync(ownerId, account.Email, ct);
+        var refreshed = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct);
+        var stripeCustomerId = refreshed?.StripeCustomerId;
+        if (stripeCustomerId is null)
+            throw new InvalidOperationException("Failed to provision Stripe customer.");
+        return Result<string, PaymentError>.Success(stripeCustomerId);
     }
 
     private async Task<string> EnsureStripeCustomerAsync(Guid ownerId, CancellationToken ct)
     {
         var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct)
             ?? throw new NotFoundException($"Payout account not found for owner {ownerId}");
-
         if (account.StripeCustomerId is not null)
             return account.StripeCustomerId;
 
         await stripeAccountClient.ProvisionCustomerAsync(ownerId, account.Email, ct);
-
         var refreshed = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct);
         return refreshed?.StripeCustomerId
             ?? throw new InvalidOperationException("Failed to provision Stripe customer.");
@@ -398,7 +443,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         };
         if (bookingId is not null)
             metadata[PaymentMetadataKeys.BookingId] = bookingId.Value.ToString();
-
         return metadata;
     }
 }

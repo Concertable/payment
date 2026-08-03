@@ -9,6 +9,21 @@ enum Currency {
   CURRENCY_GBP = 826;
 }
 
+enum OperationErrorKind {
+  OPERATION_ERROR_INVALID = 0;
+  OPERATION_ERROR_NOT_FOUND = 1;
+  OPERATION_ERROR_CONFLICT = 2;
+  OPERATION_ERROR_UNAUTHENTICATED = 3;
+  OPERATION_ERROR_FORBIDDEN = 4;
+  OPERATION_ERROR_PAYMENT_REQUIRED = 5;
+}
+
+message OperationErrorDetail {
+  string code = 1;
+  string message = 2;
+  OperationErrorKind kind = 3;
+}
+
 message Money {
   int64 amount_minor = 1;
   Currency currency = 2;

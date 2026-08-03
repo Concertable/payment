@@ -58,30 +58,41 @@ public sealed class SettlementTransactionEntity : TransactionEntity
     public long RefundedGrossMinor { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
 
-    public void RecordRefund(PaymentRefundEntity refund)
+    public UnitResult<TransactionTransitionError> RecordRefund(PaymentRefundEntity refund)
     {
         if (Status != TransactionStatus.Complete)
-            throw new DomainException("Only a completed settlement can be refunded.");
+            return UnitResult.Failure(TransactionTransitionError.NotComplete(Status));
+
         if (refund.SettlementTransactionId != Id)
             throw new DomainException("Refund belongs to another settlement.");
 
         refunds.Add(refund);
+        return UnitResult.Success<TransactionTransitionError>();
     }
 
-    public void CompleteRefund(PaymentRefundEntity refund, string stripeRefundId, DateTimeOffset completedAt)
+    public UnitResult<PaymentRefundTransitionError> CompleteRefund(
+        PaymentRefundEntity refund,
+        string stripeRefundId,
+        DateTimeOffset completedAt)
     {
         if (!refunds.Contains(refund))
             throw new DomainException("Refund does not belong to this settlement.");
 
-        refund.Complete(stripeRefundId, completedAt);
+        var transition = refund.Complete(stripeRefundId, completedAt);
+        if (transition.IsFailure)
+            return transition;
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
-    public void ReleaseRefund(PaymentRefundEntity refund)
+    public UnitResult<PaymentRefundTransitionError> ReleaseRefund(PaymentRefundEntity refund)
     {
         if (!refunds.Contains(refund))
             throw new DomainException("Refund does not belong to this settlement.");
 
-        refund.Fail();
+        var transition = refund.Fail();
+        if (transition.IsFailure)
+            return transition;
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
     public static SettlementTransactionEntity Create(
