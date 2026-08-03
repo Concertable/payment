@@ -1,5 +1,6 @@
 using Concertable.Kernel;
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Domain.Errors;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
@@ -86,21 +87,27 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
-    public void Release_FromPending_Throws()
+    public void Release_FromPending_ReturnsFailure()
     {
         var escrow = NewPending();
 
-        Assert.Throws<DomainException>(() => escrow.Release("tr_test", DateTime.UtcNow));
+        var result = escrow.Release("tr_test", DateTime.UtcNow);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(EscrowTransitionError.NotHeld(EscrowStatus.Pending), error);
     }
 
     [Fact]
-    public void Release_FromReleased_Throws()
+    public void Release_FromReleased_ReturnsFailure()
     {
         var escrow = NewPending();
         escrow.Confirm();
         escrow.Release("tr_test", DateTime.UtcNow);
 
-        Assert.Throws<DomainException>(() => escrow.Release("tr_test_2", DateTime.UtcNow));
+        var result = escrow.Release("tr_test_2", DateTime.UtcNow);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(EscrowTransitionError.NotHeld(EscrowStatus.Released), error);
     }
 
     [Fact]
@@ -159,20 +166,26 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
-    public void RecordRefund_FromPending_Throws()
+    public void RecordRefund_FromPending_ReturnsFailure()
     {
         var escrow = NewPending();
 
-        Assert.Throws<DomainException>(() => escrow.RecordRefund(FullRefund(escrow)));
+        var result = escrow.RecordRefund(FullRefund(escrow));
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(EscrowTransitionError.NotRefundable(EscrowStatus.Pending), error);
     }
 
     [Fact]
-    public void RecordRefund_FromFailed_Throws()
+    public void RecordRefund_FromFailed_ReturnsFailure()
     {
         var escrow = NewPending();
         escrow.Fail();
 
-        Assert.Throws<DomainException>(() => escrow.RecordRefund(FullRefund(escrow)));
+        var result = escrow.RecordRefund(FullRefund(escrow));
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(EscrowTransitionError.NotRefundable(EscrowStatus.Failed), error);
     }
 
     [Fact]
@@ -232,11 +245,14 @@ public sealed class EscrowEntityTests
     }
 
     [Fact]
-    public void MarkDisputed_FromPending_Throws()
+    public void MarkDisputed_FromPending_ReturnsFailure()
     {
         var escrow = NewPending();
 
-        Assert.Throws<DomainException>(() => escrow.MarkDisputed());
+        var result = escrow.MarkDisputed();
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(EscrowTransitionError.NotDisputable(EscrowStatus.Pending), error);
     }
 
     private static PaymentRefundEntity FullRefund(EscrowEntity escrow) =>

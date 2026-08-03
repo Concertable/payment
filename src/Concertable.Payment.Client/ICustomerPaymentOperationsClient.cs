@@ -1,13 +1,17 @@
-namespace Concertable.Payment.Application.Interfaces;
+using Concertable.Kernel.Functional;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 
-internal interface ICustomerPaymentService
+namespace Concertable.Payment.Client;
+
+public interface ICustomerPaymentOperationsClient
 {
     Task<Result<PaymentOutcome, PaymentError>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
-        Money amount,
-        IReadOnlyDictionary<string, string> metadata,
+        decimal amount,
+        IDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default);
 
@@ -15,6 +19,6 @@ internal interface ICustomerPaymentService
         Guid payerId,
         int concertId,
         Guid payeeId,
-        IReadOnlyDictionary<string, string> metadata,
+        IDictionary<string, string> metadata,
         CancellationToken ct = default);
 }

@@ -1,11 +1,14 @@
 global using Concertable.Kernel;
+global using Concertable.Kernel.Functional;
 global using Concertable.Kernel.ValueObjects;
 global using Concertable.Contracts;
 global using Concertable.Contracts.Enums;
 global using Concertable.Messaging;
 global using Concertable.Payment.Domain.Entities;
 global using Concertable.Payment.Domain.Enums;
+global using Concertable.Payment.Domain.Errors;
 global using Concertable.Payment.Contracts;
+global using Concertable.Payment.Contracts.Errors;
 global using Concertable.Payment.Contracts.Enums;
 global using Concertable.Payment.Contracts.Events;
 global using Concertable.Payment.Application.DTOs;

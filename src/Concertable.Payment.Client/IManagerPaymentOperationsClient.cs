@@ -1,11 +1,16 @@
-namespace Concertable.Payment.Application.Interfaces;
+using Concertable.Kernel.Functional;
+using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 
-internal interface IManagerPaymentService
+namespace Concertable.Payment.Client;
+
+public interface IManagerPaymentOperationsClient
 {
     Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        Money amount,
+        decimal amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -21,44 +26,37 @@ internal interface IManagerPaymentService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        string? stripeSetupIntentId,
+        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
     Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
-        IReadOnlyDictionary<string, string> metadata,
+        IDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
-        IReadOnlyDictionary<string, string> metadata,
+        IDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        Money amount,
-        IReadOnlyDictionary<string, string> metadata,
+        decimal amount,
+        IDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
-        IReadOnlyDictionary<string, string> metadata,
+        IDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        string? stripeSetupIntentId,
+        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
     Task<string> FindHeldIntentAsync(
         Guid payerId,
         int applicationId,
-        CancellationToken ct = default);
-
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
-        int bookingId,
-        long grossMinor,
-        Currency currency,
-        string? reason = null,
         CancellationToken ct = default);
 }
