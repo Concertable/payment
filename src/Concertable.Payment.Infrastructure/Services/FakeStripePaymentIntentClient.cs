@@ -3,8 +3,6 @@ using Concertable.Payment.Application.Requests;
 using Concertable.Kernel.Functional;
 using Concertable.Payment.Contracts.Errors;
 using Stripe;
-using Transfer = Concertable.Payment.Contracts.Transfer;
-using Refund = Concertable.Payment.Contracts.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -20,7 +18,6 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
     public async Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(StripeChargeOptions opts)
     {
         var transactionId = $"pi_fake_{Guid.NewGuid():N}";
-
         await webhookQueue.EnqueueAsync(new Event
         {
             Id = $"evt_fake_{Guid.NewGuid():N}",
@@ -31,8 +28,8 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
                 {
                     Id = transactionId,
                     Status = "succeeded",
-                    AmountReceived = opts.Amount.ToMinorUnits(),
-                    Metadata = opts.Metadata
+                    AmountReceived = amount.ToMinorUnits(),
+                    Metadata = metadata
                 }
             }
         });

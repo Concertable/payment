@@ -20,8 +20,6 @@ internal sealed record BoundCommissionManagerPayCommand(
     int BookingId,
     Guid CommissionBindingId,
     string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor,
     string? StripeSetupIntentId);
 
 internal sealed record CreateSessionCommand(
@@ -39,8 +37,6 @@ internal sealed record CreateBoundCommissionHoldSessionCommand(
     IReadOnlyDictionary<string, string> Metadata,
     Guid CommissionBindingId,
     string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor,
     string? StripeSetupIntentId);
 
 internal sealed record FindHeldIntentCommand(
@@ -68,8 +64,6 @@ internal static class ManagerPaymentRequestMappers
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
         request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor,
         EmptyToNull(request.StripeSetupIntentId));
 
     public static CreateSessionCommand ToCommand(this CreateSetupSessionRequest request) => new(
@@ -93,8 +87,6 @@ internal static class ManagerPaymentRequestMappers
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
         request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor,
         EmptyToNull(request.StripeSetupIntentId));
 
     public static FindHeldIntentCommand ToCommand(this FindHeldIntentRequest request) => new(

@@ -24,34 +24,19 @@ internal interface IManagerPaymentService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is known but cannot be charged yet — the other party hasn't accepted.
-    /// Pre-authorises the card for a future off-session charge so the bank will honour it
-    /// when the payer is no longer present.
-    /// </summary>
     Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is unknown until after the event (e.g. door revenue split).
-    /// Confirms the card is real and likely chargeable — nothing is ring-fenced.
-    /// </summary>
     Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is known and ring-fenced now — the bank locks it, nothing is taken yet.
-    /// A subsequent capture collects the held amount into escrow at accept time.
-    /// </summary>
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         Money amount,
@@ -65,8 +50,6 @@ internal interface IManagerPaymentService
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 

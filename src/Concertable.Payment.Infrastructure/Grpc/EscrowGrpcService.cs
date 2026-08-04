@@ -16,7 +16,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     public override async Task<EscrowResponse> Deposit(DepositRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var result = await escrowService.DepositAsync(
             command.PayerId,
             command.PayeeId,
@@ -44,8 +43,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             command.StripeSetupIntentId,
             context.CancellationToken);
 
@@ -55,7 +52,6 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var result = await escrowService.CaptureAsync(
             command.PayerId,
             command.PayeeId,
@@ -81,14 +77,14 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.ExpectedCommissionMinor,
-            command.ExpectedPayerTotalMinor,
             context.CancellationToken);
 
         return result.GetValueOrThrow().ToProtoEscrowResponse();
     }
 
-    public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(ReleaseByBookingIdRequest request, ServerCallContext context)
+    public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(
+        ReleaseByBookingIdRequest request,
+        ServerCallContext context)
     {
         var result = await escrowService.ReleaseByBookingIdAsync(request.BookingId, context.CancellationToken);
 
@@ -101,7 +97,9 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         };
     }
 
-    public override async Task<RefundByBookingIdResponse> RefundByBookingId(RefundByBookingIdRequest request, ServerCallContext context)
+    public override async Task<RefundByBookingIdResponse> RefundByBookingId(
+        RefundByBookingIdRequest request,
+        ServerCallContext context)
     {
         var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
 
@@ -132,4 +130,12 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
                 () => null)
         };
     }
+
+    private static RefundByBookingIdResponse ToResponse(Option<Refund> refund) =>
+        new()
+        {
+            Refund = refund.Match<RefundResponse?>(
+                value => new RefundResponse { RefundId = value.RefundId },
+                () => null)
+        };
 }

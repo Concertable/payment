@@ -1,5 +1,5 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
-using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
@@ -8,7 +8,7 @@ using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class EscrowClient : IEscrowClient
+internal sealed class EscrowClient : IEscrowOperationsClient, IEscrowClient
 {
     private readonly Proto.Escrow.EscrowClient client;
 
@@ -57,14 +57,10 @@ internal sealed class EscrowClient : IEscrowClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.DepositBoundCommissionAsync(
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.DepositBoundCommissionAsync(
                 new Proto.BoundCommissionDepositRequest
                 {
                     PayerId = payerId.ToString(),
@@ -76,8 +72,6 @@ internal sealed class EscrowClient : IEscrowClient
                     BookingId = bookingId,
                     CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct);
@@ -126,13 +120,9 @@ internal sealed class EscrowClient : IEscrowClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.CaptureBoundCommissionAsync(
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.CaptureBoundCommissionAsync(
                 new Proto.BoundCommissionCaptureRequest
                 {
                     PayerId = payerId.ToString(),
@@ -142,9 +132,7 @@ internal sealed class EscrowClient : IEscrowClient
                     PaymentIntentId = paymentIntentId,
                     BookingId = bookingId,
                     CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor
+                    ExternalReference = externalReference
                 },
                 cancellationToken: ct);
             return Functional.Result.Success<EscrowDeposit, CaptureError>(response.ToEscrowDeposit());

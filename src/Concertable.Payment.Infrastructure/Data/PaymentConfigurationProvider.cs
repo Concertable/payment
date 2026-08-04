@@ -18,6 +18,7 @@ internal sealed class PaymentConfigurationProvider : IEntityTypeConfigurationPro
         modelBuilder.ApplyConfiguration(new LedgerAccountEntityConfiguration());
         modelBuilder.ApplyConfiguration(new LedgerTransactionEntityConfiguration());
         modelBuilder.ApplyConfiguration(new LedgerEntryEntityConfiguration());
+        modelBuilder.ApplyConfiguration(new CommissionConfigurationEntityConfiguration());
         modelBuilder.ApplyConfiguration(new CommissionBindingEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PaymentRefundEntityConfiguration());
     }

@@ -27,8 +27,9 @@ public sealed class StripeTransferClientTests
             .Setup(c => c.CreateTransferReversalAsync(
                 "tr_test",
                 It.IsAny<TransferReversalCreateOptions>(),
-                It.IsAny<RequestOptions?>()))
-            .Callback<string, TransferReversalCreateOptions, RequestOptions?>((_, options, request) =>
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, TransferReversalCreateOptions, RequestOptions?, CancellationToken>((_, options, request, _) =>
             {
                 reversal = options;
                 reversalRequest = request;
@@ -37,8 +38,9 @@ public sealed class StripeTransferClientTests
         stripeClient
             .Setup(c => c.CreateRefundAsync(
                 It.IsAny<RefundCreateOptions>(),
-                It.IsAny<RequestOptions?>()))
-            .Callback<RefundCreateOptions, RequestOptions?>((options, request) =>
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<RefundCreateOptions, RequestOptions?, CancellationToken>((options, request, _) =>
             {
                 refund = options;
                 refundRequest = request;
