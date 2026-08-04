@@ -26,10 +26,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.BookingId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoPaymentResponse();
+        return result.GetValueOrThrow().ToProtoPaymentResponse();
     }
 
     public override async Task<PaymentResponse> PayBoundCommission(
@@ -52,12 +49,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoPaymentResponse();
+        return result.GetValueOrThrow().ToProtoPaymentResponse();
     }
 
     public override async Task<CheckoutSessionResponse> CreateSetupSession(CreateSetupSessionRequest request, ServerCallContext context)
@@ -114,12 +106,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoCheckoutSession();
+        return result.GetValueOrThrow().ToProtoCheckoutSession();
     }
 
     public override async Task<FindHeldIntentResponse> FindHeldIntent(FindHeldIntentRequest request, ServerCallContext context)

@@ -1,15 +1,16 @@
 using Concertable.Payment.Application.DTOs;
-using FluentResults;
+using Concertable.Kernel.Functional;
+using Concertable.Payment.Contracts.Errors;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Mappers;
 
 internal static class PaymentIntentMappers
 {
-    public static Result<PaymentOutcome> ToPaymentResult(this PaymentIntent intent) =>
+    public static Result<PaymentOutcome, PaymentError> ToPaymentResult(this PaymentIntent intent) =>
         intent.Status is not ("succeeded" or "requires_action" or "requires_confirmation")
-            ? Result.Fail($"Payment failed with status: {intent.Status}")
-            : Result.Ok(new PaymentOutcome
+            ? Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.PaymentRejected())
+            : Result.Success<PaymentOutcome, PaymentError>(new PaymentOutcome
             {
                 RequiresAction = intent.Status is "requires_action" or "requires_confirmation",
                 ClientSecret = intent.ClientSecret,

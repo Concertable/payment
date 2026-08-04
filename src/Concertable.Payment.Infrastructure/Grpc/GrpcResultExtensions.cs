@@ -1,4 +1,5 @@
 using Concertable.Kernel.Errors;
+using Concertable.Kernel.Functional;
 using Concertable.Payment.Grpc;
 using Google.Protobuf;
 using Grpc.Core;
@@ -26,4 +27,11 @@ internal static class GrpcResultExtensions
             new Status(StatusCode.FailedPrecondition, definition.Message),
             trailers);
     }
+
+    public static TValue GetValueOrThrow<TValue, TError>(this Result<TValue, TError> result)
+        where TValue : notnull
+        where TError : IError =>
+        result.Match(
+            value => value,
+            error => throw error.ToRpcException());
 }

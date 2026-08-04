@@ -1,12 +1,13 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client;
 
 public interface IManagerPaymentClient
 {
-    Task<Result<PaymentOutcome>> PayAsync(
+    Task<Functional.Result<PaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -15,7 +16,7 @@ public interface IManagerPaymentClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
+    Task<Functional.Result<PaymentOutcome, PaymentError>> ChargeBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -23,6 +24,18 @@ public interface IManagerPaymentClient
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
+        Guid commissionBindingId,
+        string externalReference,
+        long expectedCommissionMinor,
+        long expectedPayerTotalMinor,
+        string? stripeSetupIntentId = null,
+        CancellationToken ct = default);
+
+    Task<Functional.Result<CheckoutSession, CommissionError>> CreateBoundCommissionHoldAsync(
+        Guid payerId,
+        long grossMinor,
+        Currency currency,
+        IDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
         long expectedCommissionMinor,
@@ -57,18 +70,6 @@ public interface IManagerPaymentClient
         Guid payerId,
         decimal amount,
         IDictionary<string, string> metadata,
-        CancellationToken ct = default);
-
-    Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
-        Guid payerId,
-        long grossMinor,
-        Currency currency,
-        IDictionary<string, string> metadata,
-        Guid commissionBindingId,
-        string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
-        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
     Task<string> FindHeldIntentAsync(

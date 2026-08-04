@@ -1,17 +1,18 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client;
 
 public interface ICommissionClient
 {
-    Task<Result<CommissionQuote>> PreviewAsync(
+    Task<Functional.Result<CommissionQuote, CommissionError>> PreviewCommissionAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default);
 
-    Task<Result<CommissionBinding>> CreateOrBindAsync(
+    Task<Functional.Result<CommissionBinding, CommissionError>> CreateOrBindCommissionAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -23,7 +24,7 @@ public interface ICommissionClient
         long? expectedPayerTotalMinor = null,
         CancellationToken ct = default);
 
-    Task<Result<CommissionQuote>> CalculateBoundAsync(
+    Task<Functional.Result<CommissionQuote, CommissionError>> CalculateBoundCommissionAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,

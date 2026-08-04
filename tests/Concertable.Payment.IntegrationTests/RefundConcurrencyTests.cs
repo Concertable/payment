@@ -1,7 +1,9 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Kernel.Functional;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
@@ -10,7 +12,6 @@ using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Repositories;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Testing.Integration;
-using FluentResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -54,7 +55,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Refund?>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, RefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new EscrowService(
@@ -75,7 +76,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
 
         Assert.Equal(1, results.Count(r => r.IsSuccess));
-        Assert.Equal(1, results.Count(r => r.IsFailed));
+        Assert.Equal(1, results.Count(r => r.IsFailure));
 
         stripe.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
@@ -121,7 +122,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Refund?>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, RefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new ManagerPaymentService(
@@ -143,7 +144,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
 
         Assert.Equal(1, results.Count(r => r.IsSuccess));
-        Assert.Equal(1, results.Count(r => r.IsFailed));
+        Assert.Equal(1, results.Count(r => r.IsFailure));
 
         stripe.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
@@ -171,7 +172,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var mock = new Mock<IPaymentManager>();
         mock
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Result.Ok(new Refund($"re_{Guid.NewGuid():N}")));
+            .ReturnsAsync(() => Result.Success<Refund, RefundError>(new Refund($"re_{Guid.NewGuid():N}")));
         return mock;
     }
 

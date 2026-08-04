@@ -26,10 +26,7 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
             command.PaymentMethodId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoPaymentResponse();
+        return result.GetValueOrThrow().ToProtoPaymentResponse();
     }
 
     public override async Task<CheckoutSessionResponse> CreatePaymentSession(CreatePaymentSessionRequest request, ServerCallContext context)

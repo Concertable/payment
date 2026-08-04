@@ -1,4 +1,5 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure;
@@ -27,8 +28,8 @@ public sealed class CommissionServiceTests
     {
         var result = await BuildService().PreviewAsync(GrossMinor, (Currency)840);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "currency_mismatch");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_currency_mismatch", error.Definition.Code);
     }
 
     [Fact]
@@ -39,10 +40,11 @@ public sealed class CommissionServiceTests
         var result = await BuildService().PreviewAsync(GrossMinor, Currency.Gbp);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(configurationId, result.Value.CommissionConfigurationId);
-        Assert.Equal(expected.PayeeGrossMinor, result.Value.GrossMinor);
-        Assert.Equal(expected.CommissionGrossMinor, result.Value.CommissionMinor);
-        Assert.Equal(expected.PayerTotalMinor, result.Value.PayerTotalMinor);
+        Assert.True(result.TryGetValue(out var quote));
+        Assert.Equal(configurationId, quote.CommissionConfigurationId);
+        Assert.Equal(expected.PayeeGrossMinor, quote.GrossMinor);
+        Assert.Equal(expected.CommissionGrossMinor, quote.CommissionMinor);
+        Assert.Equal(expected.PayerTotalMinor, quote.PayerTotalMinor);
     }
 
     [Fact]
@@ -51,8 +53,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CreateOrBindAsync(
             "booking:7", "payer:1", Currency.Gbp, Guid.NewGuid(), null, null, null, null, null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "pricing_changed");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_pricing_changed", error.Definition.Code);
     }
 
     [Fact]
@@ -67,7 +69,8 @@ public sealed class CommissionServiceTests
             "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null, GrossMinor, 500, 5500);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(existing.Id, result.Value.BindingId);
+        Assert.True(result.TryGetValue(out var binding));
+        Assert.Equal(existing.Id, binding.BindingId);
     }
 
     [Fact]
@@ -81,8 +84,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CreateOrBindAsync(
             "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_2", null, null, null, null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "commission_binding_mismatch");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_binding_mismatch", error.Definition.Code);
     }
 
     [Fact]
@@ -112,8 +115,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CalculateBoundAsync(
             id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, null, null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "commission_binding_not_found");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_binding_not_found", error.Definition.Code);
     }
 
     [Fact]
@@ -127,8 +130,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CalculateBoundAsync(
             binding.Id, "booking:OTHER", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, "pi_1", null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "commission_binding_mismatch");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_binding_mismatch", error.Definition.Code);
     }
 
     [Fact]
@@ -142,8 +145,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CalculateBoundAsync(
             binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 500, 5500, "pi_2", null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "commission_binding_intent_mismatch");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_intent_mismatch", error.Definition.Code);
     }
 
     [Fact]
@@ -160,9 +163,10 @@ public sealed class CommissionServiceTests
             expected.CommissionGrossMinor, expected.PayerTotalMinor, "pi_1", null);
 
         Assert.True(result.IsSuccess);
-        Assert.Same(binding, result.Value.Binding);
-        Assert.Equal(Terms(), result.Value.Terms);
-        Assert.Equal(expected, result.Value.Calculation);
+        Assert.True(result.TryGetValue(out var boundCommission));
+        Assert.Same(binding, boundCommission.Binding);
+        Assert.Equal(Terms(), boundCommission.Terms);
+        Assert.Equal(expected, boundCommission.Calculation);
     }
 
     [Fact]
@@ -176,8 +180,8 @@ public sealed class CommissionServiceTests
         var result = await BuildService().CalculateBoundAsync(
             binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 1, 2, "pi_1", null);
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "pricing_changed");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal("payment.commission_pricing_changed", error.Definition.Code);
     }
 
     [Fact]
