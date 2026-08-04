@@ -1,9 +1,10 @@
+using Concertable.Kernel.Functional;
 using Concertable.Payment.Client.Enums;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class PayoutAccountClient : IPayoutAccountClient
+internal sealed class PayoutAccountClient : IPayoutAccountOperationsClient, IPayoutAccountClient
 {
     private readonly Proto.PayoutAccount.PayoutAccountClient client;
 
@@ -12,31 +13,53 @@ internal sealed class PayoutAccountClient : IPayoutAccountClient
         this.client = client;
     }
 
-    public async Task<string?> GetOnboardingLinkAsync(Guid ownerId, CancellationToken ct = default)
+    public async Task<Option<string>> GetOnboardingLinkAsync(
+        Guid ownerId,
+        CancellationToken ct = default)
     {
         var response = await client.GetOnboardingLinkAsync(Request(ownerId), cancellationToken: ct);
-        return string.IsNullOrEmpty(response.Url) ? null : response.Url;
+        return string.IsNullOrEmpty(response.Url)
+            ? Option.None<string>()
+            : Option.Some(response.Url);
     }
 
-    public async Task<PayoutAccountStatus> GetAccountStatusAsync(Guid ownerId, CancellationToken ct = default)
+    public async Task<PayoutAccountStatus> GetAccountStatusAsync(
+        Guid ownerId,
+        CancellationToken ct = default)
     {
         var response = await client.GetAccountStatusAsync(Request(ownerId), cancellationToken: ct);
         return response.Status.ToStatus();
     }
 
-    public async Task<SavedCard?> GetPaymentMethodAsync(Guid ownerId, CancellationToken ct = default)
+    public async Task<Option<SavedCard>> GetPaymentMethodAsync(
+        Guid ownerId,
+        CancellationToken ct = default)
     {
         var response = await client.GetPaymentMethodAsync(Request(ownerId), cancellationToken: ct);
         return response.HasCard
-            ? new SavedCard(response.Brand, response.Last4, response.ExpMonth, response.ExpYear)
-            : null;
+            ? Option.Some(new SavedCard(response.Brand, response.Last4, response.ExpMonth, response.ExpYear))
+            : Option.None<SavedCard>();
     }
 
-    public async Task<string?> CreateSetupIntentAsync(Guid ownerId, CancellationToken ct = default)
+    public async Task<Option<string>> CreateSetupIntentAsync(
+        Guid ownerId,
+        CancellationToken ct = default)
     {
         var response = await client.CreateSetupIntentAsync(Request(ownerId), cancellationToken: ct);
-        return string.IsNullOrEmpty(response.ClientSecret) ? null : response.ClientSecret;
+        return string.IsNullOrEmpty(response.ClientSecret)
+            ? Option.None<string>()
+            : Option.Some(response.ClientSecret);
     }
 
-    private static Proto.PayoutOwnerRequest Request(Guid ownerId) => new() { OwnerId = ownerId.ToString() };
+    async Task<string?> IPayoutAccountClient.GetOnboardingLinkAsync(Guid ownerId, CancellationToken ct) =>
+        (await GetOnboardingLinkAsync(ownerId, ct)).Match<string?>(value => value, () => null);
+
+    async Task<SavedCard?> IPayoutAccountClient.GetPaymentMethodAsync(Guid ownerId, CancellationToken ct) =>
+        (await GetPaymentMethodAsync(ownerId, ct)).Match<SavedCard?>(value => value, () => null);
+
+    async Task<string?> IPayoutAccountClient.CreateSetupIntentAsync(Guid ownerId, CancellationToken ct) =>
+        (await CreateSetupIntentAsync(ownerId, ct)).Match<string?>(value => value, () => null);
+
+    private static Proto.PayoutOwnerRequest Request(Guid ownerId) =>
+        new() { OwnerId = ownerId.ToString() };
 }

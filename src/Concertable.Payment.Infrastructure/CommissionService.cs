@@ -9,22 +9,25 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class CommissionService : ICommissionService
 {
     private readonly ICommissionBindingRepository bindingRepository;
+    private readonly ICommissionConfigurationRepository configurationRepository;
     private readonly CommissionCalculator calculator;
-    private readonly PlatformCommissionOptions options;
-    private readonly PlatformCommissionTaxOptions taxOptions;
+    private readonly Guid currentConfigurationId;
+    private readonly Percentage vatRate;
     private readonly TimeProvider timeProvider;
 
     public CommissionService(
         ICommissionBindingRepository bindingRepository,
+        ICommissionConfigurationRepository configurationRepository,
         CommissionCalculator calculator,
         IOptions<PlatformCommissionOptions> options,
         IOptions<PlatformCommissionTaxOptions> taxOptions,
         TimeProvider timeProvider)
     {
         this.bindingRepository = bindingRepository;
+        this.configurationRepository = configurationRepository;
         this.calculator = calculator;
-        this.options = options.Value;
-        this.taxOptions = taxOptions.Value;
+        this.currentConfigurationId = options.Value.ConfigurationId;
+        this.vatRate = Percentage.From(taxOptions.Value.VatRatePercentage);
         this.timeProvider = timeProvider;
     }
 
@@ -58,8 +61,11 @@ internal sealed class CommissionService : ICommissionService
         if (currency != terms.Currency)
             return Result.Failure<CommissionBinding, CommissionError>(CommissionError.CurrencyMismatch);
 
+        var configuration = await GetCurrentConfigurationAsync(ct);
+        var terms = configuration.Terms;
         var validation = ValidateExpected(
             terms,
+            currency,
             grossMinor,
             expectedCommissionMinor,
             expectedPayerTotalMinor);
@@ -68,7 +74,8 @@ internal sealed class CommissionService : ICommissionService
 
         var binding = await bindingRepository.GetOrCreateAsync(
             CommissionBindingEntity.Create(
-                terms,
+                configuration,
+                currency,
                 externalReference,
                 payerReference,
                 timeProvider.GetUtcNow(),
@@ -79,6 +86,7 @@ internal sealed class CommissionService : ICommissionService
         return ExistingBinding(
             binding,
             terms,
+            currency,
             externalReference,
             payerReference,
             stripePaymentIntentId,
@@ -92,8 +100,6 @@ internal sealed class CommissionService : ICommissionService
         string payerReference,
         Currency currency,
         long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripePaymentIntentId,
         string? stripeSetupIntentId,
         CancellationToken ct = default)
@@ -121,12 +127,12 @@ internal sealed class CommissionService : ICommissionService
         return Result.Success<BoundCommission, CommissionError>(new BoundCommission(binding, terms, calculation));
     }
 
-    public async Task<string?> FindBoundPaymentIntentAsync(
+    public async Task<Option<string>> FindBoundPaymentIntentAsync(
         Guid bindingId,
         CancellationToken ct = default)
     {
         var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
-        return binding?.StripePaymentIntentId;
+        return Option.FromNullable(binding?.StripePaymentIntentId);
     }
 
     public void BindPaymentIntent(
@@ -134,16 +140,17 @@ internal sealed class CommissionService : ICommissionService
         string paymentIntentId) =>
         binding.BindPaymentIntent(paymentIntentId);
 
-    private CommissionTerms CurrentTerms() =>
-        new(
-            options.ConfigurationId,
-            options.Version,
-            Enum.Parse<Currency>(options.Currency, ignoreCase: true),
-            options.RateBasisPoints,
-            taxOptions.VatRateBasisPoints);
+    private async Task<CommissionConfigurationEntity> GetCurrentConfigurationAsync(
+        CancellationToken ct)
+    {
+        var configuration = await configurationRepository.GetByIdAsync(currentConfigurationId, ct);
+        return configuration ?? throw new InvalidOperationException(
+            "Configured commission revision has not been initialized.");
+    }
 
     private UnitResult<CommissionError> ValidateExpected(
         CommissionTerms terms,
+        Currency currency,
         long? grossMinor,
         long? expectedCommissionMinor,
         long? expectedPayerTotalMinor)
@@ -156,7 +163,7 @@ internal sealed class CommissionService : ICommissionService
         if (expectedCommissionMinor is null || expectedPayerTotalMinor is null)
             return UnitResult.Failure(CommissionError.ExpectedAmountsInvalid);
 
-        var calculation = Calculate(terms, grossMinor.Value);
+        var calculation = Calculate(terms, grossMinor.Value, currency);
         return calculation.CommissionGrossMinor == expectedCommissionMinor.Value &&
                calculation.PayerTotalMinor == expectedPayerTotalMinor.Value
             ? UnitResult.Success<CommissionError>()
@@ -166,6 +173,7 @@ internal sealed class CommissionService : ICommissionService
     private Result<CommissionBinding, CommissionError> ExistingBinding(
         CommissionBindingEntity binding,
         CommissionTerms currentTerms,
+        Currency currency,
         string externalReference,
         string payerReference,
         string? stripePaymentIntentId,
@@ -174,6 +182,7 @@ internal sealed class CommissionService : ICommissionService
     {
         if (!binding.Matches(
                 currentTerms.ConfigurationId,
+                currency,
                 externalReference,
                 payerReference,
                 stripePaymentIntentId,
@@ -184,17 +193,18 @@ internal sealed class CommissionService : ICommissionService
         return Result.Success<CommissionBinding, CommissionError>(ToBinding(
             binding,
             terms,
-            grossMinor is null ? null : Calculate(terms, grossMinor.Value)));
+            grossMinor is null ? null : Calculate(terms, grossMinor.Value, binding.Currency)));
     }
 
-    private CommissionCalculation Calculate(
+    private Concertable.Payment.Domain.CommissionCalculation Calculate(
         CommissionTerms terms,
-        long grossMinor) =>
+        long grossMinor,
+        Currency currency) =>
         calculator.Calculate(
             grossMinor,
-            terms.Currency,
-            terms.RateBasisPoints,
-            terms.VatRateBasisPoints);
+            currency,
+            terms,
+            vatRate);
 
     private static bool IntentMatches(string? bound, string? supplied) =>
         bound is null || string.Equals(bound, supplied, StringComparison.Ordinal);
@@ -202,23 +212,21 @@ internal sealed class CommissionService : ICommissionService
     private static CommissionBinding ToBinding(
         CommissionBindingEntity binding,
         CommissionTerms terms,
-        CommissionCalculation? calculation) =>
+        Concertable.Payment.Domain.CommissionCalculation? calculation) =>
         new(
             binding.Id,
             terms.ConfigurationId,
-            terms.Version,
-            terms.RateBasisPoints,
-            terms.Currency,
-            calculation is null ? null : ToQuote(terms, calculation.Value));
+            terms.Rate.Value,
+            binding.Currency,
+            calculation is null ? null : ToCalculation(terms, calculation.Value));
 
-    private static CommissionQuote ToQuote(
+    private static Concertable.Payment.Contracts.CommissionCalculation ToCalculation(
         CommissionTerms terms,
-        CommissionCalculation calculation) =>
+        Concertable.Payment.Domain.CommissionCalculation calculation) =>
         new(
             terms.ConfigurationId,
-            terms.Version,
-            terms.RateBasisPoints,
-            terms.Currency,
+            terms.Rate.Value,
+            calculation.Currency,
             calculation.PayeeGrossMinor,
             calculation.CommissionGrossMinor,
             calculation.PayerTotalMinor);

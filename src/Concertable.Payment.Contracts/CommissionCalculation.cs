@@ -2,10 +2,9 @@ using Concertable.Kernel.ValueObjects;
 
 namespace Concertable.Payment.Contracts;
 
-public sealed record CommissionQuote(
+public sealed record CommissionCalculation(
     Guid CommissionConfigurationId,
-    string ConfigurationVersion,
-    int RateBasisPoints,
+    decimal RatePercentage,
     Currency Currency,
     long GrossMinor,
     long CommissionMinor,

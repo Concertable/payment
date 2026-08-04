@@ -26,8 +26,6 @@ public interface IManagerPaymentClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 

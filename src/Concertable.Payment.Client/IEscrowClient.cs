@@ -26,8 +26,6 @@ public interface IEscrowClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
@@ -48,8 +46,6 @@ public interface IEscrowClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         CancellationToken ct = default);
 
     Task<Functional.Result<Functional.Option<Transfer>, ReleaseError>> ReleaseAsync(

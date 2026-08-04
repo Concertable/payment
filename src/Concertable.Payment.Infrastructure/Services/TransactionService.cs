@@ -35,7 +35,10 @@ internal sealed class TransactionService : ITransactionService
     {
         var entity = await purchaseRepository.GetByPaymentIntentIdAsync(paymentIntentId);
 
-        if (entity is null || !entity.Complete())
+        if (entity is null)
+            return;
+
+        if (entity.Complete().IsFailure)
             return;
 
         if (entity is SettlementTransactionEntity settlement)
