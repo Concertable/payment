@@ -57,6 +57,7 @@ if (builder.Environment.EnvironmentName == "E2E")
 
 services.AddScoped<GrpcExceptionInterceptor>();
 services.AddGrpc(options => options.Interceptors.Add<GrpcExceptionInterceptor>());
+services.AddProblemDetails();
 services.AddPaymentControllers();
 
 services.AddAzureServiceBusTransport(
@@ -96,7 +97,6 @@ services.AddAuthorization(opts =>
 });
 
 services.AddExceptionHandler<GlobalExceptionHandler>();
-services.AddProblemDetails();
 
 var app = builder.Build();
 
