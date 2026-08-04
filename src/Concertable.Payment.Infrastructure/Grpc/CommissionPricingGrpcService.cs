@@ -1,3 +1,4 @@
+using System.Globalization;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Grpc;
@@ -14,7 +15,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         this.commissionService = commissionService;
     }
 
-    public override async Task<CommissionQuoteResponse> PreviewCommission(
+    public override async Task<CommissionCalculationResponse> PreviewCommission(
         PreviewCommissionRequest request,
         ServerCallContext context)
     {
@@ -46,7 +47,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         return result.GetValueOrThrow().ToProto();
     }
 
-    public override async Task<CommissionQuoteResponse> CalculateBoundCommission(
+    public override async Task<CommissionCalculationResponse> CalculateBoundCommission(
         CalculateBoundCommissionRequest request,
         ServerCallContext context)
     {
@@ -56,8 +57,6 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.PayerReference,
             request.Currency.ToDomainCurrency(),
             request.GrossMinor,
-            request.ExpectedCommissionMinor,
-            request.ExpectedPayerTotalMinor,
             EmptyToNull(request.StripePaymentIntentId),
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);
@@ -79,27 +78,25 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
 
 internal static class CommissionPricingGrpcMappers
 {
-    public static CommissionQuoteResponse ToProto(this CommissionQuote quote) =>
+    public static CommissionCalculationResponse ToProto(
+        this CommissionCalculation calculation) =>
         new()
         {
-            CommissionConfigurationId = quote.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = quote.ConfigurationVersion,
-            RateBasisPoints = quote.RateBasisPoints,
-            Currency = quote.Currency.ToProtoCurrency(),
-            GrossMinor = quote.GrossMinor,
-            CommissionMinor = quote.CommissionMinor,
-            PayerTotalMinor = quote.PayerTotalMinor
+            CommissionConfigurationId = calculation.CommissionConfigurationId.ToString(),
+            RatePercentage = calculation.RatePercentage.ToString(CultureInfo.InvariantCulture),
+            Currency = calculation.Currency.ToProtoCurrency(),
+            GrossMinor = calculation.GrossMinor,
+            CommissionMinor = calculation.CommissionMinor,
+            PayerTotalMinor = calculation.PayerTotalMinor
         };
 
-    public static CommissionBindingResponse ToProto(
-        this CommissionBinding binding) =>
+    public static CommissionBindingResponse ToProto(this CommissionBinding binding) =>
         new()
         {
             BindingId = binding.BindingId.ToString(),
             CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = binding.ConfigurationVersion,
-            RateBasisPoints = binding.RateBasisPoints,
+            RatePercentage = binding.RatePercentage.ToString(CultureInfo.InvariantCulture),
             Currency = binding.Currency.ToProtoCurrency(),
-            Quote = binding.Quote?.ToProto()
+            Calculation = binding.Calculation?.ToProto()
         };
 }

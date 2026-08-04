@@ -20,8 +20,6 @@ internal sealed record BoundCommissionDepositCommand(
     int BookingId,
     Guid CommissionBindingId,
     string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor,
     string? StripeSetupIntentId);
 
 internal sealed record CaptureCommand(
@@ -38,9 +36,7 @@ internal sealed record BoundCommissionCaptureCommand(
     string PaymentIntentId,
     int BookingId,
     Guid CommissionBindingId,
-    string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor);
+    string ExternalReference);
 
 internal static class EscrowRequestMappers
 {
@@ -63,8 +59,6 @@ internal static class EscrowRequestMappers
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
         request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor,
         EmptyToNull(request.StripeSetupIntentId));
 
     public static CaptureCommand ToCommand(this CaptureRequest request) => new(
@@ -83,9 +77,7 @@ internal static class EscrowRequestMappers
         request.BookingId,
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
-        request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor);
+        request.ExternalReference);
 
     private static string? EmptyToNull(string value) =>
         string.IsNullOrEmpty(value) ? null : value;

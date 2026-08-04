@@ -118,9 +118,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("RateBasisPoints")
-                        .HasColumnType("int");
-
                     b.Property<string>("StripePaymentIntentId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -129,15 +126,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int>("VatRateBasisPoints")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Version")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("CommissionConfigurationId");
 
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique()
@@ -150,13 +141,27 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("ExternalReference", "PayerReference")
                         .IsUnique();
 
-                    b.ToTable("CommissionBindings", "payment", t =>
+                    b.ToTable("CommissionBindings", "payment");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("RatePercentage");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CommissionConfigurations", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_CommissionBindings_Currency", "[Currency] = 'Gbp'");
-
-                            t.HasCheckConstraint("CK_CommissionBindings_RateBasisPoints", "[RateBasisPoints] >= 1 AND [RateBasisPoints] <= 10000");
-
-                            t.HasCheckConstraint("CK_CommissionBindings_VatRateBasisPoints", "[VatRateBasisPoints] >= 0 AND [VatRateBasisPoints] <= 10000");
+                            t.HasCheckConstraint("CK_CommissionConfigurations_RatePercentage", "[RatePercentage] > 0 AND [RatePercentage] <= 100");
                         });
                 });
 
@@ -187,8 +192,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("CommissionVatMinor")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("CommissionVatRateBasisPoints")
-                        .HasColumnType("int");
+                    b.Property<decimal>("CommissionVatRate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -525,8 +532,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("CommissionVatMinor")
                         .HasColumnType("bigint");
 
-                    b.Property<int>("CommissionVatRateBasisPoints")
-                        .HasColumnType("int");
+                    b.Property<decimal>("CommissionVatRate")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)")
+                        .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<string>("Currency")
                         .IsRequired()
@@ -571,6 +580,17 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnName("ContextId");
 
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionBindingEntity", b =>
+                {
+                    b.HasOne("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", "CommissionConfiguration")
+                        .WithMany()
+                        .HasForeignKey("CommissionConfigurationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CommissionConfiguration");
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.EscrowEntity", b =>

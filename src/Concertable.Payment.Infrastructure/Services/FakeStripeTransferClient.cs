@@ -1,5 +1,4 @@
 using Concertable.Payment.Application.DTOs;
-using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Kernel.Functional;
 using Concertable.Payment.Contracts.Errors;

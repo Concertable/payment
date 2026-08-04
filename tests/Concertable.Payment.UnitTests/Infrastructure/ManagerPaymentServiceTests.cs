@@ -1,3 +1,4 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Kernel.Functional;
 using Concertable.Payment.Contracts.Errors;
@@ -6,6 +7,7 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
@@ -153,7 +155,7 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync(Option.None<string>());
         commissionService
             .Setup(c => c.CalculateBoundAsync(
                 bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Currency>(),
@@ -166,8 +168,7 @@ public sealed class ManagerPaymentServiceTests
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
             payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: null);
+            bindingId, "booking:7", stripeSetupIntentId: null);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.TryGetValue(out var session));
@@ -188,7 +189,7 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("pi_hold_bound");
+            .ReturnsAsync(Option.Some("pi_hold_bound"));
         string? suppliedPaymentIntent = "sentinel";
         commissionService
             .Setup(c => c.CalculateBoundAsync(
@@ -204,8 +205,7 @@ public sealed class ManagerPaymentServiceTests
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
             payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: null);
+            bindingId, "booking:7", stripeSetupIntentId: null);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.TryGetValue(out var session));
@@ -227,7 +227,7 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("pi_hold_bound");
+            .ReturnsAsync(Option.Some("pi_hold_bound"));
         commissionService
             .Setup(c => c.CalculateBoundAsync(
                 bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Currency>(),
@@ -237,8 +237,7 @@ public sealed class ManagerPaymentServiceTests
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
             payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: "seti_different");
+            bindingId, "booking:7", stripeSetupIntentId: "seti_different");
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_intent_mismatch", error.Definition.Code);
@@ -316,6 +315,26 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
+    public async Task RefundBoundCommissionByBookingIdAsync_ProviderFailureAfterReservationTransition_ThrowsInvariantFailure()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback(() => settlement.ReleaseRefund(Assert.Single(settlement.Refunds)))
+            .ReturnsAsync(Result<Refund, PaymentError>.Failure(PaymentError.Declined()));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp));
+
+        Assert.Equal("Settlement refund reservation could not be released.", exception.Message);
+    }
+
+    [Fact]
     public async Task RefundBoundCommissionByBookingIdAsync_ExceedsRemainingGross_Fails()
     {
         var sut = SutWithFee(0m);
@@ -359,7 +378,14 @@ public sealed class ManagerPaymentServiceTests
             payerId,
             payeeId,
             "pi_settlement",
-            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+            new Concertable.Payment.Domain.CommissionCalculation(
+                Currency.Gbp,
+                5000,
+                1000,
+                800,
+                200,
+                Percentage.From(20m),
+                6000),
             TransactionStatus.Pending,
             bookingId: 7,
             commissionBindingId: Guid.NewGuid());
@@ -369,12 +395,23 @@ public sealed class ManagerPaymentServiceTests
 
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)
     {
-        var terms = new CommissionTerms(Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, 2000);
+        var configuration = CommissionConfigurationEntity.Create(
+            Guid.NewGuid(),
+            Percentage.From(20m),
+            DateTimeOffset.UtcNow);
+        var terms = configuration.Terms;
         var binding = CommissionBindingEntity.Create(
-            terms, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
+            configuration, Currency.Gbp, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
-        var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000);
+        var calculation = new Concertable.Payment.Domain.CommissionCalculation(
+            Currency.Gbp,
+            5000,
+            1000,
+            800,
+            200,
+            Percentage.From(20m),
+            6000);
         return new BoundCommission(binding, terms, calculation);
     }
 

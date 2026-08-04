@@ -24,8 +24,6 @@ internal interface IEscrowService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
@@ -46,8 +44,6 @@ internal interface IEscrowService
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         CancellationToken ct = default);
 
     Task<Result<Transfer, ReleaseError>> ReleaseAsync(int escrowId, CancellationToken ct = default);
@@ -73,5 +69,5 @@ internal interface IEscrowService
         string? reason = null,
         CancellationToken ct = default);
 
-    Task<EscrowDto?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Option<EscrowDto>> GetByBookingIdAsync(int bookingId, CancellationToken ct = default);
 }
