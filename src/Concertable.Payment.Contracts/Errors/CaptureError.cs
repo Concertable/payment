@@ -3,16 +3,18 @@ using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
 
-[Union]
-public partial record CaptureError : IError
+[Union(EnableImplicitConversions = false)]
+public abstract partial record CaptureError : IError
 {
-    partial record PaymentFailure(PaymentError Error);
-    partial record CommissionFailure(CommissionError Error);
+    public abstract ErrorDefinition Definition { get; }
 
-    public static CaptureError Payment(PaymentError error) => new PaymentFailure(error);
-    public static CaptureError Commission(CommissionError error) => new CommissionFailure(error);
+    public partial record PaymentFailure(PaymentError Error)
+    {
+        public override ErrorDefinition Definition => Error.Definition;
+    }
 
-    public ErrorDefinition Definition => Match(
-        paymentFailure => paymentFailure.Error.Definition,
-        commissionFailure => commissionFailure.Error.Definition);
+    public partial record CommissionFailure(CommissionError Error)
+    {
+        public override ErrorDefinition Definition => Error.Definition;
+    }
 }

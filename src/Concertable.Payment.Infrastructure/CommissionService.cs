@@ -1,6 +1,7 @@
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
-using FluentResults;
+using Concertable.Kernel.Functional;
+using Concertable.Payment.Contracts.Errors;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -27,18 +28,18 @@ internal sealed class CommissionService : ICommissionService
         this.timeProvider = timeProvider;
     }
 
-    public Task<Result<CommissionQuote>> PreviewAsync(
+    public Task<Result<CommissionQuote, CommissionError>> PreviewAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default)
     {
         var terms = CurrentTerms();
         return Task.FromResult(currency != terms.Currency
-            ? Result.Fail<CommissionQuote>("currency_mismatch")
-            : Result.Ok(ToQuote(terms, Calculate(terms, grossMinor))));
+            ? Result.Failure<CommissionQuote, CommissionError>(CommissionError.CurrencyMismatch)
+            : Result.Success<CommissionQuote, CommissionError>(ToQuote(terms, Calculate(terms, grossMinor))));
     }
 
-    public async Task<Result<CommissionBinding>> CreateOrBindAsync(
+    public async Task<Result<CommissionBinding, CommissionError>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -51,19 +52,19 @@ internal sealed class CommissionService : ICommissionService
         CancellationToken ct = default)
     {
         if (reviewedCommissionConfigurationId != options.ConfigurationId)
-            return Result.Fail("pricing_changed");
+            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.PricingChanged);
 
         var terms = CurrentTerms();
         if (currency != terms.Currency)
-            return Result.Fail("currency_mismatch");
+            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.CurrencyMismatch);
 
         var validation = ValidateExpected(
             terms,
             grossMinor,
             expectedCommissionMinor,
             expectedPayerTotalMinor);
-        if (validation.IsFailed)
-            return validation.ToResult<CommissionBinding>();
+        if (validation.TryGetError(out var validationError))
+            return Result.Failure<CommissionBinding, CommissionError>(validationError);
 
         var binding = await bindingRepository.GetOrCreateAsync(
             CommissionBindingEntity.Create(
@@ -85,7 +86,7 @@ internal sealed class CommissionService : ICommissionService
             grossMinor);
     }
 
-    public async Task<Result<BoundCommission>> CalculateBoundAsync(
+    public async Task<Result<BoundCommission, CommissionError>> CalculateBoundAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
@@ -99,25 +100,25 @@ internal sealed class CommissionService : ICommissionService
     {
         var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
         if (binding is null)
-            return Result.Fail("commission_binding_not_found");
+            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingNotFound);
 
         if (!string.Equals(binding.ExternalReference, externalReference, StringComparison.Ordinal) ||
             !string.Equals(binding.PayerReference, payerReference, StringComparison.Ordinal))
-            return Result.Fail("commission_binding_mismatch");
+            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingMismatch);
 
         var terms = binding.Terms;
         if (currency != terms.Currency)
-            return Result.Fail("currency_mismatch");
+            return Result.Failure<BoundCommission, CommissionError>(CommissionError.CurrencyMismatch);
         if (!IntentMatches(binding.StripePaymentIntentId, stripePaymentIntentId) ||
             !IntentMatches(binding.StripeSetupIntentId, stripeSetupIntentId))
-            return Result.Fail("commission_binding_intent_mismatch");
+            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingIntentMismatch);
 
         var calculation = Calculate(terms, grossMinor);
         if (calculation.CommissionGrossMinor != expectedCommissionMinor ||
             calculation.PayerTotalMinor != expectedPayerTotalMinor)
-            return Result.Fail("pricing_changed");
+            return Result.Failure<BoundCommission, CommissionError>(CommissionError.PricingChanged);
 
-        return Result.Ok(new BoundCommission(binding, terms, calculation));
+        return Result.Success<BoundCommission, CommissionError>(new BoundCommission(binding, terms, calculation));
     }
 
     public async Task<string?> FindBoundPaymentIntentAsync(
@@ -141,7 +142,7 @@ internal sealed class CommissionService : ICommissionService
             options.RateBasisPoints,
             taxOptions.VatRateBasisPoints);
 
-    private Result ValidateExpected(
+    private UnitResult<CommissionError> ValidateExpected(
         CommissionTerms terms,
         long? grossMinor,
         long? expectedCommissionMinor,
@@ -149,20 +150,20 @@ internal sealed class CommissionService : ICommissionService
     {
         if (grossMinor is null)
             return expectedCommissionMinor is null && expectedPayerTotalMinor is null
-                ? Result.Ok()
-                : Result.Fail("Expected amounts require a gross amount.");
+                ? UnitResult.Success<CommissionError>()
+                : UnitResult.Failure(CommissionError.ExpectedAmountsInvalid);
 
         if (expectedCommissionMinor is null || expectedPayerTotalMinor is null)
-            return Result.Fail("Expected commission and payer total are required when gross is supplied.");
+            return UnitResult.Failure(CommissionError.ExpectedAmountsInvalid);
 
         var calculation = Calculate(terms, grossMinor.Value);
         return calculation.CommissionGrossMinor == expectedCommissionMinor.Value &&
                calculation.PayerTotalMinor == expectedPayerTotalMinor.Value
-            ? Result.Ok()
-            : Result.Fail("pricing_changed");
+            ? UnitResult.Success<CommissionError>()
+            : UnitResult.Failure(CommissionError.PricingChanged);
     }
 
-    private Result<CommissionBinding> ExistingBinding(
+    private Result<CommissionBinding, CommissionError> ExistingBinding(
         CommissionBindingEntity binding,
         CommissionTerms currentTerms,
         string externalReference,
@@ -177,10 +178,10 @@ internal sealed class CommissionService : ICommissionService
                 payerReference,
                 stripePaymentIntentId,
                 stripeSetupIntentId))
-            return Result.Fail("commission_binding_mismatch");
+            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.BindingMismatch);
 
         var terms = binding.Terms;
-        return Result.Ok(ToBinding(
+        return Result.Success<CommissionBinding, CommissionError>(ToBinding(
             binding,
             terms,
             grossMinor is null ? null : Calculate(terms, grossMinor.Value)));

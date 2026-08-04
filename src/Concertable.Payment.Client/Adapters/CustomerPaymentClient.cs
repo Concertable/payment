@@ -2,9 +2,10 @@ using Concertable.Kernel.Exceptions;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
@@ -17,7 +18,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public async Task<Functional.Result<PaymentOutcome, PaymentError>> PurchaseAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
@@ -39,11 +40,11 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
             };
             request.Metadata.Add(metadata);
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
+            return Functional.Result.Success<PaymentOutcome, PaymentError>(response.ToPaymentOutcome());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<PaymentOutcome, PaymentError>(ex.ToPaymentError());
         }
     }
 

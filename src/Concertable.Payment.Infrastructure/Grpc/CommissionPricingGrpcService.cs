@@ -23,12 +23,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.Currency.ToDomainCurrency(),
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.GetValueOrThrow().ToProto();
     }
 
     public override async Task<CommissionBindingResponse> CreateOrBindCommission(
@@ -48,12 +43,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.HasExpectedPayerTotalMinor ? request.ExpectedPayerTotalMinor : null,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.GetValueOrThrow().ToProto();
     }
 
     public override async Task<CommissionQuoteResponse> CalculateBoundCommission(
@@ -72,19 +62,15 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
+        var commission = result.GetValueOrThrow();
         return new CommissionQuote(
-            result.Value.Terms.ConfigurationId,
-            result.Value.Terms.Version,
-            result.Value.Terms.RateBasisPoints,
-            result.Value.Terms.Currency,
-            result.Value.Calculation.PayeeGrossMinor,
-            result.Value.Calculation.CommissionGrossMinor,
-            result.Value.Calculation.PayerTotalMinor).ToProto();
+            commission.Terms.ConfigurationId,
+            commission.Terms.Version,
+            commission.Terms.RateBasisPoints,
+            commission.Terms.Currency,
+            commission.Calculation.PayeeGrossMinor,
+            commission.Calculation.CommissionGrossMinor,
+            commission.Calculation.PayerTotalMinor).ToProto();
     }
 
     private static string? EmptyToNull(string value) =>

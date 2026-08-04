@@ -1,11 +1,12 @@
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client;
 
 public interface ICustomerPaymentClient
 {
-    Task<Result<PaymentOutcome>> PayAsync(
+    Task<Functional.Result<PaymentOutcome, PaymentError>> PurchaseAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
