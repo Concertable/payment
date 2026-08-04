@@ -1,12 +1,13 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client;
 
 public interface IEscrowClient
 {
-    Task<Result<EscrowDeposit>> DepositAsync(
+    Task<Functional.Result<EscrowDeposit, DepositError>> CreateDepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -15,7 +16,7 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> DepositBoundCommissionAsync(
+    Task<Functional.Result<EscrowDeposit, DepositError>> CreateBoundCommissionDepositAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -30,7 +31,7 @@ public interface IEscrowClient
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> CaptureAsync(
+    Task<Functional.Result<EscrowDeposit, CaptureError>> CaptureDepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -38,7 +39,7 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> CaptureBoundCommissionAsync(
+    Task<Functional.Result<EscrowDeposit, CaptureError>> CaptureBoundCommissionDepositAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -51,11 +52,15 @@ public interface IEscrowClient
         long expectedPayerTotalMinor,
         CancellationToken ct = default);
 
-    Task<Result<Transfer?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Functional.Result<Functional.Option<Transfer>, ReleaseError>> ReleaseAsync(
+        int bookingId,
+        CancellationToken ct = default);
 
-    Task<Result<Refund?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
+    Task<Functional.Result<Functional.Option<Refund>, RefundError>> RefundAsync(
+        int bookingId,
+        CancellationToken ct = default);
 
-    Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
+    Task<Functional.Result<Functional.Option<Refund>, RefundError>> RefundBoundCommissionAsync(
         int bookingId,
         long grossMinor,
         Currency currency,

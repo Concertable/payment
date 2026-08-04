@@ -1,8 +1,9 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
@@ -15,7 +16,7 @@ internal sealed class CommissionClient : ICommissionClient
         this.client = client;
     }
 
-    public async Task<Result<CommissionQuote>> PreviewAsync(
+    public async Task<Functional.Result<CommissionQuote, CommissionError>> PreviewCommissionAsync(
         long grossMinor,
         Currency currency,
         CancellationToken ct = default)
@@ -29,15 +30,15 @@ internal sealed class CommissionClient : ICommissionClient
                     Currency = currency.ToProtoCurrency()
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
+            return Functional.Result.Success<CommissionQuote, CommissionError>(response.ToCommissionQuote());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<CommissionQuote, CommissionError>(ex.ToCommissionError());
         }
     }
 
-    public async Task<Result<CommissionBinding>> CreateOrBindAsync(
+    public async Task<Functional.Result<CommissionBinding, CommissionError>> CreateOrBindCommissionAsync(
         string externalReference,
         string payerReference,
         Currency currency,
@@ -70,15 +71,15 @@ internal sealed class CommissionClient : ICommissionClient
             var response = await client.CreateOrBindCommissionAsync(
                 request,
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionBinding());
+            return Functional.Result.Success<CommissionBinding, CommissionError>(response.ToCommissionBinding());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<CommissionBinding, CommissionError>(ex.ToCommissionError());
         }
     }
 
-    public async Task<Result<CommissionQuote>> CalculateBoundAsync(
+    public async Task<Functional.Result<CommissionQuote, CommissionError>> CalculateBoundCommissionAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
@@ -106,11 +107,11 @@ internal sealed class CommissionClient : ICommissionClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
+            return Functional.Result.Success<CommissionQuote, CommissionError>(response.ToCommissionQuote());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<CommissionQuote, CommissionError>(ex.ToCommissionError());
         }
     }
 }

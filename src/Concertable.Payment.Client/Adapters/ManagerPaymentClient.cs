@@ -1,9 +1,10 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
@@ -16,7 +17,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public async Task<Functional.Result<PaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -38,15 +39,15 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                 BookingId = bookingId
             };
             var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
+            return Functional.Result.Success<PaymentOutcome, PaymentError>(response.ToPaymentOutcome());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<PaymentOutcome, PaymentError>(ex.ToPaymentError());
         }
     }
 
-    public async Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
+    public async Task<Functional.Result<PaymentOutcome, PaymentError>> ChargeBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -80,11 +81,11 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
+            return Functional.Result.Success<PaymentOutcome, PaymentError>(response.ToPaymentOutcome());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<PaymentOutcome, PaymentError>(ex.ToPaymentError());
         }
     }
 
@@ -127,7 +128,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         return response.ToCheckoutSession();
     }
 
-    public async Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
+    public async Task<Functional.Result<CheckoutSession, CommissionError>> CreateBoundCommissionHoldAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
@@ -156,11 +157,11 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
             var response = await client.CreateBoundCommissionHoldSessionAsync(
                 request,
                 cancellationToken: ct);
-            return Result.Ok(response.ToCheckoutSession());
+            return Functional.Result.Success<CheckoutSession, CommissionError>(response.ToCheckoutSession());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<CheckoutSession, CommissionError>(ex.ToCommissionError());
         }
     }
 

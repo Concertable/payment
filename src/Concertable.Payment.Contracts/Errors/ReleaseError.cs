@@ -1,24 +1,17 @@
 using Concertable.Kernel.Errors;
-using Dunet;
-
 namespace Concertable.Payment.Contracts.Errors;
 
-[Union]
-public partial record ReleaseError : IError
+public sealed record ReleaseError(ErrorDefinition Definition) : IError
 {
-    partial record EscrowNotFound;
-    partial record InvalidEscrowState;
-    partial record RecipientUnavailable;
-    partial record ReleaseRejected;
+    public static readonly ReleaseError EscrowNotFound = new(
+        ErrorDefinition.NotFound("payment.escrow_not_found", "The escrow payment was not found."));
 
-    public static ReleaseError NotFound() => new EscrowNotFound();
-    public static ReleaseError InvalidState() => new InvalidEscrowState();
-    public static ReleaseError UnavailableRecipient() => new RecipientUnavailable();
-    public static ReleaseError Rejected() => new ReleaseRejected();
+    public static readonly ReleaseError InvalidEscrowState = new(
+        ErrorDefinition.Conflict("payment.escrow_release_invalid_state", "The escrow payment cannot be released in its current state."));
 
-    public ErrorDefinition Definition => Match<ErrorDefinition>(
-        escrowNotFound => ErrorDefinition.NotFound("payment.escrow_not_found", "The escrow payment was not found."),
-        invalidEscrowState => ErrorDefinition.Conflict("payment.escrow_release_invalid_state", "The escrow payment cannot be released in its current state."),
-        recipientUnavailable => ErrorDefinition.Conflict("payment.recipient_unavailable", "The recipient account is not ready for payments."),
-        releaseRejected => ErrorDefinition.Invalid("payment.escrow_release_rejected", "The escrow release was rejected."));
+    public static readonly ReleaseError RecipientUnavailable = new(
+        ErrorDefinition.Conflict("payment.recipient_unavailable", "The recipient account is not ready for payments."));
+
+    public static readonly ReleaseError ReleaseRejected = new(
+        ErrorDefinition.Invalid("payment.escrow_release_rejected", "The escrow release was rejected."));
 }

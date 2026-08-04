@@ -1,4 +1,5 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces.Webhook;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure.Services;
@@ -96,4 +97,60 @@ public sealed class StripeTransferClientTests
         Assert.Null(reversalRequest);
         Assert.Null(refundRequest);
     }
+
+    [Fact]
+    public async Task RefundAsync_CallerActionableStripeFailure_ReturnsTypedRejection()
+    {
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .ThrowsAsync(new StripeException("invalid refund")
+            {
+                StripeError = new StripeError { Type = "invalid_request_error" }
+            });
+
+        var result = await sut.RefundAsync(RefundOptions());
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(RefundError.RefundRejected, error);
+    }
+
+    [Fact]
+    public async Task RefundAsync_StripeInfrastructureFailure_Propagates()
+    {
+        var exception = new StripeException("Stripe unavailable")
+        {
+            StripeError = new StripeError { Type = "api_error" }
+        };
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    [Fact]
+    public async Task RefundAsync_Cancellation_Propagates()
+    {
+        var exception = new OperationCanceledException();
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<OperationCanceledException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    private static StripeRefundOptions RefundOptions() =>
+        new()
+        {
+            Amount = Money.Gbp(10),
+            PaymentIntentId = "pi_test",
+            Metadata = new Dictionary<string, string>
+            {
+                [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "1000"
+            }
+        };
 }
