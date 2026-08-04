@@ -15,7 +15,7 @@ public partial record PaymentError : IError
     public partial record DeclinedCase;
     public partial record RejectedCase;
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         _ => ErrorDefinition.NotFound("payment.payer_not_found", "Payer payment account not found."),
         _ => ErrorDefinition.NotFound("payment.payee_not_found", "Payee payment account not found."),
         _ => ErrorDefinition.Invalid("payment.payer_not_configured", "Payer payment account is not configured."),
@@ -55,7 +55,7 @@ public partial record CommissionError : IError
     public partial record BindingIntentMismatchCase;
     public partial record ExpectedAmountsInvalidCase;
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         _ => ErrorDefinition.Invalid("commission.currency_mismatch", "Commission currency does not match."),
         _ => ErrorDefinition.Conflict("commission.pricing_changed", "Commission pricing has changed."),
         _ => ErrorDefinition.NotFound("commission.binding_not_found", "Commission binding not found."),
@@ -88,7 +88,7 @@ public partial record ManagerPaymentError : IError
     public partial record PaymentCase(PaymentError Error);
     public partial record CommissionCase(CommissionError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         payment => payment.Error.Definition,
         commission => commission.Error.Definition);
 
@@ -107,7 +107,7 @@ public partial record EscrowDepositError : IError
     public partial record PaymentCase(PaymentError Error);
     public partial record CommissionCase(CommissionError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         payment => payment.Error.Definition,
         commission => commission.Error.Definition);
 
@@ -126,7 +126,7 @@ public partial record EscrowCaptureError : IError
     public partial record PaymentCase(PaymentError Error);
     public partial record CommissionCase(CommissionError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         payment => payment.Error.Definition,
         commission => commission.Error.Definition);
 
@@ -146,7 +146,7 @@ public partial record EscrowReleaseError : IError
     public partial record EscrowNotHeldCase;
     public partial record PaymentCase(PaymentError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         _ => ErrorDefinition.NotFound("escrow.release_not_found", "Escrow not found."),
         _ => ErrorDefinition.Conflict("escrow.release_not_held", "Only held escrow can be released."),
         payment => payment.Error.Definition);
@@ -175,7 +175,7 @@ public partial record EscrowRefundError : IError
     public partial record ConflictCase;
     public partial record PaymentCase(PaymentError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         _ => ErrorDefinition.NotFound("escrow.refund_not_found", "Escrow not found."),
         _ => ErrorDefinition.Conflict("escrow.refund_not_allowed", "Escrow cannot be refunded in its current state."),
         _ => ErrorDefinition.NotFound("escrow.refund_commission_binding_not_found", "Commission binding not found."),
@@ -213,7 +213,7 @@ public partial record HoldSessionError : IError
     public partial record PaymentCase(PaymentError Error);
     public partial record CommissionCase(CommissionError Error);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         payment => payment.Error.Definition,
         commission => commission.Error.Definition);
 

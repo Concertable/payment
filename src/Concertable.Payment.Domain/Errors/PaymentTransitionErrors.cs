@@ -10,7 +10,7 @@ internal partial record TransactionTransitionError : IError
     public partial record NotPendingCase(TransactionStatus Status);
     public partial record NotCompleteCase(TransactionStatus Status);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         transition => ErrorDefinition.Conflict(
             "payment.transaction_not_pending",
             $"Transaction is {transition.Status} and cannot transition from pending."),
@@ -33,7 +33,7 @@ internal partial record EscrowTransitionError : IError
     public partial record NotRefundableCase(EscrowStatus Status);
     public partial record NotDisputableCase(EscrowStatus Status);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         transition => ErrorDefinition.Conflict(
             "escrow.not_pending",
             $"Escrow is {transition.Status} and cannot transition from pending."),
@@ -58,7 +58,7 @@ internal partial record PaymentRefundTransitionError : IError
 {
     public partial record NotPendingCase(PaymentRefundStatus Status);
 
-    public ErrorDefinition Definition => Match(
+    public ErrorDefinition Definition => Match<ErrorDefinition>(
         transition => ErrorDefinition.Conflict(
             "payment.refund_not_pending",
             $"Refund is {transition.Status} and cannot transition from pending."));
