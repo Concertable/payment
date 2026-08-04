@@ -31,25 +31,25 @@ public interface IManagerPaymentOperationsClient
 
     Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         decimal amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
         string? stripeSetupIntentId = null,

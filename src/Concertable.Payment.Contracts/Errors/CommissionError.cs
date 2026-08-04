@@ -1,4 +1,5 @@
 using Concertable.Kernel.Errors;
+using Concertable.Kernel.Functional;
 namespace Concertable.Payment.Contracts.Errors;
 
 public sealed record CommissionError(ErrorDefinition Definition) : IError
@@ -20,4 +21,15 @@ public sealed record CommissionError(ErrorDefinition Definition) : IError
 
     public static readonly CommissionError ExpectedAmountsInvalid = new(
         ErrorDefinition.Invalid("payment.commission_expected_amounts_invalid", "The expected commission amounts are invalid."));
+
+    public static Option<CommissionError> FromCode(string code) => code switch
+    {
+        "payment.commission_binding_not_found" => Option.Some(BindingNotFound),
+        "payment.commission_binding_mismatch" => Option.Some(BindingMismatch),
+        "payment.commission_currency_mismatch" => Option.Some(CurrencyMismatch),
+        "payment.commission_intent_mismatch" => Option.Some(BindingIntentMismatch),
+        "payment.commission_pricing_changed" => Option.Some(PricingChanged),
+        "payment.commission_expected_amounts_invalid" => Option.Some(ExpectedAmountsInvalid),
+        _ => Option.None<CommissionError>()
+    };
 }

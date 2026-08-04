@@ -49,11 +49,6 @@ message PaymentResponse {
   string transaction_id = 3;
 }
 
-message OperationErrorDetail {
-  string code = 1;
-  string message = 2;
-}
-
 message CheckoutSessionResponse {
   string client_secret = 1;
   string customer_session = 2;

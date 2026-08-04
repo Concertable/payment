@@ -1,4 +1,5 @@
 using Concertable.Kernel.Errors;
+using Concertable.Kernel.Functional;
 using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
@@ -42,4 +43,16 @@ public abstract partial record PaymentError : IError
     {
         public override ErrorDefinition Definition => Error.Definition;
     }
+
+    public static Option<PaymentError> FromCode(string code) => code switch
+    {
+        "payment.payer_not_found" => Option.Some<PaymentError>(new PayerNotFound()),
+        "payment.payee_not_found" => Option.Some<PaymentError>(new PayeeNotFound()),
+        "payment.payer_unavailable" => Option.Some<PaymentError>(new PayerUnavailable()),
+        "payment.recipient_unavailable" => Option.Some<PaymentError>(new RecipientUnavailable()),
+        "payment.rejected" => Option.Some<PaymentError>(new PaymentRejected()),
+        _ => CommissionError.FromCode(code).Match(
+            error => Option.Some<PaymentError>(new CommissionFailure(error)),
+            Option.None<PaymentError>)
+    };
 }
