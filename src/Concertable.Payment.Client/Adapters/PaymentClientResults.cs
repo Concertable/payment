@@ -1,4 +1,3 @@
-using Concertable.Kernel.Errors;
 using Concertable.Kernel.Functional;
 using Google.Protobuf;
 using Grpc.Core;
@@ -39,22 +38,6 @@ internal static class PaymentClientResults
             return Result<TValue, TError>.Failure(error);
         }
     }
-
-    public static FluentResults.Result<TValue> ToLegacy<TValue, TError>(
-        this Result<TValue, TError> result)
-        where TValue : notnull
-        where TError : IError =>
-        result.Match(
-            FluentResults.Result.Ok,
-            error => FluentResults.Result.Fail<TValue>(error.Definition.Message));
-
-    public static FluentResults.Result<TValue?> ToLegacyNullable<TValue, TError>(
-        this Result<Option<TValue>, TError> result)
-        where TValue : class
-        where TError : IError =>
-        result.Match(
-            value => FluentResults.Result.Ok<TValue?>(value.Match<TValue?>(item => item, () => null)),
-            error => FluentResults.Result.Fail<TValue?>(error.Definition.Message));
 
     private static Option<Proto.OperationErrorDetail> ParseDetail(byte[] bytes)
     {

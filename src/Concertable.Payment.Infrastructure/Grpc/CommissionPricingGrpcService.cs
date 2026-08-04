@@ -24,7 +24,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.Currency.ToDomainCurrency(),
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
     public override async Task<CommissionBindingResponse> CreateOrBindCommission(
@@ -44,7 +44,7 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.HasExpectedPayerTotalMinor ? request.ExpectedPayerTotalMinor : null,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
     public override async Task<CommissionCalculationResponse> CalculateBoundCommission(
@@ -61,12 +61,11 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);
 
-        var commission = result.GetValueOrThrow();
-        return new CommissionQuote(
+        var commission = result.ValueOrRpcException();
+        return new Concertable.Payment.Contracts.CommissionCalculation(
             commission.Terms.ConfigurationId,
-            commission.Terms.Version,
-            commission.Terms.RateBasisPoints,
-            commission.Terms.Currency,
+            commission.Terms.Rate.Value,
+            commission.Calculation.Currency,
             commission.Calculation.PayeeGrossMinor,
             commission.Calculation.CommissionGrossMinor,
             commission.Calculation.PayerTotalMinor).ToProto();

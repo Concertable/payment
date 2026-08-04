@@ -50,19 +50,14 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ManagerPaymentClient>();
         services.AddScoped<IManagerPaymentOperationsClient>(sp => sp.GetRequiredService<ManagerPaymentClient>());
-        services.AddScoped<IManagerPaymentClient>(sp => sp.GetRequiredService<ManagerPaymentClient>());
         services.AddScoped<CustomerPaymentClient>();
         services.AddScoped<ICustomerPaymentOperationsClient>(sp => sp.GetRequiredService<CustomerPaymentClient>());
-        services.AddScoped<ICustomerPaymentClient>(sp => sp.GetRequiredService<CustomerPaymentClient>());
         services.AddScoped<EscrowClient>();
         services.AddScoped<IEscrowOperationsClient>(sp => sp.GetRequiredService<EscrowClient>());
-        services.AddScoped<IEscrowClient>(sp => sp.GetRequiredService<EscrowClient>());
         services.AddScoped<PayoutAccountClient>();
         services.AddScoped<IPayoutAccountOperationsClient>(sp => sp.GetRequiredService<PayoutAccountClient>());
-        services.AddScoped<IPayoutAccountClient>(sp => sp.GetRequiredService<PayoutAccountClient>());
         services.AddScoped<CommissionClient>();
         services.AddScoped<ICommissionPricingClient>(sp => sp.GetRequiredService<CommissionClient>());
-        services.AddScoped<ICommissionClient>(sp => sp.GetRequiredService<CommissionClient>());
 
         return services;
     }
