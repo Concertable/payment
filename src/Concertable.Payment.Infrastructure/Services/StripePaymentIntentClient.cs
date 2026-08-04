@@ -2,8 +2,6 @@ using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Mappers;
-using Concertable.Kernel.Functional;
-using Concertable.Payment.Contracts.Errors;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -28,15 +26,17 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         this.logger = logger;
     }
 
-    public async Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(StripeChargeOptions opts)
+    public async Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+        StripeChargeOptions opts,
+        CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrEmpty(opts.DestinationStripeId))
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
             if (await stripeAccountClient.GetAccountStatusAsync(opts.DestinationStripeId) != PayoutAccountStatus.Verified)
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
             var options = new PaymentIntentCreateOptions
             {
@@ -72,21 +72,23 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         catch (StripeException ex)
         {
             logger.StripeChargeFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
-            if (ex.StripeError?.Type == "card_error")
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.PaymentRejected());
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return Result<PaymentOutcome, PaymentError>.Failure(error);
             throw;
         }
     }
 
-    public async Task<Result<PaymentOutcome, PaymentError>> HoldAsync(StripeHoldOptions opts)
+    public async Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+        StripeHoldOptions opts,
+        CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrEmpty(opts.DestinationStripeId))
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
             if (await stripeAccountClient.GetAccountStatusAsync(opts.DestinationStripeId) != PayoutAccountStatus.Verified)
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
             var options = new PaymentIntentCreateOptions
             {
@@ -118,8 +120,8 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         catch (StripeException ex)
         {
             logger.StripeHoldFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
-            if (ex.StripeError?.Type == "card_error")
-                return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.PaymentRejected());
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return Result<PaymentOutcome, PaymentError>.Failure(error);
             throw;
         }
     }

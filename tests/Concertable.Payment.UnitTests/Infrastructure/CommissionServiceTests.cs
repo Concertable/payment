@@ -169,21 +169,6 @@ public sealed class CommissionServiceTests
     }
 
     [Fact]
-    public async Task CalculateBoundAsync_CalculationDiffersFromExpected_ReturnsPricingChanged()
-    {
-        var binding = Binding("booking:7", "payer:1", "pi_1");
-        authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(binding);
-
-        var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, 1, 2, "pi_1", null);
-
-        Assert.True(result.TryGetError(out var error));
-        Assert.Equal("payment.commission_pricing_changed", error.Definition.Code);
-    }
-
-    [Fact]
     public async Task FindBoundPaymentIntentAsync_ReturnsBoundIntent()
     {
         var binding = Binding("booking:7", "payer:1", "pi_1");

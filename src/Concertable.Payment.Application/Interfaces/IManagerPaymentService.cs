@@ -5,7 +5,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IManagerPaymentService
 {
-    Task<Result<PaymentOutcome, PaymentError>> PayAsync(
+    Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -14,7 +14,7 @@ internal interface IManagerPaymentService
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> PayBoundCommissionAsync(
+    Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -43,7 +43,7 @@ internal interface IManagerPaymentService
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<CheckoutSession, CommissionError>> CreateBoundCommissionHoldSessionAsync(
+    Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
         long grossMinor,
         Currency currency,
@@ -58,7 +58,7 @@ internal interface IManagerPaymentService
         int applicationId,
         CancellationToken ct = default);
 
-    Task<Result<Option<Refund>, RefundError>> RefundBoundCommissionByBookingIdAsync(
+    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         long grossMinor,
         Currency currency,

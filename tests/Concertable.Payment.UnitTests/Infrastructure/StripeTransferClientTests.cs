@@ -104,16 +104,20 @@ public sealed class StripeTransferClientTests
     public async Task RefundAsync_CallerActionableStripeFailure_ReturnsTypedRejection()
     {
         stripeClient
-            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new StripeException("invalid refund")
             {
+                HttpStatusCode = System.Net.HttpStatusCode.BadRequest,
                 StripeError = new StripeError { Type = "invalid_request_error" }
             });
 
         var result = await sut.RefundAsync(RefundOptions());
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(RefundError.RefundRejected, error);
+        Assert.Equal(new PaymentError.PaymentRejected(), error);
     }
 
     [Fact]
@@ -124,7 +128,10 @@ public sealed class StripeTransferClientTests
             StripeError = new StripeError { Type = "api_error" }
         };
         stripeClient
-            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
@@ -137,7 +144,10 @@ public sealed class StripeTransferClientTests
     {
         var exception = new OperationCanceledException();
         stripeClient
-            .Setup(c => c.CreateRefundAsync(It.IsAny<RefundCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(exception);
 
         var thrown = await Assert.ThrowsAsync<OperationCanceledException>(() => sut.RefundAsync(RefundOptions()));
