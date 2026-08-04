@@ -30,8 +30,6 @@ public interface ICommissionClient
         string payerReference,
         Currency currency,
         long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);

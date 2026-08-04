@@ -1,5 +1,5 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
-using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
@@ -8,7 +8,7 @@ using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class ManagerPaymentClient : IManagerPaymentClient
+internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IManagerPaymentClient
 {
     private readonly Proto.ManagerPayment.ManagerPaymentClient client;
 
@@ -57,14 +57,10 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.PayBoundCommissionAsync(
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayBoundCommissionAsync(
                 new Proto.BoundCommissionManagerPayRequest
                 {
                     PayerId = payerId.ToString(),
@@ -76,8 +72,6 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
                     BookingId = bookingId,
                     CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct);
@@ -96,8 +90,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         var request = new Proto.CreateSetupSessionRequest { PayerId = payerId.ToString() };
         request.Metadata.Add(metadata);
-        var response = await this.client.CreateSetupSessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        return (await client.CreateSetupSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateVerifySessionAsync(
@@ -107,8 +100,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         var request = new Proto.CreateVerifySessionRequest { PayerId = payerId.ToString() };
         request.Metadata.Add(metadata);
-        var response = await this.client.CreateVerifySessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        return (await client.CreateVerifySessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
@@ -117,15 +109,13 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var money = Money.Gbp(amount);
         var request = new Proto.CreateHoldSessionRequest
         {
             PayerId = payerId.ToString(),
-            Amount = money.ToProtoMoney()
+            Amount = Money.Gbp(amount).ToProtoMoney()
         };
         request.Metadata.Add(metadata);
-        var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        return (await client.CreateHoldSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
     public async Task<Functional.Result<CheckoutSession, CommissionError>> CreateBoundCommissionHoldAsync(
@@ -135,14 +125,10 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         IDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var request = new Proto.CreateBoundCommissionHoldSessionRequest
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
             {
                 PayerId = payerId.ToString(),
                 GrossMinor = grossMinor,
@@ -170,12 +156,67 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         int applicationId,
         CancellationToken ct = default)
     {
-        var request = new Proto.FindHeldIntentRequest
-        {
-            PayerId = payerId.ToString(),
-            ApplicationId = applicationId
-        };
-        var response = await this.client.FindHeldIntentAsync(request, cancellationToken: ct);
+        var response = await client.FindHeldIntentAsync(
+            new Proto.FindHeldIntentRequest
+            {
+                PayerId = payerId.ToString(),
+                ApplicationId = applicationId
+            },
+            cancellationToken: ct);
         return response.PaymentIntentId;
     }
+
+    async Task<FluentResults.Result<PaymentOutcome>> IManagerPaymentClient.PayAsync(
+        Guid payerId,
+        Guid payeeId,
+        decimal amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct) =>
+        (await PayAsync(payerId, payeeId, amount, paymentMethodId, session, bookingId, ct)).ToLegacy();
+
+    async Task<FluentResults.Result<PaymentOutcome>> IManagerPaymentClient.PayBoundCommissionAsync(
+        Guid payerId,
+        Guid payeeId,
+        long grossMinor,
+        Currency currency,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        Guid commissionBindingId,
+        string externalReference,
+        string? stripeSetupIntentId,
+        CancellationToken ct) =>
+        (await PayBoundCommissionAsync(
+            payerId,
+            payeeId,
+            grossMinor,
+            currency,
+            paymentMethodId,
+            session,
+            bookingId,
+            commissionBindingId,
+            externalReference,
+            stripeSetupIntentId,
+            ct)).ToLegacy();
+
+    async Task<FluentResults.Result<CheckoutSession>> IManagerPaymentClient.CreateBoundCommissionHoldSessionAsync(
+        Guid payerId,
+        long grossMinor,
+        Currency currency,
+        IDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        string externalReference,
+        string? stripeSetupIntentId,
+        CancellationToken ct) =>
+        (await CreateBoundCommissionHoldSessionAsync(
+            payerId,
+            grossMinor,
+            currency,
+            metadata,
+            commissionBindingId,
+            externalReference,
+            stripeSetupIntentId,
+            ct)).ToLegacy();
 }

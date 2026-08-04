@@ -5,7 +5,6 @@ namespace Concertable.Payment.Contracts;
 public sealed record CommissionBinding(
     Guid BindingId,
     Guid CommissionConfigurationId,
-    string ConfigurationVersion,
-    int RateBasisPoints,
+    decimal RatePercentage,
     Currency Currency,
-    CommissionQuote? Quote);
+    CommissionCalculation? Calculation);

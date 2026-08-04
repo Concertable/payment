@@ -28,17 +28,13 @@ internal interface ICommissionService
         string payerReference,
         Currency currency,
         long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripePaymentIntentId,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
-    Task<string?> FindBoundPaymentIntentAsync(
+    Task<Option<string>> FindBoundPaymentIntentAsync(
         Guid bindingId,
         CancellationToken ct = default);
 
-    void BindPaymentIntent(
-        CommissionBindingEntity binding,
-        string paymentIntentId);
+    void BindPaymentIntent(CommissionBindingEntity binding, string paymentIntentId);
 }

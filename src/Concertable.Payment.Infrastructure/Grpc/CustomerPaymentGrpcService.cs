@@ -16,7 +16,6 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
     public override async Task<PaymentResponse> Pay(CustomerPayRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var result = await customerPaymentService.PayAsync(
             command.PayerId,
             command.ConcertId,
@@ -29,17 +28,17 @@ internal sealed class CustomerPaymentGrpcService : CustomerPayment.CustomerPayme
         return result.GetValueOrThrow().ToProtoPaymentResponse();
     }
 
-    public override async Task<CheckoutSessionResponse> CreatePaymentSession(CreatePaymentSessionRequest request, ServerCallContext context)
+    public override async Task<CheckoutSessionResponse> CreatePaymentSession(
+        CreatePaymentSessionRequest request,
+        ServerCallContext context)
     {
         var command = request.ToCommand();
-
         var session = await customerPaymentService.CreatePaymentSessionAsync(
             command.PayerId,
             command.ConcertId,
             command.PayeeId,
             command.Metadata,
             context.CancellationToken);
-
         return session.ToProtoCheckoutSession();
     }
 }

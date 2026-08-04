@@ -40,7 +40,7 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, amount, transferAmount: null, paymentMethodId, session, metadata, ct);
+        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, ct);
 
     public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
         Guid payerId,
@@ -71,21 +71,19 @@ internal sealed class PaymentManager : IPaymentManager
         var (stripeCustomerId, destinationStripeId, receiptEmail) = accounts;
 
         var payeeAmount = transferAmount ?? chargeAmount;
-
-        var merged = BuildMetadata(payerId, payeeId, receiptEmail, payeeAmount, metadata);
-
-        logger.ChargingPayment(payerId, payeeAmount.Amount, payeeId, destinationStripeId, metadata[PaymentMetadataKeys.Type]);
+        var merged = BuildMetadata(payerId, payeeId, resolved.email, payeeAmount, metadata);
+        logger.ChargingPayment(payerId, payeeAmount.Amount, payeeId, resolved.destinationStripeId, metadata[PaymentMetadataKeys.Type]);
 
         return await intentClientFactory.Create(session).ChargeAsync(new StripeChargeOptions
         {
             Amount = chargeAmount,
             TransferAmount = transferAmount,
             PaymentMethodId = paymentMethodId,
-            StripeCustomerId = stripeCustomerId,
-            DestinationStripeId = destinationStripeId,
-            ReceiptEmail = receiptEmail,
+            StripeCustomerId = resolved.stripeCustomerId,
+            DestinationStripeId = resolved.destinationStripeId,
+            ReceiptEmail = resolved.email,
             Metadata = merged
-        });
+        }, ct);
     }
 
     public async Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
@@ -223,6 +221,5 @@ internal sealed class PaymentManager : IPaymentManager
             [PaymentMetadataKeys.FromUserEmail] = payerEmail,
             [PaymentMetadataKeys.ToUserId] = payeeId.ToString(),
             [PaymentMetadataKeys.Amount] = settledAmount.ToMinorUnits().ToString()
-        }
-        .Merge(metadata);
+        }.Merge(metadata);
 }

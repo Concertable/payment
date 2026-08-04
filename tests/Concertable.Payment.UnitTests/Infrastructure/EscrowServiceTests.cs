@@ -1,9 +1,11 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Kernel.Functional;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -308,6 +310,29 @@ public sealed class EscrowServiceTests
             r => r.ReleaseReservedRefundGrossAsync(heldEscrow.Id, 5000, It.IsAny<CancellationToken>()),
             Times.Once);
         Assert.Empty(postings);
+    }
+
+    [Fact]
+    public async Task RefundByBookingIdAsync_ProviderFailureAfterReservationTransition_ThrowsInvariantFailure()
+    {
+        var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_test");
+        heldEscrow.Confirm();
+
+        escrowRepository
+            .Setup(r => r.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+        escrowRepository
+            .Setup(r => r.GetWithRefundsByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback(() => heldEscrow.ReleaseRefund(Assert.Single(heldEscrow.Refunds)))
+            .ReturnsAsync(Result<Refund, PaymentError>.Failure(PaymentError.Declined()));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.RefundByBookingIdAsync(7));
+
+        Assert.Equal("Escrow refund reservation could not be released.", exception.Message);
     }
 
     [Fact]
