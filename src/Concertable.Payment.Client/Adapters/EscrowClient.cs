@@ -1,9 +1,10 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
 using Grpc.Core;
 using Proto = Concertable.Payment.Grpc;
+using Functional = Concertable.Kernel.Functional;
 
 namespace Concertable.Payment.Client.Adapters;
 
@@ -16,7 +17,7 @@ internal sealed class EscrowClient : IEscrowClient
         this.client = client;
     }
 
-    public async Task<Result<EscrowDeposit>> DepositAsync(
+    public async Task<Functional.Result<EscrowDeposit, DepositError>> CreateDepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -38,15 +39,15 @@ internal sealed class EscrowClient : IEscrowClient
                 BookingId = bookingId
             };
             var response = await client.DepositAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToEscrowDeposit());
+            return Functional.Result.Success<EscrowDeposit, DepositError>(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<EscrowDeposit, DepositError>(ex.ToDepositError());
         }
     }
 
-    public async Task<Result<EscrowDeposit>> DepositBoundCommissionAsync(
+    public async Task<Functional.Result<EscrowDeposit, DepositError>> CreateBoundCommissionDepositAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -80,15 +81,15 @@ internal sealed class EscrowClient : IEscrowClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToEscrowDeposit());
+            return Functional.Result.Success<EscrowDeposit, DepositError>(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<EscrowDeposit, DepositError>(ex.ToDepositError());
         }
     }
 
-    public async Task<Result<EscrowDeposit>> CaptureAsync(
+    public async Task<Functional.Result<EscrowDeposit, CaptureError>> CaptureDepositAsync(
         Guid payerId,
         Guid payeeId,
         decimal amount,
@@ -108,15 +109,15 @@ internal sealed class EscrowClient : IEscrowClient
                 BookingId = bookingId
             };
             var response = await this.client.CaptureAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToEscrowDeposit());
+            return Functional.Result.Success<EscrowDeposit, CaptureError>(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<EscrowDeposit, CaptureError>(ex.ToCaptureError());
         }
     }
 
-    public async Task<Result<EscrowDeposit>> CaptureBoundCommissionAsync(
+    public async Task<Functional.Result<EscrowDeposit, CaptureError>> CaptureBoundCommissionDepositAsync(
         Guid payerId,
         Guid payeeId,
         long grossMinor,
@@ -146,15 +147,15 @@ internal sealed class EscrowClient : IEscrowClient
                     ExpectedPayerTotalMinor = expectedPayerTotalMinor
                 },
                 cancellationToken: ct);
-            return Result.Ok(response.ToEscrowDeposit());
+            return Functional.Result.Success<EscrowDeposit, CaptureError>(response.ToEscrowDeposit());
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<EscrowDeposit, CaptureError>(ex.ToCaptureError());
         }
     }
 
-    public async Task<Result<Transfer?>> ReleaseByBookingIdAsync(
+    public async Task<Functional.Result<Functional.Option<Transfer>, ReleaseError>> ReleaseAsync(
         int bookingId,
         CancellationToken ct = default)
     {
@@ -162,18 +163,18 @@ internal sealed class EscrowClient : IEscrowClient
         {
             var request = new Proto.ReleaseByBookingIdRequest { BookingId = bookingId };
             var response = await client.ReleaseByBookingIdAsync(request, cancellationToken: ct);
-            Transfer? transfer = string.IsNullOrEmpty(response.Transfer?.TransferId)
-                ? null
-                : new Transfer(response.Transfer.TransferId);
-            return Result.Ok(transfer);
+            var transfer = string.IsNullOrEmpty(response.Transfer?.TransferId)
+                ? Functional.Option.None<Transfer>()
+                : Functional.Option.Some(new Transfer(response.Transfer.TransferId));
+            return Functional.Result.Success<Functional.Option<Transfer>, ReleaseError>(transfer);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<Functional.Option<Transfer>, ReleaseError>(ex.ToReleaseError());
         }
     }
 
-    public async Task<Result<Refund?>> RefundByBookingIdAsync(
+    public async Task<Functional.Result<Functional.Option<Refund>, RefundError>> RefundAsync(
         int bookingId,
         CancellationToken ct = default)
     {
@@ -181,18 +182,18 @@ internal sealed class EscrowClient : IEscrowClient
         {
             var request = new Proto.RefundByBookingIdRequest { BookingId = bookingId };
             var response = await client.RefundByBookingIdAsync(request, cancellationToken: ct);
-            Refund? refund = string.IsNullOrEmpty(response.Refund?.RefundId)
-                ? null
-                : new Refund(response.Refund.RefundId);
-            return Result.Ok(refund);
+            var refund = string.IsNullOrEmpty(response.Refund?.RefundId)
+                ? Functional.Option.None<Refund>()
+                : Functional.Option.Some(new Refund(response.Refund.RefundId));
+            return Functional.Result.Success<Functional.Option<Refund>, RefundError>(refund);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<Functional.Option<Refund>, RefundError>(ex.ToRefundError());
         }
     }
 
-    public async Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
+    public async Task<Functional.Result<Functional.Option<Refund>, RefundError>> RefundBoundCommissionAsync(
         int bookingId,
         long grossMinor,
         Currency currency,
@@ -208,14 +209,14 @@ internal sealed class EscrowClient : IEscrowClient
                     Currency = currency.ToProtoCurrency()
                 },
                 cancellationToken: ct);
-            Refund? refund = string.IsNullOrEmpty(response.Refund?.RefundId)
-                ? null
-                : new Refund(response.Refund.RefundId);
-            return Result.Ok(refund);
+            var refund = string.IsNullOrEmpty(response.Refund?.RefundId)
+                ? Functional.Option.None<Refund>()
+                : Functional.Option.Some(new Refund(response.Refund.RefundId));
+            return Functional.Result.Success<Functional.Option<Refund>, RefundError>(refund);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            return Result.Fail(ex.Status.Detail);
+            return Functional.Result.Failure<Functional.Option<Refund>, RefundError>(ex.ToRefundError());
         }
     }
 }

@@ -26,10 +26,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.GetValueOrThrow().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> DepositBoundCommission(
@@ -52,12 +49,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.GetValueOrThrow().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
@@ -72,10 +64,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.GetValueOrThrow().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> CaptureBoundCommission(
@@ -96,26 +85,19 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.ExpectedPayerTotalMinor,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProtoEscrowResponse();
+        return result.GetValueOrThrow().ToProtoEscrowResponse();
     }
 
     public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(ReleaseByBookingIdRequest request, ServerCallContext context)
     {
         var result = await escrowService.ReleaseByBookingIdAsync(request.BookingId, context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
+        var transfer = result.GetValueOrThrow();
         return new ReleaseByBookingIdResponse
         {
-            Transfer = result.Value is not null
-                ? new TransferResponse { TransferId = result.Value.TransferId }
-                : null
+            Transfer = transfer.Match<TransferResponse?>(
+                value => new TransferResponse { TransferId = value.TransferId },
+                () => null)
         };
     }
 
@@ -123,14 +105,12 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     {
         var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(StatusCode.FailedPrecondition, result.Errors[0].Message));
-
+        var refund = result.GetValueOrThrow();
         return new RefundByBookingIdResponse
         {
-            Refund = result.Value is not null
-                ? new RefundResponse { RefundId = result.Value.RefundId }
-                : null
+            Refund = refund.Match<RefundResponse?>(
+                value => new RefundResponse { RefundId = value.RefundId },
+                () => null)
         };
     }
 
@@ -144,16 +124,12 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             request.Currency.ToDomainCurrency(),
             ct: context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
+        var refund = result.GetValueOrThrow();
         return new RefundByBookingIdResponse
         {
-            Refund = result.Value is not null
-                ? new RefundResponse { RefundId = result.Value.RefundId }
-                : null
+            Refund = refund.Match<RefundResponse?>(
+                value => new RefundResponse { RefundId = value.RefundId },
+                () => null)
         };
     }
 }
