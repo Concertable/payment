@@ -4,7 +4,7 @@ using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class PayoutAccountClient : IPayoutAccountOperationsClient, IPayoutAccountClient
+internal sealed class PayoutAccountClient : IPayoutAccountOperationsClient
 {
     private readonly Proto.PayoutAccount.PayoutAccountClient client;
 
@@ -50,15 +50,6 @@ internal sealed class PayoutAccountClient : IPayoutAccountOperationsClient, IPay
             ? Option.None<string>()
             : Option.Some(response.ClientSecret);
     }
-
-    async Task<string?> IPayoutAccountClient.GetOnboardingLinkAsync(Guid ownerId, CancellationToken ct) =>
-        (await GetOnboardingLinkAsync(ownerId, ct)).Match<string?>(value => value, () => null);
-
-    async Task<SavedCard?> IPayoutAccountClient.GetPaymentMethodAsync(Guid ownerId, CancellationToken ct) =>
-        (await GetPaymentMethodAsync(ownerId, ct)).Match<SavedCard?>(value => value, () => null);
-
-    async Task<string?> IPayoutAccountClient.CreateSetupIntentAsync(Guid ownerId, CancellationToken ct) =>
-        (await CreateSetupIntentAsync(ownerId, ct)).Match<string?>(value => value, () => null);
 
     private static Proto.PayoutOwnerRequest Request(Guid ownerId) =>
         new() { OwnerId = ownerId.ToString() };

@@ -1,8 +1,10 @@
+extern alias PaymentClient;
+
 using Concertable.Kernel.Functional;
-using Concertable.Payment.Client.Adapters;
 using Concertable.Payment.Contracts.Errors;
 using Google.Protobuf;
 using Grpc.Core;
+using PaymentClientResults = PaymentClient::Concertable.Payment.Client.Adapters.PaymentClientResults;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
@@ -24,8 +26,8 @@ public sealed class PaymentClientResultsTests
     public async Task ExecuteAsync_KnownPaymentError_ReturnsTypedFailure()
     {
         var exception = RpcFailure(Detail(
-            "payment.declined",
-            "The payment was declined.",
+            "payment.rejected",
+            "The payment was rejected.",
             kind: 5));
 
         var result = await PaymentClientResults.ExecuteAsync(
@@ -34,7 +36,7 @@ public sealed class PaymentClientResultsTests
             CancellationToken.None);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(PaymentError.Declined(), error);
+        Assert.Equal(new PaymentError.PaymentRejected(), error);
     }
 
     [Fact]

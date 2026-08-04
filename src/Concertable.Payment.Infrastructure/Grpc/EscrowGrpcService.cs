@@ -25,7 +25,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> DepositBoundCommission(
@@ -46,7 +46,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
@@ -60,7 +60,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.BookingId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<EscrowResponse> CaptureBoundCommission(
@@ -79,7 +79,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             command.ExternalReference,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoEscrowResponse();
+        return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
     public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(
@@ -88,7 +88,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     {
         var result = await escrowService.ReleaseByBookingIdAsync(request.BookingId, context.CancellationToken);
 
-        var transfer = result.GetValueOrThrow();
+        var transfer = result.ValueOrRpcException();
         return new ReleaseByBookingIdResponse
         {
             Transfer = transfer.Match<TransferResponse?>(
@@ -103,7 +103,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     {
         var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
 
-        var refund = result.GetValueOrThrow();
+        var refund = result.ValueOrRpcException();
         return new RefundByBookingIdResponse
         {
             Refund = refund.Match<RefundResponse?>(
@@ -122,7 +122,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
             request.Currency.ToDomainCurrency(),
             ct: context.CancellationToken);
 
-        var refund = result.GetValueOrThrow();
+        var refund = result.ValueOrRpcException();
         return new RefundByBookingIdResponse
         {
             Refund = refund.Match<RefundResponse?>(

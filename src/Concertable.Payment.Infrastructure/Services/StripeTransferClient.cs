@@ -1,8 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
-using Concertable.Kernel.Functional;
-using Concertable.Payment.Contracts.Errors;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Transfer = Concertable.Payment.Contracts.Transfer;
@@ -21,12 +19,14 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         this.logger = logger;
     }
 
-    public async Task<Result<Transfer, ReleaseError>> ReleaseAsync(StripeReleaseOptions opts)
+    public async Task<Result<Transfer, PaymentError>> ReleaseAsync(
+        StripeReleaseOptions opts,
+        CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrEmpty(opts.DestinationStripeId))
-                return Result.Failure<Transfer, ReleaseError>(ReleaseError.RecipientUnavailable);
+                return Result<Transfer, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
             var transfer = await stripeClient.CreateTransferAsync(
                 new TransferCreateOptions
@@ -42,18 +42,20 @@ internal sealed class StripeTransferClient : IStripeTransferClient
 
             logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
 
-            return Result.Success<Transfer, ReleaseError>(new Transfer(transfer.Id));
+            return Result<Transfer, PaymentError>.Success(new Transfer(transfer.Id));
         }
         catch (StripeException ex)
         {
             logger.StripeReleaseFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
-            if (ex.StripeError?.Type is "card_error" or "invalid_request_error")
-                return Result.Failure<Transfer, ReleaseError>(ReleaseError.ReleaseRejected);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return Result<Transfer, PaymentError>.Failure(error);
             throw;
         }
     }
 
-    public async Task<Result<Refund, RefundError>> RefundAsync(StripeRefundOptions opts)
+    public async Task<Result<Refund, PaymentError>> RefundAsync(
+        StripeRefundOptions opts,
+        CancellationToken ct = default)
     {
         try
         {
@@ -92,13 +94,13 @@ internal sealed class StripeTransferClient : IStripeTransferClient
 
             logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);
 
-            return Result.Success<Refund, RefundError>(new Refund(refund.Id));
+            return Result<Refund, PaymentError>.Success(new Refund(refund.Id));
         }
         catch (StripeException ex)
         {
             logger.StripeRefundFailed(opts.PaymentIntentId, ex.StripeError?.Code, ex);
-            if (ex.StripeError?.Type is "card_error" or "invalid_request_error")
-                return Result.Failure<Refund, RefundError>(RefundError.RefundRejected);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return Result<Refund, PaymentError>.Failure(error);
             throw;
         }
     }

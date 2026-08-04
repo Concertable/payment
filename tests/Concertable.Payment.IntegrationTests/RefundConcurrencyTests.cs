@@ -1,6 +1,5 @@
 using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
-using Concertable.Kernel.Functional;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Contracts;
@@ -63,7 +62,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Option<Refund>, RefundError>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, EscrowRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new EscrowService(
@@ -137,7 +136,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Option<Refund>, RefundError>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, EscrowRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new ManagerPaymentService(
@@ -187,7 +186,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var mock = new Mock<IPaymentManager>();
         mock
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Result.Success<Refund, RefundError>(new Refund($"re_{Guid.NewGuid():N}")));
+            .ReturnsAsync(() => Result<Refund, PaymentError>.Success(
+                new Refund($"re_{Guid.NewGuid():N}")));
         return mock;
     }
 

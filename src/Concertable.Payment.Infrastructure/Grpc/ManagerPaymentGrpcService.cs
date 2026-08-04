@@ -25,7 +25,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.BookingId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoPaymentResponse();
+        return result.ValueOrRpcException().ToProtoPaymentResponse();
     }
 
     public override async Task<PaymentResponse> PayBoundCommission(
@@ -46,7 +46,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoPaymentResponse();
+        return result.ValueOrRpcException().ToProtoPaymentResponse();
     }
 
     public override async Task<CheckoutSessionResponse> CreateSetupSession(
@@ -98,7 +98,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             command.StripeSetupIntentId,
             context.CancellationToken);
 
-        return result.GetValueOrThrow().ToProtoCheckoutSession();
+        return result.ValueOrRpcException().ToProtoCheckoutSession();
     }
 
     public override async Task<FindHeldIntentResponse> FindHeldIntent(

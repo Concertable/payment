@@ -9,13 +9,13 @@ internal static class StripeFailureClassifier
     {
         if (exception.HttpStatusCode == HttpStatusCode.PaymentRequired ||
             string.Equals(exception.StripeError?.Type, "card_error", StringComparison.Ordinal))
-            return Option.Some(PaymentError.Declined());
+            return Option.Some<PaymentError>(new PaymentError.PaymentRejected());
 
         if (exception.HttpStatusCode is HttpStatusCode.BadRequest
             or HttpStatusCode.NotFound
             or HttpStatusCode.Conflict
             or HttpStatusCode.UnprocessableEntity)
-            return Option.Some(PaymentError.Rejected());
+            return Option.Some<PaymentError>(new PaymentError.PaymentRejected());
 
         return Option.None<PaymentError>();
     }

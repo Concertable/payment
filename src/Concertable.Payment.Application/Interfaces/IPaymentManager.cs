@@ -34,7 +34,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<Transfer, ReleaseError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);
-    Task<Result<Refund, RefundError>> RefundAsync(RefundRequest request, CancellationToken ct = default);
-    Task<UnitResult<CaptureError>> CaptureAsync(CaptureRequest request, CancellationToken ct = default);
+    Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);
+    Task<Result<Refund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default);
+    Task<UnitResult<PaymentError>> CaptureAsync(CaptureRequest request, CancellationToken ct = default);
 }
