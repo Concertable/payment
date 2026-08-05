@@ -9,7 +9,7 @@ public interface IEscrowClient
     Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -33,7 +33,7 @@ public interface IEscrowClient
     Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default);
