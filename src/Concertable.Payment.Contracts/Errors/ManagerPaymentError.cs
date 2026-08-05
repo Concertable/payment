@@ -20,9 +20,9 @@ public abstract partial record ManagerPaymentError : IError
     }
 
     public static Option<ManagerPaymentError> FromCode(string code) =>
-        PaymentError.FromCode(code).Match(
-            payment => Option.Some<ManagerPaymentError>(new PaymentFailure(payment)),
-            () => CommissionError.FromCode(code).Match(
-                commission => Option.Some<ManagerPaymentError>(new CommissionFailure(commission)),
+        CommissionError.FromCode(code).Match(
+            commission => Option.Some<ManagerPaymentError>(new CommissionFailure(commission)),
+            () => PaymentError.FromCode(code).Match(
+                payment => Option.Some<ManagerPaymentError>(new PaymentFailure(payment)),
                 Option.None<ManagerPaymentError>));
 }

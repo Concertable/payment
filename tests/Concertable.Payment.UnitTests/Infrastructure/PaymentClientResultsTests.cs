@@ -2,6 +2,7 @@ extern alias PaymentClient;
 
 using Concertable.Kernel.Functional;
 using Concertable.Payment.Contracts.Errors;
+using Concertable.Payment.Infrastructure.Grpc;
 using Google.Protobuf;
 using Grpc.Core;
 using PaymentClientResults = PaymentClient::Concertable.Payment.Client.Adapters.PaymentClientResults;
@@ -37,6 +38,22 @@ public sealed class PaymentClientResultsTests
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal(new PaymentError.PaymentRejected(), error);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CommissionFailure_PreservesCompositeCaseAcrossWire()
+    {
+        var serverError = new ManagerPaymentError.CommissionFailure(CommissionError.PricingChanged);
+        var exception = serverError.ToRpcException();
+
+        var result = await PaymentClientResults.ExecuteAsync(
+            () => Task.FromException<string>(exception),
+            ManagerPaymentError.FromCode,
+            CancellationToken.None);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(serverError, error);
+        Assert.IsType<ManagerPaymentError.CommissionFailure>(error);
     }
 
     [Fact]
