@@ -135,7 +135,7 @@ The opaque `owner` is resolved two different ways by design:
 
 ## Authentication
 
-JWT Bearer; accepted audiences `concertable.payment.api` / `b2b.api` / `customer.api`. gRPC + write endpoints require policy `ServiceToken` (`scope=payment:write`). Callers obtain service tokens via `client_credentials`.
+JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api` / `concertable.customer.api`. gRPC + write endpoints require policy `ServiceToken` (`scope=payment:write`). Callers obtain service tokens via `client_credentials`.
 
 ---
 
