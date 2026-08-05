@@ -18,7 +18,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -29,7 +29,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    Amount = Money.Gbp(amount).ToProtoMoney(),
+                    Amount = amount.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId
@@ -41,8 +41,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -56,8 +55,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
+                    Gross = gross.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId,
@@ -72,7 +70,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default) =>
@@ -82,7 +80,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    Amount = Money.Gbp(amount).ToProtoMoney(),
+                    Amount = amount.ToProtoMoney(),
                     PaymentIntentId = paymentIntentId,
                     BookingId = bookingId
                 },
@@ -93,8 +91,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentIntentId,
         int bookingId,
         Guid commissionBindingId,
@@ -106,8 +103,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
+                    Gross = gross.ToProtoMoney(),
                     PaymentIntentId = paymentIntentId,
                     BookingId = bookingId,
                     CommissionBindingId = commissionBindingId.ToString(),
@@ -151,8 +147,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
 
     public Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () =>
@@ -161,8 +156,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     new Proto.BoundCommissionRefundByBookingIdRequest
                     {
                         BookingId = bookingId,
-                        GrossMinor = grossMinor,
-                        Currency = currency.ToProtoCurrency()
+                        Gross = gross.ToProtoMoney()
                     },
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Refund?.RefundId)

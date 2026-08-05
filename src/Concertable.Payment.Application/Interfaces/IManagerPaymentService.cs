@@ -17,8 +17,7 @@ internal interface IManagerPaymentService
     Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -45,8 +44,7 @@ internal interface IManagerPaymentService
 
     Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
@@ -60,8 +58,7 @@ internal interface IManagerPaymentService
 
     Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string? reason = null,
         CancellationToken ct = default);
 }

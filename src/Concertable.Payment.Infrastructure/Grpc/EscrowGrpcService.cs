@@ -36,8 +36,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         var result = await escrowService.DepositBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
-            command.Gross.ToMinorUnits(),
-            command.Gross.Currency,
+            command.Gross,
             command.PaymentMethodId,
             command.Session,
             command.BookingId,
@@ -71,8 +70,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         var result = await escrowService.CaptureBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
-            command.Gross.ToMinorUnits(),
-            command.Gross.Currency,
+            command.Gross,
             command.PaymentIntentId,
             command.BookingId,
             command.CommissionBindingId,
@@ -118,8 +116,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     {
         var result = await escrowService.RefundBoundCommissionByBookingIdAsync(
             request.BookingId,
-            request.GrossMinor,
-            request.Currency.ToDomainCurrency(),
+            request.Gross.ToMoney(),
             ct: context.CancellationToken);
 
         var refund = result.ValueOrRpcException();

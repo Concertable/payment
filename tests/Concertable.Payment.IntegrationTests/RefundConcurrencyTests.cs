@@ -77,7 +77,9 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 NullLogger<EscrowService>.Instance);
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(
+                bookingId,
+                Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
@@ -152,7 +154,9 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(
+                bookingId,
+                Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
