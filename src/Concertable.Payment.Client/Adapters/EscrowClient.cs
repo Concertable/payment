@@ -19,7 +19,7 @@ internal sealed class EscrowClient : IEscrowClient
     public async Task<Result<EscrowDeposit>> DepositAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -27,12 +27,11 @@ internal sealed class EscrowClient : IEscrowClient
     {
         try
         {
-            var money = Money.Gbp(amount);
             var request = new Proto.DepositRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = money.ToProtoMoney(),
+                Amount = amount.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId,
                 Session = session.ToProtoSession(),
                 BookingId = bookingId
@@ -91,19 +90,18 @@ internal sealed class EscrowClient : IEscrowClient
     public async Task<Result<EscrowDeposit>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentIntentId,
         int bookingId,
         CancellationToken ct = default)
     {
         try
         {
-            var money = Money.Gbp(amount);
             var request = new Proto.CaptureRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = money.ToProtoMoney(),
+                Amount = amount.ToProtoMoney(),
                 PaymentIntentId = paymentIntentId,
                 BookingId = bookingId
             };
