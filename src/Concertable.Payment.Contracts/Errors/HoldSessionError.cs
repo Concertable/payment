@@ -20,9 +20,9 @@ public abstract partial record HoldSessionError : IError
     }
 
     public static Option<HoldSessionError> FromCode(string code) =>
-        PaymentError.FromCode(code).Match(
-            payment => Option.Some<HoldSessionError>(new PaymentFailure(payment)),
-            () => CommissionError.FromCode(code).Match(
-                commission => Option.Some<HoldSessionError>(new CommissionFailure(commission)),
+        CommissionError.FromCode(code).Match(
+            commission => Option.Some<HoldSessionError>(new CommissionFailure(commission)),
+            () => PaymentError.FromCode(code).Match(
+                payment => Option.Some<HoldSessionError>(new PaymentFailure(payment)),
                 Option.None<HoldSessionError>));
 }
