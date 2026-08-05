@@ -1,6 +1,7 @@
 using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
@@ -138,7 +139,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Option<Refund>, EscrowRefundError>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, SettlementRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new ManagerPaymentService(
