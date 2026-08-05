@@ -20,9 +20,9 @@ public abstract partial record EscrowCaptureError : IError
     }
 
     public static Option<EscrowCaptureError> FromCode(string code) =>
-        PaymentError.FromCode(code).Match(
-            payment => Option.Some<EscrowCaptureError>(new PaymentFailure(payment)),
-            () => CommissionError.FromCode(code).Match(
-                commission => Option.Some<EscrowCaptureError>(new CommissionFailure(commission)),
+        CommissionError.FromCode(code).Match(
+            commission => Option.Some<EscrowCaptureError>(new CommissionFailure(commission)),
+            () => PaymentError.FromCode(code).Match(
+                payment => Option.Some<EscrowCaptureError>(new PaymentFailure(payment)),
                 Option.None<EscrowCaptureError>));
 }

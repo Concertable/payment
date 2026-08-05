@@ -45,6 +45,22 @@ public sealed class StripePaymentIntentClientTests
     }
 
     [Fact]
+    public async Task ChargeAsync_DeclineCode_ReturnsTypedRejection()
+    {
+        stripeClient
+            .Setup(c => c.CreatePaymentIntentAsync(It.IsAny<PaymentIntentCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .ThrowsAsync(new StripeException("declined")
+            {
+                StripeError = new StripeError { DeclineCode = "generic_decline" }
+            });
+
+        var result = await sut.ChargeAsync(Options());
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new PaymentError.PaymentRejected(), error);
+    }
+
+    [Fact]
     public async Task ChargeAsync_StripeInfrastructureFailure_Propagates()
     {
         var exception = new StripeException("Stripe unavailable")

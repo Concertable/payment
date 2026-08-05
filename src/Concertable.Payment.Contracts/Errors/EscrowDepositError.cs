@@ -20,9 +20,9 @@ public abstract partial record EscrowDepositError : IError
     }
 
     public static Option<EscrowDepositError> FromCode(string code) =>
-        PaymentError.FromCode(code).Match(
-            payment => Option.Some<EscrowDepositError>(new PaymentFailure(payment)),
-            () => CommissionError.FromCode(code).Match(
-                commission => Option.Some<EscrowDepositError>(new CommissionFailure(commission)),
+        CommissionError.FromCode(code).Match(
+            commission => Option.Some<EscrowDepositError>(new CommissionFailure(commission)),
+            () => PaymentError.FromCode(code).Match(
+                payment => Option.Some<EscrowDepositError>(new PaymentFailure(payment)),
                 Option.None<EscrowDepositError>));
 }
