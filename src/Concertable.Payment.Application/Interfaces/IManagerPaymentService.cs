@@ -1,4 +1,5 @@
 using Concertable.Kernel.Functional;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.Application.Interfaces;
@@ -56,7 +57,7 @@ internal interface IManagerPaymentService
         int applicationId,
         CancellationToken ct = default);
 
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
+    Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         Money gross,
         string? reason = null,

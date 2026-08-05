@@ -111,11 +111,6 @@ internal sealed class EscrowService : IEscrowService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var existing = await escrowRepository.GetByCommissionBindingIdAsync(commissionBindingId, ct);
-        if (existing is not null)
-            return Result<EscrowDeposit, EscrowDepositError>.Success(
-                new EscrowDeposit(existing.Id, existing.ChargeId, existing.Status));
-
         var authorized = await commissionService.CalculateBoundAsync(
             commissionBindingId,
             externalReference,
@@ -130,6 +125,11 @@ internal sealed class EscrowService : IEscrowService
             return Result<EscrowDeposit, EscrowDepositError>.Failure(
                 new EscrowDepositError.CommissionFailure(commissionError!));
         }
+
+        var existing = await escrowRepository.GetByCommissionBindingIdAsync(commissionBindingId, ct);
+        if (existing is not null)
+            return Result<EscrowDeposit, EscrowDepositError>.Success(
+                new EscrowDeposit(existing.Id, existing.ChargeId, existing.Status));
 
         var payerError = await ValidatePayerAsync(payerId, session, ct);
         if (payerError.TryGetValue(out var error))
@@ -225,11 +225,6 @@ internal sealed class EscrowService : IEscrowService
         string externalReference,
         CancellationToken ct = default)
     {
-        var existing = await escrowRepository.GetByCommissionBindingIdAsync(commissionBindingId, ct);
-        if (existing is not null)
-            return Result<EscrowDeposit, EscrowCaptureError>.Success(
-                new EscrowDeposit(existing.Id, existing.ChargeId, existing.Status));
-
         var authorized = await commissionService.CalculateBoundAsync(
             commissionBindingId,
             externalReference,
@@ -244,6 +239,11 @@ internal sealed class EscrowService : IEscrowService
             return Result<EscrowDeposit, EscrowCaptureError>.Failure(
                 new EscrowCaptureError.CommissionFailure(commissionError!));
         }
+
+        var existing = await escrowRepository.GetByCommissionBindingIdAsync(commissionBindingId, ct);
+        if (existing is not null)
+            return Result<EscrowDeposit, EscrowCaptureError>.Success(
+                new EscrowDeposit(existing.Id, existing.ChargeId, existing.Status));
 
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {
@@ -388,12 +388,7 @@ internal sealed class EscrowService : IEscrowService
         if (escrow.Status == EscrowStatus.Refunded)
         {
             logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
-            var existing = escrow.Refunds
-                .Where(refund => refund.Status == PaymentRefundStatus.Completed)
-                .OrderByDescending(refund => refund.CompletedAt)
-                .First();
-            return Result<Option<Refund>, EscrowRefundError>.Success(
-                Option.Some(new Refund(existing.StripeRefundId!)));
+            return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
         }
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
