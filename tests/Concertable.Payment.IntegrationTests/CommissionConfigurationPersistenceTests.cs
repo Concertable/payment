@@ -68,6 +68,43 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             await verification.CommissionBindings.CountAsync(b => b.CommissionConfigurationId == configurationId));
     }
 
+    [Fact]
+    public async Task ConfirmReviewedGross_DifferentSecondValue_CannotOverwriteFirst()
+    {
+        await using (var migrate = CreateContext())
+            await migrate.Database.MigrateAsync();
+
+        Guid bindingId;
+        await using (var seed = CreateContext())
+        {
+            var configuration = CommissionConfigurationEntity.Create(
+                Guid.NewGuid(),
+                Percentage.From(5m),
+                DateTimeOffset.UtcNow);
+            var binding = CommissionBindingEntity.Create(
+                configuration,
+                Currency.Gbp,
+                $"booking:{Guid.NewGuid():N}",
+                $"payer:{Guid.NewGuid():N}",
+                DateTimeOffset.UtcNow);
+            seed.AddRange(configuration, binding);
+            await seed.SaveChangesAsync();
+            bindingId = binding.Id;
+        }
+
+        await using (var first = CreateContext())
+            Assert.True(await new CommissionBindingRepository(first)
+                .TryConfirmReviewedGrossAsync(bindingId, Money.Gbp(50)));
+
+        await using (var second = CreateContext())
+            Assert.False(await new CommissionBindingRepository(second)
+                .TryConfirmReviewedGrossAsync(bindingId, Money.Gbp(51)));
+
+        await using var verification = CreateContext();
+        var bindingRow = await verification.CommissionBindings.SingleAsync(binding => binding.Id == bindingId);
+        Assert.Equal(5000, bindingRow.ReviewedGrossMinor);
+    }
+
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()

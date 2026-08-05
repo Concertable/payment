@@ -98,7 +98,8 @@ internal sealed class CommissionService : ICommissionService
         if (reviewedGross.Currency != binding.Currency)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
                 CommissionError.CurrencyMismatch);
-        if (binding.ReviewedGross is { } existing && existing != reviewedGross)
+        var existing = binding.ReviewedGross;
+        if (existing is not null && existing.Value != reviewedGross)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
                 CommissionError.GrossMismatch);
 

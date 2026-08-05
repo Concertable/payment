@@ -68,6 +68,83 @@ public sealed class EscrowServiceTests
             NullLogger<EscrowService>.Instance);
 
     [Fact]
+    public async Task DepositBoundCommissionAsync_ExistingEscrowWithMismatchedGross_ReturnsCommissionFailure()
+    {
+        var bindingId = Guid.NewGuid();
+        escrowRepository
+            .Setup(r => r.GetByCommissionBindingIdAsync(bindingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExistingBoundEscrow(bindingId));
+        commissionService
+            .Setup(c => c.CalculateBoundAsync(
+                bindingId,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+
+        var result = await sut.DepositBoundCommissionAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(51),
+            "pm_test",
+            PaymentSession.OnSession,
+            7,
+            bindingId,
+            "booking:7",
+            null);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new EscrowDepositError.CommissionFailure(CommissionError.GrossMismatch), error);
+        paymentManager.Verify(
+            p => p.HoldAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Money>(),
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CaptureBoundCommissionAsync_ExistingEscrowWithMismatchedGross_ReturnsCommissionFailure()
+    {
+        var bindingId = Guid.NewGuid();
+        escrowRepository
+            .Setup(r => r.GetByCommissionBindingIdAsync(bindingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExistingBoundEscrow(bindingId));
+        commissionService
+            .Setup(c => c.CalculateBoundAsync(
+                bindingId,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+
+        var result = await sut.CaptureBoundCommissionAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(51),
+            "pi_existing",
+            7,
+            bindingId,
+            "booking:7");
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new EscrowCaptureError.CommissionFailure(CommissionError.GrossMismatch), error);
+        paymentManager.Verify(
+            p => p.CaptureAsync(It.IsAny<CaptureRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task DepositAsync_OnSynchronousSuccess_PersistsEscrowAtHeld()
     {
         paymentManager
@@ -235,8 +312,7 @@ public sealed class EscrowServiceTests
         var result = await sut.RefundByBookingIdAsync(7);
 
         Assert.True(result.TryGetValue(out var refund));
-        Assert.True(refund.TryGetValue(out var existing));
-        Assert.Equal("re_prior", existing.RefundId);
+        Assert.True(refund.IsNone);
         paymentManager.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -574,6 +650,26 @@ public sealed class EscrowServiceTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(refunded);
         Assert.Equal(Money.Gbp(62), refunded.Amount);
+    }
+
+    private EscrowEntity ExistingBoundEscrow(Guid bindingId)
+    {
+        var escrow = EscrowEntity.CreateBound(
+            7,
+            payerId,
+            payeeId,
+            bindingId,
+            new Concertable.Payment.Domain.CommissionCalculation(
+                Currency.Gbp,
+                5000,
+                1000,
+                800,
+                200,
+                Percentage.From(20m),
+                6000),
+            "pi_existing");
+        escrow.Confirm();
+        return escrow;
     }
 
     private static PayoutAccountEntity PayoutAccountWith(string stripeCustomerId)

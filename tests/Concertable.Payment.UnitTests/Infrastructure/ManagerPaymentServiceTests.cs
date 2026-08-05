@@ -180,6 +180,51 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
+    public async Task PayBoundCommissionAsync_ExistingSettlementWithMismatchedGross_ReturnsCommissionFailure()
+    {
+        var sut = SutWithFee(0m);
+        var bindingId = Guid.NewGuid();
+        transactionRepository
+            .Setup(r => r.GetSettlementByCommissionBindingIdAsync(bindingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAuthorizedSettlement(bindingId));
+        commissionService
+            .Setup(c => c.CalculateBoundAsync(
+                bindingId,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+
+        var result = await sut.PayBoundCommissionAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(51),
+            "pm_test",
+            PaymentSession.OnSession,
+            7,
+            bindingId,
+            "booking:7",
+            null);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new ManagerPaymentError.CommissionFailure(CommissionError.GrossMismatch), error);
+        paymentManager.Verify(
+            p => p.SettleAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Money>(),
+                It.IsAny<Money>(),
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task CreateBoundCommissionHoldSessionAsync_Retry_ReturnsExistingSessionWithoutRebinding()
     {
         var sut = SutWithFee(0m);
@@ -370,7 +415,7 @@ public sealed class ManagerPaymentServiceTests
             Times.Never);
     }
 
-    private SettlementTransactionEntity CompletedAuthorizedSettlement()
+    private SettlementTransactionEntity CompletedAuthorizedSettlement(Guid? commissionBindingId = null)
     {
         var settlement = SettlementTransactionEntity.CreateBound(
             payerId,
@@ -386,7 +431,7 @@ public sealed class ManagerPaymentServiceTests
                 6000),
             TransactionStatus.Pending,
             bookingId: 7,
-            commissionBindingId: Guid.NewGuid());
+            commissionBindingId: commissionBindingId ?? Guid.NewGuid());
         settlement.Complete();
         return settlement;
     }

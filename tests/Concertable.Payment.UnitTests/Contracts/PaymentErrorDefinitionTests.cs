@@ -1,4 +1,5 @@
 using Concertable.Kernel.Errors;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.UnitTests.Contracts;
@@ -37,6 +38,13 @@ public sealed class PaymentErrorDefinitionTests
         { new EscrowRefundError.AmountExceedsRemaining(), "escrow.refund_amount_exceeds_remaining", "Refund amount exceeds the remaining refundable amount.", ErrorKind.Conflict },
         { new EscrowRefundError.Conflict(), "escrow.refund_conflict", "Another refund changed the refundable amount.", ErrorKind.Conflict },
         { new EscrowRefundError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
+        { SettlementRefundError.SettlementNotFound, "settlement.refund_not_found", "Settlement not found.", ErrorKind.NotFound },
+        { SettlementRefundError.SettlementNotRefundable, "settlement.refund_not_allowed", "Settlement cannot be refunded in its current state.", ErrorKind.Conflict },
+        { SettlementRefundError.CommissionBindingNotFound, "settlement.refund_commission_binding_not_found", "Commission binding not found.", ErrorKind.NotFound },
+        { SettlementRefundError.CurrencyMismatch, "settlement.refund_currency_mismatch", "Refund currency does not match.", ErrorKind.Invalid },
+        { SettlementRefundError.AmountMustBePositive, "settlement.refund_amount_invalid", "Refund amount must be positive.", ErrorKind.Invalid },
+        { SettlementRefundError.AmountExceedsRemaining, "settlement.refund_amount_exceeds_remaining", "Refund amount exceeds the remaining refundable amount.", ErrorKind.Conflict },
+        { SettlementRefundError.Conflict, "settlement.refund_conflict", "Another refund changed the refundable amount.", ErrorKind.Conflict },
         { new HoldSessionError.PaymentFailure(new PaymentError.PayerNotFound()), "payment.payer_not_found", "The payer account was not found.", ErrorKind.NotFound },
         { new HoldSessionError.CommissionFailure(CommissionError.BindingMismatch), "payment.commission_binding_mismatch", "The commission binding does not match this payment.", ErrorKind.Invalid }
     };
