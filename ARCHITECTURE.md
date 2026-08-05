@@ -112,7 +112,7 @@ Outbound Stripe calls carry idempotency keys (`Services/StripeIdempotency.cs`).
 
 ## gRPC surface & the `owner` boundary
 
-The proto (`Client/Protos/payment.proto`) generates client stubs in `Payment.Client` and server stubs in `Payment.Api`; services are mapped with `RequireAuthorization("ServiceToken")` (`Infrastructure/Extensions/RoutingExtensions.cs`). Services: **`CommissionPricing`**, **`ManagerPayment`**, **`CustomerPayment`**, **`Escrow`**, **`PayoutAccount`**; typed adapters in `Client/Adapters/` (`ICommissionClient`, `ICustomerPaymentClient`, `IManagerPaymentClient`, `IEscrowClient`, `IPayoutAccountClient`).
+The proto (`Client/Protos/payment.proto`) generates client stubs in `Payment.Client` and server stubs in `Payment.Api`; services are mapped with `RequireAuthorization("ServiceToken")` (`Infrastructure/Extensions/RoutingExtensions.cs`). Services: **`CommissionPricing`**, **`ManagerPayment`**, **`CustomerPayment`**, **`Escrow`**, **`PayoutAccount`**; typed adapters in `Client/Adapters/` (`ICommissionPricingClient`, `ICustomerPaymentOperationsClient`, `IManagerPaymentOperationsClient`, `IEscrowOperationsClient`, `IPayoutAccountOperationsClient`).
 
 The opaque `owner` is resolved two different ways by design:
 
@@ -141,7 +141,7 @@ JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api`
 
 ## Tech stack
 
-.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper · FluentValidation. Service contracts still return FluentResults `Result` — migration debt toward the Kernel typed `Result<TValue, TError>` (`api/agents/CODE_CONVENTIONS.md`).
+.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper · FluentValidation. Published client operations return Kernel-owned typed results with Payment-owned error unions (`api/agents/CODE_CONVENTIONS.md`).
 
 ---
 
