@@ -10,7 +10,7 @@ public interface IManagerPaymentOperationsClient
     Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -19,8 +19,7 @@ public interface IManagerPaymentOperationsClient
     Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -41,14 +40,13 @@ public interface IManagerPaymentOperationsClient
 
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
     Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,

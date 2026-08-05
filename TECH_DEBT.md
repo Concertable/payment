@@ -6,6 +6,17 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## LOW
 
+### Internal Payment DTOs still expose monetary values as primitives
+
+`Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published
+`Client/EscrowDto.cs` expose monetary values as `decimal` or `long`. These shapes predate the shared
+`Money` value object and force callers to infer or obtain currency separately. Persistence columns,
+Stripe metadata, and calculator-local minor-unit arithmetic are intentional representations and are
+not part of this debt.
+
+**Resolves when:** every in-process and published Payment DTO uses `Money` for monetary values, with
+conversion to minor units confined to persistence, provider, and protobuf mapper boundaries.
+
 ### A crashed two-phase refund can strand a `Pending` `PaymentRefundEntity` with no reconcile
 
 Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund, and the Stripe idempotency key (`commission:{authId}:refund:{cumulativeGross}`) would collapse a same-amount retry onto the same Stripe refund anyway. But the reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.

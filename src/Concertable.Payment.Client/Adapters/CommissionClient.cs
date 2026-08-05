@@ -16,15 +16,13 @@ internal sealed class CommissionClient : ICommissionPricingClient
     }
 
     public Task<Result<CommissionCalculation, CommissionError>> PreviewAsync(
-        long grossMinor,
-        Currency currency,
+        Money gross,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.PreviewCommissionAsync(
                 new Proto.PreviewCommissionRequest
                 {
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency()
+                    Gross = gross.ToProtoMoney()
                 },
                 cancellationToken: ct)).ToCommissionCalculation(),
             CommissionError.FromCode,
@@ -37,9 +35,6 @@ internal sealed class CommissionClient : ICommissionPricingClient
         Guid reviewedCommissionConfigurationId,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
-        long? grossMinor = null,
-        long? expectedCommissionMinor = null,
-        long? expectedPayerTotalMinor = null,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () =>
@@ -53,14 +48,27 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 };
-                if (grossMinor is not null)
-                    request.GrossMinor = grossMinor.Value;
-                if (expectedCommissionMinor is not null)
-                    request.ExpectedCommissionMinor = expectedCommissionMinor.Value;
-                if (expectedPayerTotalMinor is not null)
-                    request.ExpectedPayerTotalMinor = expectedPayerTotalMinor.Value;
                 return (await client.CreateOrBindCommissionAsync(request, cancellationToken: ct)).ToCommissionBinding();
             },
+            CommissionError.FromCode,
+            ct);
+
+    public Task<Result<CommissionCalculation, CommissionError>> ConfirmReviewedGrossAsync(
+        Guid bindingId,
+        string externalReference,
+        string payerReference,
+        Money reviewedGross,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.ConfirmReviewedGrossAsync(
+                new Proto.ConfirmReviewedGrossRequest
+                {
+                    BindingId = bindingId.ToString(),
+                    ExternalReference = externalReference,
+                    PayerReference = payerReference,
+                    ReviewedGross = reviewedGross.ToProtoMoney()
+                },
+                cancellationToken: ct)).ToCommissionCalculation(),
             CommissionError.FromCode,
             ct);
 
@@ -68,8 +76,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
         Guid bindingId,
         string externalReference,
         string payerReference,
-        Currency currency,
-        long grossMinor,
+        Money gross,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default) =>
@@ -80,8 +87,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     BindingId = bindingId.ToString(),
                     ExternalReference = externalReference,
                     PayerReference = payerReference,
-                    Currency = currency.ToProtoCurrency(),
-                    GrossMinor = grossMinor,
+                    Gross = gross.ToProtoMoney(),
                     StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },

@@ -52,7 +52,7 @@ internal static class EscrowRequestMappers
         this BoundCommissionDepositRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId,
@@ -72,7 +72,7 @@ internal static class EscrowRequestMappers
         this BoundCommissionCaptureRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.PaymentIntentId,
         request.BookingId,
         request.CommissionBindingId.ParseOrThrow<Guid>(

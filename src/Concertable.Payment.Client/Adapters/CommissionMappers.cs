@@ -12,10 +12,9 @@ internal static class CommissionMappers
         new(
             Guid.Parse(response.CommissionConfigurationId),
             decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
-            response.Currency.ToCurrency(),
-            response.GrossMinor,
-            response.CommissionMinor,
-            response.PayerTotalMinor);
+            response.Gross.ToMoney(),
+            response.Commission.ToMoney(),
+            response.PayerTotal.ToMoney());
 
     public static CommissionBinding ToCommissionBinding(
         this Proto.CommissionBindingResponse response) =>
@@ -23,8 +22,7 @@ internal static class CommissionMappers
             Guid.Parse(response.BindingId),
             Guid.Parse(response.CommissionConfigurationId),
             decimal.Parse(response.RatePercentage, CultureInfo.InvariantCulture),
-            response.Currency.ToCurrency(),
-            response.Calculation?.ToCommissionCalculation());
+            response.Currency.ToCurrency());
 
     private static Currency ToCurrency(this Proto.Currency currency) => currency switch
     {

@@ -26,7 +26,7 @@ public sealed class CommissionServiceTests
     [Fact]
     public async Task PreviewAsync_CurrencyMismatch_Fails()
     {
-        var result = await BuildService().PreviewAsync(GrossMinor, (Currency)840);
+        var result = await BuildService().PreviewAsync(Money.FromMinorUnits(GrossMinor, (Currency)840));
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_currency_mismatch", error.Definition.Code);
@@ -37,21 +37,21 @@ public sealed class CommissionServiceTests
     {
         var expected = calculator.Calculate(GrossMinor, Currency.Gbp, Terms(), Percentage.From(VatRatePercentage));
 
-        var result = await BuildService().PreviewAsync(GrossMinor, Currency.Gbp);
+        var result = await BuildService().PreviewAsync(Gross());
 
         Assert.True(result.IsSuccess);
         Assert.True(result.TryGetValue(out var quote));
         Assert.Equal(configurationId, quote.CommissionConfigurationId);
-        Assert.Equal(expected.PayeeGrossMinor, quote.GrossMinor);
-        Assert.Equal(expected.CommissionGrossMinor, quote.CommissionMinor);
-        Assert.Equal(expected.PayerTotalMinor, quote.PayerTotalMinor);
+        Assert.Equal(Money.FromMinorUnits(expected.PayeeGrossMinor, expected.Currency), quote.Gross);
+        Assert.Equal(Money.FromMinorUnits(expected.CommissionGrossMinor, expected.Currency), quote.Commission);
+        Assert.Equal(Money.FromMinorUnits(expected.PayerTotalMinor, expected.Currency), quote.PayerTotal);
     }
 
     [Fact]
     public async Task CreateOrBindAsync_ReviewedConfigDiffers_ReturnsPricingChanged()
     {
         var result = await BuildService().CreateOrBindAsync(
-            "booking:7", "payer:1", Currency.Gbp, Guid.NewGuid(), null, null, null, null, null);
+            "booking:7", "payer:1", Currency.Gbp, Guid.NewGuid(), null, null);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_pricing_changed", error.Definition.Code);
@@ -66,7 +66,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(existing);
 
         var result = await BuildService().CreateOrBindAsync(
-            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null, GrossMinor, 500, 5500);
+            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.TryGetValue(out var binding));
@@ -82,7 +82,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(existing);
 
         var result = await BuildService().CreateOrBindAsync(
-            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_2", null, null, null, null);
+            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_2", null);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_binding_mismatch", error.Definition.Code);
@@ -96,12 +96,82 @@ public sealed class CommissionServiceTests
             .ReturnsAsync((CommissionBindingEntity candidate, CancellationToken _) => candidate);
 
         var result = await BuildService().CreateOrBindAsync(
-            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null, null, null, null);
+            "booking:7", "payer:1", Currency.Gbp, configurationId, "pi_1", null);
 
         Assert.True(result.IsSuccess);
         authorizationRepository.Verify(
             r => r.GetOrCreateAsync(It.IsAny<CommissionBindingEntity>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmReviewedGrossAsync_FirstConfirmation_PersistsAndReturnsPaymentCalculation()
+    {
+        var binding = Binding("booking:7", "payer:1", null, confirmed: false);
+        authorizationRepository
+            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(binding);
+        authorizationRepository
+            .Setup(r => r.TryConfirmReviewedGrossAsync(binding.Id, Gross(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var result = await BuildService().ConfirmReviewedGrossAsync(
+            binding.Id, "booking:7", "payer:1", Gross());
+
+        Assert.True(result.TryGetValue(out var calculation));
+        Assert.Equal(Gross(), calculation.Gross);
+        Assert.Equal(Money.Gbp(5), calculation.Commission);
+        Assert.Equal(Money.Gbp(55), calculation.PayerTotal);
+        Assert.Equal(Gross(), binding.ReviewedGross);
+    }
+
+    [Fact]
+    public async Task ConfirmReviewedGrossAsync_ConcurrentDifferentConfirmation_FailsClosed()
+    {
+        var binding = Binding("booking:7", "payer:1", null, confirmed: false);
+        authorizationRepository
+            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(binding);
+        authorizationRepository
+            .Setup(r => r.TryConfirmReviewedGrossAsync(binding.Id, Gross(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var result = await BuildService().ConfirmReviewedGrossAsync(
+            binding.Id, "booking:7", "payer:1", Gross());
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(CommissionError.GrossMismatch, error);
+        Assert.Null(binding.ReviewedGross);
+    }
+
+    [Fact]
+    public async Task CalculateBoundAsync_UnconfirmedGross_Fails()
+    {
+        var binding = Binding("booking:7", "payer:1", null, confirmed: false);
+        authorizationRepository
+            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(binding);
+
+        var result = await BuildService().CalculateBoundAsync(
+            binding.Id, "booking:7", "payer:1", Gross(), null, null);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(CommissionError.GrossNotConfirmed, error);
+    }
+
+    [Fact]
+    public async Task CalculateBoundAsync_DifferentGross_Fails()
+    {
+        var binding = Binding("booking:7", "payer:1", null);
+        authorizationRepository
+            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(binding);
+
+        var result = await BuildService().CalculateBoundAsync(
+            binding.Id, "booking:7", "payer:1", Money.Gbp(51), null, null);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(CommissionError.GrossMismatch, error);
     }
 
     [Fact]
@@ -113,7 +183,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync((CommissionBindingEntity?)null);
 
         var result = await BuildService().CalculateBoundAsync(
-            id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, null, null);
+            id, "booking:7", "payer:1", Gross(), null, null);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_binding_not_found", error.Definition.Code);
@@ -128,7 +198,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:OTHER", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
+            binding.Id, "booking:OTHER", "payer:1", Gross(), "pi_1", null);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_binding_mismatch", error.Definition.Code);
@@ -143,7 +213,7 @@ public sealed class CommissionServiceTests
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_2", null);
+            binding.Id, "booking:7", "payer:1", Gross(), "pi_2", null);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal("payment.commission_intent_mismatch", error.Definition.Code);
@@ -159,7 +229,7 @@ public sealed class CommissionServiceTests
         var expected = calculator.Calculate(GrossMinor, Currency.Gbp, Terms(), Percentage.From(VatRatePercentage));
 
         var result = await BuildService().CalculateBoundAsync(
-            binding.Id, "booking:7", "payer:1", Currency.Gbp, GrossMinor, "pi_1", null);
+            binding.Id, "booking:7", "payer:1", Gross(), "pi_1", null);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.TryGetValue(out var boundCommission));
@@ -198,6 +268,9 @@ public sealed class CommissionServiceTests
     private CommissionTerms Terms() =>
         Configuration().Terms;
 
+    private static Money Gross() =>
+        Money.FromMinorUnits(GrossMinor, Currency.Gbp);
+
     private CommissionConfigurationEntity Configuration() =>
         CommissionConfigurationEntity.Create(
             configurationId,
@@ -207,9 +280,15 @@ public sealed class CommissionServiceTests
     private CommissionBindingEntity Binding(
         string externalReference,
         string payerReference,
-        string? stripePaymentIntentId) =>
-        CommissionBindingEntity.Create(
+        string? stripePaymentIntentId,
+        bool confirmed = true)
+    {
+        var binding = CommissionBindingEntity.Create(
             Configuration(), Currency.Gbp, externalReference, payerReference, timeProvider.GetUtcNow(), stripePaymentIntentId);
+        if (confirmed)
+            binding.ConfirmReviewedGross(Gross());
+        return binding;
+    }
 
     private CommissionService BuildService()
     {

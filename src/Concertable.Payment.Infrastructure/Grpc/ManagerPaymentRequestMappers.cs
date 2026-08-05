@@ -57,7 +57,7 @@ internal static class ManagerPaymentRequestMappers
         this BoundCommissionManagerPayRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId,
@@ -82,7 +82,7 @@ internal static class ManagerPaymentRequestMappers
     public static CreateBoundCommissionHoldSessionCommand ToCommand(
         this CreateBoundCommissionHoldSessionRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.Metadata,
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),

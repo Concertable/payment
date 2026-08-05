@@ -13,9 +13,18 @@ internal static class PaymentMappers
         Currency = money.Currency.ToProtoCurrency()
     };
 
+    public static Money ToMoney(this Proto.Money money) =>
+        Money.FromMinorUnits(money.AmountMinor, money.Currency.ToCurrency());
+
     public static Proto.Currency ToProtoCurrency(this Currency currency) => currency switch
     {
         Currency.Gbp => Proto.Currency.Gbp,
+        _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
+    };
+
+    private static Currency ToCurrency(this Proto.Currency currency) => currency switch
+    {
+        Proto.Currency.Gbp => Currency.Gbp,
         _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
     };
 
