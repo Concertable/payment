@@ -11,6 +11,12 @@ internal static class MoneyMappers
             ? throw new RpcException(new Status(StatusCode.InvalidArgument, "Money amount is required."))
             : Money.FromMinorUnits(money.AmountMinor, money.Currency.ToDomainCurrency());
 
+    public static Proto.Money ToProtoMoney(this Money money) => new()
+    {
+        AmountMinor = money.ToMinorUnits(),
+        Currency = money.Currency.ToProtoCurrency()
+    };
+
     public static Currency ToDomainCurrency(this Proto.Currency currency) => currency switch
     {
         Proto.Currency.Gbp => Currency.Gbp,

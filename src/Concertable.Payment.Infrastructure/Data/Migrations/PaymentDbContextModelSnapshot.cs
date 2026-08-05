@@ -118,6 +118,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<long?>("ReviewedGrossMinor")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("StripePaymentIntentId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");

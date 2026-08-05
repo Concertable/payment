@@ -19,7 +19,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
         Guid payerId,
         int concertId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default) =>
@@ -31,7 +31,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
                     PayerId = payerId.ToString(),
                     ConcertId = concertId,
                     PayeeId = payeeId.ToString(),
-                    Amount = Money.Gbp(amount).ToProtoMoney(),
+                    Amount = amount.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId
                 };
                 request.Metadata.Add(new Dictionary<string, string>(metadata));

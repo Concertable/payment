@@ -102,8 +102,7 @@ internal sealed class EscrowService : IEscrowService
     public async Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -121,8 +120,7 @@ internal sealed class EscrowService : IEscrowService
             commissionBindingId,
             externalReference,
             payerId.ToString(),
-            currency,
-            grossMinor,
+            gross,
             null,
             stripeSetupIntentId,
             ct);
@@ -220,8 +218,7 @@ internal sealed class EscrowService : IEscrowService
     public async Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentIntentId,
         int bookingId,
         Guid commissionBindingId,
@@ -237,8 +234,7 @@ internal sealed class EscrowService : IEscrowService
             commissionBindingId,
             externalReference,
             payerId.ToString(),
-            currency,
-            grossMinor,
+            gross,
             paymentIntentId,
             null,
             ct);
@@ -417,11 +413,11 @@ internal sealed class EscrowService : IEscrowService
 
     public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string? reason = null,
         CancellationToken ct = default)
     {
+        var grossMinor = gross.ToMinorUnits();
         var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
         if (escrow is null)
         {
@@ -430,7 +426,7 @@ internal sealed class EscrowService : IEscrowService
         }
         if (escrow.CommissionBindingId is null)
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CommissionBindingNotFound());
-        if (currency != escrow.Currency)
+        if (gross.Currency != escrow.Currency)
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CurrencyMismatch());
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());

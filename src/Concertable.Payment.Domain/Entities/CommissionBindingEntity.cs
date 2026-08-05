@@ -44,8 +44,12 @@ internal sealed class CommissionBindingEntity : IGuidEntity
     public DateTimeOffset BoundAt { get; private set; }
     public string? StripePaymentIntentId { get; private set; }
     public string? StripeSetupIntentId { get; private set; }
+    public long? ReviewedGrossMinor { get; private set; }
 
     public CommissionTerms Terms => CommissionConfiguration.Terms;
+    public Money? ReviewedGross => ReviewedGrossMinor is null
+        ? null
+        : Money.FromMinorUnits(ReviewedGrossMinor.Value, Currency);
 
     public static CommissionBindingEntity Create(
         CommissionConfigurationEntity commissionConfiguration,
@@ -74,6 +78,18 @@ internal sealed class CommissionBindingEntity : IGuidEntity
             throw new DomainException("Commission binding is already bound to another PaymentIntent.");
 
         StripePaymentIntentId = paymentIntentId;
+    }
+
+    public void ConfirmReviewedGross(Money reviewedGross)
+    {
+        if (reviewedGross.Currency != Currency)
+            throw new DomainException("Reviewed gross currency must match the commission binding.");
+
+        var reviewedGrossMinor = reviewedGross.ToMinorUnits();
+        if (ReviewedGrossMinor is not null && ReviewedGrossMinor != reviewedGrossMinor)
+            throw new DomainException("Reviewed gross has already been confirmed at a different amount.");
+
+        ReviewedGrossMinor = reviewedGrossMinor;
     }
 
     public bool Matches(
