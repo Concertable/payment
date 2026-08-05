@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
@@ -116,14 +117,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var existing = await transactionRepository.GetSettlementByCommissionBindingIdAsync(commissionBindingId, ct);
-        if (existing is not null)
-            return Result<PaymentOutcome, ManagerPaymentError>.Success(new PaymentOutcome
-            {
-                TransactionId = existing.PaymentIntentId,
-                RequiresAction = existing.Status == TransactionStatus.Pending
-            });
-
         var authorized = await commissionService.CalculateBoundAsync(
             commissionBindingId,
             externalReference,
@@ -137,6 +130,14 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             authorized.TryGetError(out var error);
             return Result<PaymentOutcome, ManagerPaymentError>.Failure(new ManagerPaymentError.CommissionFailure(error!));
         }
+
+        var existing = await transactionRepository.GetSettlementByCommissionBindingIdAsync(commissionBindingId, ct);
+        if (existing is not null)
+            return Result<PaymentOutcome, ManagerPaymentError>.Success(new PaymentOutcome
+            {
+                TransactionId = existing.PaymentIntentId,
+                RequiresAction = existing.Status == TransactionStatus.Pending
+            });
 
         var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
         if (payer is null)
@@ -269,7 +270,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         return await stripeHoldClient.FindHeldIntentAsync(stripeCustomerId, applicationId, ct);
     }
 
-    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
+    public async Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         Money gross,
         string? reason = null,
@@ -278,22 +279,22 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         var grossMinor = gross.ToMinorUnits();
         var settlement = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
         if (settlement is null)
-            return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
+            return Result<Option<Refund>, SettlementRefundError>.Success(Option.None<Refund>());
         if (settlement.CommissionBindingId is null)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CommissionBindingNotFound());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.CommissionBindingNotFound);
         if (gross.Currency != settlement.Currency)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CurrencyMismatch());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.CurrencyMismatch);
         if (settlement.Status != TransactionStatus.Complete)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotRefundable);
         if (grossMinor <= 0)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountMustBePositive());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountMustBePositive);
 
         var grossAlreadyRefunded = settlement.Refunds
             .Where(refund => refund.CountsTowardCumulative)
             .Sum(refund => refund.GrossRefundedMinor);
         var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
         if (cumulativeGrossRefund > settlement.PayeeGrossMinor)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountExceedsRemaining());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountExceedsRemaining);
 
         var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
             settlement.CommissionGrossMinor,
@@ -355,7 +356,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             await unitOfWork.SaveChangesAsync(ct);
             await transactionRepository.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, grossMinor, ct);
             refund.TryGetError(out var error);
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.PaymentFailure(error!));
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError(error!.Definition));
         }
 
         if (settlement.CompleteRefund(reservation, completedRefund.RefundId, timeProvider.GetUtcNow()).IsFailure)
@@ -374,22 +375,22 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             ct);
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Result<Option<Refund>, EscrowRefundError>.Success(Option.Some(completedRefund));
+        return Result<Option<Refund>, SettlementRefundError>.Success(Option.Some(completedRefund));
     }
 
-    private async Task<Result<Option<Refund>, EscrowRefundError>> ReservationConflictAsync(
+    private async Task<Result<Option<Refund>, SettlementRefundError>> ReservationConflictAsync(
         int bookingId,
         long grossMinor,
         CancellationToken ct)
     {
         var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
         if (current is null)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotFound());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotFound);
         if (current.Status != TransactionStatus.Complete)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());
+            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotRefundable);
         return checked(current.RefundedGrossMinor + grossMinor) > current.PayeeGrossMinor
-            ? Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountExceedsRemaining())
-            : Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.Conflict());
+            ? Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountExceedsRemaining)
+            : Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.Conflict);
     }
 
     private async Task<Result<string, PaymentError>> ResolveStripeCustomerAsync(Guid ownerId, CancellationToken ct)
