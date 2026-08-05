@@ -101,23 +101,43 @@ public sealed class StripeTransferClientTests
     }
 
     [Fact]
-    public async Task RefundAsync_CallerActionableStripeFailure_ReturnsTypedRejection()
+    public async Task RefundAsync_InvalidRequestFailure_Propagates()
     {
+        var exception = new StripeException("invalid refund")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.BadRequest,
+            StripeError = new StripeError { Type = "invalid_request_error" }
+        };
         stripeClient
             .Setup(c => c.CreateRefundAsync(
                 It.IsAny<RefundCreateOptions>(),
                 It.IsAny<RequestOptions?>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new StripeException("invalid refund")
-            {
-                HttpStatusCode = System.Net.HttpStatusCode.BadRequest,
-                StripeError = new StripeError { Type = "invalid_request_error" }
-            });
+            .ThrowsAsync(exception);
 
-        var result = await sut.RefundAsync(RefundOptions());
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
 
-        Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new PaymentError.PaymentRejected(), error);
+        Assert.Same(exception, thrown);
+    }
+
+    [Fact]
+    public async Task RefundAsync_ResourceMissingFailure_Propagates()
+    {
+        var exception = new StripeException("resource missing")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.NotFound,
+            StripeError = new StripeError { Code = "resource_missing", Type = "invalid_request_error" }
+        };
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
     }
 
     [Fact]

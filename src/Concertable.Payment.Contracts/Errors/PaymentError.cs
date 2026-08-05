@@ -51,8 +51,6 @@ public abstract partial record PaymentError : IError
         "payment.payer_unavailable" => Option.Some<PaymentError>(new PayerUnavailable()),
         "payment.recipient_unavailable" => Option.Some<PaymentError>(new RecipientUnavailable()),
         "payment.rejected" => Option.Some<PaymentError>(new PaymentRejected()),
-        _ => CommissionError.FromCode(code).Match(
-            error => Option.Some<PaymentError>(new CommissionFailure(error)),
-            Option.None<PaymentError>)
+        _ => Option.None<PaymentError>()
     };
 }
