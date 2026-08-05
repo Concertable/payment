@@ -36,8 +36,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
         var result = await managerPaymentService.PayBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
-            command.Gross.ToMinorUnits(),
-            command.Gross.Currency,
+            command.Gross,
             command.PaymentMethodId,
             command.Session,
             command.BookingId,
@@ -90,8 +89,7 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
         var command = request.ToCommand();
         var result = await managerPaymentService.CreateBoundCommissionHoldSessionAsync(
             command.PayerId,
-            command.Gross.ToMinorUnits(),
-            command.Gross.Currency,
+            command.Gross,
             command.Metadata,
             command.CommissionBindingId,
             command.ExternalReference,

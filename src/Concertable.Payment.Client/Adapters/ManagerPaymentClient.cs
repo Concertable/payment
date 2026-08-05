@@ -18,7 +18,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
     public Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -29,7 +29,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    Amount = Money.Gbp(amount).ToProtoMoney(),
+                    Amount = amount.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId
@@ -41,8 +41,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
     public Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -56,8 +55,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
+                    Gross = gross.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId,
@@ -91,14 +89,14 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        decimal amount,
+        Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var request = new Proto.CreateHoldSessionRequest
         {
             PayerId = payerId.ToString(),
-            Amount = Money.Gbp(amount).ToProtoMoney()
+            Amount = amount.ToProtoMoney()
         };
         request.Metadata.Add(new Dictionary<string, string>(metadata));
         return (await client.CreateHoldSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
@@ -106,8 +104,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
 
     public Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
@@ -119,8 +116,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                 var request = new Proto.CreateBoundCommissionHoldSessionRequest
                 {
                     PayerId = payerId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
+                    Gross = gross.ToProtoMoney(),
                     CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty

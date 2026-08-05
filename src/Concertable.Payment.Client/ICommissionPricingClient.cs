@@ -8,8 +8,7 @@ namespace Concertable.Payment.Client;
 public interface ICommissionPricingClient
 {
     Task<Result<CommissionCalculation, CommissionError>> PreviewAsync(
-        long grossMinor,
-        Currency currency,
+        Money gross,
         CancellationToken ct = default);
 
     Task<Result<CommissionBinding, CommissionError>> CreateOrBindAsync(
@@ -19,17 +18,20 @@ public interface ICommissionPricingClient
         Guid reviewedCommissionConfigurationId,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
-        long? grossMinor = null,
-        long? expectedCommissionMinor = null,
-        long? expectedPayerTotalMinor = null,
+        CancellationToken ct = default);
+
+    Task<Result<CommissionCalculation, CommissionError>> ConfirmReviewedGrossAsync(
+        Guid bindingId,
+        string externalReference,
+        string payerReference,
+        Money reviewedGross,
         CancellationToken ct = default);
 
     Task<Result<CommissionCalculation, CommissionError>> CalculateBoundAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
-        Currency currency,
-        long grossMinor,
+        Money gross,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);

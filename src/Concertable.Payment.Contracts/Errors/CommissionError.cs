@@ -19,8 +19,11 @@ public sealed record CommissionError(ErrorDefinition Definition) : IError
     public static readonly CommissionError PricingChanged = new(
         ErrorDefinition.Conflict("payment.commission_pricing_changed", "The commission pricing has changed."));
 
-    public static readonly CommissionError ExpectedAmountsInvalid = new(
-        ErrorDefinition.Invalid("payment.commission_expected_amounts_invalid", "The expected commission amounts are invalid."));
+    public static readonly CommissionError GrossNotConfirmed = new(
+        ErrorDefinition.Conflict("payment.commission_gross_not_confirmed", "The commission gross has not been confirmed."));
+
+    public static readonly CommissionError GrossMismatch = new(
+        ErrorDefinition.Conflict("payment.commission_gross_mismatch", "The commission gross does not match the confirmed amount."));
 
     public static Option<CommissionError> FromCode(string code) => code switch
     {
@@ -29,7 +32,8 @@ public sealed record CommissionError(ErrorDefinition Definition) : IError
         "payment.commission_currency_mismatch" => Option.Some(CurrencyMismatch),
         "payment.commission_intent_mismatch" => Option.Some(BindingIntentMismatch),
         "payment.commission_pricing_changed" => Option.Some(PricingChanged),
-        "payment.commission_expected_amounts_invalid" => Option.Some(ExpectedAmountsInvalid),
+        "payment.commission_gross_not_confirmed" => Option.Some(GrossNotConfirmed),
+        "payment.commission_gross_mismatch" => Option.Some(GrossMismatch),
         _ => Option.None<CommissionError>()
     };
 }

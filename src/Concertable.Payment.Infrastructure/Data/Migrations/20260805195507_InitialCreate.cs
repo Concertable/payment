@@ -106,7 +106,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     PayerReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     BoundAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     StripePaymentIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    StripeSetupIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    StripeSetupIntentId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ReviewedGrossMinor = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {

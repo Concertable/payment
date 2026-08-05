@@ -17,8 +17,7 @@ internal interface IEscrowService
     Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -38,8 +37,7 @@ internal interface IEscrowService
     Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentIntentId,
         int bookingId,
         Guid commissionBindingId,
@@ -58,8 +56,7 @@ internal interface IEscrowService
 
     Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string? reason = null,
         CancellationToken ct = default);
 

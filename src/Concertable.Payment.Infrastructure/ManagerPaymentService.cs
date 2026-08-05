@@ -107,8 +107,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -129,8 +128,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionBindingId,
             externalReference,
             payerId.ToString(),
-            currency,
-            grossMinor,
+            gross,
             null,
             stripeSetupIntentId,
             ct);
@@ -214,8 +212,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
     public async Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
@@ -229,8 +226,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionBindingId,
             externalReference,
             payerId.ToString(),
-            currency,
-            grossMinor,
+            gross,
             boundIntentId,
             stripeSetupIntentId,
             ct);
@@ -275,17 +271,17 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
     public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string? reason = null,
         CancellationToken ct = default)
     {
+        var grossMinor = gross.ToMinorUnits();
         var settlement = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
         if (settlement is null)
             return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
         if (settlement.CommissionBindingId is null)
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CommissionBindingNotFound());
-        if (currency != settlement.Currency)
+        if (gross.Currency != settlement.Currency)
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CurrencyMismatch());
         if (settlement.Status != TransactionStatus.Complete)
             return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());

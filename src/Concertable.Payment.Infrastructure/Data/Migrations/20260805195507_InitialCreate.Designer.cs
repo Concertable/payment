@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260802215519_InitialCreate")]
+    [Migration("20260805195507_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -120,6 +120,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("ReviewedGrossMinor")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("StripePaymentIntentId")
                         .HasMaxLength(100)

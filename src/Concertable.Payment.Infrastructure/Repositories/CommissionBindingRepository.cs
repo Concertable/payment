@@ -32,4 +32,21 @@ internal sealed class CommissionBindingRepository
             .LoadAsync(ct);
         return binding;
     }
+
+    public async Task<bool> TryConfirmReviewedGrossAsync(
+        Guid bindingId,
+        Money reviewedGross,
+        CancellationToken ct = default)
+    {
+        var reviewedGrossMinor = reviewedGross.ToMinorUnits();
+        var affected = await context.CommissionBindings
+            .Where(binding =>
+                binding.Id == bindingId &&
+                binding.Currency == reviewedGross.Currency &&
+                (binding.ReviewedGrossMinor == null || binding.ReviewedGrossMinor == reviewedGrossMinor))
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(binding => binding.ReviewedGrossMinor, reviewedGrossMinor),
+                ct);
+        return affected == 1;
+    }
 }
