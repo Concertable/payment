@@ -1,3 +1,4 @@
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using FluentResults;
 
@@ -9,7 +10,7 @@ public interface ICustomerPaymentClient
         Guid payerId,
         int concertId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         IDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default);
