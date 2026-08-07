@@ -3,7 +3,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");
 var authDb = sql.AddDatabase(AuthConstants.Database);
 var b2bDb = sql.AddDatabase(AppHostConstants.Databases.B2B);
-var paymentDb = sql.AddDatabase(AppHostConstants.Databases.Payment);
+var paymentDb = sql.AddDatabase(PaymentConstants.Database);
 
 var asb = builder.AddServiceBus();
 asb.Topology().AddPaymentTopology().AddAuthTopology();
