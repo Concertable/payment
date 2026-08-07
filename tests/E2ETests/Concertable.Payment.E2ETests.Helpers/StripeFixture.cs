@@ -1,3 +1,4 @@
+using Concertable.Kernel.ValueObjects;
 using Stripe;
 
 namespace Concertable.E2ETests;
@@ -54,7 +55,7 @@ public sealed class StripeFixture
             Created = new DateRangeOptions { GreaterThanOrEqual = LastReset }
         });
         return results.Data.SingleOrDefault(p =>
-            p.Amount == (long)(amount * 100) && p.Status == "succeeded");
+            p.Amount == Money.Gbp(amount).ToMinorUnits() && p.Status == "succeeded");
     }
 
     public async Task<Transfer?> FindTransferAsync(string stripeAccountId, decimal amount)
@@ -64,7 +65,7 @@ public sealed class StripeFixture
             Destination = stripeAccountId,
             Created = new DateRangeOptions { GreaterThanOrEqual = LastReset }
         });
-        return results.Data.SingleOrDefault(t => t.Amount == (long)(amount * 100));
+        return results.Data.SingleOrDefault(t => t.Amount == Money.Gbp(amount).ToMinorUnits());
     }
 
 }

@@ -19,7 +19,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     public async Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -27,12 +27,11 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
     {
         try
         {
-            var money = Money.Gbp(amount);
             var request = new Proto.ManagerPayRequest
             {
                 PayerId = payerId.ToString(),
                 PayeeId = payeeId.ToString(),
-                Amount = money.ToProtoMoney(),
+                Amount = amount.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId,
                 Session = session.ToProtoSession(),
                 BookingId = bookingId
@@ -112,15 +111,14 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        decimal amount,
+        Money amount,
         IDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var money = Money.Gbp(amount);
         var request = new Proto.CreateHoldSessionRequest
         {
             PayerId = payerId.ToString(),
-            Amount = money.ToProtoMoney()
+            Amount = amount.ToProtoMoney()
         };
         request.Metadata.Add(metadata);
         var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);
