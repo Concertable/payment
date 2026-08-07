@@ -81,7 +81,7 @@ internal sealed class PaymentRefundEntity : IGuidEntity
         DateTimeOffset completedAt)
     {
         if (Status != PaymentRefundStatus.Pending)
-            return UnitResult.Failure(PaymentRefundTransitionError.NotPending(Status));
+            return UnitResult.Failure<PaymentRefundTransitionError>(new PaymentRefundTransitionError.NotPending(Status));
 
         if (string.IsNullOrWhiteSpace(stripeRefundId))
             throw new DomainException("Stripe refund id is required.");
@@ -95,7 +95,7 @@ internal sealed class PaymentRefundEntity : IGuidEntity
     public UnitResult<PaymentRefundTransitionError> Fail()
     {
         if (Status != PaymentRefundStatus.Pending)
-            return UnitResult.Failure(PaymentRefundTransitionError.NotPending(Status));
+            return UnitResult.Failure<PaymentRefundTransitionError>(new PaymentRefundTransitionError.NotPending(Status));
 
         Status = PaymentRefundStatus.Failed;
         return UnitResult.Success<PaymentRefundTransitionError>();

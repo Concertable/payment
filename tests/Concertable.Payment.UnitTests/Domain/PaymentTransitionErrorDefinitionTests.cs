@@ -7,13 +7,13 @@ public sealed class PaymentTransitionErrorDefinitionTests
 {
     public static TheoryData<IError, string, string, ErrorKind> Cases => new()
     {
-        { TransactionTransitionError.NotPending(TransactionStatus.Complete), "payment.transaction_not_pending", "Transaction is Complete and cannot transition from pending.", ErrorKind.Conflict },
-        { TransactionTransitionError.NotComplete(TransactionStatus.Pending), "payment.transaction_not_complete", "Transaction is Pending; only a complete transaction can be refunded.", ErrorKind.Conflict },
-        { EscrowTransitionError.NotPending(EscrowStatus.Held), "escrow.not_pending", "Escrow is Held and cannot transition from pending.", ErrorKind.Conflict },
-        { EscrowTransitionError.NotHeld(EscrowStatus.Pending), "escrow.not_held", "Escrow is Pending; only held escrow can be released.", ErrorKind.Conflict },
-        { EscrowTransitionError.NotRefundable(EscrowStatus.Failed), "escrow.not_refundable", "Escrow is Failed and cannot be refunded.", ErrorKind.Conflict },
-        { EscrowTransitionError.NotDisputable(EscrowStatus.Released), "escrow.not_disputable", "Escrow is Released; only held escrow can be disputed.", ErrorKind.Conflict },
-        { PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), "payment.refund_not_pending", "Refund is Completed and cannot transition from pending.", ErrorKind.Conflict }
+        { new TransactionTransitionError.NotPending(TransactionStatus.Complete), "payment.transaction_not_pending", "Transaction is Complete and cannot transition from pending.", ErrorKind.Conflict },
+        { new TransactionTransitionError.NotComplete(TransactionStatus.Pending), "payment.transaction_not_complete", "Transaction is Pending; only a complete transaction can be refunded.", ErrorKind.Conflict },
+        { new EscrowTransitionError.NotPending(EscrowStatus.Held), "escrow.not_pending", "Escrow is Held and cannot transition from pending.", ErrorKind.Conflict },
+        { new EscrowTransitionError.NotHeld(EscrowStatus.Pending), "escrow.not_held", "Escrow is Pending; only held escrow can be released.", ErrorKind.Conflict },
+        { new EscrowTransitionError.NotRefundable(EscrowStatus.Failed), "escrow.not_refundable", "Escrow is Failed and cannot be refunded.", ErrorKind.Conflict },
+        { new EscrowTransitionError.NotDisputable(EscrowStatus.Released), "escrow.not_disputable", "Escrow is Released; only held escrow can be disputed.", ErrorKind.Conflict },
+        { new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), "payment.refund_not_pending", "Refund is Completed and cannot transition from pending.", ErrorKind.Conflict }
     };
 
     [Theory]

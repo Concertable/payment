@@ -61,7 +61,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
     public UnitResult<TransactionTransitionError> RecordRefund(PaymentRefundEntity refund)
     {
         if (Status != TransactionStatus.Complete)
-            return UnitResult.Failure(TransactionTransitionError.NotComplete(Status));
+            return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotComplete(Status));
 
         if (refund.SettlementTransactionId != Id)
             throw new DomainException("Refund belongs to another settlement.");

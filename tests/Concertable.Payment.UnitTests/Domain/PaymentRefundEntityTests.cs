@@ -71,7 +71,7 @@ public sealed class PaymentRefundEntityTests
         var result = refund.Complete("re_again", DateTimeOffset.UtcNow);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
+        Assert.Equal(new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class PaymentRefundEntityTests
         var result = refund.Fail();
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
+        Assert.Equal(new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
     }
 
     [Fact]
