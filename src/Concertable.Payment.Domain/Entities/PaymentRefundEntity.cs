@@ -76,23 +76,29 @@ internal sealed class PaymentRefundEntity : IGuidEntity
             commissionVatReversedMinor,
             createdAt);
 
-    public void Complete(string stripeRefundId, DateTimeOffset completedAt)
+    public UnitResult<PaymentRefundTransitionError> Complete(
+        string stripeRefundId,
+        DateTimeOffset completedAt)
     {
         if (Status != PaymentRefundStatus.Pending)
-            throw new DomainException("Only a pending refund can be completed.");
+            return UnitResult.Failure<PaymentRefundTransitionError>(new PaymentRefundTransitionError.NotPending(Status));
+
         if (string.IsNullOrWhiteSpace(stripeRefundId))
             throw new DomainException("Stripe refund id is required.");
 
         StripeRefundId = stripeRefundId;
         CompletedAt = completedAt;
         Status = PaymentRefundStatus.Completed;
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
-    public void Fail()
+    public UnitResult<PaymentRefundTransitionError> Fail()
     {
         if (Status != PaymentRefundStatus.Pending)
-            throw new DomainException("Only a pending refund can be failed.");
+            return UnitResult.Failure<PaymentRefundTransitionError>(new PaymentRefundTransitionError.NotPending(Status));
+
         Status = PaymentRefundStatus.Failed;
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
     public static PaymentRefundEntity CreateCompletedForEscrow(

@@ -19,8 +19,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
+    <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" Aliases="global,PaymentInfrastructure" />
   </ItemGroup>
 
   <ItemGroup>

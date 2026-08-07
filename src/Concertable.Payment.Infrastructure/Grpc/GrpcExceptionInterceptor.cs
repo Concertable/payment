@@ -33,10 +33,14 @@ internal sealed class GrpcExceptionInterceptor : Interceptor
             logger.GrpcHandlerError(context.Method, ex);
             throw new RpcException(new Status(ex.StatusCode.ToGrpc(), ex.Detail));
         }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.GrpcHandlerUnhandledException(context.Method, ex);
-            throw new RpcException(new Status(StatusCode.Internal, ex.Message));
+            throw new RpcException(new Status(StatusCode.Internal, "The payment operation failed."));
         }
     }
 }

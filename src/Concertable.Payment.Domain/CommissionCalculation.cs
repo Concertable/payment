@@ -6,5 +6,5 @@ internal readonly record struct CommissionCalculation(
     long CommissionGrossMinor,
     long CommissionNetMinor,
     long CommissionVatMinor,
-    int CommissionVatRateBasisPoints,
+    Percentage CommissionVatRate,
     long PayerTotalMinor);

@@ -18,7 +18,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
         long commissionGrossMinor,
         long commissionNetMinor,
         long commissionVatMinor,
-        int commissionVatRateBasisPoints,
+        Percentage commissionVatRate,
         string chargeId,
         Guid? commissionBindingId)
     {
@@ -38,7 +38,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
         CommissionGrossMinor = commissionGrossMinor;
         CommissionNetMinor = commissionNetMinor;
         CommissionVatMinor = commissionVatMinor;
-        CommissionVatRateBasisPoints = commissionVatRateBasisPoints;
+        CommissionVatRate = commissionVatRate;
         PayerTotalMinor = checked(payeeGrossMinor + commissionGrossMinor);
         ChargeId = chargeId;
         CommissionBindingId = commissionBindingId;
@@ -56,7 +56,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public long CommissionGrossMinor { get; private set; }
     public long CommissionNetMinor { get; private set; }
     public long CommissionVatMinor { get; private set; }
-    public int CommissionVatRateBasisPoints { get; private set; }
+    public Percentage CommissionVatRate { get; private set; }
     public long PayerTotalMinor { get; private set; }
     public EscrowStatus Status { get; private set; }
     public string ChargeId { get; private set; } = null!;
@@ -92,7 +92,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
             platformFee.ToMinorUnits(),
             platformFee.ToMinorUnits(),
             0,
-            0,
+            Percentage.From(0m),
             chargeId,
             null);
 
@@ -112,59 +112,76 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
             calculation.CommissionGrossMinor,
             calculation.CommissionNetMinor,
             calculation.CommissionVatMinor,
-            calculation.CommissionVatRateBasisPoints,
+            calculation.CommissionVatRate,
             chargeId,
             commissionBindingId);
 
-    public void Confirm()
+    public UnitResult<EscrowTransitionError> Confirm()
     {
         if (Status != EscrowStatus.Pending)
-            return;
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotPending(Status));
+
         Status = EscrowStatus.Held;
+        return UnitResult.Success<EscrowTransitionError>();
     }
 
-    public void Fail()
+    public UnitResult<EscrowTransitionError> Fail()
     {
         if (Status != EscrowStatus.Pending)
-            return;
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotPending(Status));
+
         Status = EscrowStatus.Failed;
+        return UnitResult.Success<EscrowTransitionError>();
     }
 
-    public void Release(string transferId, DateTime now)
+    public UnitResult<EscrowTransitionError> Release(string transferId, DateTime now)
     {
         if (Status != EscrowStatus.Held)
-            throw new DomainException("Only held escrow can be released.");
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotHeld(Status));
+
         TransferId = transferId;
         ReleasedAt = now;
         Status = EscrowStatus.Released;
+        return UnitResult.Success<EscrowTransitionError>();
     }
 
-    public void RecordRefund(PaymentRefundEntity refund)
+    public UnitResult<EscrowTransitionError> RecordRefund(PaymentRefundEntity refund)
     {
         if (Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
-            throw new DomainException("Only held, released, or disputed escrow can be refunded.");
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotRefundable(Status));
+
         if (refund.EscrowId != Id)
             throw new DomainException("Refund belongs to another escrow.");
 
         refunds.Add(refund);
         SettleRefundedStatus();
+        return UnitResult.Success<EscrowTransitionError>();
     }
 
-    public void CompleteRefund(PaymentRefundEntity refund, string stripeRefundId, DateTimeOffset completedAt)
+    public UnitResult<PaymentRefundTransitionError> CompleteRefund(
+        PaymentRefundEntity refund,
+        string stripeRefundId,
+        DateTimeOffset completedAt)
     {
         if (!refunds.Contains(refund))
             throw new DomainException("Refund does not belong to this escrow.");
 
-        refund.Complete(stripeRefundId, completedAt);
+        var transition = refund.Complete(stripeRefundId, completedAt);
+        if (transition.IsFailure)
+            return transition;
         SettleRefundedStatus();
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
-    public void ReleaseRefund(PaymentRefundEntity refund)
+    public UnitResult<PaymentRefundTransitionError> ReleaseRefund(PaymentRefundEntity refund)
     {
         if (!refunds.Contains(refund))
             throw new DomainException("Refund does not belong to this escrow.");
 
-        refund.Fail();
+        var transition = refund.Fail();
+        if (transition.IsFailure)
+            return transition;
+        return UnitResult.Success<PaymentRefundTransitionError>();
     }
 
     private void SettleRefundedStatus()
@@ -178,10 +195,12 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
             Status = EscrowStatus.Refunded;
     }
 
-    public void MarkDisputed()
+    public UnitResult<EscrowTransitionError> MarkDisputed()
     {
         if (Status != EscrowStatus.Held)
-            throw new DomainException("Only held escrow can be disputed.");
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotDisputable(Status));
+
         Status = EscrowStatus.Disputed;
+        return UnitResult.Success<EscrowTransitionError>();
     }
 }

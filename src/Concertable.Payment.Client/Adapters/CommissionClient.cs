@@ -1,12 +1,12 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
-using Grpc.Core;
+using Concertable.Payment.Contracts.Errors;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class CommissionClient : ICommissionClient
+internal sealed class CommissionClient : ICommissionPricingClient
 {
     private readonly Proto.CommissionPricing.CommissionPricingClient client;
 
@@ -15,102 +15,84 @@ internal sealed class CommissionClient : ICommissionClient
         this.client = client;
     }
 
-    public async Task<Result<CommissionQuote>> PreviewAsync(
-        long grossMinor,
-        Currency currency,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.PreviewCommissionAsync(
+    public Task<Result<CommissionCalculation, CommissionError>> PreviewAsync(
+        Money gross,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PreviewCommissionAsync(
                 new Proto.PreviewCommissionRequest
                 {
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency()
+                    Gross = gross.ToProtoMoney()
                 },
-                cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+                cancellationToken: ct)).ToCommissionCalculation(),
+            error => error.ToCommissionError(),
+            ct);
 
-    public async Task<Result<CommissionBinding>> CreateOrBindAsync(
+    public Task<Result<CommissionBinding, CommissionError>> CreateOrBindAsync(
         string externalReference,
         string payerReference,
         Currency currency,
         Guid reviewedCommissionConfigurationId,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
-        long? grossMinor = null,
-        long? expectedCommissionMinor = null,
-        long? expectedPayerTotalMinor = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var request = new Proto.CreateOrBindCommissionRequest
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
             {
-                ExternalReference = externalReference,
-                PayerReference = payerReference,
-                Currency = currency.ToProtoCurrency(),
-                ReviewedCommissionConfigurationId = reviewedCommissionConfigurationId.ToString(),
-                StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
-                StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-            };
-            if (grossMinor is not null)
-                request.GrossMinor = grossMinor.Value;
-            if (expectedCommissionMinor is not null)
-                request.ExpectedCommissionMinor = expectedCommissionMinor.Value;
-            if (expectedPayerTotalMinor is not null)
-                request.ExpectedPayerTotalMinor = expectedPayerTotalMinor.Value;
+                var request = new Proto.CreateOrBindCommissionRequest
+                {
+                    ExternalReference = externalReference,
+                    PayerReference = payerReference,
+                    Currency = currency.ToProtoCurrency(),
+                    ReviewedCommissionConfigurationId = reviewedCommissionConfigurationId.ToString(),
+                    StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
+                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+                };
+                return (await client.CreateOrBindCommissionAsync(request, cancellationToken: ct)).ToCommissionBinding();
+            },
+            error => error.ToCommissionError(),
+            ct);
 
-            var response = await client.CreateOrBindCommissionAsync(
-                request,
-                cancellationToken: ct);
-            return Result.Ok(response.ToCommissionBinding());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
-
-    public async Task<Result<CommissionQuote>> CalculateBoundAsync(
+    public Task<Result<CommissionCalculation, CommissionError>> ConfirmReviewedGrossAsync(
         Guid bindingId,
         string externalReference,
         string payerReference,
-        Currency currency,
-        long grossMinor,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
+        Money reviewedGross,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.ConfirmReviewedGrossAsync(
+                new Proto.ConfirmReviewedGrossRequest
+                {
+                    BindingId = bindingId.ToString(),
+                    ExternalReference = externalReference,
+                    PayerReference = payerReference,
+                    ReviewedGross = reviewedGross.ToProtoMoney()
+                },
+                cancellationToken: ct)).ToCommissionCalculation(),
+            error => error.ToCommissionError(),
+            ct);
+
+    public Task<Result<CommissionCalculation, CommissionError>> CalculateBoundAsync(
+        Guid bindingId,
+        string externalReference,
+        string payerReference,
+        Money gross,
         string? stripePaymentIntentId = null,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.CalculateBoundCommissionAsync(
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.CalculateBoundCommissionAsync(
                 new Proto.CalculateBoundCommissionRequest
                 {
                     BindingId = bindingId.ToString(),
                     ExternalReference = externalReference,
                     PayerReference = payerReference,
-                    Currency = currency.ToProtoCurrency(),
-                    GrossMinor = grossMinor,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
+                    Gross = gross.ToProtoMoney(),
                     StripePaymentIntentId = stripePaymentIntentId ?? string.Empty,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
-                cancellationToken: ct);
-            return Result.Ok(response.ToCommissionQuote());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+                cancellationToken: ct)).ToCommissionCalculation(),
+            error => error.ToCommissionError(),
+            ct);
+
 }

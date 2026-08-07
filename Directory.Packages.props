@@ -10,7 +10,7 @@
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.2" />
     <PackageVersion Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.1.2" />
     <PackageVersion Include="Dapper" Version="2.1.72" />
-    <PackageVersion Include="FluentResults" Version="4.0.0" />
+    <PackageVersion Include="Dunet" Version="1.16.2" />
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
     <PackageVersion Include="Google.Protobuf" Version="3.29.2" />
     <PackageVersion Include="Grpc.AspNetCore" Version="2.67.0" />
@@ -39,6 +39,7 @@
   <ItemGroup>
     <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Contracts" Version="$(ConcertablePlatformVersion)" />
+    <PackageVersion Include="Concertable.Grpc" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Kernel" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.DataAccess.Application" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.DataAccess.Infrastructure" Version="$(ConcertablePlatformVersion)" />

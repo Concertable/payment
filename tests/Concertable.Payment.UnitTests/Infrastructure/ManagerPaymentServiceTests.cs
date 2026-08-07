@@ -1,12 +1,13 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
-using FluentResults;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -75,7 +76,8 @@ public sealed class ManagerPaymentServiceTests
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, Guid, Money, Money, string, PaymentSession, IReadOnlyDictionary<string, string>, CancellationToken>((_, _, charge, payee, _, _, _, _) => { chargeAmount = charge; payeeAmount = payee; })
-            .ReturnsAsync(Result.Ok(new PaymentOutcome { TransactionId = "pi_fee", RequiresAction = false }));
+            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(
+                new PaymentOutcome { TransactionId = "pi_fee", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
@@ -106,7 +108,8 @@ public sealed class ManagerPaymentServiceTests
 
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Ok(new PaymentOutcome { TransactionId = "pi_zero", RequiresAction = false }));
+            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(
+                new PaymentOutcome { TransactionId = "pi_zero", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
@@ -152,28 +155,72 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
+            .ReturnsAsync(Option.None<string>());
         commissionService
             .Setup(c => c.CalculateBoundAsync(
-                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Currency>(),
-                It.IsAny<long>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Ok(authorized));
+                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Money>(),
+                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Success(authorized));
         stripeAccountClient
             .Setup(c => c.CreateHoldSessionAsync(It.IsAny<string>(), It.IsAny<Money>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CheckoutSession("cs_new_secret", "sess_secret", "cus_test", "pi_hold_new"));
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
-            payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: null);
+            payerId, gross: Money.Gbp(50), new Dictionary<string, string>(),
+            bindingId, "booking:7", stripeSetupIntentId: null);
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal("cs_new_secret", result.Value.ClientSecret);
+        Assert.True(result.TryGetValue(out var checkout));
+        Assert.Equal("cs_new_secret", checkout.ClientSecret);
         commissionService.Verify(
             c => c.BindPaymentIntent(authorized.Binding, "pi_hold_new"), Times.Once);
         stripeAccountClient.Verify(
             c => c.GetHoldSessionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PayBoundCommissionAsync_ExistingSettlementWithMismatchedGross_ReturnsCommissionFailure()
+    {
+        var sut = SutWithFee(0m);
+        var bindingId = Guid.NewGuid();
+        transactionRepository
+            .Setup(r => r.GetSettlementByCommissionBindingIdAsync(bindingId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CompletedAuthorizedSettlement(bindingId));
+        commissionService
+            .Setup(c => c.CalculateBoundAsync(
+                bindingId,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(new CommissionError.GrossMismatch()));
+
+        var result = await sut.PayBoundCommissionAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(51),
+            "pm_test",
+            PaymentSession.OnSession,
+            7,
+            bindingId,
+            "booking:7",
+            null);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new ManagerPaymentError.CommissionFailure(new CommissionError.GrossMismatch()), error);
+        paymentManager.Verify(
+            p => p.SettleAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Money>(),
+                It.IsAny<Money>(),
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -186,27 +233,26 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("pi_hold_bound");
+            .ReturnsAsync(Option.Some("pi_hold_bound"));
         string? suppliedPaymentIntent = "sentinel";
         commissionService
             .Setup(c => c.CalculateBoundAsync(
-                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Currency>(),
-                It.IsAny<long>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .Callback<Guid, string, string, Currency, long, long, long, string?, string?, CancellationToken>(
-                (_, _, _, _, _, _, _, pi, _, _) => suppliedPaymentIntent = pi)
-            .ReturnsAsync(Result.Ok(authorized));
+                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Money>(),
+                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<Guid, string, string, Money, string?, string?, CancellationToken>(
+                (_, _, _, _, pi, _, _) => suppliedPaymentIntent = pi)
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Success(authorized));
         stripeAccountClient
             .Setup(c => c.GetHoldSessionAsync("cus_test", "pi_hold_bound", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CheckoutSession("cs_existing_secret", "sess_secret", "cus_test", "pi_hold_bound"));
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
-            payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: null);
+            payerId, gross: Money.Gbp(50), new Dictionary<string, string>(),
+            bindingId, "booking:7", stripeSetupIntentId: null);
 
-        Assert.True(result.IsSuccess);
-        Assert.Equal("cs_existing_secret", result.Value.ClientSecret);
+        Assert.True(result.TryGetValue(out var checkout));
+        Assert.Equal("cs_existing_secret", checkout.ClientSecret);
         Assert.Equal("pi_hold_bound", suppliedPaymentIntent);
         stripeAccountClient.Verify(
             c => c.CreateHoldSessionAsync(It.IsAny<string>(), It.IsAny<Money>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()),
@@ -224,21 +270,21 @@ public sealed class ManagerPaymentServiceTests
 
         commissionService
             .Setup(c => c.FindBoundPaymentIntentAsync(bindingId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("pi_hold_bound");
+            .ReturnsAsync(Option.Some("pi_hold_bound"));
         commissionService
             .Setup(c => c.CalculateBoundAsync(
-                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Currency>(),
-                It.IsAny<long>(), It.IsAny<long>(), It.IsAny<long>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Fail("commission_binding_intent_mismatch"));
+                bindingId, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Money>(),
+                It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(
+                new CommissionError.BindingIntentMismatch()));
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
-            payerId, grossMinor: 5000, Currency.Gbp, new Dictionary<string, string>(),
-            bindingId, "booking:7", expectedCommissionMinor: 1000, expectedPayerTotalMinor: 6000,
-            stripeSetupIntentId: "seti_different");
+            payerId, gross: Money.Gbp(50), new Dictionary<string, string>(),
+            bindingId, "booking:7", stripeSetupIntentId: "seti_different");
 
-        Assert.True(result.IsFailed);
-        Assert.Contains(result.Errors, e => e.Message == "commission_binding_intent_mismatch");
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new HoldSessionError.CommissionFailure(new CommissionError.BindingIntentMismatch()), error);
         stripeAccountClient.Verify(
             c => c.GetHoldSessionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -261,9 +307,9 @@ public sealed class ManagerPaymentServiceTests
         paymentManager
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
             .Callback<RefundRequest, CancellationToken>((r, _) => captured = r)
-            .ReturnsAsync(Result.Ok(new Refund("re_settlement")));
+            .ReturnsAsync(Result<Refund, PaymentError>.Success(new Refund("re_settlement")));
 
-        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp);
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, Money.Gbp(50));
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(captured);
@@ -298,11 +344,11 @@ public sealed class ManagerPaymentServiceTests
 
         paymentManager
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Fail<Refund>("stripe_declined"));
+            .ReturnsAsync(Result<Refund, PaymentError>.Failure(new PaymentError.PaymentRejected()));
 
-        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp);
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, Money.Gbp(50));
 
-        Assert.True(result.IsFailed);
+        Assert.True(result.IsFailure);
         var reservation = Assert.Single(settlement.Refunds);
         Assert.Equal(PaymentRefundStatus.Failed, reservation.Status);
         Assert.False(reservation.CountsTowardCumulative);
@@ -310,6 +356,26 @@ public sealed class ManagerPaymentServiceTests
             r => r.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, 5000, It.IsAny<CancellationToken>()),
             Times.Once);
         Assert.Empty(postings);
+    }
+
+    [Fact]
+    public async Task RefundBoundCommissionByBookingIdAsync_ProviderFailureAfterReservationTransition_ThrowsInvariantFailure()
+    {
+        var sut = SutWithFee(0m);
+        var settlement = CompletedAuthorizedSettlement();
+
+        transactionRepository
+            .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(settlement);
+        paymentManager
+            .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .Callback(() => settlement.ReleaseRefund(Assert.Single(settlement.Refunds)))
+            .ReturnsAsync(Result<Refund, PaymentError>.Failure(new PaymentError.PaymentRejected()));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.RefundBoundCommissionByBookingIdAsync(7, Money.Gbp(50)));
+
+        Assert.Equal("Settlement refund reservation could not be released.", exception.Message);
     }
 
     [Fact]
@@ -322,9 +388,9 @@ public sealed class ManagerPaymentServiceTests
             .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(7, It.IsAny<CancellationToken>()))
             .ReturnsAsync(settlement);
 
-        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5001, Currency.Gbp);
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, Money.Gbp(50.01m));
 
-        Assert.True(result.IsFailed);
+        Assert.True(result.IsFailure);
         Assert.Empty(settlement.Refunds);
         paymentManager.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
@@ -340,37 +406,55 @@ public sealed class ManagerPaymentServiceTests
             .Setup(r => r.GetSettlementWithRefundsByBookingIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SettlementTransactionEntity?)null);
 
-        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, 5000, Currency.Gbp);
+        var result = await sut.RefundBoundCommissionByBookingIdAsync(7, Money.Gbp(50));
 
-        Assert.True(result.IsSuccess);
-        Assert.Null(result.Value);
+        Assert.True(result.TryGetValue(out var refund));
+        Assert.True(refund.IsNone);
         paymentManager.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
-    private SettlementTransactionEntity CompletedAuthorizedSettlement()
+    private SettlementTransactionEntity CompletedAuthorizedSettlement(Guid? commissionBindingId = null)
     {
         var settlement = SettlementTransactionEntity.CreateBound(
             payerId,
             payeeId,
             "pi_settlement",
-            new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+            new Concertable.Payment.Domain.CommissionCalculation(
+                Currency.Gbp,
+                5000,
+                1000,
+                800,
+                200,
+                Percentage.From(20m),
+                6000),
             TransactionStatus.Pending,
             bookingId: 7,
-            commissionBindingId: Guid.NewGuid());
+            commissionBindingId: commissionBindingId ?? Guid.NewGuid());
         settlement.Complete();
         return settlement;
     }
 
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)
     {
-        var terms = new CommissionTerms(Guid.NewGuid(), $"v-{Guid.NewGuid():N}", Currency.Gbp, 2000, 2000);
+        var configuration = CommissionConfigurationEntity.Create(
+            Guid.NewGuid(),
+            Percentage.From(20m),
+            DateTimeOffset.UtcNow);
+        var terms = configuration.Terms;
         var binding = CommissionBindingEntity.Create(
-            terms, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
+            configuration, Currency.Gbp, "booking:7", payerId.ToString(), DateTimeOffset.UtcNow);
         if (boundIntentId is not null)
             binding.BindPaymentIntent(boundIntentId);
-        var calculation = new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000);
+        var calculation = new Concertable.Payment.Domain.CommissionCalculation(
+            Currency.Gbp,
+            5000,
+            1000,
+            800,
+            200,
+            Percentage.From(20m),
+            6000);
         return new BoundCommission(binding, terms, calculation);
     }
 

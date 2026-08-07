@@ -1,7 +1,9 @@
+using System.Globalization;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
+using DomainMoney = Concertable.Kernel.ValueObjects.Money;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
@@ -14,21 +16,15 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
         this.commissionService = commissionService;
     }
 
-    public override async Task<CommissionQuoteResponse> PreviewCommission(
+    public override async Task<CommissionCalculationResponse> PreviewCommission(
         PreviewCommissionRequest request,
         ServerCallContext context)
     {
         var result = await commissionService.PreviewAsync(
-            request.GrossMinor,
-            request.Currency.ToDomainCurrency(),
+            request.Gross.ToMoney(),
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
     public override async Task<CommissionBindingResponse> CreateOrBindCommission(
@@ -43,20 +39,26 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
                 nameof(request.ReviewedCommissionConfigurationId)),
             EmptyToNull(request.StripePaymentIntentId),
             EmptyToNull(request.StripeSetupIntentId),
-            request.HasGrossMinor ? request.GrossMinor : null,
-            request.HasExpectedCommissionMinor ? request.ExpectedCommissionMinor : null,
-            request.HasExpectedPayerTotalMinor ? request.ExpectedPayerTotalMinor : null,
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return result.Value.ToProto();
+        return result.ValueOrRpcException().ToProto();
     }
 
-    public override async Task<CommissionQuoteResponse> CalculateBoundCommission(
+    public override async Task<CommissionCalculationResponse> ConfirmReviewedGross(
+        ConfirmReviewedGrossRequest request,
+        ServerCallContext context)
+    {
+        var result = await commissionService.ConfirmReviewedGrossAsync(
+            request.BindingId.ParseOrThrow<Guid>(nameof(request.BindingId)),
+            request.ExternalReference,
+            request.PayerReference,
+            request.ReviewedGross.ToMoney(),
+            context.CancellationToken);
+
+        return result.ValueOrRpcException().ToProto();
+    }
+
+    public override async Task<CommissionCalculationResponse> CalculateBoundCommission(
         CalculateBoundCommissionRequest request,
         ServerCallContext context)
     {
@@ -64,27 +66,18 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.BindingId.ParseOrThrow<Guid>(nameof(request.BindingId)),
             request.ExternalReference,
             request.PayerReference,
-            request.Currency.ToDomainCurrency(),
-            request.GrossMinor,
-            request.ExpectedCommissionMinor,
-            request.ExpectedPayerTotalMinor,
+            request.Gross.ToMoney(),
             EmptyToNull(request.StripePaymentIntentId),
             EmptyToNull(request.StripeSetupIntentId),
             context.CancellationToken);
 
-        if (result.IsFailed)
-            throw new RpcException(new Status(
-                StatusCode.FailedPrecondition,
-                result.Errors[0].Message));
-
-        return new CommissionQuote(
-            result.Value.Terms.ConfigurationId,
-            result.Value.Terms.Version,
-            result.Value.Terms.RateBasisPoints,
-            result.Value.Terms.Currency,
-            result.Value.Calculation.PayeeGrossMinor,
-            result.Value.Calculation.CommissionGrossMinor,
-            result.Value.Calculation.PayerTotalMinor).ToProto();
+        var commission = result.ValueOrRpcException();
+        return new Concertable.Payment.Contracts.CommissionCalculation(
+            commission.Terms.ConfigurationId,
+            commission.Terms.Rate.Value,
+            DomainMoney.FromMinorUnits(commission.Calculation.PayeeGrossMinor, commission.Calculation.Currency),
+            DomainMoney.FromMinorUnits(commission.Calculation.CommissionGrossMinor, commission.Calculation.Currency),
+            DomainMoney.FromMinorUnits(commission.Calculation.PayerTotalMinor, commission.Calculation.Currency)).ToProto();
     }
 
     private static string? EmptyToNull(string value) =>
@@ -93,27 +86,23 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
 
 internal static class CommissionPricingGrpcMappers
 {
-    public static CommissionQuoteResponse ToProto(this CommissionQuote quote) =>
+    public static CommissionCalculationResponse ToProto(
+        this CommissionCalculation calculation) =>
         new()
         {
-            CommissionConfigurationId = quote.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = quote.ConfigurationVersion,
-            RateBasisPoints = quote.RateBasisPoints,
-            Currency = quote.Currency.ToProtoCurrency(),
-            GrossMinor = quote.GrossMinor,
-            CommissionMinor = quote.CommissionMinor,
-            PayerTotalMinor = quote.PayerTotalMinor
+            CommissionConfigurationId = calculation.CommissionConfigurationId.ToString(),
+            RatePercentage = calculation.RatePercentage.ToString(CultureInfo.InvariantCulture),
+            Gross = calculation.Gross.ToProtoMoney(),
+            Commission = calculation.Commission.ToProtoMoney(),
+            PayerTotal = calculation.PayerTotal.ToProtoMoney()
         };
 
-    public static CommissionBindingResponse ToProto(
-        this CommissionBinding binding) =>
+    public static CommissionBindingResponse ToProto(this CommissionBinding binding) =>
         new()
         {
             BindingId = binding.BindingId.ToString(),
             CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
-            ConfigurationVersion = binding.ConfigurationVersion,
-            RateBasisPoints = binding.RateBasisPoints,
-            Currency = binding.Currency.ToProtoCurrency(),
-            Quote = binding.Quote?.ToProto()
+            RatePercentage = binding.RatePercentage.ToString(CultureInfo.InvariantCulture),
+            Currency = binding.Currency.ToProtoCurrency()
         };
 }

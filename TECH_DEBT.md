@@ -6,23 +6,22 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## LOW
 
+### Internal Payment DTOs still expose monetary values as primitives
+
+`Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published
+`Client/EscrowDto.cs` expose monetary values as `decimal` or `long`. These shapes predate the shared
+`Money` value object and force callers to infer or obtain currency separately. Persistence columns,
+Stripe metadata, and calculator-local minor-unit arithmetic are intentional representations and are
+not part of this debt.
+
+**Resolves when:** every in-process and published Payment DTO uses `Money` for monetary values, with
+conversion to minor units confined to persistence, provider, and protobuf mapper boundaries.
+
 ### A crashed two-phase refund can strand a `Pending` `PaymentRefundEntity` with no reconcile
 
 Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund, and the Stripe idempotency key (`commission:{authId}:refund:{cumulativeGross}`) would collapse a same-amount retry onto the same Stripe refund anyway. But the reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.
 
 **Resolves when:** a reconcile path exists — e.g. a background sweep (or webhook handler) that, for a `Pending` `PaymentRefundEntity` older than some threshold, queries Stripe for a refund under the reservation's idempotency key and either `Complete`s it (Stripe refund exists) or `Fail`s it (none), freeing the reserved gross.
-
-### Published `Payment.Client` metadata params are still `IDictionary`, not `IReadOnlyDictionary`
-
-`ICustomerPaymentClient` / `IManagerPaymentClient` (and their `Adapters` impls) in the published
-`Concertable.Payment.Client` package still take `IDictionary<string, string> metadata`. Nothing mutates
-it — every read is read-only — so like the Payment-internal surface it should be `IReadOnlyDictionary`.
-It was left out of that narrowing sweep because `Payment.Client` is consumed by B2B and Customer (and
-their test fixtures *implement* the interfaces), so changing the signature is a breaking package change
-that can't land in one PR — it needs an expand/contract across a platform-version bump.
-
-**Resolves when:** the pair narrows to `IReadOnlyDictionary` via a breaking `Payment.Client` release +
-the platform-sync bump that carries it to B2B/Customer.
 
 ### gRPC mappers use the `""` literal and erase value presence
 
