@@ -30,7 +30,7 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public UnitResult<TransactionTransitionError> Complete()
     {
         if (Status != TransactionStatus.Pending)
-            return UnitResult.Failure(TransactionTransitionError.NotPending(Status));
+            return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotPending(Status));
 
         Status = TransactionStatus.Complete;
         return UnitResult.Success<TransactionTransitionError>();
@@ -39,7 +39,7 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public UnitResult<TransactionTransitionError> Fail()
     {
         if (Status != TransactionStatus.Pending)
-            return UnitResult.Failure(TransactionTransitionError.NotPending(Status));
+            return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotPending(Status));
 
         Status = TransactionStatus.Failed;
         return UnitResult.Success<TransactionTransitionError>();

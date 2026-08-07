@@ -25,7 +25,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     Gross = gross.ToProtoMoney()
                 },
                 cancellationToken: ct)).ToCommissionCalculation(),
-            CommissionError.FromCode,
+            error => error.ToCommissionError(),
             ct);
 
     public Task<Result<CommissionBinding, CommissionError>> CreateOrBindAsync(
@@ -50,7 +50,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                 };
                 return (await client.CreateOrBindCommissionAsync(request, cancellationToken: ct)).ToCommissionBinding();
             },
-            CommissionError.FromCode,
+            error => error.ToCommissionError(),
             ct);
 
     public Task<Result<CommissionCalculation, CommissionError>> ConfirmReviewedGrossAsync(
@@ -69,7 +69,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     ReviewedGross = reviewedGross.ToProtoMoney()
                 },
                 cancellationToken: ct)).ToCommissionCalculation(),
-            CommissionError.FromCode,
+            error => error.ToCommissionError(),
             ct);
 
     public Task<Result<CommissionCalculation, CommissionError>> CalculateBoundAsync(
@@ -92,7 +92,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct)).ToCommissionCalculation(),
-            CommissionError.FromCode,
+            error => error.ToCommissionError(),
             ct);
 
 }

@@ -1,41 +1,40 @@
 using Concertable.Kernel.Errors;
+using Concertable.Payment.Contracts.Errors;
+using Dunet;
 
 namespace Concertable.Payment.Application.Errors;
 
-internal sealed record SettlementRefundError(ErrorDefinition Definition) : IError
+[Union(EnableImplicitConversions = false)]
+internal abstract partial record SettlementRefundError : IError
 {
-    public static readonly SettlementRefundError SettlementNotFound = new(
-        ErrorDefinition.NotFound(
-            "settlement.refund_not_found",
-            "Settlement not found."));
+    public ErrorDefinition Definition => this switch
+    {
+        SettlementNotFound => ErrorDefinition.NotFound<SettlementNotFound>(),
+        SettlementNotRefundable => ErrorDefinition.Conflict<SettlementNotRefundable>("Settlement cannot be refunded in its current state."),
+        CommissionBindingNotFound => ErrorDefinition.NotFound<CommissionBindingNotFound>(),
+        CurrencyMismatch => ErrorDefinition.Invalid<CurrencyMismatch>("Refund currency does not match."),
+        AmountMustBePositive => ErrorDefinition.Invalid<AmountMustBePositive>("Refund amount must be positive."),
+        AmountExceedsRemaining => ErrorDefinition.Conflict<AmountExceedsRemaining>("Refund amount exceeds the remaining refundable amount."),
+        Conflict => ErrorDefinition.Conflict<Conflict>("Another refund changed the refundable amount."),
+        PaymentFailure(var error) => error.Definition
+    };
 
-    public static readonly SettlementRefundError SettlementNotRefundable = new(
-        ErrorDefinition.Conflict(
-            "settlement.refund_not_allowed",
-            "Settlement cannot be refunded in its current state."));
+    [ErrorCode("settlement.refund_not_found")]
+    public partial record SettlementNotFound;
 
-    public static readonly SettlementRefundError CommissionBindingNotFound = new(
-        ErrorDefinition.NotFound(
-            "settlement.refund_commission_binding_not_found",
-            "Commission binding not found."));
+    [ErrorCode("settlement.refund_not_allowed")]
+    public partial record SettlementNotRefundable;
 
-    public static readonly SettlementRefundError CurrencyMismatch = new(
-        ErrorDefinition.Invalid(
-            "settlement.refund_currency_mismatch",
-            "Refund currency does not match."));
+    public partial record CommissionBindingNotFound;
 
-    public static readonly SettlementRefundError AmountMustBePositive = new(
-        ErrorDefinition.Invalid(
-            "settlement.refund_amount_invalid",
-            "Refund amount must be positive."));
+    public partial record CurrencyMismatch;
 
-    public static readonly SettlementRefundError AmountExceedsRemaining = new(
-        ErrorDefinition.Conflict(
-            "settlement.refund_amount_exceeds_remaining",
-            "Refund amount exceeds the remaining refundable amount."));
+    [ErrorCode("settlement.refund_amount_invalid")]
+    public partial record AmountMustBePositive;
 
-    public static readonly SettlementRefundError Conflict = new(
-        ErrorDefinition.Conflict(
-            "settlement.refund_conflict",
-            "Another refund changed the refundable amount."));
+    public partial record AmountExceedsRemaining;
+
+    public partial record Conflict;
+
+    public partial record PaymentFailure(PaymentError Error);
 }

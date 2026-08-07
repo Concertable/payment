@@ -35,7 +35,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     BookingId = bookingId
                 },
                 cancellationToken: ct)).ToEscrowDeposit(),
-            EscrowDepositError.FromCode,
+            error => error.ToEscrowDepositError(),
             ct);
 
     public Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
@@ -64,7 +64,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct)).ToEscrowDeposit(),
-            EscrowDepositError.FromCode,
+            error => error.ToEscrowDepositError(),
             ct);
 
     public Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
@@ -85,7 +85,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     BookingId = bookingId
                 },
                 cancellationToken: ct)).ToEscrowDeposit(),
-            EscrowCaptureError.FromCode,
+            error => error.ToEscrowCaptureError(),
             ct);
 
     public Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
@@ -110,7 +110,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     ExternalReference = externalReference
                 },
                 cancellationToken: ct)).ToEscrowDeposit(),
-            EscrowCaptureError.FromCode,
+            error => error.ToEscrowCaptureError(),
             ct);
 
     public Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
@@ -126,7 +126,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     ? Option.None<Transfer>()
                     : Option.Some(new Transfer(response.Transfer.TransferId));
             },
-            EscrowReleaseError.FromCode,
+            error => error.ToEscrowReleaseError(),
             ct);
 
     public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
@@ -142,7 +142,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     ? Option.None<Refund>()
                     : Option.Some(new Refund(response.Refund.RefundId));
             },
-            EscrowRefundError.FromCode,
+            error => error.ToEscrowRefundError(),
             ct);
 
     public Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
@@ -163,7 +163,7 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                     ? Option.None<Refund>()
                     : Option.Some(new Refund(response.Refund.RefundId));
             },
-            EscrowRefundError.FromCode,
+            error => error.ToEscrowRefundError(),
             ct);
 
 }
