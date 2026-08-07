@@ -1,5 +1,4 @@
 using Concertable.Kernel.Errors;
-using Concertable.Kernel.Functional;
 using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
@@ -7,50 +6,25 @@ namespace Concertable.Payment.Contracts.Errors;
 [Union(EnableImplicitConversions = false)]
 public abstract partial record PaymentError : IError
 {
-    public abstract ErrorDefinition Definition { get; }
-
-    public partial record PayerNotFound
+    public ErrorDefinition Definition => this switch
     {
-        public override ErrorDefinition Definition =>
-            ErrorDefinition.NotFound("payment.payer_not_found", "The payer account was not found.");
-    }
-
-    public partial record PayeeNotFound
-    {
-        public override ErrorDefinition Definition =>
-            ErrorDefinition.NotFound("payment.payee_not_found", "The payee account was not found.");
-    }
-
-    public partial record PayerUnavailable
-    {
-        public override ErrorDefinition Definition =>
-            ErrorDefinition.Conflict("payment.payer_unavailable", "The payer account is not ready for payments.");
-    }
-
-    public partial record RecipientUnavailable
-    {
-        public override ErrorDefinition Definition =>
-            ErrorDefinition.Conflict("payment.recipient_unavailable", "The recipient account is not ready for payments.");
-    }
-
-    public partial record PaymentRejected
-    {
-        public override ErrorDefinition Definition =>
-            ErrorDefinition.PaymentRequired("payment.rejected", "The payment was rejected.");
-    }
-
-    public partial record CommissionFailure(CommissionError Error)
-    {
-        public override ErrorDefinition Definition => Error.Definition;
-    }
-
-    public static Option<PaymentError> FromCode(string code) => code switch
-    {
-        "payment.payer_not_found" => Option.Some<PaymentError>(new PayerNotFound()),
-        "payment.payee_not_found" => Option.Some<PaymentError>(new PayeeNotFound()),
-        "payment.payer_unavailable" => Option.Some<PaymentError>(new PayerUnavailable()),
-        "payment.recipient_unavailable" => Option.Some<PaymentError>(new RecipientUnavailable()),
-        "payment.rejected" => Option.Some<PaymentError>(new PaymentRejected()),
-        _ => Option.None<PaymentError>()
+        PayerNotFound => ErrorDefinition.NotFound<PayerNotFound>("The payer account was not found."),
+        PayeeNotFound => ErrorDefinition.NotFound<PayeeNotFound>("The payee account was not found."),
+        PayerUnavailable => ErrorDefinition.Conflict<PayerUnavailable>("The payer account is not ready for payments."),
+        RecipientUnavailable => ErrorDefinition.Conflict<RecipientUnavailable>("The recipient account is not ready for payments."),
+        PaymentRejected => ErrorDefinition.PaymentRequired<PaymentRejected>("The payment was rejected."),
+        CommissionFailure(var error) => error.Definition
     };
+
+    public partial record PayerNotFound;
+
+    public partial record PayeeNotFound;
+
+    public partial record PayerUnavailable;
+
+    public partial record RecipientUnavailable;
+
+    public partial record PaymentRejected;
+
+    public partial record CommissionFailure(CommissionError Error);
 }

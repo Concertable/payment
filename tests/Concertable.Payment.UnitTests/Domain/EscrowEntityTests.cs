@@ -94,7 +94,7 @@ public sealed class EscrowEntityTests
         var result = escrow.Release("tr_test", DateTime.UtcNow);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(EscrowTransitionError.NotHeld(EscrowStatus.Pending), error);
+        Assert.Equal(new EscrowTransitionError.NotHeld(EscrowStatus.Pending), error);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class EscrowEntityTests
         var result = escrow.Release("tr_test_2", DateTime.UtcNow);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(EscrowTransitionError.NotHeld(EscrowStatus.Released), error);
+        Assert.Equal(new EscrowTransitionError.NotHeld(EscrowStatus.Released), error);
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class EscrowEntityTests
         var result = escrow.RecordRefund(FullRefund(escrow));
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(EscrowTransitionError.NotRefundable(EscrowStatus.Pending), error);
+        Assert.Equal(new EscrowTransitionError.NotRefundable(EscrowStatus.Pending), error);
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public sealed class EscrowEntityTests
         var result = escrow.RecordRefund(FullRefund(escrow));
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(EscrowTransitionError.NotRefundable(EscrowStatus.Failed), error);
+        Assert.Equal(new EscrowTransitionError.NotRefundable(EscrowStatus.Failed), error);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class EscrowEntityTests
         var result = escrow.MarkDisputed();
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(EscrowTransitionError.NotDisputable(EscrowStatus.Pending), error);
+        Assert.Equal(new EscrowTransitionError.NotDisputable(EscrowStatus.Pending), error);
     }
 
     private static PaymentRefundEntity FullRefund(EscrowEntity escrow) =>

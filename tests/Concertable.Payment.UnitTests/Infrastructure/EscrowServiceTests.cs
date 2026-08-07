@@ -83,7 +83,7 @@ public sealed class EscrowServiceTests
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(new CommissionError.GrossMismatch()));
 
         var result = await sut.DepositBoundCommissionAsync(
             payerId,
@@ -97,7 +97,7 @@ public sealed class EscrowServiceTests
             null);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new EscrowDepositError.CommissionFailure(CommissionError.GrossMismatch), error);
+        Assert.Equal(new EscrowDepositError.CommissionFailure(new CommissionError.GrossMismatch()), error);
         paymentManager.Verify(
             p => p.HoldAsync(
                 It.IsAny<Guid>(),
@@ -126,7 +126,7 @@ public sealed class EscrowServiceTests
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(new CommissionError.GrossMismatch()));
 
         var result = await sut.CaptureBoundCommissionAsync(
             payerId,
@@ -138,7 +138,7 @@ public sealed class EscrowServiceTests
             "booking:7");
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new EscrowCaptureError.CommissionFailure(CommissionError.GrossMismatch), error);
+        Assert.Equal(new EscrowCaptureError.CommissionFailure(new CommissionError.GrossMismatch()), error);
         paymentManager.Verify(
             p => p.CaptureAsync(It.IsAny<CaptureRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);

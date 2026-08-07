@@ -37,7 +37,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
                 request.Metadata.Add(new Dictionary<string, string>(metadata));
                 return (await client.PayAsync(request, cancellationToken: ct)).ToPaymentOutcome();
             },
-            PaymentError.FromCode,
+            error => error.ToPaymentError(),
             ct);
 
     public async Task<CheckoutSession> CreatePaymentSessionAsync(

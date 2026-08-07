@@ -35,7 +35,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                     BookingId = bookingId
                 },
                 cancellationToken: ct)).ToPaymentOutcome(),
-            ManagerPaymentError.FromCode,
+            error => error.ToManagerPaymentError(),
             ct);
 
     public Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
@@ -64,7 +64,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
                 cancellationToken: ct)).ToPaymentOutcome(),
-            ManagerPaymentError.FromCode,
+            error => error.ToManagerPaymentError(),
             ct);
 
     public async Task<CheckoutSession> CreateSetupSessionAsync(
@@ -126,7 +126,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
                     request,
                     cancellationToken: ct)).ToCheckoutSession();
             },
-            HoldSessionError.FromCode,
+            error => error.ToHoldSessionError(),
             ct);
 
     public async Task<string> FindHeldIntentAsync(
