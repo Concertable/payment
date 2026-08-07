@@ -37,7 +37,7 @@ internal sealed class CommissionService : ICommissionService
     {
         if (gross.Currency != Currency.Gbp)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.CurrencyMismatch);
+                new CommissionError.CurrencyMismatch());
 
         var terms = (await GetCurrentConfigurationAsync(ct)).Terms;
         return Result.Success<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
@@ -54,9 +54,9 @@ internal sealed class CommissionService : ICommissionService
         CancellationToken ct = default)
     {
         if (reviewedCommissionConfigurationId != currentConfigurationId)
-            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.PricingChanged);
+            return Result.Failure<CommissionBinding, CommissionError>(new CommissionError.PricingChanged());
         if (currency != Currency.Gbp)
-            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.CurrencyMismatch);
+            return Result.Failure<CommissionBinding, CommissionError>(new CommissionError.CurrencyMismatch());
 
         var configuration = await GetCurrentConfigurationAsync(ct);
         var terms = configuration.Terms;
@@ -91,22 +91,22 @@ internal sealed class CommissionService : ICommissionService
         var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
         if (binding is null)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.BindingNotFound);
+                new CommissionError.BindingNotFound());
         if (!IdentityMatches(binding, externalReference, payerReference))
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.BindingMismatch);
+                new CommissionError.BindingMismatch());
         if (reviewedGross.Currency != binding.Currency)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.CurrencyMismatch);
+                new CommissionError.CurrencyMismatch());
         var existing = binding.ReviewedGross;
         if (existing is not null && existing.Value != reviewedGross)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.GrossMismatch);
+                new CommissionError.GrossMismatch());
 
         var calculation = Calculate(binding.Terms, reviewedGross);
         if (!await bindingRepository.TryConfirmReviewedGrossAsync(bindingId, reviewedGross, ct))
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
-                CommissionError.GrossMismatch);
+                new CommissionError.GrossMismatch());
 
         binding.ConfirmReviewedGross(reviewedGross);
 
@@ -125,20 +125,20 @@ internal sealed class CommissionService : ICommissionService
     {
         var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
         if (binding is null)
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingNotFound);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.BindingNotFound());
 
         if (!IdentityMatches(binding, externalReference, payerReference))
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingMismatch);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.BindingMismatch());
 
         if (gross.Currency != binding.Currency)
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.CurrencyMismatch);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.CurrencyMismatch());
         if (binding.ReviewedGross is null)
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.GrossNotConfirmed);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.GrossNotConfirmed());
         if (binding.ReviewedGross != gross)
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.GrossMismatch);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.GrossMismatch());
         if (!IntentMatches(binding.StripePaymentIntentId, stripePaymentIntentId) ||
             !IntentMatches(binding.StripeSetupIntentId, stripeSetupIntentId))
-            return Result.Failure<BoundCommission, CommissionError>(CommissionError.BindingIntentMismatch);
+            return Result.Failure<BoundCommission, CommissionError>(new CommissionError.BindingIntentMismatch());
 
         var terms = binding.Terms;
         return Result.Success<BoundCommission, CommissionError>(new BoundCommission(
@@ -184,7 +184,7 @@ internal sealed class CommissionService : ICommissionService
                 payerReference,
                 stripePaymentIntentId,
                 stripeSetupIntentId))
-            return Result.Failure<CommissionBinding, CommissionError>(CommissionError.BindingMismatch);
+            return Result.Failure<CommissionBinding, CommissionError>(new CommissionError.BindingMismatch());
 
         return Result.Success<CommissionBinding, CommissionError>(ToBinding(binding, binding.Terms));
     }

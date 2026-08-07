@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ConcertablePlatformVersion>0.1.0-alpha.0.827</ConcertablePlatformVersion>
+    <ConcertablePlatformVersion>0.1.0-alpha.0.842</ConcertablePlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,6 +39,7 @@
   <ItemGroup>
     <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Contracts" Version="$(ConcertablePlatformVersion)" />
+    <PackageVersion Include="Concertable.Grpc" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Kernel" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.DataAccess.Application" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.DataAccess.Infrastructure" Version="$(ConcertablePlatformVersion)" />

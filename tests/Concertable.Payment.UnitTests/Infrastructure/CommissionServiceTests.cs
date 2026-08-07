@@ -140,7 +140,7 @@ public sealed class CommissionServiceTests
             binding.Id, "booking:7", "payer:1", Gross());
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(CommissionError.GrossMismatch, error);
+        Assert.Equal(new CommissionError.GrossMismatch(), error);
         Assert.Null(binding.ReviewedGross);
     }
 
@@ -156,7 +156,7 @@ public sealed class CommissionServiceTests
             binding.Id, "booking:7", "payer:1", Gross(), null, null);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(CommissionError.GrossNotConfirmed, error);
+        Assert.Equal(new CommissionError.GrossNotConfirmed(), error);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public sealed class CommissionServiceTests
             binding.Id, "booking:7", "payer:1", Money.Gbp(51), null, null);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(CommissionError.GrossMismatch, error);
+        Assert.Equal(new CommissionError.GrossMismatch(), error);
     }
 
     [Fact]

@@ -119,7 +119,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public UnitResult<EscrowTransitionError> Confirm()
     {
         if (Status != EscrowStatus.Pending)
-            return UnitResult.Failure(EscrowTransitionError.NotPending(Status));
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotPending(Status));
 
         Status = EscrowStatus.Held;
         return UnitResult.Success<EscrowTransitionError>();
@@ -128,7 +128,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public UnitResult<EscrowTransitionError> Fail()
     {
         if (Status != EscrowStatus.Pending)
-            return UnitResult.Failure(EscrowTransitionError.NotPending(Status));
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotPending(Status));
 
         Status = EscrowStatus.Failed;
         return UnitResult.Success<EscrowTransitionError>();
@@ -137,7 +137,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public UnitResult<EscrowTransitionError> Release(string transferId, DateTime now)
     {
         if (Status != EscrowStatus.Held)
-            return UnitResult.Failure(EscrowTransitionError.NotHeld(Status));
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotHeld(Status));
 
         TransferId = transferId;
         ReleasedAt = now;
@@ -148,7 +148,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public UnitResult<EscrowTransitionError> RecordRefund(PaymentRefundEntity refund)
     {
         if (Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
-            return UnitResult.Failure(EscrowTransitionError.NotRefundable(Status));
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotRefundable(Status));
 
         if (refund.EscrowId != Id)
             throw new DomainException("Refund belongs to another escrow.");
@@ -198,7 +198,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public UnitResult<EscrowTransitionError> MarkDisputed()
     {
         if (Status != EscrowStatus.Held)
-            return UnitResult.Failure(EscrowTransitionError.NotDisputable(Status));
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotDisputable(Status));
 
         Status = EscrowStatus.Disputed;
         return UnitResult.Success<EscrowTransitionError>();

@@ -1,5 +1,4 @@
 using Concertable.Kernel.Errors;
-using Concertable.Kernel.Functional;
 using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
@@ -7,22 +6,13 @@ namespace Concertable.Payment.Contracts.Errors;
 [Union(EnableImplicitConversions = false)]
 public abstract partial record EscrowCaptureError : IError
 {
-    public abstract ErrorDefinition Definition { get; }
-
-    public partial record PaymentFailure(PaymentError Error)
+    public ErrorDefinition Definition => this switch
     {
-        public override ErrorDefinition Definition => Error.Definition;
-    }
+        PaymentFailure(var error) => error.Definition,
+        CommissionFailure(var error) => error.Definition
+    };
 
-    public partial record CommissionFailure(CommissionError Error)
-    {
-        public override ErrorDefinition Definition => Error.Definition;
-    }
+    public partial record PaymentFailure(PaymentError Error);
 
-    public static Option<EscrowCaptureError> FromCode(string code) =>
-        CommissionError.FromCode(code).Match(
-            commission => Option.Some<EscrowCaptureError>(new CommissionFailure(commission)),
-            () => PaymentError.FromCode(code).Match(
-                payment => Option.Some<EscrowCaptureError>(new PaymentFailure(payment)),
-                Option.None<EscrowCaptureError>));
+    public partial record CommissionFailure(CommissionError Error);
 }

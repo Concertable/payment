@@ -196,7 +196,7 @@ public sealed class ManagerPaymentServiceTests
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(CommissionError.GrossMismatch));
+            .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(new CommissionError.GrossMismatch()));
 
         var result = await sut.PayBoundCommissionAsync(
             payerId,
@@ -210,7 +210,7 @@ public sealed class ManagerPaymentServiceTests
             null);
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new ManagerPaymentError.CommissionFailure(CommissionError.GrossMismatch), error);
+        Assert.Equal(new ManagerPaymentError.CommissionFailure(new CommissionError.GrossMismatch()), error);
         paymentManager.Verify(
             p => p.SettleAsync(
                 It.IsAny<Guid>(),
@@ -277,14 +277,14 @@ public sealed class ManagerPaymentServiceTests
                 It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BoundCommission, CommissionError>.Failure(
-                CommissionError.BindingIntentMismatch));
+                new CommissionError.BindingIntentMismatch()));
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
             payerId, gross: Money.Gbp(50), new Dictionary<string, string>(),
             bindingId, "booking:7", stripeSetupIntentId: "seti_different");
 
         Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new HoldSessionError.CommissionFailure(CommissionError.BindingIntentMismatch), error);
+        Assert.Equal(new HoldSessionError.CommissionFailure(new CommissionError.BindingIntentMismatch()), error);
         stripeAccountClient.Verify(
             c => c.GetHoldSessionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);

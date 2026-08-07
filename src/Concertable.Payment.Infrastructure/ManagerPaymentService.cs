@@ -281,20 +281,20 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (settlement is null)
             return Result<Option<Refund>, SettlementRefundError>.Success(Option.None<Refund>());
         if (settlement.CommissionBindingId is null)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.CommissionBindingNotFound);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.CommissionBindingNotFound());
         if (gross.Currency != settlement.Currency)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.CurrencyMismatch);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.CurrencyMismatch());
         if (settlement.Status != TransactionStatus.Complete)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotRefundable);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.SettlementNotRefundable());
         if (grossMinor <= 0)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountMustBePositive);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.AmountMustBePositive());
 
         var grossAlreadyRefunded = settlement.Refunds
             .Where(refund => refund.CountsTowardCumulative)
             .Sum(refund => refund.GrossRefundedMinor);
         var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
         if (cumulativeGrossRefund > settlement.PayeeGrossMinor)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountExceedsRemaining);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.AmountExceedsRemaining());
 
         var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
             settlement.CommissionGrossMinor,
@@ -356,7 +356,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             await unitOfWork.SaveChangesAsync(ct);
             await transactionRepository.ReleaseReservedSettlementRefundGrossAsync(settlement.Id, grossMinor, ct);
             refund.TryGetError(out var error);
-            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError(error!.Definition));
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.PaymentFailure(error!));
         }
 
         if (settlement.CompleteRefund(reservation, completedRefund.RefundId, timeProvider.GetUtcNow()).IsFailure)
@@ -385,12 +385,12 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     {
         var current = await transactionRepository.GetSettlementWithRefundsByBookingIdAsync(bookingId, ct);
         if (current is null)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotFound);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.SettlementNotFound());
         if (current.Status != TransactionStatus.Complete)
-            return Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.SettlementNotRefundable);
+            return Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.SettlementNotRefundable());
         return checked(current.RefundedGrossMinor + grossMinor) > current.PayeeGrossMinor
-            ? Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.AmountExceedsRemaining)
-            : Result<Option<Refund>, SettlementRefundError>.Failure(SettlementRefundError.Conflict);
+            ? Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.AmountExceedsRemaining())
+            : Result<Option<Refund>, SettlementRefundError>.Failure(new SettlementRefundError.Conflict());
     }
 
     private async Task<Result<string, PaymentError>> ResolveStripeCustomerAsync(Guid ownerId, CancellationToken ct)
