@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
+        services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
         services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
         services.AddScoped<ILedgerTransactionRepository, LedgerTransactionRepository>();
@@ -69,6 +70,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITransactionMapper, TransactionMapper>();
         services.AddSingleton<CommissionCalculator>();
         services.AddScoped<ICommissionService, CommissionService>();
+        services.AddScoped<CommissionConfigurationInitializer>();
+        services.AddHostedService<CommissionConfigurationHostedService>();
 
         services.AddScoped<ITransactionService, TransactionService>();
 

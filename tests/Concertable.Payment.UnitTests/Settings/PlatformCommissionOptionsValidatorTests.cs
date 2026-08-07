@@ -13,10 +13,8 @@ public sealed class PlatformCommissionOptionsValidatorTests
         {
             [$"{PlatformCommissionOptions.SectionName}:{nameof(PlatformCommissionOptions.ConfigurationId)}"] =
                 options.ConfigurationId == Guid.Empty ? null : options.ConfigurationId.ToString(),
-            [$"{PlatformCommissionOptions.SectionName}:{nameof(PlatformCommissionOptions.Version)}"] = options.Version,
-            [$"{PlatformCommissionOptions.SectionName}:{nameof(PlatformCommissionOptions.Currency)}"] = options.Currency,
-            [$"{PlatformCommissionOptions.SectionName}:{nameof(PlatformCommissionOptions.RateBasisPoints)}"] =
-                options.RateBasisPoints.ToString(CultureInfo.InvariantCulture)
+            [$"{PlatformCommissionOptions.SectionName}:{nameof(PlatformCommissionOptions.RatePercentage)}"] =
+                options.RatePercentage.ToString(CultureInfo.InvariantCulture)
         };
 
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
@@ -27,9 +25,7 @@ public sealed class PlatformCommissionOptionsValidatorTests
     private static PlatformCommissionOptions ValidLaunchOptions() => new()
     {
         ConfigurationId = Guid.NewGuid(),
-        Version = "2026-launch",
-        Currency = "GBP",
-        RateBasisPoints = 1_000
+        RatePercentage = 10m
     };
 
     [Fact]
@@ -42,32 +38,21 @@ public sealed class PlatformCommissionOptionsValidatorTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Validate_VersionBlank_Fails(string version)
+    [InlineData(0)]
+    [InlineData(100.01)]
+    public void Validate_RatePercentageOutOfRange_Fails(decimal ratePercentage)
     {
         var options = ValidLaunchOptions();
-        options.Version = version;
+        options.RatePercentage = ratePercentage;
 
         Assert.True(Validate(options).Failed);
     }
 
     [Fact]
-    public void Validate_CurrencyNotGbp_Fails()
+    public void Validate_UnsupportedPrecision_Fails()
     {
         var options = ValidLaunchOptions();
-        options.Currency = "USD";
-
-        Assert.True(Validate(options).Failed);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(10_001)]
-    public void Validate_RateBasisPointsOutOfRange_Fails(int rateBasisPoints)
-    {
-        var options = ValidLaunchOptions();
-        options.RateBasisPoints = rateBasisPoints;
+        options.RatePercentage = 5.00001m;
 
         Assert.True(Validate(options).Failed);
     }

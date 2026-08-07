@@ -20,8 +20,6 @@ internal sealed record BoundCommissionDepositCommand(
     int BookingId,
     Guid CommissionBindingId,
     string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor,
     string? StripeSetupIntentId);
 
 internal sealed record CaptureCommand(
@@ -38,9 +36,7 @@ internal sealed record BoundCommissionCaptureCommand(
     string PaymentIntentId,
     int BookingId,
     Guid CommissionBindingId,
-    string ExternalReference,
-    long ExpectedCommissionMinor,
-    long ExpectedPayerTotalMinor);
+    string ExternalReference);
 
 internal static class EscrowRequestMappers
 {
@@ -56,15 +52,13 @@ internal static class EscrowRequestMappers
         this BoundCommissionDepositRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.PaymentMethodId,
         request.Session.ToPaymentSession(),
         request.BookingId,
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
         request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor,
         EmptyToNull(request.StripeSetupIntentId));
 
     public static CaptureCommand ToCommand(this CaptureRequest request) => new(
@@ -78,14 +72,12 @@ internal static class EscrowRequestMappers
         this BoundCommissionCaptureRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        Money.FromMinorUnits(request.GrossMinor, request.Currency.ToDomainCurrency()),
+        request.Gross.ToMoney(),
         request.PaymentIntentId,
         request.BookingId,
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
-        request.ExternalReference,
-        request.ExpectedCommissionMinor,
-        request.ExpectedPayerTotalMinor);
+        request.ExternalReference);
 
     private static string? EmptyToNull(string value) =>
         string.IsNullOrEmpty(value) ? null : value;
