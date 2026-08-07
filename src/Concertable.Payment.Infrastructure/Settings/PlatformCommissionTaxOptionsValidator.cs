@@ -14,12 +14,15 @@ internal sealed class PlatformCommissionTaxOptionsValidator : IValidateOptions<P
 
     public ValidateOptionsResult Validate(string? name, PlatformCommissionTaxOptions options)
     {
-        var key = $"{PlatformCommissionTaxOptions.SectionName}:{nameof(options.VatRateBasisPoints)}";
+        var key = $"{PlatformCommissionTaxOptions.SectionName}:{nameof(options.VatRatePercentage)}";
         if (configuration[key] is null)
             return ValidateOptionsResult.Fail($"{key} must be configured.");
 
-        return options.VatRateBasisPoints is < 0 or > 10_000
-            ? ValidateOptionsResult.Fail($"{key} must be between 0 and 10,000.")
+        if (options.VatRatePercentage is < 0m or > 100m)
+            return ValidateOptionsResult.Fail($"{key} must be between 0 and 100.");
+
+        return decimal.Round(options.VatRatePercentage, 4) != options.VatRatePercentage
+            ? ValidateOptionsResult.Fail($"{key} cannot have more than four decimal places.")
             : ValidateOptionsResult.Success;
     }
 }

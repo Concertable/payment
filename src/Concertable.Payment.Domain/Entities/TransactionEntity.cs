@@ -27,18 +27,21 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public DateTime? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
-    public bool Complete()
+    public UnitResult<TransactionTransitionError> Complete()
     {
         if (Status != TransactionStatus.Pending)
-            return false;
+            return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotPending(Status));
+
         Status = TransactionStatus.Complete;
-        return true;
+        return UnitResult.Success<TransactionTransitionError>();
     }
 
-    public void Fail()
+    public UnitResult<TransactionTransitionError> Fail()
     {
         if (Status != TransactionStatus.Pending)
-            return;
+            return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotPending(Status));
+
         Status = TransactionStatus.Failed;
+        return UnitResult.Success<TransactionTransitionError>();
     }
 }

@@ -1,13 +1,12 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
-using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
-using FluentResults;
-using Grpc.Core;
+using Concertable.Payment.Contracts.Errors;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class ManagerPaymentClient : IManagerPaymentClient
+internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
 {
     private readonly Proto.ManagerPayment.ManagerPaymentClient client;
 
@@ -16,103 +15,82 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var request = new Proto.ManagerPayRequest
-            {
-                PayerId = payerId.ToString(),
-                PayeeId = payeeId.ToString(),
-                Amount = amount.ToProtoMoney(),
-                PaymentMethodId = paymentMethodId,
-                Session = session.ToProtoSession(),
-                BookingId = bookingId
-            };
-            var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayAsync(
+                new Proto.ManagerPayRequest
+                {
+                    PayerId = payerId.ToString(),
+                    PayeeId = payeeId.ToString(),
+                    Amount = amount.ToProtoMoney(),
+                    PaymentMethodId = paymentMethodId,
+                    Session = session.ToProtoSession(),
+                    BookingId = bookingId
+                },
+                cancellationToken: ct)).ToPaymentOutcome(),
+            error => error.ToManagerPaymentError(),
+            ct);
 
-    public async Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
+    public Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await client.PayBoundCommissionAsync(
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayBoundCommissionAsync(
                 new Proto.BoundCommissionManagerPayRequest
                 {
                     PayerId = payerId.ToString(),
                     PayeeId = payeeId.ToString(),
-                    GrossMinor = grossMinor,
-                    Currency = currency.ToProtoCurrency(),
+                    Gross = gross.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
                     BookingId = bookingId,
                     CommissionBindingId = commissionBindingId.ToString(),
                     ExternalReference = externalReference,
-                    ExpectedCommissionMinor = expectedCommissionMinor,
-                    ExpectedPayerTotalMinor = expectedPayerTotalMinor,
                     StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
                 },
-                cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+                cancellationToken: ct)).ToPaymentOutcome(),
+            error => error.ToManagerPaymentError(),
+            ct);
 
     public async Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var request = new Proto.CreateSetupSessionRequest { PayerId = payerId.ToString() };
-        request.Metadata.Add(metadata);
-        var response = await this.client.CreateSetupSessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        return (await client.CreateSetupSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var request = new Proto.CreateVerifySessionRequest { PayerId = payerId.ToString() };
-        request.Metadata.Add(metadata);
-        var response = await this.client.CreateVerifySessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        return (await client.CreateVerifySessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
     public async Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         Money amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
         var request = new Proto.CreateHoldSessionRequest
@@ -120,59 +98,50 @@ internal sealed class ManagerPaymentClient : IManagerPaymentClient
             PayerId = payerId.ToString(),
             Amount = amount.ToProtoMoney()
         };
-        request.Metadata.Add(metadata);
-        var response = await this.client.CreateHoldSessionAsync(request, cancellationToken: ct);
-        return response.ToCheckoutSession();
+        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        return (await client.CreateHoldSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
-    public async Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
+    public Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
-        IDictionary<string, string> metadata,
+        Money gross,
+        IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var request = new Proto.CreateBoundCommissionHoldSessionRequest
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
             {
-                PayerId = payerId.ToString(),
-                GrossMinor = grossMinor,
-                Currency = currency.ToProtoCurrency(),
-                CommissionBindingId = commissionBindingId.ToString(),
-                ExternalReference = externalReference,
-                ExpectedCommissionMinor = expectedCommissionMinor,
-                ExpectedPayerTotalMinor = expectedPayerTotalMinor,
-                StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-            };
-            request.Metadata.Add(metadata);
-            var response = await client.CreateBoundCommissionHoldSessionAsync(
-                request,
-                cancellationToken: ct);
-            return Result.Ok(response.ToCheckoutSession());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+                var request = new Proto.CreateBoundCommissionHoldSessionRequest
+                {
+                    PayerId = payerId.ToString(),
+                    Gross = gross.ToProtoMoney(),
+                    CommissionBindingId = commissionBindingId.ToString(),
+                    ExternalReference = externalReference,
+                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
+                };
+                request.Metadata.Add(new Dictionary<string, string>(metadata));
+                return (await client.CreateBoundCommissionHoldSessionAsync(
+                    request,
+                    cancellationToken: ct)).ToCheckoutSession();
+            },
+            error => error.ToHoldSessionError(),
+            ct);
 
     public async Task<string> FindHeldIntentAsync(
         Guid payerId,
         int applicationId,
         CancellationToken ct = default)
     {
-        var request = new Proto.FindHeldIntentRequest
-        {
-            PayerId = payerId.ToString(),
-            ApplicationId = applicationId
-        };
-        var response = await this.client.FindHeldIntentAsync(request, cancellationToken: ct);
+        var response = await client.FindHeldIntentAsync(
+            new Proto.FindHeldIntentRequest
+            {
+                PayerId = payerId.ToString(),
+                ApplicationId = applicationId
+            },
+            cancellationToken: ct);
         return response.PaymentIntentId;
     }
+
 }

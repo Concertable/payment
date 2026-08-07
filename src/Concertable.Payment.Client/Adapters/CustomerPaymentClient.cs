@@ -1,14 +1,12 @@
-using Concertable.Kernel.Exceptions;
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
-using Concertable.Payment.Client;
 using Concertable.Payment.Contracts;
-using FluentResults;
-using Grpc.Core;
+using Concertable.Payment.Contracts.Errors;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class CustomerPaymentClient : ICustomerPaymentClient
+internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
 {
     private readonly Proto.CustomerPayment.CustomerPaymentClient client;
 
@@ -17,52 +15,46 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
         this.client = client;
     }
 
-    public async Task<Result<PaymentOutcome>> PayAsync(
+    public Task<Result<PaymentOutcome, PaymentError>> PayAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
         Money amount,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         string paymentMethodId,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            var request = new Proto.CustomerPayRequest
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
             {
-                PayerId = payerId.ToString(),
-                ConcertId = concertId,
-                PayeeId = payeeId.ToString(),
-                Amount = amount.ToProtoMoney(),
-                PaymentMethodId = paymentMethodId
-            };
-            request.Metadata.Add(metadata);
-            var response = await this.client.PayAsync(request, cancellationToken: ct);
-            return Result.Ok(response.ToPaymentOutcome());
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
-        {
-            return Result.Fail(ex.Status.Detail);
-        }
-    }
+                var request = new Proto.CustomerPayRequest
+                {
+                    PayerId = payerId.ToString(),
+                    ConcertId = concertId,
+                    PayeeId = payeeId.ToString(),
+                    Amount = amount.ToProtoMoney(),
+                    PaymentMethodId = paymentMethodId
+                };
+                request.Metadata.Add(new Dictionary<string, string>(metadata));
+                return (await client.PayAsync(request, cancellationToken: ct)).ToPaymentOutcome();
+            },
+            error => error.ToPaymentError(),
+            ct);
 
     public async Task<CheckoutSession> CreatePaymentSessionAsync(
         Guid payerId,
         int concertId,
         Guid payeeId,
-        IDictionary<string, string> metadata,
+        IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        try
+        var request = new Proto.CreatePaymentSessionRequest
         {
-            var request = new Proto.CreatePaymentSessionRequest { PayerId = payerId.ToString(), ConcertId = concertId, PayeeId = payeeId.ToString() };
-            request.Metadata.Add(metadata);
-            var response = await this.client.CreatePaymentSessionAsync(request, cancellationToken: ct);
-            return response.ToCheckoutSession();
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.NotFound)
-        {
-            throw new NotFoundException(ex.Status.Detail);
-        }
+            PayerId = payerId.ToString(),
+            ConcertId = concertId,
+            PayeeId = payeeId.ToString()
+        };
+        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        return (await client.CreatePaymentSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
+
 }

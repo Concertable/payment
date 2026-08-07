@@ -7,4 +7,9 @@ internal interface ICommissionBindingRepository : IRepository<CommissionBindingE
     Task<CommissionBindingEntity> GetOrCreateAsync(
         CommissionBindingEntity candidate,
         CancellationToken ct = default);
+
+    Task<bool> TryConfirmReviewedGrossAsync(
+        Guid bindingId,
+        Money reviewedGross,
+        CancellationToken ct = default);
 }

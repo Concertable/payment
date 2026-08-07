@@ -1,7 +1,10 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
@@ -10,7 +13,6 @@ using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Repositories;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Testing.Integration;
-using FluentResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -42,7 +44,14 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 binding.Id,
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+                new Concertable.Payment.Domain.CommissionCalculation(
+                    Currency.Gbp,
+                    5000,
+                    1000,
+                    800,
+                    200,
+                    Percentage.From(20m),
+                    6000),
                 $"pi_escrow_{Guid.NewGuid():N}");
             escrow.Confirm();
             escrow.CreatedBy = "integration";
@@ -54,7 +63,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Refund?>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, EscrowRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new EscrowService(
@@ -69,13 +78,15 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 NullLogger<EscrowService>.Instance);
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(
+                bookingId,
+                Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
 
         Assert.Equal(1, results.Count(r => r.IsSuccess));
-        Assert.Equal(1, results.Count(r => r.IsFailed));
+        Assert.Equal(1, results.Count(r => r.IsFailure));
 
         stripe.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
@@ -108,7 +119,14 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 $"pi_settlement_{Guid.NewGuid():N}",
-                new CommissionCalculation(Currency.Gbp, 5000, 1000, 800, 200, 2000, 6000),
+                new Concertable.Payment.Domain.CommissionCalculation(
+                    Currency.Gbp,
+                    5000,
+                    1000,
+                    800,
+                    200,
+                    Percentage.From(20m),
+                    6000),
                 TransactionStatus.Complete,
                 bookingId,
                 binding.Id);
@@ -121,7 +139,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var stripe = RecordingRefundManager();
         var gate = new StartGate(participants: 2);
 
-        async Task<Result<Refund?>> RefundAsync(long grossMinor)
+        async Task<Result<Option<Refund>, SettlementRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
             var service = new ManagerPaymentService(
@@ -137,13 +155,15 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(bookingId, grossMinor, Currency.Gbp);
+            return await service.RefundBoundCommissionByBookingIdAsync(
+                bookingId,
+                Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
         var results = await Task.WhenAll(RefundAsync(3000), RefundAsync(2500));
 
         Assert.Equal(1, results.Count(r => r.IsSuccess));
-        Assert.Equal(1, results.Count(r => r.IsFailed));
+        Assert.Equal(1, results.Count(r => r.IsFailure));
 
         stripe.Verify(
             p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()),
@@ -171,7 +191,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var mock = new Mock<IPaymentManager>();
         mock
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Result.Ok(new Refund($"re_{Guid.NewGuid():N}")));
+            .ReturnsAsync(() => Result<Refund, PaymentError>.Success(
+                new Refund($"re_{Guid.NewGuid():N}")));
         return mock;
     }
 
@@ -193,10 +214,17 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
 
     private static async Task<CommissionBindingEntity> SeedAuthorizationAsync(PaymentDbContext context)
     {
-        var terms = new CommissionTerms(
-            Guid.NewGuid(), $"integration-{Guid.NewGuid():N}", Currency.Gbp, 500, 0);
+        var configuration = CommissionConfigurationEntity.Create(
+            Guid.NewGuid(),
+            Percentage.From(5m),
+            DateTimeOffset.UtcNow);
         var binding = CommissionBindingEntity.Create(
-            terms, $"booking:{Guid.NewGuid():N}", $"payer:{Guid.NewGuid():N}", DateTimeOffset.UtcNow);
+            configuration,
+            Currency.Gbp,
+            $"booking:{Guid.NewGuid():N}",
+            $"payer:{Guid.NewGuid():N}",
+            DateTimeOffset.UtcNow);
+        context.Add(configuration);
         context.Add(binding);
         await context.SaveChangesAsync();
         return binding;

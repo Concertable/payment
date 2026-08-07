@@ -9,16 +9,20 @@ public sealed class CommissionCalculatorTests
     private readonly CommissionCalculator sut = new();
 
     [Theory]
-    [InlineData(10_000, 500, 500, 10_500)]
-    [InlineData(101, 500, 5, 106)]
-    [InlineData(10, 500, 1, 11)]
+    [InlineData(10_000, 5, 500, 10_500)]
+    [InlineData(101, 5, 5, 106)]
+    [InlineData(10, 5, 1, 11)]
     public void Calculate_AppliesPercentageWithHalfUpRounding(
         long grossMinor,
-        int rateBasisPoints,
+        decimal ratePercentage,
         long expectedCommissionMinor,
         long expectedPayerTotalMinor)
     {
-        var result = sut.Calculate(grossMinor, Currency.Gbp, rateBasisPoints, 0);
+        var result = sut.Calculate(
+            grossMinor,
+            Currency.Gbp,
+            Terms(ratePercentage),
+            Percentage.From(0m));
 
         Assert.Equal(expectedCommissionMinor, result.CommissionGrossMinor);
         Assert.Equal(expectedCommissionMinor, result.CommissionNetMinor);
@@ -29,7 +33,11 @@ public sealed class CommissionCalculatorTests
     [Fact]
     public void Calculate_DecomposesVatInclusiveCommission()
     {
-        var result = sut.Calculate(24_000, Currency.Gbp, 500, 2_000);
+        var result = sut.Calculate(
+            24_000,
+            Currency.Gbp,
+            Terms(5m),
+            Percentage.From(20m));
 
         Assert.Equal(1_200, result.CommissionGrossMinor);
         Assert.Equal(1_000, result.CommissionNetMinor);
@@ -42,13 +50,15 @@ public sealed class CommissionCalculatorTests
     {
         var unsupported = (Currency)978;
 
-        Assert.Throws<DomainException>(() => sut.Calculate(10_000, unsupported, 500, 0));
+        Assert.Throws<DomainException>(() =>
+            sut.Calculate(10_000, unsupported, Terms(5m), Percentage.From(0m)));
     }
 
     [Fact]
     public void Calculate_UsesCheckedArithmetic()
     {
-        Assert.Throws<OverflowException>(() => sut.Calculate(long.MaxValue, Currency.Gbp, 10_000, 0));
+        Assert.Throws<OverflowException>(() =>
+            sut.Calculate(long.MaxValue, Currency.Gbp, Terms(100m), Percentage.From(0m)));
     }
 
     [Fact]
@@ -63,4 +73,7 @@ public sealed class CommissionCalculatorTests
         Assert.Equal(503, finalCumulative);
         Assert.Equal(503, firstCumulative + (secondCumulative - firstCumulative) + (finalCumulative - secondCumulative));
     }
+
+    private static CommissionTerms Terms(decimal ratePercentage) =>
+        new(Guid.NewGuid(), Percentage.From(ratePercentage));
 }
