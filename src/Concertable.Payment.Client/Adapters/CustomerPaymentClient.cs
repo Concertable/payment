@@ -21,20 +21,19 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentClient
         Guid payerId,
         int concertId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         IDictionary<string, string> metadata,
         string paymentMethodId,
         CancellationToken ct = default)
     {
         try
         {
-            var money = Money.Gbp(amount);
             var request = new Proto.CustomerPayRequest
             {
                 PayerId = payerId.ToString(),
                 ConcertId = concertId,
                 PayeeId = payeeId.ToString(),
-                Amount = money.ToProtoMoney(),
+                Amount = amount.ToProtoMoney(),
                 PaymentMethodId = paymentMethodId
             };
             request.Metadata.Add(metadata);
