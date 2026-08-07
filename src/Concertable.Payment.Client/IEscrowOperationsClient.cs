@@ -1,12 +1,13 @@
+using Concertable.Kernel.Functional;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
-using FluentResults;
+using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.Client;
 
-public interface IEscrowClient
+public interface IEscrowOperationsClient
 {
-    Task<Result<EscrowDeposit>> DepositAsync(
+    Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -15,22 +16,19 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> DepositBoundCommissionAsync(
+    Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> CaptureAsync(
+    Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -38,26 +36,26 @@ public interface IEscrowClient
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<EscrowDeposit>> CaptureBoundCommissionAsync(
+    Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentIntentId,
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         CancellationToken ct = default);
 
-    Task<Result<Transfer?>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
-
-    Task<Result<Refund?>> RefundByBookingIdAsync(int bookingId, CancellationToken ct = default);
-
-    Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
+    Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        CancellationToken ct = default);
+
+    Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default);
+
+    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
+        int bookingId,
+        Money gross,
         CancellationToken ct = default);
 }

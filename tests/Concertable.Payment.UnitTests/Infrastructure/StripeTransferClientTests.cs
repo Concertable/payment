@@ -1,4 +1,5 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces.Webhook;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure.Services;
@@ -26,8 +27,9 @@ public sealed class StripeTransferClientTests
             .Setup(c => c.CreateTransferReversalAsync(
                 "tr_test",
                 It.IsAny<TransferReversalCreateOptions>(),
-                It.IsAny<RequestOptions?>()))
-            .Callback<string, TransferReversalCreateOptions, RequestOptions?>((_, options, request) =>
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, TransferReversalCreateOptions, RequestOptions?, CancellationToken>((_, options, request, _) =>
             {
                 reversal = options;
                 reversalRequest = request;
@@ -36,8 +38,9 @@ public sealed class StripeTransferClientTests
         stripeClient
             .Setup(c => c.CreateRefundAsync(
                 It.IsAny<RefundCreateOptions>(),
-                It.IsAny<RequestOptions?>()))
-            .Callback<RefundCreateOptions, RequestOptions?>((options, request) =>
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<RefundCreateOptions, RequestOptions?, CancellationToken>((options, request, _) =>
             {
                 refund = options;
                 refundRequest = request;
@@ -96,4 +99,90 @@ public sealed class StripeTransferClientTests
         Assert.Null(reversalRequest);
         Assert.Null(refundRequest);
     }
+
+    [Fact]
+    public async Task RefundAsync_InvalidRequestFailure_Propagates()
+    {
+        var exception = new StripeException("invalid refund")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.BadRequest,
+            StripeError = new StripeError { Type = "invalid_request_error" }
+        };
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    [Fact]
+    public async Task RefundAsync_ResourceMissingFailure_Propagates()
+    {
+        var exception = new StripeException("resource missing")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.NotFound,
+            StripeError = new StripeError { Code = "resource_missing", Type = "invalid_request_error" }
+        };
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    [Fact]
+    public async Task RefundAsync_StripeInfrastructureFailure_Propagates()
+    {
+        var exception = new StripeException("Stripe unavailable")
+        {
+            StripeError = new StripeError { Type = "api_error" }
+        };
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<StripeException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    [Fact]
+    public async Task RefundAsync_Cancellation_Propagates()
+    {
+        var exception = new OperationCanceledException();
+        stripeClient
+            .Setup(c => c.CreateRefundAsync(
+                It.IsAny<RefundCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(exception);
+
+        var thrown = await Assert.ThrowsAsync<OperationCanceledException>(() => sut.RefundAsync(RefundOptions()));
+
+        Assert.Same(exception, thrown);
+    }
+
+    private static StripeRefundOptions RefundOptions() =>
+        new()
+        {
+            Amount = Money.Gbp(10),
+            PaymentIntentId = "pi_test",
+            Metadata = new Dictionary<string, string>
+            {
+                [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "1000"
+            }
+        };
 }

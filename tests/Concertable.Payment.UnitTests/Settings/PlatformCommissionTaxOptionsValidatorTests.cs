@@ -7,42 +7,51 @@ namespace Concertable.Payment.UnitTests.Settings;
 
 public sealed class PlatformCommissionTaxOptionsValidatorTests
 {
-    private static ValidateOptionsResult Validate(int? vatRateBasisPoints)
+    private static ValidateOptionsResult Validate(decimal? vatRatePercentage)
     {
         var settings = new Dictionary<string, string?>();
-        if (vatRateBasisPoints is not null)
-            settings[$"{PlatformCommissionTaxOptions.SectionName}:{nameof(PlatformCommissionTaxOptions.VatRateBasisPoints)}"] =
-                vatRateBasisPoints.Value.ToString(CultureInfo.InvariantCulture);
+        if (vatRatePercentage is not null)
+            settings[$"{PlatformCommissionTaxOptions.SectionName}:{nameof(PlatformCommissionTaxOptions.VatRatePercentage)}"] =
+                vatRatePercentage.Value.ToString(CultureInfo.InvariantCulture);
 
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
-        var options = new PlatformCommissionTaxOptions { VatRateBasisPoints = vatRateBasisPoints ?? 0 };
+        var options = new PlatformCommissionTaxOptions
+        {
+            VatRatePercentage = vatRatePercentage ?? 0m
+        };
 
         return new PlatformCommissionTaxOptionsValidator(configuration).Validate(null, options);
     }
 
     [Fact]
-    public void Validate_VatRateBasisPointsMissing_Fails()
+    public void Validate_VatRatePercentageMissing_Fails()
     {
-        Assert.True(Validate(vatRateBasisPoints: null).Failed);
+        Assert.True(Validate(vatRatePercentage: null).Failed);
     }
 
     [Theory]
-    [InlineData(-1)]
-    [InlineData(10_001)]
-    public void Validate_VatRateBasisPointsOutOfRange_Fails(int vatRateBasisPoints)
+    [InlineData(-0.01)]
+    [InlineData(100.01)]
+    public void Validate_VatRatePercentageOutOfRange_Fails(decimal vatRatePercentage)
     {
-        Assert.True(Validate(vatRateBasisPoints).Failed);
+        Assert.True(Validate(vatRatePercentage).Failed);
+    }
+
+    [Fact]
+    public void Validate_UnsupportedPrecision_Fails()
+    {
+        Assert.True(Validate(vatRatePercentage: 20.00001m).Failed);
     }
 
     [Fact]
     public void Validate_ZeroVat_Succeeds()
     {
-        Assert.True(Validate(vatRateBasisPoints: 0).Succeeded);
+        Assert.True(Validate(vatRatePercentage: 0m).Succeeded);
     }
 
     [Fact]
-    public void Validate_VatRateBasisPointsConfigured_Succeeds()
+    public void Validate_VatRatePercentageConfigured_Succeeds()
     {
-        Assert.True(Validate(vatRateBasisPoints: 2_000).Succeeded);
+        Assert.True(Validate(vatRatePercentage: 20m).Succeeded);
     }
 }

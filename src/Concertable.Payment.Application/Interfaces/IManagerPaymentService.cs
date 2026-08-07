@@ -1,10 +1,12 @@
-using FluentResults;
+using Concertable.Kernel.Functional;
+using Concertable.Payment.Application.Errors;
+using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IManagerPaymentService
 {
-    Task<Result<PaymentOutcome>> PayAsync(
+    Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -13,59 +15,40 @@ internal interface IManagerPaymentService
         int bookingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome>> PayBoundCommissionAsync(
+    Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is known but cannot be charged yet — the other party hasn't accepted.
-    /// Pre-authorises the card for a future off-session charge so the bank will honour it
-    /// when the payer is no longer present.
-    /// </summary>
     Task<CheckoutSession> CreateSetupSessionAsync(
         Guid payerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is unknown until after the event (e.g. door revenue split).
-    /// Confirms the card is real and likely chargeable — nothing is ring-fenced.
-    /// </summary>
     Task<CheckoutSession> CreateVerifySessionAsync(
         Guid payerId,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// The amount is known and ring-fenced now — the bank locks it, nothing is taken yet.
-    /// A subsequent capture collects the held amount into escrow at accept time.
-    /// </summary>
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<CheckoutSession>> CreateBoundCommissionHoldSessionAsync(
+    Task<Result<CheckoutSession, HoldSessionError>> CreateBoundCommissionHoldSessionAsync(
         Guid payerId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         string externalReference,
-        long expectedCommissionMinor,
-        long expectedPayerTotalMinor,
         string? stripeSetupIntentId,
         CancellationToken ct = default);
 
@@ -74,10 +57,9 @@ internal interface IManagerPaymentService
         int applicationId,
         CancellationToken ct = default);
 
-    Task<Result<Refund?>> RefundBoundCommissionByBookingIdAsync(
+    Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
-        long grossMinor,
-        Currency currency,
+        Money gross,
         string? reason = null,
         CancellationToken ct = default);
 }

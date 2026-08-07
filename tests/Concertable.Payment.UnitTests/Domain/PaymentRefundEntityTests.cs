@@ -1,4 +1,5 @@
 using Concertable.Kernel;
+using Concertable.Payment.Domain.Errors;
 
 namespace Concertable.Payment.UnitTests.Domain;
 
@@ -62,12 +63,15 @@ public sealed class PaymentRefundEntityTests
     }
 
     [Fact]
-    public void Complete_Twice_Throws()
+    public void Complete_Twice_ReturnsFailure()
     {
         var refund = PaymentRefundEntity.CreatePendingForEscrow(1, 3000, 0, 0, DateTimeOffset.UtcNow);
         refund.Complete("re_done", DateTimeOffset.UtcNow);
 
-        Assert.Throws<DomainException>(() => refund.Complete("re_again", DateTimeOffset.UtcNow));
+        var result = refund.Complete("re_again", DateTimeOffset.UtcNow);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
     }
 
     [Fact]
@@ -83,12 +87,15 @@ public sealed class PaymentRefundEntityTests
     }
 
     [Fact]
-    public void Fail_AfterComplete_Throws()
+    public void Fail_AfterComplete_ReturnsFailure()
     {
         var refund = PaymentRefundEntity.CreatePendingForEscrow(1, 3000, 0, 0, DateTimeOffset.UtcNow);
         refund.Complete("re_done", DateTimeOffset.UtcNow);
 
-        Assert.Throws<DomainException>(refund.Fail);
+        var result = refund.Fail();
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), error);
     }
 
     [Fact]
