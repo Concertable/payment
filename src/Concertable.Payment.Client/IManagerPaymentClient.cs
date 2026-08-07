@@ -9,7 +9,7 @@ public interface IManagerPaymentClient
     Task<Result<PaymentOutcome>> PayAsync(
         Guid payerId,
         Guid payeeId,
-        decimal amount,
+        Money amount,
         string paymentMethodId,
         PaymentSession session,
         int bookingId,
@@ -55,7 +55,7 @@ public interface IManagerPaymentClient
     /// </summary>
     Task<CheckoutSession> CreateHoldSessionAsync(
         Guid payerId,
-        decimal amount,
+        Money amount,
         IDictionary<string, string> metadata,
         CancellationToken ct = default);
 
