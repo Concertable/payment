@@ -7,10 +7,10 @@ public static class PaymentTopology
 {
     public static AsbTopology AddPaymentTopology(this AsbTopology topology) =>
         topology
-            .Subscribe<ConcertChangedEvent>(AppHostConstants.ServiceNames.Payment)
-            .Subscribe<CredentialRegisteredEvent>(AppHostConstants.ServiceNames.Payment)
-            .Subscribe<PayoutOwnerRegisteredEvent>(AppHostConstants.ServiceNames.Payment)
-            .Subscribe<PaymentSucceededEvent>(AppHostConstants.ServiceNames.Payment)
-            .Subscribe<PaymentFailedEvent>(AppHostConstants.ServiceNames.Payment)
-            .Queue<ProcessStripeWebhookCommand>(AppHostConstants.ServiceNames.Payment);
+            .Subscribe<ConcertChangedEvent>(PaymentConstants.ServiceName)
+            .Subscribe<CredentialRegisteredEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PayoutOwnerRegisteredEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PaymentSucceededEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PaymentFailedEvent>(PaymentConstants.ServiceName)
+            .Queue<ProcessStripeWebhookCommand>(PaymentConstants.ServiceName);
 }
