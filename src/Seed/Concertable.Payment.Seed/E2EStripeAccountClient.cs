@@ -12,7 +12,7 @@ namespace Concertable.Payment.Seed;
 
 /// <summary>
 /// E2E substitute for <see cref="IStripeAccountClient"/> that intercepts account provisioning using
-/// Stripe test-mode IDs from <see cref="StripeAccountResolver"/>. Customers are isolated per E2E run;
+/// Stripe test-mode IDs from <see cref="StripeE2EAccountResolver"/>. Customers are isolated per E2E run;
 /// connected Express accounts are pre-provisioned with payouts enabled. Link both to payout account DB rows.
 /// <para>
 /// Session-creation methods (<see cref="CreateSetupSessionAsync"/>, <see cref="CreatePaymentSessionAsync"/>,
@@ -27,7 +27,7 @@ namespace Concertable.Payment.Seed;
 internal sealed class E2EStripeAccountClient : IStripeAccountClient
 {
     private readonly IPayoutAccountRepository payoutAccountRepository;
-    private readonly StripeAccountResolver resolver;
+    private readonly StripeE2EAccountResolver resolver;
     // CreateSetupSessionAsync (venue hire apply), CreateVerifySessionAsync (door split / versus verify), CreateSetupIntentAsync (onboarding card save)
     private readonly SetupIntentService setupIntentService;
     // CreatePaymentSessionAsync (flat fee / door split / versus), CreateHoldSessionAsync (venue hire accept)
@@ -40,7 +40,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     public E2EStripeAccountClient(
         IConfiguration configuration,
         IPayoutAccountRepository payoutAccountRepository,
-        StripeAccountResolver resolver,
+        StripeE2EAccountResolver resolver,
         SetupIntentService setupIntentService,
         PaymentIntentService paymentIntentService,
         PaymentMethodService paymentMethodService,
@@ -56,7 +56,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     }
 
     /// <summary>
-    /// Links the run-scoped Stripe customer ID from <see cref="StripeAccountResolver"/> to the payout
+    /// Links the run-scoped Stripe customer ID from <see cref="StripeE2EAccountResolver"/> to the payout
     /// account DB row.
     /// </summary>
     public async Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default)
@@ -72,7 +72,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     }
 
     /// <summary>
-    /// Links the pre-seeded Stripe Express account ID from <see cref="StripeAccountResolver"/> to the
+    /// Links the pre-seeded Stripe Express account ID from <see cref="StripeE2EAccountResolver"/> to the
     /// payout account DB row. Does not create a new Stripe account — the account already exists in test mode.
     /// </summary>
     public async Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default)
