@@ -28,7 +28,7 @@ public sealed class E2EStripeWebhookProcessorTests
         this.inner = new Mock<IWebhookProcessor>();
         this.processor = new E2EStripeWebhookProcessor(
             this.inner.Object,
-            new StripeE2EAccountResolver(configuration),
+            new StripeAccountResolver(configuration),
             NullLogger<E2EStripeWebhookProcessor>.Instance);
     }
 
