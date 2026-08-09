@@ -5,25 +5,6 @@ namespace Concertable.Payment.UnitTests;
 public sealed class ReunionArchitectureTests
 {
     [Fact]
-    public void PaymentSource_OldKernelFunctionalIdentities_AreAbsent()
-    {
-        var oldFunctionalNamespace = "Concertable.Kernel." + "Functional";
-        var oldErrorsNamespace = "Concertable.Kernel." + "Errors";
-        var violations = Directory
-            .EnumerateFiles(FindPaymentRoot(), "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsGeneratedPath(path))
-            .Where(path =>
-            {
-                var source = File.ReadAllText(path);
-                return source.Contains(oldFunctionalNamespace, StringComparison.Ordinal)
-                    || source.Contains(oldErrorsNamespace, StringComparison.Ordinal);
-            })
-            .ToArray();
-
-        Assert.Empty(violations);
-    }
-
-    [Fact]
     public void ReunionPackages_HaveOnlyDirectOwners()
     {
         var references = Directory

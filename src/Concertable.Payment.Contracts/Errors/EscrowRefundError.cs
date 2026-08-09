@@ -8,13 +8,13 @@ public abstract partial record EscrowRefundError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        EscrowNotFound => ErrorDefinition.For<EscrowRefundError>().NotFound<EscrowNotFound>(),
-        EscrowNotRefundable => ErrorDefinition.For<EscrowRefundError>().Conflict<EscrowNotRefundable>("Escrow cannot be refunded in its current state."),
-        CommissionBindingNotFound => ErrorDefinition.For<EscrowRefundError>().NotFound<CommissionBindingNotFound>(),
-        CurrencyMismatch => ErrorDefinition.For<EscrowRefundError>().Invalid<CurrencyMismatch>("Refund currency does not match."),
-        AmountMustBePositive => ErrorDefinition.For<EscrowRefundError>().Invalid<AmountMustBePositive>("Refund amount must be positive."),
-        AmountExceedsRemaining => ErrorDefinition.For<EscrowRefundError>().Conflict<AmountExceedsRemaining>("Refund amount exceeds the remaining refundable amount."),
-        Conflict => ErrorDefinition.For<EscrowRefundError>().Conflict<Conflict>("Another refund changed the refundable amount."),
+        EscrowNotFound => ErrorDefinition.NotFound<EscrowNotFound>(),
+        EscrowNotRefundable => ErrorDefinition.Conflict<EscrowNotRefundable>("Escrow cannot be refunded in its current state."),
+        CommissionBindingNotFound => ErrorDefinition.NotFound<CommissionBindingNotFound>(),
+        CurrencyMismatch => ErrorDefinition.Invalid<CurrencyMismatch>("Refund currency does not match."),
+        AmountMustBePositive => ErrorDefinition.Invalid<AmountMustBePositive>("Refund amount must be positive."),
+        AmountExceedsRemaining => ErrorDefinition.Conflict<AmountExceedsRemaining>("Refund amount exceeds the remaining refundable amount."),
+        Conflict => ErrorDefinition.Conflict<Conflict>("Another refund changed the refundable amount."),
         PaymentFailure(var error) => error.Definition
     };
 
