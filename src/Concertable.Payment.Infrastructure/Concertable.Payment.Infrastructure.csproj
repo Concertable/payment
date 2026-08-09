@@ -19,6 +19,8 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Reunion" />
+    <PackageReference Include="Reunion.Errors" />
     <PackageReference Include="Stripe.net" />
   </ItemGroup>
 

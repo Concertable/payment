@@ -1,4 +1,4 @@
-using Concertable.Kernel.Errors;
+using Reunion.Errors;
 using Concertable.Payment.Contracts.Enums;
 using Dunet;
 
@@ -9,9 +9,9 @@ internal partial record TransactionTransitionError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        NotPending(var status) => ErrorDefinition.Conflict<NotPending>(
+        NotPending(var status) => ErrorDefinition.For<TransactionTransitionError>().Conflict<NotPending>(
             $"Transaction is {status} and cannot transition from pending."),
-        NotComplete(var status) => ErrorDefinition.Conflict<NotComplete>(
+        NotComplete(var status) => ErrorDefinition.For<TransactionTransitionError>().Conflict<NotComplete>(
             $"Transaction is {status}; only a complete transaction can be refunded.")
     };
 
@@ -27,13 +27,13 @@ internal partial record EscrowTransitionError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        NotPending(var status) => ErrorDefinition.Conflict<NotPending>(
+        NotPending(var status) => ErrorDefinition.For<EscrowTransitionError>().Conflict<NotPending>(
             $"Escrow is {status} and cannot transition from pending."),
-        NotHeld(var status) => ErrorDefinition.Conflict<NotHeld>(
+        NotHeld(var status) => ErrorDefinition.For<EscrowTransitionError>().Conflict<NotHeld>(
             $"Escrow is {status}; only held escrow can be released."),
-        NotRefundable(var status) => ErrorDefinition.Conflict<NotRefundable>(
+        NotRefundable(var status) => ErrorDefinition.For<EscrowTransitionError>().Conflict<NotRefundable>(
             $"Escrow is {status} and cannot be refunded."),
-        NotDisputable(var status) => ErrorDefinition.Conflict<NotDisputable>(
+        NotDisputable(var status) => ErrorDefinition.For<EscrowTransitionError>().Conflict<NotDisputable>(
             $"Escrow is {status}; only held escrow can be disputed.")
     };
 
@@ -55,7 +55,7 @@ internal partial record PaymentRefundTransitionError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        NotPending(var status) => ErrorDefinition.Conflict<NotPending>(
+        NotPending(var status) => ErrorDefinition.For<PaymentRefundTransitionError>().Conflict<NotPending>(
             $"Refund is {status} and cannot transition from pending.")
     };
 

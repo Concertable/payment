@@ -1,4 +1,4 @@
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;

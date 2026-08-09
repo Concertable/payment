@@ -11,6 +11,7 @@
   <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Dunet" />
+    <PackageReference Include="Reunion.Errors" />
     <PackageReference Include="Concertable.Kernel" />
     <PackageReference Include="Concertable.Messaging.Contracts" />
   </ItemGroup>

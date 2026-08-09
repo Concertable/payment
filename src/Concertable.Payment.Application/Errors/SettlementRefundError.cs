@@ -1,4 +1,4 @@
-using Concertable.Kernel.Errors;
+using Reunion.Errors;
 using Concertable.Payment.Contracts.Errors;
 using Dunet;
 
@@ -9,13 +9,13 @@ internal abstract partial record SettlementRefundError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        SettlementNotFound => ErrorDefinition.NotFound<SettlementNotFound>(),
-        SettlementNotRefundable => ErrorDefinition.Conflict<SettlementNotRefundable>("Settlement cannot be refunded in its current state."),
-        CommissionBindingNotFound => ErrorDefinition.NotFound<CommissionBindingNotFound>(),
-        CurrencyMismatch => ErrorDefinition.Invalid<CurrencyMismatch>("Refund currency does not match."),
-        AmountMustBePositive => ErrorDefinition.Invalid<AmountMustBePositive>("Refund amount must be positive."),
-        AmountExceedsRemaining => ErrorDefinition.Conflict<AmountExceedsRemaining>("Refund amount exceeds the remaining refundable amount."),
-        Conflict => ErrorDefinition.Conflict<Conflict>("Another refund changed the refundable amount."),
+        SettlementNotFound => ErrorDefinition.For<SettlementRefundError>().NotFound<SettlementNotFound>(),
+        SettlementNotRefundable => ErrorDefinition.For<SettlementRefundError>().Conflict<SettlementNotRefundable>("Settlement cannot be refunded in its current state."),
+        CommissionBindingNotFound => ErrorDefinition.For<SettlementRefundError>().NotFound<CommissionBindingNotFound>(),
+        CurrencyMismatch => ErrorDefinition.For<SettlementRefundError>().Invalid<CurrencyMismatch>("Refund currency does not match."),
+        AmountMustBePositive => ErrorDefinition.For<SettlementRefundError>().Invalid<AmountMustBePositive>("Refund amount must be positive."),
+        AmountExceedsRemaining => ErrorDefinition.For<SettlementRefundError>().Conflict<AmountExceedsRemaining>("Refund amount exceeds the remaining refundable amount."),
+        Conflict => ErrorDefinition.For<SettlementRefundError>().Conflict<Conflict>("Another refund changed the refundable amount."),
         PaymentFailure(var error) => error.Definition
     };
 
