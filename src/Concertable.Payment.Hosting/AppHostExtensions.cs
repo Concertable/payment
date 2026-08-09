@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
-public static class PaymentAppHostExtensions
+namespace Concertable.Payment.Hosting;
+
+public static class AppHostExtensions
 {
     public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
         this IDistributedApplicationBuilder builder,

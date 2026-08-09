@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="src/Concertable.Payment.AppHost.Extensions/Concertable.Payment.AppHost.Extensions.csproj" />
+  <Project Path="src/Concertable.Payment.Hosting/Concertable.Payment.Hosting.csproj" />
   <Project Path="src/Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
   <Project Path="src/Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
   <Project Path="src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj" />
