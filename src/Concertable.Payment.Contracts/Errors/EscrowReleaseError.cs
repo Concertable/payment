@@ -1,4 +1,4 @@
-using Concertable.Kernel.Errors;
+using Reunion.Errors;
 using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
@@ -8,8 +8,8 @@ public abstract partial record EscrowReleaseError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        EscrowNotFound => ErrorDefinition.NotFound<EscrowNotFound>(),
-        EscrowNotHeld => ErrorDefinition.Conflict<EscrowNotHeld>("Only held escrow can be released."),
+        EscrowNotFound => ErrorDefinition.For<EscrowReleaseError>().NotFound<EscrowNotFound>(),
+        EscrowNotHeld => ErrorDefinition.For<EscrowReleaseError>().Conflict<EscrowNotHeld>("Only held escrow can be released."),
         PaymentFailure(var error) => error.Definition
     };
 
