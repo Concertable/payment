@@ -61,7 +61,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task ProvisionCustomerAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        if (!resolver.TryGetCustomerId(ownerId, out var id))
+        if (!resolver.ResolveCustomer(ownerId).TryGetValue(out var id))
             return;
 
         var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);
@@ -77,7 +77,7 @@ internal sealed class E2EStripeAccountClient : IStripeAccountClient
     /// </summary>
     public async Task ProvisionConnectAccountAsync(Guid ownerId, string email, CancellationToken ct = default)
     {
-        if (!resolver.TryGetAccountId(ownerId, out var id))
+        if (!resolver.ResolveAccount(ownerId).TryGetValue(out var id))
             return;
 
         var account = await payoutAccountRepository.GetByOwnerIdAsync(ownerId, ct) ?? PayoutAccountEntity.Create(ownerId, email);

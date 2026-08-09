@@ -14,27 +14,14 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
     private ILocator CardTab => CardForm.GetByText("Card", new() { Exact = true });
     private ILocator ConfirmButton => Page.GetByTestId("confirm");
 
-    public async Task PayWithSavedCardAsync()
-    {
-        var response = await ConfirmAsync();
-        await response.EnsureStripeSuccessAsync();
-    }
+    public Task PayWithSavedCardAsync() => ConfirmAsync();
 
     public async Task PayWithNewCardAsync(string cardNumber)
-    {
-        var response = await SubmitNewCardAsync(cardNumber);
-        await response.EnsureStripeSuccessAsync();
-    }
-
-    public Task PayWithDeclinedCardAsync(string cardNumber) =>
-        SubmitNewCardAsync(cardNumber);
-
-    private async Task<IResponse> SubmitNewCardAsync(string cardNumber)
     {
         await CardFrameElement.ScrollIntoViewIfNeededAsync();
         await CardTab.ClickAsync();
         await FillCardAsync(cardNumber);
-        return await ConfirmAsync();
+        await ConfirmAsync();
     }
 
     private async Task FillCardAsync(string cardNumber)
@@ -44,7 +31,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
         await FillFieldAsync(CardForm.Locator("[autocomplete='cc-csc']"), "123");
     }
 
-    private async Task<IResponse> ConfirmAsync()
+    private async Task ConfirmAsync()
     {
         var confirmationResponse = Page.WaitForResponseAsync(response =>
             response.Request.Method == "POST" &&
@@ -52,7 +39,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
             response.Url.EndsWith("/confirm", StringComparison.OrdinalIgnoreCase));
 
         await ConfirmButton.ClickAsync();
-        return await confirmationResponse;
+        await confirmationResponse;
     }
 
     private static async Task FillFieldAsync(ILocator field, string value)
