@@ -1,4 +1,4 @@
-using Concertable.Kernel.Errors;
+using Reunion.Errors;
 using Dunet;
 
 namespace Concertable.Payment.Contracts.Errors;
@@ -8,11 +8,11 @@ public abstract partial record PaymentError : IError
 {
     public ErrorDefinition Definition => this switch
     {
-        PayerNotFound => ErrorDefinition.NotFound<PayerNotFound>("The payer account was not found."),
-        PayeeNotFound => ErrorDefinition.NotFound<PayeeNotFound>("The payee account was not found."),
-        PayerUnavailable => ErrorDefinition.Conflict<PayerUnavailable>("The payer account is not ready for payments."),
-        RecipientUnavailable => ErrorDefinition.Conflict<RecipientUnavailable>("The recipient account is not ready for payments."),
-        PaymentRejected => ErrorDefinition.PaymentRequired<PaymentRejected>("The payment was rejected."),
+        PayerNotFound => ErrorDefinition.For<PaymentError>().NotFound<PayerNotFound>("The payer account was not found."),
+        PayeeNotFound => ErrorDefinition.For<PaymentError>().NotFound<PayeeNotFound>("The payee account was not found."),
+        PayerUnavailable => ErrorDefinition.For<PaymentError>().Conflict<PayerUnavailable>("The payer account is not ready for payments."),
+        RecipientUnavailable => ErrorDefinition.For<PaymentError>().Conflict<RecipientUnavailable>("The recipient account is not ready for payments."),
+        PaymentRejected => ErrorDefinition.For<PaymentError>().PaymentRequired<PaymentRejected>("The payment was rejected."),
         CommissionFailure(var error) => error.Definition
     };
 

@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Reunion" />
+    <PackageReference Include="Reunion.Errors" />
     <PackageReference Include="Stripe.net" />
   </ItemGroup>
 
