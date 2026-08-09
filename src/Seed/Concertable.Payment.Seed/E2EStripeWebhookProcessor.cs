@@ -7,12 +7,12 @@ namespace Concertable.Payment.Seed;
 internal sealed class E2EStripeWebhookProcessor : IWebhookProcessor
 {
     private readonly IWebhookProcessor inner;
-    private readonly StripeAccountResolver resolver;
+    private readonly StripeE2EAccountResolver resolver;
     private readonly ILogger<E2EStripeWebhookProcessor> logger;
 
     public E2EStripeWebhookProcessor(
         IWebhookProcessor inner,
-        StripeAccountResolver resolver,
+        StripeE2EAccountResolver resolver,
         ILogger<E2EStripeWebhookProcessor> logger)
     {
         this.inner = inner;

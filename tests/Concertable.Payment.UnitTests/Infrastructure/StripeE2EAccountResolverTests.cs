@@ -5,13 +5,13 @@ using Microsoft.Extensions.Configuration;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
-public sealed class StripeAccountResolverTests
+public sealed class StripeE2EAccountResolverTests
 {
     private const string OwnedCustomerId = "cus_owned";
     private static readonly Guid VenueManagerId = SeedUsers.VenueManagerId(1);
-    private readonly StripeAccountResolver resolver;
+    private readonly StripeE2EAccountResolver resolver;
 
-    public StripeAccountResolverTests()
+    public StripeE2EAccountResolverTests()
     {
         var values = SeedUsers.Managers.ToDictionary(
             manager => $"E2EStripe:Customers:{manager.Id:N}",
@@ -22,7 +22,7 @@ public sealed class StripeAccountResolverTests
             .AddInMemoryCollection(values)
             .Build();
 
-        this.resolver = new StripeAccountResolver(configuration);
+        this.resolver = new StripeE2EAccountResolver(configuration);
     }
 
     #region ResolveCustomer
@@ -52,7 +52,7 @@ public sealed class StripeAccountResolverTests
     {
         var accountId = this.resolver.ResolveAccount(TenantSeedIds.For(VenueManagerId));
 
-        Assert.Equal(Option.Some(StripeAccountResolver.AccountIds[VenueManagerId]), accountId);
+        Assert.Equal(Option.Some(StripeE2EAccountResolver.AccountIds[VenueManagerId]), accountId);
     }
 
     #endregion
