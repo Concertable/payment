@@ -1,8 +1,7 @@
-using Concertable.Payment.Infrastructure.Services.Webhook;
+using Concertable.Kernel.Functional;
 using Concertable.Payment.Seed;
 using Concertable.Seed.Identity;
 using Microsoft.Extensions.Configuration;
-using Stripe;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
@@ -26,36 +25,50 @@ public sealed class StripeE2EAccountResolverTests
         this.resolver = new StripeE2EAccountResolver(configuration);
     }
 
+    #region ResolveCustomer
+
     [Fact]
     public void ResolveCustomer_UsesRunConfiguration()
     {
-        var customerId = this.resolver.ResolveCustomer(VenueManagerId);
+        var customerId = this.resolver.ResolveCustomer(TenantSeedIds.For(VenueManagerId));
 
-        Assert.Equal(OwnedCustomerId, customerId);
+        Assert.Equal(Option.Some(OwnedCustomerId), customerId);
     }
+
+    [Fact]
+    public void ResolveCustomer_ReturnsNoneForUnmappedOwner()
+    {
+        var customerId = this.resolver.ResolveCustomer(Guid.NewGuid());
+
+        Assert.Equal(Option.None<string>(), customerId);
+    }
+
+    #endregion
+
+    #region ResolveAccount
+
+    [Fact]
+    public void ResolveAccount_UsesConfiguredAccountMapping()
+    {
+        var accountId = this.resolver.ResolveAccount(TenantSeedIds.For(VenueManagerId));
+
+        Assert.Equal(Option.Some(StripeE2EAccountResolver.AccountIds[VenueManagerId]), accountId);
+    }
+
+    #endregion
+
+    #region OwnsCustomer
 
     [Theory]
-    [InlineData(true, true)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(false, false)]
-    public void ShouldProcess_AcceptsOnlyIntentEventsOwnedByTheRun(
-        bool isPaymentIntent,
-        bool isOwned)
+    [InlineData(OwnedCustomerId, true)]
+    [InlineData("cus_another_run", false)]
+    [InlineData(null, false)]
+    public void OwnsCustomer_ReturnsWhetherCustomerBelongsToRun(string? customerId, bool expected)
     {
-        var customerId = isOwned ? OwnedCustomerId : "cus_another_run";
-        var stripeEvent = new Event
-        {
-            Data = new EventData
-            {
-                Object = isPaymentIntent
-                    ? new PaymentIntent { CustomerId = customerId }
-                    : new SetupIntent { CustomerId = customerId },
-            },
-        };
+        var ownsCustomer = this.resolver.OwnsCustomer(customerId);
 
-        var shouldProcess = ((IStripeEventFilter)this.resolver).ShouldProcess(stripeEvent);
-
-        Assert.Equal(isOwned, shouldProcess);
+        Assert.Equal(expected, ownsCustomer);
     }
+
+    #endregion
 }

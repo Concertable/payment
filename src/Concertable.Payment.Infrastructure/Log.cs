@@ -16,9 +16,6 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: already processed")]
     internal static partial void SkippingStripeEventAlreadyProcessed(this ILogger logger, string eventId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: outside this runtime's Stripe resource scope")]
-    internal static partial void SkippingStripeEventOutsideScope(this ILogger logger, string eventId);
-
     [LoggerMessage(Level = LogLevel.Information, Message = "Publishing PaymentSucceededEvent for PaymentIntent {IntentId} (event {EventId}) of transaction type {TransactionType}")]
     internal static partial void PublishingPaymentSucceededEvent(this ILogger logger, string intentId, string eventId, string transactionType);
 
