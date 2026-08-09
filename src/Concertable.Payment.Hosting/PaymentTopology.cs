@@ -3,6 +3,8 @@ using Concertable.B2B.Concert.Contracts.Events;
 using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
 
+namespace Concertable.Payment.Hosting;
+
 public static class PaymentTopology
 {
     public static AsbTopology AddPaymentTopology(this AsbTopology topology) =>
