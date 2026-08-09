@@ -1,11 +1,10 @@
+using Concertable.Kernel.Functional;
 using Concertable.Seed.Identity;
-using Concertable.Payment.Infrastructure.Services.Webhook;
 using Microsoft.Extensions.Configuration;
-using Stripe;
 
 namespace Concertable.Payment.Seed;
 
-public sealed class StripeE2EAccountResolver : IStripeEventFilter
+public sealed class StripeE2EAccountResolver
 {
     // Keyed by seed user id — what E2E tests reference. Connect accounts exist for managers only.
     public static readonly Dictionary<Guid, string> AccountIds = new()
@@ -19,7 +18,6 @@ public sealed class StripeE2EAccountResolver : IStripeEventFilter
     private static readonly HashSet<Guid> managerUserIds =
         SeedUsers.Managers.Select(manager => manager.Id).ToHashSet();
 
-    private readonly IReadOnlyDictionary<Guid, string> customerIds;
     private readonly IReadOnlyDictionary<Guid, string> customersByOwner;
     private readonly HashSet<string> ownedCustomerIds;
 
@@ -29,7 +27,7 @@ public sealed class StripeE2EAccountResolver : IStripeEventFilter
         AccountIds.ToDictionary(kv => TenantSeedIds.For(kv.Key), kv => kv.Value);
     public StripeE2EAccountResolver(IConfiguration configuration)
     {
-        customerIds = configuration.GetSection("E2EStripe:Customers")
+        var customerIds = configuration.GetSection("E2EStripe:Customers")
             .GetChildren()
             .ToDictionary(
                 customer => Guid.ParseExact(customer.Key, "N"),
@@ -43,26 +41,12 @@ public sealed class StripeE2EAccountResolver : IStripeEventFilter
         ownedCustomerIds = customerIds.Values.ToHashSet(StringComparer.Ordinal);
     }
 
-    // Owner-keyed — used by E2EStripeAccountClient when linking a provisioned account.
-    public bool TryGetCustomerId(Guid ownerId, out string id) => customersByOwner.TryGetValue(ownerId, out id!);
-    public bool TryGetAccountId(Guid ownerId, out string id) => accountsByOwner.TryGetValue(ownerId, out id!);
+    public Option<string> ResolveCustomer(Guid ownerId) =>
+        customersByOwner.GetValueOrDefault(ownerId).ToOption();
 
-    // User-keyed — used by E2E tests/hooks.
-    public string ResolveCustomer(Guid userId) =>
-        customerIds.TryGetValue(userId, out var id)
-            ? id
-            : throw new InvalidOperationException($"No E2E Stripe customer ID registered for {userId}.");
+    public Option<string> ResolveAccount(Guid ownerId) =>
+        accountsByOwner.GetValueOrDefault(ownerId).ToOption();
 
-    public string ResolveAccount(Guid userId) =>
-        AccountIds.TryGetValue(userId, out var id)
-            ? id
-            : throw new InvalidOperationException($"No E2E Stripe account ID registered for {userId}.");
-
-    bool IStripeEventFilter.ShouldProcess(Event stripeEvent) =>
-        stripeEvent.Data.Object switch
-        {
-            PaymentIntent intent => ownedCustomerIds.Contains(intent.CustomerId),
-            SetupIntent intent => ownedCustomerIds.Contains(intent.CustomerId),
-            _ => true,
-        };
+    public bool OwnsCustomer(string? customerId) =>
+        customerId is not null && ownedCustomerIds.Contains(customerId);
 }
