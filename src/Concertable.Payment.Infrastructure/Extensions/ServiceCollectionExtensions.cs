@@ -123,7 +123,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IStripeWebhookHandler<Stripe.PaymentIntent>, PaymentIntentWebhookHandler>();
         services.AddScoped<IStripeWebhookHandler<Stripe.SetupIntent>, SetupIntentWebhookHandler>();
-        services.AddSingleton<IStripeEventFilter, AcceptAllStripeEventFilter>();
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
