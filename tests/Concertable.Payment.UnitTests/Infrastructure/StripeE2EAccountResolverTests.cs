@@ -38,7 +38,7 @@ public sealed class StripeE2EAccountResolverTests
     [Fact]
     public void ResolveCustomer_ReturnsNoneForUnmappedOwner()
     {
-        var customerId = this.resolver.ResolveCustomer(Guid.NewGuid());
+        var customerId = this.resolver.ResolveCustomer(Guid.Empty);
 
         Assert.Equal(Option.None<string>(), customerId);
     }
