@@ -65,15 +65,17 @@ public sealed class StripeFixture
             new PaymentIntentConfirmOptions { PaymentMethod = paymentMethodId },
             cancellationToken: ct);
 
-    public async Task<PaymentIntent?> FindCapturedHoldAsync(string stripeCustomerId, decimal amount)
+    public async Task<PaymentIntent?> GetCapturedHoldAsync(
+        string paymentIntentId,
+        decimal amount,
+        CancellationToken ct = default)
     {
-        var results = await paymentIntents.ListAsync(new PaymentIntentListOptions
-        {
-            Customer = stripeCustomerId,
-            Created = new DateRangeOptions { GreaterThanOrEqual = LastReset }
-        });
-        return results.Data.SingleOrDefault(p =>
-            p.Amount == Money.Gbp(amount).ToMinorUnits() && p.Status == "succeeded");
+        var paymentIntent = await paymentIntents.GetAsync(paymentIntentId, cancellationToken: ct);
+
+        return paymentIntent.Amount == Money.Gbp(amount).ToMinorUnits()
+            && paymentIntent.Status == "succeeded"
+                ? paymentIntent
+                : null;
     }
 
     public async Task<Transfer?> FindTransferAsync(string stripeAccountId, decimal amount)
