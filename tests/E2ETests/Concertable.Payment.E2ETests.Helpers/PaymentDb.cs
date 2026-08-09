@@ -30,6 +30,11 @@ public sealed class PaymentDb
             "SELECT ToOwnerId FROM payment.Escrows WHERE BookingId = @bookingId",
             new { bookingId });
 
+    public Task<string> GetEscrowPaymentIntentIdAsync(int bookingId) =>
+        connection.QuerySingleAsync<string>(
+            "SELECT ChargeId FROM payment.Escrows WHERE BookingId = @bookingId",
+            new { bookingId });
+
     public Task<int?> GetEscrowStatusAsync(int bookingId) =>
         connection.QuerySingleOrDefaultAsync<int?>(
             "SELECT Status FROM payment.Escrows WHERE BookingId = @bookingId",
