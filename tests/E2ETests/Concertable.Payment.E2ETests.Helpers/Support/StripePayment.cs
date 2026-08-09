@@ -8,6 +8,7 @@ public sealed class StripePayment(IPageAccessor accessor, StripeCardEntry cardEn
 
     public Task PayWithSavedCardAsync() => cardEntry.PayWithSavedCardAsync();
     public Task PayWithNewCardAsync(string cardNumber) => cardEntry.PayWithNewCardAsync(cardNumber);
+    public Task PayWithDeclinedCardAsync(string cardNumber) => cardEntry.PayWithDeclinedCardAsync(cardNumber);
 
     public async Task CompleteChallengeIfRequiredAsync()
     {

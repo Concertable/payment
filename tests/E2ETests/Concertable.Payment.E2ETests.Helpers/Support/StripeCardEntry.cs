@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Playwright;
 
 namespace Concertable.E2ETests.Support;
@@ -15,14 +14,27 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
     private ILocator CardTab => CardForm.GetByText("Card", new() { Exact = true });
     private ILocator ConfirmButton => Page.GetByTestId("confirm");
 
-    public Task PayWithSavedCardAsync() => ConfirmAsync();
+    public async Task PayWithSavedCardAsync()
+    {
+        var response = await ConfirmAsync();
+        await response.EnsureStripeSuccessAsync();
+    }
 
     public async Task PayWithNewCardAsync(string cardNumber)
+    {
+        var response = await SubmitNewCardAsync(cardNumber);
+        await response.EnsureStripeSuccessAsync();
+    }
+
+    public Task PayWithDeclinedCardAsync(string cardNumber) =>
+        SubmitNewCardAsync(cardNumber);
+
+    private async Task<IResponse> SubmitNewCardAsync(string cardNumber)
     {
         await CardFrameElement.ScrollIntoViewIfNeededAsync();
         await CardTab.ClickAsync();
         await FillCardAsync(cardNumber);
-        await ConfirmAsync();
+        return await ConfirmAsync();
     }
 
     private async Task FillCardAsync(string cardNumber)
@@ -32,7 +44,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
         await FillFieldAsync(CardForm.Locator("[autocomplete='cc-csc']"), "123");
     }
 
-    private async Task ConfirmAsync()
+    private async Task<IResponse> ConfirmAsync()
     {
         var confirmationResponse = Page.WaitForResponseAsync(response =>
             response.Request.Method == "POST" &&
@@ -40,24 +52,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
             response.Url.EndsWith("/confirm", StringComparison.OrdinalIgnoreCase));
 
         await ConfirmButton.ClickAsync();
-        var response = await confirmationResponse;
-
-        if (response.Ok) return;
-
-        var body = await response.TextAsync();
-        var message = "Stripe returned an error without a message.";
-        try
-        {
-            using var document = JsonDocument.Parse(body);
-            if (document.RootElement.TryGetProperty("error", out var error) &&
-                error.TryGetProperty("message", out var errorMessage))
-                message = errorMessage.GetString() ?? message;
-        }
-        catch (JsonException)
-        {
-        }
-
-        throw new InvalidOperationException($"Stripe confirmation failed ({response.Status}): {message}");
+        return await confirmationResponse;
     }
 
     private static async Task FillFieldAsync(ILocator field, string value)
