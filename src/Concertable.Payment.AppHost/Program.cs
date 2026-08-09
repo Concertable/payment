@@ -1,3 +1,5 @@
+using Concertable.Payment.Hosting;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");

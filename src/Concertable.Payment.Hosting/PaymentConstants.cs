@@ -1,3 +1,5 @@
+namespace Concertable.Payment.Hosting;
+
 public static class PaymentConstants
 {
     public const string Database = "PaymentDb";
