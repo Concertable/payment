@@ -11,6 +11,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
     private readonly TimeProvider timeProvider;
     private readonly IStripeWebhookHandler<PaymentIntent> paymentIntentHandler;
     private readonly IStripeWebhookHandler<SetupIntent> setupIntentHandler;
+    private readonly IStripeEventFilter eventFilter;
     private readonly ILogger<WebhookProcessor> logger;
 
     public WebhookProcessor(
@@ -19,6 +20,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         TimeProvider timeProvider,
         IStripeWebhookHandler<PaymentIntent> paymentIntentHandler,
         IStripeWebhookHandler<SetupIntent> setupIntentHandler,
+        IStripeEventFilter eventFilter,
         ILogger<WebhookProcessor> logger)
     {
         this.stripeEventRepository = stripeEventRepository;
@@ -26,6 +28,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         this.timeProvider = timeProvider;
         this.paymentIntentHandler = paymentIntentHandler;
         this.setupIntentHandler = setupIntentHandler;
+        this.eventFilter = eventFilter;
         this.logger = logger;
     }
 
@@ -39,6 +42,12 @@ internal sealed class WebhookProcessor : IWebhookProcessor
             if (dataObject is not (PaymentIntent or SetupIntent))
             {
                 logger.SkippingStripeEventUnhandledObject(stripeEvent.Id, dataObject?.GetType().Name ?? "null");
+                return;
+            }
+
+            if (!eventFilter.ShouldProcess(stripeEvent))
+            {
+                logger.SkippingStripeEventOutsideScope(stripeEvent.Id);
                 return;
             }
 
