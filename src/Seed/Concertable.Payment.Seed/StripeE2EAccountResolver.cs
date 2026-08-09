@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Concertable.Payment.Seed;
 
-public sealed class StripeAccountResolver
+public sealed class StripeE2EAccountResolver
 {
     // Keyed by seed user id — what E2E tests reference. Connect accounts exist for managers only.
     public static readonly Dictionary<Guid, string> AccountIds = new()
@@ -25,7 +25,7 @@ public sealed class StripeAccountResolver
        it: a manager (one with a Connect account) is owned by its tenant; a ticket buyer is owned by itself. */
     private static readonly Dictionary<Guid, string> accountsByOwner =
         AccountIds.ToDictionary(kv => TenantSeedIds.For(kv.Key), kv => kv.Value);
-    public StripeAccountResolver(IConfiguration configuration)
+    public StripeE2EAccountResolver(IConfiguration configuration)
     {
         var customerIds = configuration.GetSection("E2EStripe:Customers")
             .GetChildren()
