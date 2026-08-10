@@ -1,4 +1,4 @@
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 
