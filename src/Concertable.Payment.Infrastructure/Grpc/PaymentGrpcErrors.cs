@@ -1,5 +1,5 @@
-using Concertable.Kernel.Errors;
-using Concertable.Kernel.Functional;
+using Reunion.Errors;
+using Reunion;
 using Concertable.Payment.Grpc;
 using Google.Protobuf;
 using Grpc.Core;
