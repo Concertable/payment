@@ -1,5 +1,5 @@
 using Concertable.Kernel.ValueObjects;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
