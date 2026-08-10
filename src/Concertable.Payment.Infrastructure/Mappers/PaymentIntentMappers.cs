@@ -1,5 +1,5 @@
 using Concertable.Payment.Application.DTOs;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Contracts.Errors;
 using Stripe;
 

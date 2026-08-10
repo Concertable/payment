@@ -26,7 +26,7 @@ It knows **nothing** of tickets, concerts, deals, or reviews as domain concepts.
 | `Concertable.Payment.Infrastructure` | Shared csproj | EF, services, Stripe clients, gRPC services, event handlers, webhook pipeline. |
 | `Concertable.Payment.Client` | **Packable** package | Refit-free gRPC **client** stubs + typed adapters (`I*Client`). Consumed by B2B/Customer. |
 | `Concertable.Payment.Contracts` | **Packable** package | Integration events + cross-service DTOs + metadata-key/`type` constants. |
-| `Concertable.Payment.Seed` | E2E/dev csproj | `UseE2EStripeClient` + pre-seeded Stripe test-mode account resolver. |
+| `Concertable.Payment.Seed` | E2E/dev csproj | `UseE2EStripeClient` + run-scoped Stripe test-mode customer and pre-provisioned Connect account resolver. |
 | `Concertable.Payment.AppHost` | Aspire AppHost | Local-dev orchestrator only. |
 
 **Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
@@ -86,13 +86,13 @@ A succeeded payment routes by its opaque metadata `type` (`Contracts/PaymentMeta
 Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeAccountClient`, `IStripeHoldClient`, `IStripePaymentIntentClient`, `IStripeTransferClient`, `Webhook/IStripeApiClient`, `IWebhookService`). Selection is by environment, never by touching real Stripe in dev/E2E:
 
 - **`ExternalServices:UseRealStripe`** (bool) in `AddPaymentInfrastructure` — `false` (dev default) registers the `Fake*` clients; `true` registers the Stripe-SDK-backed real clients.
-- **`UseE2EStripeClient()`** (`Seed/`, gated on `EnvironmentName == "E2E"`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for `E2EStripeAccountClient` — which links pre-seeded **real test-mode** Stripe IDs so Stripe.js client secrets validate, without a Fake.
+- **`UseE2EStripeClient()`** (`Seed/`, gated on `EnvironmentName == "E2E"`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for `E2EStripeAccountClient`. Each fixture creates its own **real test-mode** customers so concurrent runs cannot detach or reuse one another's cards; pre-provisioned Connect accounts remain shared because tests do not mutate them. The webhook processor accepts only intents owned by the fixture's customers.
 
 ---
 
 ## Webhook pipeline & idempotency
 
-`WebhookController` (`POST api/Webhook`) reads the raw body + `Stripe-Signature` → `WebhookService` verifies the signature (`EventUtility.ValidateSignature`, secret from `StripeSettings`) and enqueues a `ProcessStripeWebhookCommand` through the outbox → `WebhookProcessor` routes `PaymentIntent`/`SetupIntent` objects to their handlers. Idempotency is two-layered:
+`WebhookController` (`POST api/Webhook`) reads the raw body + `Stripe-Signature` → `WebhookService` verifies the signature (`EventUtility.ValidateSignature`, secret from `StripeSettings`) and enqueues a `ProcessStripeWebhookCommand` through the outbox → `WebhookProcessor` applies the runtime resource-scope filter, then routes `PaymentIntent`/`SetupIntent` objects to their handlers. Production accepts the whole Stripe account; E2E accepts only intents for its run-scoped customers. Idempotency is two-layered:
 
 1. **Stripe-event dedup** — `WebhookProcessor` skips if `StripeEventEntity` (keyed on Stripe event id, `[payment].[StripeEvents]`) already exists, else inserts it inside the same outbox transaction as the side-effects.
 2. **Messaging inbox** — subscribers dedup on `(MessageId, ConsumerName)`.
@@ -141,7 +141,7 @@ JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api`
 
 ## Tech stack
 
-.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper · FluentValidation. Published client operations return Kernel-owned typed results with Payment-owned error unions (`api/agents/CODE_CONVENTIONS.md`).
+.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions (`api/agents/CODE_CONVENTIONS.md`).
 
 ---
 
