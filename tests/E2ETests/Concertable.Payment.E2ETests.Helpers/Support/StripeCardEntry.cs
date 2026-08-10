@@ -9,6 +9,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
     private const string CardFrameSelector = "iframe[src*='elements-inner-accessory-target']";
 
     private IFrameLocator CardForm => Page.FrameLocator(CardFrameSelector);
+    private ILocator CardFrameElement => Page.Locator(CardFrameSelector);
 
     private ILocator CardTab => CardForm.GetByRole(AriaRole.Tab, new() { Name = "Card", Exact = true });
     private ILocator CardNumber => CardForm.Locator("[name='number']");
@@ -25,6 +26,8 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
 
     private async Task SelectCardAsync()
     {
+        await CardFrameElement.ScrollIntoViewIfNeededAsync();
+
         if (await CardTab.GetAttributeAsync("aria-selected") != "true")
             await CardTab.ClickAsync();
 
