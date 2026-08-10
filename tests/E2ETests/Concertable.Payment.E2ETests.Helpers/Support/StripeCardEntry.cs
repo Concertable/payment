@@ -11,24 +11,45 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
     private IFrameLocator CardForm => Page.FrameLocator(CardFrameSelector);
     private ILocator CardFrameElement => Page.Locator(CardFrameSelector);
 
-    private ILocator CardTab => CardForm.GetByText("Card", new() { Exact = true });
+    private ILocator CardTab => CardForm.GetByRole(AriaRole.Tab, new() { Name = "Card", Exact = true });
+    private ILocator CardNumber => CardForm.Locator("[name='number']");
     private ILocator ConfirmButton => Page.GetByTestId("confirm");
 
-    public Task PayWithSavedCardAsync() => ConfirmButton.ClickAsync();
+    public Task PayWithSavedCardAsync() => ConfirmAsync();
 
     public async Task PayWithNewCardAsync(string cardNumber)
     {
-        await CardFrameElement.ScrollIntoViewIfNeededAsync();
-        await CardTab.ClickAsync();
+        await SelectCardAsync();
         await FillCardAsync(cardNumber);
-        await ConfirmButton.ClickAsync();
+        await ConfirmAsync();
+    }
+
+    private async Task SelectCardAsync()
+    {
+        await CardFrameElement.ScrollIntoViewIfNeededAsync();
+
+        if (await CardTab.GetAttributeAsync("aria-selected") != "true")
+            await CardTab.ClickAsync();
+
+        await Assertions.Expect(CardTab).ToHaveAttributeAsync("aria-selected", "true");
     }
 
     private async Task FillCardAsync(string cardNumber)
     {
-        await FillFieldAsync(CardForm.Locator("[name='number']"), cardNumber);
+        await FillFieldAsync(CardNumber, cardNumber);
         await FillFieldAsync(CardForm.Locator("[autocomplete='cc-exp']"), "1230");
         await FillFieldAsync(CardForm.Locator("[autocomplete='cc-csc']"), "123");
+    }
+
+    private async Task ConfirmAsync()
+    {
+        var confirmationResponse = Page.WaitForResponseAsync(response =>
+            response.Request.Method == "POST" &&
+            response.Url.StartsWith("https://api.stripe.com/v1/", StringComparison.OrdinalIgnoreCase) &&
+            response.Url.EndsWith("/confirm", StringComparison.OrdinalIgnoreCase));
+
+        await ConfirmButton.ClickAsync();
+        await confirmationResponse;
     }
 
     private static async Task FillFieldAsync(ILocator field, string value)

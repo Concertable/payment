@@ -1,5 +1,5 @@
 using Concertable.Payment.Application.Requests;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.Application.Interfaces;
