@@ -1,5 +1,5 @@
 using System.Collections.Frozen;
-using Concertable.Kernel.Errors;
+using Reunion.Errors;
 using Concertable.Payment.Contracts.Errors;
 using Google.Protobuf;
 using Grpc.Core;
