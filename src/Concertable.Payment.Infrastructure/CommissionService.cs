@@ -1,6 +1,6 @@
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Contracts.Errors;
 using Microsoft.Extensions.Options;
 
