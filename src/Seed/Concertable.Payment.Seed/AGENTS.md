@@ -1,8 +1,8 @@
 # Concertable.Payment.Seed
 
-## `StripeE2EAccountResolver` must cover every seeded user with a Stripe ID
+## `StripeE2EAccountResolver` must cover every seeded user with a Stripe customer
 
-The dictionaries in `StripeE2EAccountResolver.cs` should contain a mapping for every seeded user that has a real Stripe test-mode account — every `SeedUsers.ArtistManagerId(i)` and `SeedUsers.VenueManagerId(i)` for `i ∈ [1, SeedUsers.ManagerCount]`, plus every customer in `SeedCustomers.All` that has saved test cards.
+`StripeCustomerResolver` must create a customer for every seeded manager (`SeedUsers.Managers`), plus every seeded customer that has saved test cards. `StripeE2EAccountResolver` consumes that supplied map generically; do not duplicate the user list there. Each E2E fixture creates distinct test-mode customers and supplies their IDs through `E2EStripe:Customers`; never restore fixed shared customer IDs. Connect account IDs remain fixed because tests do not mutate them.
 
 If you find the resolver doesn't cover all of them, fill it in. **Don't reason around it.** A missing entry is a bug here, not a feature.
 
