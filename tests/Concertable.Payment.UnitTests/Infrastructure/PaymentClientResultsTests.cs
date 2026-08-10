@@ -1,6 +1,6 @@
 extern alias PaymentClient;
 
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure.Grpc;
 using Google.Protobuf;

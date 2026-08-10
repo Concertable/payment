@@ -1,4 +1,4 @@
-using Concertable.Kernel.Functional;
+using Reunion;
 using Concertable.Payment.Client.Enums;
 using Proto = Concertable.Payment.Grpc;
 
