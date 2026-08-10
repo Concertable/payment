@@ -26,7 +26,7 @@ public sealed class StripeCardEntry(IPageAccessor accessor)
     private async Task SelectCardAsync()
     {
         if (await CardTab.GetAttributeAsync("aria-selected") != "true")
-            await CardTab.PressAsync("Enter");
+            await CardTab.ClickAsync();
 
         await Assertions.Expect(CardTab).ToHaveAttributeAsync("aria-selected", "true");
     }
