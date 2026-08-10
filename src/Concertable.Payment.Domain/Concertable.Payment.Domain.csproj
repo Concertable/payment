@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="Dunet" />
+    <PackageReference Include="Reunion" />
+    <PackageReference Include="Reunion.Errors" />
     <ProjectReference Include="..\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
   </ItemGroup>
 
