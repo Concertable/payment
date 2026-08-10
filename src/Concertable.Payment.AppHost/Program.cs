@@ -1,10 +1,11 @@
+using Concertable.B2B.Hosting;
 using Concertable.Payment.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
 var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");
 var authDb = sql.AddDatabase(AuthConstants.Database);
-var b2bDb = sql.AddDatabase(AppHostConstants.Databases.B2B);
+var b2bDb = sql.AddDatabase(B2BConstants.Database);
 var paymentDb = sql.AddDatabase(PaymentConstants.Database);
 
 var asb = builder.AddServiceBus();
