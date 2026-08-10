@@ -1,5 +1,5 @@
 using Concertable.Grpc;
-using Concertable.Kernel.Functional;
+using Reunion;
 using Grpc.Core;
 
 namespace Concertable.Payment.Client.Adapters;
