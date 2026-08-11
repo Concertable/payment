@@ -2,7 +2,7 @@ using System.Data;
 using Concertable.Payment.Domain.Enums;
 using Dapper;
 
-namespace Concertable.E2ETests;
+namespace Concertable.Payment.E2ETests.Helpers;
 
 public sealed class PaymentDb
 {

@@ -1,7 +1,7 @@
 using Concertable.Kernel.ValueObjects;
 using Stripe;
 
-namespace Concertable.E2ETests;
+namespace Concertable.Payment.E2ETests.Helpers;
 
 public sealed class StripeFixture
 {
