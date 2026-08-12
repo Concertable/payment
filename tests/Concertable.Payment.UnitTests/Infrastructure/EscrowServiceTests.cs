@@ -595,6 +595,71 @@ public sealed class EscrowServiceTests
     }
 
     [Fact]
+    public async Task CaptureAsync_ExistingBooking_ReturnsExistingEscrowWithoutCapturingAgain()
+    {
+        var existing = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_held");
+        existing.Confirm();
+        escrowRepository
+            .Setup(repository => repository.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        var result = await sut.CaptureAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pi_held",
+            7,
+            Guid.NewGuid());
+
+        Assert.True(result.TryGetValue(out var deposit));
+        Assert.Equal("pi_held", deposit.ChargeId);
+        paymentManager.Verify(
+            manager => manager.CaptureAsync(It.IsAny<CaptureRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RefundByBookingIdAsync_PendingOperation_ResumesSameRefundReservation()
+    {
+        var operationId = Guid.NewGuid();
+        var existing = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_held");
+        existing.Confirm();
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            existing.Id,
+            5000,
+            0,
+            0,
+            timeProvider.GetUtcNow(),
+            operationId);
+        existing.RecordRefund(reservation);
+        escrowRepository
+            .Setup(repository => repository.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        paymentManager
+            .Setup(manager => manager.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<Refund, PaymentError>.Success(new Refund("re_resumed")));
+
+        var result = await sut.RefundByBookingIdAsync(7, null, "cancelled", operationId);
+
+        Assert.True(result.TryGetValue(out var option));
+        Assert.True(option.TryGetValue(out var refund));
+        Assert.Equal("re_resumed", refund.RefundId);
+        Assert.Equal(PaymentRefundStatus.Completed, reservation.Status);
+        paymentManager.Verify(
+            manager => manager.RefundAsync(
+                It.Is<RefundRequest>(request =>
+                    request.Metadata[PaymentMetadataKeys.OperationId] == operationId.ToString()),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        escrowRepository.Verify(
+            repository => repository.TryReserveRefundGrossAsync(
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ReleaseByBookingIdAsync_WithPlatformFee_TransfersGrossOnly()
     {
         var heldEscrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_test");

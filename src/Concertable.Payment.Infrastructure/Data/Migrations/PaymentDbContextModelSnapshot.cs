@@ -259,6 +259,59 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.ToTable("Escrows", "payment");
                 });
 
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.FinancialOperationEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BookingId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FailureMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTimeOffset>("LastAttemptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ReferenceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("BookingId", "Type");
+
+                    b.ToTable("FinancialOperations", "payment");
+                });
+
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.LedgerAccountEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -378,6 +431,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("GrossRefundedMinor")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<long>("PayerTotalRefundedMinor")
                         .HasColumnType("bigint");
 
@@ -394,6 +450,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EscrowId");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasFilter("[OperationId] IS NOT NULL");
 
                     b.HasIndex("SettlementTransactionId");
 
