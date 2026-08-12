@@ -1,5 +1,5 @@
 using System.Net;
-using Concertable.E2ETests;
+using Concertable.Payment.E2ETests.Helpers;
 using Stripe;
 
 namespace Concertable.Payment.E2ETests.Helpers.UnitTests;
