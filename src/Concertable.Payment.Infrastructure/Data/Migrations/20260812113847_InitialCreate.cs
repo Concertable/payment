@@ -30,6 +30,28 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "FinancialOperations",
+                schema: "payment",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BookingId = table.Column<int>(type: "int", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
+                    RequestFingerprint = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
+                    ReferenceId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FailureCode = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    FailureMessage = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastAttemptedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FinancialOperations", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LedgerAccounts",
                 schema: "payment",
                 columns: table => new
@@ -248,7 +270,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     PayerTotalRefundedMinor = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true)
+                    CompletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -328,6 +351,18 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_FinancialOperations_BookingId_Type",
+                schema: "payment",
+                table: "FinancialOperations",
+                columns: new[] { "BookingId", "Type" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FinancialOperations_Status",
+                schema: "payment",
+                table: "FinancialOperations",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_LedgerAccounts_Type_OwnerId_Currency",
                 schema: "payment",
                 table: "LedgerAccounts",
@@ -370,6 +405,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment",
                 table: "PaymentRefunds",
                 column: "EscrowId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentRefunds_OperationId",
+                schema: "payment",
+                table: "PaymentRefunds",
+                column: "OperationId",
+                unique: true,
+                filter: "[OperationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentRefunds_SettlementTransactionId",
@@ -435,6 +478,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "FinancialOperations",
+                schema: "payment");
+
             migrationBuilder.DropTable(
                 name: "LedgerEntries",
                 schema: "payment");
