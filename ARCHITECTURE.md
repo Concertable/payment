@@ -141,7 +141,7 @@ JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api`
 
 ## Tech stack
 
-.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions (`api/agents/CODE_CONVENTIONS.md`).
+.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions ([`../agents/RESULT_PATTERN.md`](../agents/RESULT_PATTERN.md)).
 
 ---
 
