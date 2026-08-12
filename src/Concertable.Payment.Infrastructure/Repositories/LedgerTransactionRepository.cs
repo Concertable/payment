@@ -6,7 +6,5 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 internal sealed class LedgerTransactionRepository : Repository<LedgerTransactionEntity>, ILedgerTransactionRepository
 {
     public LedgerTransactionRepository(PaymentDbContext context)
-        : base(context)
-    {
-    }
+        : base(context) { }
 }
