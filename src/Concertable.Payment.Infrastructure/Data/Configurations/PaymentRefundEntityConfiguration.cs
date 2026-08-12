@@ -11,6 +11,7 @@ internal sealed class PaymentRefundEntityConfiguration : IEntityTypeConfiguratio
         builder.Property(r => r.Id).ValueGeneratedNever();
         builder.Property(r => r.StripeRefundId).HasMaxLength(100);
         builder.HasIndex(r => r.StripeRefundId).IsUnique();
+        builder.HasIndex(r => r.OperationId).IsUnique().HasFilter("[OperationId] IS NOT NULL");
         builder.HasOne(r => r.Escrow)
             .WithMany(e => e.Refunds)
             .HasForeignKey(r => r.EscrowId)
