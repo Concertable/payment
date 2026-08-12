@@ -36,7 +36,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     BookingId = table.Column<int>(type: "int", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false),
                     RequestFingerprint = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
                     ReferenceId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
@@ -351,10 +350,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
-                name: "IX_FinancialOperations_BookingId_Type",
+                name: "IX_FinancialOperations_BookingId",
                 schema: "payment",
                 table: "FinancialOperations",
-                columns: new[] { "BookingId", "Type" });
+                column: "BookingId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_FinancialOperations_Status",

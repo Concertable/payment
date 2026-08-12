@@ -10,9 +10,13 @@ public sealed class FinancialOperationContractTests
         { typeof(CaptureEscrowCommand), "concertable.payment.capture-escrow.v1" },
         { typeof(DepositEscrowCommand), "concertable.payment.deposit-escrow.v1" },
         { typeof(RefundEscrowCommand), "concertable.payment.refund-escrow.v1" },
-        { typeof(FinancialOperationSucceededEvent), "concertable.payment.financial-operation-succeeded.v1" },
-        { typeof(FinancialOperationRejectedEvent), "concertable.payment.financial-operation-rejected.v1" },
-        { typeof(FinancialOperationDeferredEvent), "concertable.payment.financial-operation-deferred.v1" }
+        { typeof(CaptureEscrowSucceededEvent), "concertable.payment.capture-escrow-succeeded.v1" },
+        { typeof(CaptureEscrowRejectedEvent), "concertable.payment.capture-escrow-rejected.v1" },
+        { typeof(DepositEscrowSucceededEvent), "concertable.payment.deposit-escrow-succeeded.v1" },
+        { typeof(DepositEscrowRejectedEvent), "concertable.payment.deposit-escrow-rejected.v1" },
+        { typeof(RefundEscrowSucceededEvent), "concertable.payment.refund-escrow-succeeded.v1" },
+        { typeof(RefundEscrowRejectedEvent), "concertable.payment.refund-escrow-rejected.v1" },
+        { typeof(RefundEscrowDeferredEvent), "concertable.payment.refund-escrow-deferred.v1" }
     };
 
     [Theory]
