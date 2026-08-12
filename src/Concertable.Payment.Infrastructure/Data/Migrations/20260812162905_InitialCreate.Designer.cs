@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260812113847_InitialCreate")]
+    [Migration("20260812162905_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -301,16 +301,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("BookingId");
 
-                    b.HasIndex("BookingId", "Type");
+                    b.HasIndex("Status");
 
                     b.ToTable("FinancialOperations", "payment");
                 });

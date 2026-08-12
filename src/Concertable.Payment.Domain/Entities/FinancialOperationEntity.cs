@@ -7,7 +7,6 @@ internal sealed class FinancialOperationEntity
     private FinancialOperationEntity(
         Guid id,
         int bookingId,
-        FinancialOperationType type,
         string requestFingerprint,
         DateTimeOffset createdAt)
     {
@@ -20,7 +19,6 @@ internal sealed class FinancialOperationEntity
 
         Id = id;
         BookingId = bookingId;
-        Type = type;
         RequestFingerprint = requestFingerprint;
         Status = FinancialOperationStatus.Pending;
         CreatedAt = createdAt;
@@ -29,7 +27,6 @@ internal sealed class FinancialOperationEntity
 
     public Guid Id { get; private set; }
     public int BookingId { get; private set; }
-    public FinancialOperationType Type { get; private set; }
     public string RequestFingerprint { get; private set; } = null!;
     public FinancialOperationStatus Status { get; private set; }
     public string? ReferenceId { get; private set; }
@@ -42,14 +39,13 @@ internal sealed class FinancialOperationEntity
     public static FinancialOperationEntity Create(
         Guid id,
         int bookingId,
-        FinancialOperationType type,
         string requestFingerprint,
         DateTimeOffset createdAt) =>
-        new(id, bookingId, type, requestFingerprint, createdAt);
+        new(id, bookingId, requestFingerprint, createdAt);
 
-    public void EnsureMatches(int bookingId, FinancialOperationType type, string requestFingerprint)
+    public void EnsureMatches(int bookingId, string requestFingerprint)
     {
-        if (BookingId != bookingId || Type != type || RequestFingerprint != requestFingerprint)
+        if (BookingId != bookingId || RequestFingerprint != requestFingerprint)
             throw new InvalidOperationException($"Financial operation {Id} was reused with a different request.");
     }
 

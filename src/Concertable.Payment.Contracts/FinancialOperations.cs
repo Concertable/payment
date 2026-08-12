@@ -3,13 +3,6 @@ using Concertable.Messaging.Contracts;
 
 namespace Concertable.Payment.Contracts;
 
-public enum FinancialOperationType
-{
-    CaptureEscrow,
-    DepositEscrow,
-    RefundEscrow
-}
-
 [MessageType("concertable.payment.capture-escrow.v1")]
 public sealed record CaptureEscrowCommand(
     Guid OperationId,
@@ -37,23 +30,46 @@ public sealed record RefundEscrowCommand(
     int BookingId,
     string? Reason = null) : IIntegrationCommand;
 
-[MessageType("concertable.payment.financial-operation-succeeded.v1")]
-public sealed record FinancialOperationSucceededEvent(
+[MessageType("concertable.payment.capture-escrow-succeeded.v1")]
+public sealed record CaptureEscrowSucceededEvent(
     Guid OperationId,
     int BookingId,
-    FinancialOperationType Type,
     string ReferenceId) : IIntegrationEvent;
 
-[MessageType("concertable.payment.financial-operation-rejected.v1")]
-public sealed record FinancialOperationRejectedEvent(
+[MessageType("concertable.payment.capture-escrow-rejected.v1")]
+public sealed record CaptureEscrowRejectedEvent(
     Guid OperationId,
     int BookingId,
-    FinancialOperationType Type,
     string Code,
     string Message) : IIntegrationEvent;
 
-[MessageType("concertable.payment.financial-operation-deferred.v1")]
-public sealed record FinancialOperationDeferredEvent(
+[MessageType("concertable.payment.deposit-escrow-succeeded.v1")]
+public sealed record DepositEscrowSucceededEvent(
     Guid OperationId,
     int BookingId,
-    FinancialOperationType Type) : IIntegrationEvent;
+    string ReferenceId) : IIntegrationEvent;
+
+[MessageType("concertable.payment.deposit-escrow-rejected.v1")]
+public sealed record DepositEscrowRejectedEvent(
+    Guid OperationId,
+    int BookingId,
+    string Code,
+    string Message) : IIntegrationEvent;
+
+[MessageType("concertable.payment.refund-escrow-succeeded.v1")]
+public sealed record RefundEscrowSucceededEvent(
+    Guid OperationId,
+    int BookingId,
+    string ReferenceId) : IIntegrationEvent;
+
+[MessageType("concertable.payment.refund-escrow-rejected.v1")]
+public sealed record RefundEscrowRejectedEvent(
+    Guid OperationId,
+    int BookingId,
+    string Code,
+    string Message) : IIntegrationEvent;
+
+[MessageType("concertable.payment.refund-escrow-deferred.v1")]
+public sealed record RefundEscrowDeferredEvent(
+    Guid OperationId,
+    int BookingId) : IIntegrationEvent;
