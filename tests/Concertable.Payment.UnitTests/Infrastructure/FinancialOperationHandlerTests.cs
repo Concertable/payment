@@ -91,7 +91,7 @@ public sealed class FinancialOperationHandlerTests
         Assert.NotNull(operation);
         Assert.Equal(FinancialOperationStatus.Succeeded, operation.Status);
         bus.Verify(value => value.PublishAsync(
-            It.Is<FinancialOperationSucceededEvent>(@event =>
+            It.Is<CaptureEscrowSucceededEvent>(@event =>
                 @event.OperationId == command.OperationId && @event.ReferenceId == command.PaymentIntentId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -142,7 +142,7 @@ public sealed class FinancialOperationHandlerTests
             It.IsAny<Guid>(),
             It.IsAny<CancellationToken>()), Times.Never);
         bus.Verify(value => value.PublishAsync(
-            It.Is<FinancialOperationSucceededEvent>(@event => @event.OperationId == command.OperationId),
+            It.Is<CaptureEscrowSucceededEvent>(@event => @event.OperationId == command.OperationId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -173,7 +173,7 @@ public sealed class FinancialOperationHandlerTests
         Assert.NotNull(operation);
         Assert.Equal(FinancialOperationStatus.Pending, operation.Status);
         bus.Verify(value => value.PublishAsync(
-            It.Is<FinancialOperationDeferredEvent>(@event => @event.OperationId == command.OperationId),
+            It.Is<RefundEscrowDeferredEvent>(@event => @event.OperationId == command.OperationId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
