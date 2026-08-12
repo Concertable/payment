@@ -1,4 +1,3 @@
-using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Infrastructure.Data;
@@ -27,7 +26,6 @@ public sealed class FinancialOperationPersistenceTests : IClassFixture<SqlFixtur
             var operation = FinancialOperationEntity.Create(
                 id,
                 17,
-                FinancialOperationType.CaptureEscrow,
                 new string('A', 64),
                 completedAt.AddMinutes(-1));
             operation.Succeed("pi_test", completedAt);
@@ -39,7 +37,6 @@ public sealed class FinancialOperationPersistenceTests : IClassFixture<SqlFixtur
         var persisted = await verification.FinancialOperations.SingleAsync(value => value.Id == id);
 
         Assert.Equal(17, persisted.BookingId);
-        Assert.Equal(FinancialOperationType.CaptureEscrow, persisted.Type);
         Assert.Equal(FinancialOperationStatus.Succeeded, persisted.Status);
         Assert.Equal("pi_test", persisted.ReferenceId);
         Assert.Equal(completedAt, persisted.CompletedAt);

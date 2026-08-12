@@ -75,9 +75,13 @@ services.AddAzureServiceBusTransport(
     {
         reg.Publishes<PaymentSucceededEvent>();
         reg.Publishes<PaymentFailedEvent>();
-        reg.Publishes<FinancialOperationSucceededEvent>();
-        reg.Publishes<FinancialOperationRejectedEvent>();
-        reg.Publishes<FinancialOperationDeferredEvent>();
+        reg.Publishes<CaptureEscrowSucceededEvent>();
+        reg.Publishes<CaptureEscrowRejectedEvent>();
+        reg.Publishes<DepositEscrowSucceededEvent>();
+        reg.Publishes<DepositEscrowRejectedEvent>();
+        reg.Publishes<RefundEscrowSucceededEvent>();
+        reg.Publishes<RefundEscrowRejectedEvent>();
+        reg.Publishes<RefundEscrowDeferredEvent>();
         reg.HandleCommand<ProcessStripeWebhookCommand>();
         reg.HandleCommand<CaptureEscrowCommand>();
         reg.HandleCommand<DepositEscrowCommand>();

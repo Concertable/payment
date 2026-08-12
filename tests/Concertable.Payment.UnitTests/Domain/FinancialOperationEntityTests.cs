@@ -1,4 +1,3 @@
-using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
 
@@ -12,12 +11,11 @@ public sealed class FinancialOperationEntityTests
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
             17,
-            FinancialOperationType.CaptureEscrow,
             "fingerprint-a",
             DateTimeOffset.UtcNow);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            operation.EnsureMatches(17, FinancialOperationType.CaptureEscrow, "fingerprint-b"));
+            operation.EnsureMatches(17, "fingerprint-b"));
 
         Assert.Contains(operation.Id.ToString(), exception.Message, StringComparison.Ordinal);
     }
@@ -29,7 +27,6 @@ public sealed class FinancialOperationEntityTests
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
             17,
-            FinancialOperationType.DepositEscrow,
             "fingerprint",
             completedAt.AddMinutes(-1));
 
@@ -46,7 +43,6 @@ public sealed class FinancialOperationEntityTests
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
             17,
-            FinancialOperationType.RefundEscrow,
             "fingerprint",
             DateTimeOffset.UtcNow);
         operation.Succeed("re_test", DateTimeOffset.UtcNow);
