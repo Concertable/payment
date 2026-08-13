@@ -2,18 +2,18 @@ using Concertable.Payment.Application.Interfaces.Webhook;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
-namespace Concertable.Payment.Seed;
+namespace Concertable.Payment.E2ETests.Stripe;
 
-internal sealed class E2EStripeWebhookProcessor : IWebhookProcessor
+internal sealed class StripeWebhookProcessor : IWebhookProcessor
 {
     private readonly IWebhookProcessor inner;
-    private readonly StripeE2EAccountResolver resolver;
-    private readonly ILogger<E2EStripeWebhookProcessor> logger;
+    private readonly StripeAccountResolver resolver;
+    private readonly ILogger<StripeWebhookProcessor> logger;
 
-    public E2EStripeWebhookProcessor(
+    public StripeWebhookProcessor(
         IWebhookProcessor inner,
-        StripeE2EAccountResolver resolver,
-        ILogger<E2EStripeWebhookProcessor> logger)
+        StripeAccountResolver resolver,
+        ILogger<StripeWebhookProcessor> logger)
     {
         this.inner = inner;
         this.resolver = resolver;
