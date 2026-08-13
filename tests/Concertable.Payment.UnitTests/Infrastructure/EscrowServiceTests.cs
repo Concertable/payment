@@ -175,6 +175,35 @@ public sealed class EscrowServiceTests
     }
 
     [Fact]
+    public async Task DepositAsync_FinancialOperation_ForwardsOperationIdentity()
+    {
+        var operationId = Guid.NewGuid();
+        paymentManager
+            .Setup(p => p.HoldAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Money>(),
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                operationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOutcome { TransactionId = "pi_operation", RequiresAction = false });
+
+        var result = await sut.DepositAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pm_test",
+            PaymentSession.OnSession,
+            7,
+            operationId);
+
+        Assert.True(result.IsSuccess);
+        paymentManager.VerifyAll();
+    }
+
+    [Fact]
     public async Task DepositAsync_OnRequiresAction_PersistsEscrowAtPendingWithClientSecret()
     {
         paymentManager
@@ -569,9 +598,12 @@ public sealed class EscrowServiceTests
     public async Task CaptureAsync_WithPlatformFee_SnapshotsGrossPlusFeeAndFee()
     {
         var feeSut = SutWithFee(12m);
+        var operationId = Guid.NewGuid();
+        CaptureRequest? captureRequest = null;
 
         paymentManager
             .Setup(p => p.CaptureAsync(It.IsAny<CaptureRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<CaptureRequest, CancellationToken>((request, _) => captureRequest = request)
             .ReturnsAsync(UnitResult<PaymentError>.Success());
 
         EscrowEntity? captured = null;
@@ -580,9 +612,10 @@ public sealed class EscrowServiceTests
             .Callback<EscrowEntity, CancellationToken>((e, _) => captured = e)
             .ReturnsAsync(() => captured!);
 
-        var result = await feeSut.CaptureAsync(payerId, payeeId, Money.Gbp(50), "pi_held", bookingId: 7);
+        var result = await feeSut.CaptureAsync(payerId, payeeId, Money.Gbp(50), "pi_held", 7, operationId);
 
         Assert.True(result.IsSuccess);
+        Assert.Equal(operationId, captureRequest!.OperationId);
         Assert.NotNull(captured);
         Assert.Equal(6200, captured.PayerTotalMinor);
         Assert.Equal(1200, captured.CommissionGrossMinor);
@@ -592,6 +625,72 @@ public sealed class EscrowServiceTests
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.Receivable));
         Assert.Equal(6200, posting.CreditMinorUnits(LedgerAccountType.StripeClearing));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_ExistingBooking_ReturnsExistingEscrowWithoutCapturingAgain()
+    {
+        var existing = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_held");
+        existing.Confirm();
+        escrowRepository
+            .Setup(repository => repository.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        var result = await sut.CaptureAsync(
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pi_held",
+            7,
+            Guid.NewGuid());
+
+        Assert.True(result.TryGetValue(out var deposit));
+        Assert.Equal("pi_held", deposit.ChargeId);
+        paymentManager.Verify(
+            manager => manager.CaptureAsync(It.IsAny<CaptureRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RefundByBookingIdAsync_PendingOperation_ResumesSameRefundReservation()
+    {
+        var operationId = Guid.NewGuid();
+        var existing = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_held");
+        existing.Confirm();
+        var reservation = PaymentRefundEntity.CreatePendingForEscrow(
+            existing.Id,
+            5000,
+            0,
+            0,
+            timeProvider.GetUtcNow(),
+            operationId);
+        existing.RecordRefund(reservation);
+        escrowRepository
+            .Setup(repository => repository.GetByBookingIdAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        paymentManager
+            .Setup(manager => manager.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<Refund, PaymentError>.Success(new Refund("re_resumed")));
+
+        var result = await sut.RefundByBookingIdAsync(7, null, "cancelled", operationId);
+
+        Assert.True(result.TryGetValue(out var option));
+        Assert.True(option.TryGetValue(out var refund));
+        Assert.Equal("re_resumed", refund.RefundId);
+        Assert.Equal(PaymentRefundStatus.Completed, reservation.Status);
+        paymentManager.Verify(
+            manager => manager.RefundAsync(
+                It.Is<RefundRequest>(request =>
+                    request.OperationId == operationId &&
+                    request.Metadata[PaymentMetadataKeys.OperationId] == operationId.ToString()),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        escrowRepository.Verify(
+            repository => repository.TryReserveRefundGrossAsync(
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
