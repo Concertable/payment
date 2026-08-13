@@ -7,6 +7,11 @@ internal sealed class FakeStripeHoldClient : IStripeHoldClient
     public Task<string> FindHeldIntentAsync(string stripeCustomerId, int applicationId, CancellationToken ct = default) =>
         Task.FromResult("pi_fake_hold_id");
 
-    public Task CaptureAsync(string intentId, IReadOnlyDictionary<string, string> metadata, CancellationToken ct = default) =>
+    public Task CaptureAsync(
+        string intentId,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid? operationId,
+        Guid? commissionBindingId,
+        CancellationToken ct = default) =>
         Task.CompletedTask;
 }
