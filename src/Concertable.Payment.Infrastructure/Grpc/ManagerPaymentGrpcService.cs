@@ -110,4 +110,28 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             context.CancellationToken);
         return new FindHeldIntentResponse { PaymentIntentId = intentId };
     }
+
+    public override async Task<Concertable.Payment.Grpc.Money> GetTicketRevenue(
+        PaymentPeriodRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var amount = await managerPaymentService.GetTicketRevenueAsync(
+            command.PayeeId,
+            command.Period,
+            context.CancellationToken);
+        return amount.ToProtoMoney();
+    }
+
+    public override async Task<Concertable.Payment.Grpc.Money> GetSettlementPayouts(
+        PaymentPeriodRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var amount = await managerPaymentService.GetSettlementPayoutsAsync(
+            command.PayeeId,
+            command.Period,
+            context.CancellationToken);
+        return amount.ToProtoMoney();
+    }
 }

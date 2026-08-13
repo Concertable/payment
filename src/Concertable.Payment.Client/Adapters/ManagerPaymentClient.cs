@@ -2,11 +2,12 @@ using Reunion;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
+using Google.Protobuf.WellKnownTypes;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
 
-internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
+internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IManagerPaymentReportingClient
 {
     private readonly Proto.ManagerPayment.ManagerPaymentClient client;
 
@@ -143,5 +144,28 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient
             cancellationToken: ct);
         return response.PaymentIntentId;
     }
+
+    public async Task<Money> GetTicketRevenueAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        (await client.GetTicketRevenueAsync(
+            ToProtoRequest(payeeId, period),
+            cancellationToken: ct)).ToMoney();
+
+    public async Task<Money> GetSettlementPayoutsAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        (await client.GetSettlementPayoutsAsync(
+            ToProtoRequest(payeeId, period),
+            cancellationToken: ct)).ToMoney();
+
+    private static Proto.PaymentPeriodRequest ToProtoRequest(Guid payeeId, DateRange period) => new()
+    {
+        PayeeId = payeeId.ToString(),
+        PeriodStart = Timestamp.FromDateTime(period.Start),
+        PeriodEnd = Timestamp.FromDateTime(period.End)
+    };
 
 }
