@@ -163,7 +163,12 @@ public sealed class ManagerPaymentServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<BoundCommission, CommissionError>.Success(authorized));
         stripeAccountClient
-            .Setup(c => c.CreateHoldSessionAsync(It.IsAny<string>(), It.IsAny<Money>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.CreateBoundCommissionHoldSessionAsync(
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                bindingId,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CheckoutSession("cs_new_secret", "sess_secret", "cus_test", "pi_hold_new"));
 
         var result = await sut.CreateBoundCommissionHoldSessionAsync(
@@ -212,7 +217,7 @@ public sealed class ManagerPaymentServiceTests
         Assert.True(result.TryGetError(out var error));
         Assert.Equal(new ManagerPaymentError.CommissionFailure(new CommissionError.GrossMismatch()), error);
         paymentManager.Verify(
-            p => p.SettleAsync(
+            p => p.SettleBoundCommissionAsync(
                 It.IsAny<Guid>(),
                 It.IsAny<Guid>(),
                 It.IsAny<Money>(),
@@ -220,6 +225,7 @@ public sealed class ManagerPaymentServiceTests
                 It.IsAny<string>(),
                 It.IsAny<PaymentSession>(),
                 It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -255,7 +261,12 @@ public sealed class ManagerPaymentServiceTests
         Assert.Equal("cs_existing_secret", checkout.ClientSecret);
         Assert.Equal("pi_hold_bound", suppliedPaymentIntent);
         stripeAccountClient.Verify(
-            c => c.CreateHoldSessionAsync(It.IsAny<string>(), It.IsAny<Money>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()),
+            c => c.CreateBoundCommissionHoldSessionAsync(
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
         commissionService.Verify(
             c => c.BindPaymentIntent(It.IsAny<CommissionBindingEntity>(), It.IsAny<string>()),
@@ -289,7 +300,12 @@ public sealed class ManagerPaymentServiceTests
             c => c.GetHoldSessionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
         stripeAccountClient.Verify(
-            c => c.CreateHoldSessionAsync(It.IsAny<string>(), It.IsAny<Money>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()),
+            c => c.CreateBoundCommissionHoldSessionAsync(
+                It.IsAny<string>(),
+                It.IsAny<Money>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<Guid>(),
+                It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
