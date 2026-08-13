@@ -8,9 +8,6 @@
   <Project Path="src/Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
   <Project Path="src/Concertable.Payment.Web/Concertable.Payment.Web.csproj" />
   <Project Path="src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj" />
-  <Folder Name="/Seed/">
-    <Project Path="src/Seed/Concertable.Payment.Seed/Concertable.Payment.Seed.csproj" />
-  </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/Concertable.Payment.IntegrationTests/Concertable.Payment.IntegrationTests.csproj" />
     <Project Path="tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
@@ -18,5 +15,8 @@
   <Folder Name="/Tests/E2ETests/">
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers.UnitTests/Concertable.Payment.E2ETests.Helpers.UnitTests.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Stripe/Concertable.Payment.E2ETests.Stripe.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj" />
   </Folder>
 </Solution>

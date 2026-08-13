@@ -1,5 +1,6 @@
 using Concertable.Contracts;
 using Concertable.DataAccess.Infrastructure;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,6 +36,30 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
         context.SettlementTransactions
             .Include(t => t.Refunds)
             .FirstOrDefaultAsync(t => t.BookingId == bookingId, ct);
+
+    public async Task<long> GetCompletedTicketRevenueAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        await context.TicketTransactions
+            .Where(t =>
+                t.PayeeId == payeeId &&
+                t.Status == TransactionStatus.Complete &&
+                t.CreatedAt >= period.Start &&
+                t.CreatedAt < period.End)
+            .SumAsync(t => (long?)t.Amount, ct) ?? 0;
+
+    public async Task<long> GetCompletedSettlementPayoutsAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        await context.SettlementTransactions
+            .Where(t =>
+                t.PayeeId == payeeId &&
+                t.Status == TransactionStatus.Complete &&
+                t.CreatedAt >= period.Start &&
+                t.CreatedAt < period.End)
+            .SumAsync(t => (long?)t.PayeeGrossMinor, ct) ?? 0;
 
     public async Task CreateAsync(TransactionEntity entity)
     {
