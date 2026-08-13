@@ -1,5 +1,5 @@
 using Concertable.Payment.Application.Interfaces.Webhook;
-using Concertable.Payment.Seed;
+using Concertable.Payment.E2ETests.Stripe;
 using Concertable.Seed.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,13 +8,13 @@ using Stripe;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
 
-public sealed class E2EStripeWebhookProcessorTests
+public sealed class StripeWebhookProcessorTests
 {
     private const string OwnedCustomerId = "cus_owned";
     private readonly Mock<IWebhookProcessor> inner;
-    private readonly E2EStripeWebhookProcessor processor;
+    private readonly StripeWebhookProcessor processor;
 
-    public E2EStripeWebhookProcessorTests()
+    public StripeWebhookProcessorTests()
     {
         var values = SeedUsers.Managers.ToDictionary(
             manager => $"E2EStripe:Customers:{manager.Id:N}",
@@ -26,10 +26,10 @@ public sealed class E2EStripeWebhookProcessorTests
             .Build();
 
         this.inner = new Mock<IWebhookProcessor>();
-        this.processor = new E2EStripeWebhookProcessor(
+        this.processor = new StripeWebhookProcessor(
             this.inner.Object,
-            new StripeE2EAccountResolver(configuration),
-            NullLogger<E2EStripeWebhookProcessor>.Instance);
+            new StripeAccountResolver(configuration),
+            NullLogger<StripeWebhookProcessor>.Instance);
     }
 
     [Theory]

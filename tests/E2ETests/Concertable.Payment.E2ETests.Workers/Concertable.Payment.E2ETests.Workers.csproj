@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
+    <ProjectReference Include="..\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
+  </ItemGroup>
+
+  <!-- Reuse the production host's E2E configuration; this host adds only the Stripe adapter swap. -->
+  <ItemGroup>
+    <Content Include="..\..\..\src\Concertable.Payment.Workers\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\..\src\Concertable.Payment.Workers\appsettings.E2E.json" Link="appsettings.E2E.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

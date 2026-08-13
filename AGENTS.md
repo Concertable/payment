@@ -12,7 +12,7 @@ Payout accounts are provisioned **only** by handlers reacting to integration eve
 
 ## E2E/dev never touch real Stripe
 
-`ExternalServices:UseRealStripe=false` (dev default) wires the `Fake*` clients; E2E layers `UseE2EStripeClient()` using run-scoped Stripe test-mode customers and pre-provisioned test-mode Connect accounts. Never add a path that calls live-mode Stripe in dev/E2E.
+`ExternalServices:UseRealStripe=false` (dev default) wires the `Fake*` clients; the E2E host projects layer `UseStripeAdapter()` using run-scoped Stripe test-mode customers and pre-provisioned test-mode Connect accounts. Never add a path that calls live-mode Stripe in dev/E2E.
 
 ## Money is `long` minor-units in the ledger
 
