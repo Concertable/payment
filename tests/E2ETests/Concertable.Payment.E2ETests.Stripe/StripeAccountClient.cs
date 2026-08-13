@@ -211,11 +211,26 @@ internal sealed class StripeAccountClient : IStripeAccountClient
     /// Real object required because <c>Stripe.js elements({ clientSecret })</c> validates against
     /// <c>api.stripe.com/v1/elements/sessions</c> and rejects fake secrets.
     /// </summary>
-    public async Task<CheckoutSession> CreateHoldSessionAsync(
+    public Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        CreateHoldSessionInternalAsync(stripeCustomerId, amount, metadata, ct);
+
+    public Task<CheckoutSession> CreateBoundCommissionHoldSessionAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        CancellationToken ct = default) =>
+        CreateHoldSessionInternalAsync(stripeCustomerId, amount, metadata, ct);
+
+    private async Task<CheckoutSession> CreateHoldSessionInternalAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        CancellationToken ct)
     {
         var intent = await paymentIntentService.CreateAsync(new PaymentIntentCreateOptions
         {

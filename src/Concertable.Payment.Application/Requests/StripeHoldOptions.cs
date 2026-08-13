@@ -7,5 +7,7 @@ internal sealed record StripeHoldOptions
     public required string StripeCustomerId { get; init; }
     public required string DestinationStripeId { get; init; }
     public required string ReceiptEmail { get; init; }
+    public Guid? OperationId { get; init; }
+    public Guid? CommissionBindingId { get; init; }
     public required Dictionary<string, string> Metadata { get; init; }
 }

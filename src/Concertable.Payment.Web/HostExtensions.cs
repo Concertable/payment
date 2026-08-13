@@ -1,6 +1,7 @@
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
@@ -73,7 +74,17 @@ public static class HostExtensions
             {
                 reg.Publishes<PaymentSucceededEvent>();
                 reg.Publishes<PaymentFailedEvent>();
+                reg.Publishes<CaptureEscrowSucceededEvent>();
+                reg.Publishes<CaptureEscrowRejectedEvent>();
+                reg.Publishes<DepositEscrowSucceededEvent>();
+                reg.Publishes<DepositEscrowRejectedEvent>();
+                reg.Publishes<RefundEscrowSucceededEvent>();
+                reg.Publishes<RefundEscrowRejectedEvent>();
+                reg.Publishes<RefundEscrowDeferredEvent>();
                 reg.HandleCommand<ProcessStripeWebhookCommand>();
+                reg.HandleCommand<CaptureEscrowCommand>();
+                reg.HandleCommand<DepositEscrowCommand>();
+                reg.HandleCommand<RefundEscrowCommand>();
             });
         services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
 
