@@ -196,11 +196,27 @@ internal sealed class StripeAccountClient : IStripeAccountClient
         return new CheckoutSession(intent.ClientSecret, customerSession, stripeCustomerId, intent.Id);
     }
 
-    public async Task<CheckoutSession> CreateHoldSessionAsync(
+    public Task<CheckoutSession> CreateHoldSessionAsync(
         string stripeCustomerId,
         Money amount,
         IReadOnlyDictionary<string, string> metadata,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        CreateHoldSessionInternalAsync(stripeCustomerId, amount, metadata, null, ct);
+
+    public Task<CheckoutSession> CreateBoundCommissionHoldSessionAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        CancellationToken ct = default) =>
+        CreateHoldSessionInternalAsync(stripeCustomerId, amount, metadata, commissionBindingId, ct);
+
+    private async Task<CheckoutSession> CreateHoldSessionInternalAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid? commissionBindingId,
+        CancellationToken ct)
     {
         var intent = await paymentIntentService.CreateAsync(
             new PaymentIntentCreateOptions
@@ -217,7 +233,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
                 },
                 Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value),
             },
-            StripeIdempotency.FromMetadata(metadata, "hold-session"),
+            StripeRequestOptions.HoldSession(commissionBindingId),
             ct);
 
         var customerSession = await CreateCustomerSessionAsync(stripeCustomerId, ct);

@@ -59,7 +59,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
                 options,
-                StripeIdempotency.FromMetadata(opts.Metadata, "charge"),
+                StripeRequestOptions.Charge(opts.CommissionBindingId),
                 ct);
 
             if (paymentIntent.Status == "succeeded")
@@ -107,7 +107,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
                 options,
-                StripeIdempotency.FromMetadata(opts.Metadata, "hold"),
+                StripeRequestOptions.Deposit(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
             if (paymentIntent.Status == "succeeded")
