@@ -1,4 +1,6 @@
 using Concertable.Payment.Grpc;
+using Concertable.Kernel.ValueObjects;
+using Grpc.Core;
 using Money = Concertable.Kernel.ValueObjects.Money;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
@@ -42,6 +44,8 @@ internal sealed record CreateBoundCommissionHoldSessionCommand(
 internal sealed record FindHeldIntentCommand(
     Guid PayerId,
     int ApplicationId);
+
+internal sealed record PaymentPeriodCommand(Guid PayeeId, DateRange Period);
 
 internal static class ManagerPaymentRequestMappers
 {
@@ -92,6 +96,35 @@ internal static class ManagerPaymentRequestMappers
     public static FindHeldIntentCommand ToCommand(this FindHeldIntentRequest request) => new(
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.ApplicationId);
+
+    public static PaymentPeriodCommand ToCommand(this PaymentPeriodRequest request) => new(
+        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+        request.ToDateRange());
+
+    private static DateRange ToDateRange(this PaymentPeriodRequest request)
+    {
+        if (request.PeriodStart is null || request.PeriodEnd is null)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
+
+        var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
+        var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
+        if (end <= start)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
+
+        return new DateRange(start, end);
+    }
+
+    private static DateTime ToDateTimeOrThrow(this Google.Protobuf.WellKnownTypes.Timestamp timestamp, string fieldName)
+    {
+        try
+        {
+            return timestamp.ToDateTime();
+        }
+        catch (InvalidOperationException)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+        }
+    }
 
     private static string? EmptyToNull(string value) =>
         string.IsNullOrEmpty(value) ? null : value;

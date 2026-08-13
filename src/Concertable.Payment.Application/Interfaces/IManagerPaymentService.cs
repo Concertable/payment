@@ -1,4 +1,5 @@
 using Reunion;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 
@@ -56,6 +57,10 @@ internal interface IManagerPaymentService
         Guid payerId,
         int applicationId,
         CancellationToken ct = default);
+
+    Task<Money> GetTicketRevenueAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
+
+    Task<Money> GetSettlementPayoutsAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
 
     Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
