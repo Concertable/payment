@@ -1,20 +1,20 @@
 using Concertable.Payment.E2ETests.Stripe;
-using Concertable.Payment.Workers;
+using Concertable.Payment.Web;
 
-namespace Concertable.Payment.E2ETests.WorkersHost;
+namespace Concertable.Payment.E2ETests.Web;
 
 public static class Program
 {
     public static async Task Main(string[] args)
     {
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = WebApplication.CreateBuilder(args);
 
-        builder.AddWorkerHost();
+        builder.AddWebHost();
         builder.Services.UseStripeAdapter();
 
         var app = builder.Build();
 
-        await app.MigrateStoresAsync();
+        await app.UseWebHost();
 
         app.Run();
     }
