@@ -16,7 +16,7 @@
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers.UnitTests/Concertable.Payment.E2ETests.Helpers.UnitTests.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Stripe/Concertable.Payment.E2ETests.Stripe.csproj" />
-    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.WebHost/Concertable.Payment.E2ETests.WebHost.csproj" />
-    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.WorkersHost/Concertable.Payment.E2ETests.WorkersHost.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj" />
   </Folder>
 </Solution>
