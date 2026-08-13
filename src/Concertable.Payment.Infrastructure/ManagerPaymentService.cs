@@ -289,6 +289,24 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             await transactionRepository.GetCompletedSettlementPayoutsAsync(payeeId, period, ct),
             Currency.Gbp);
 
+    public Task<IReadOnlyList<MonthlyPaymentTotal>> GetTicketRevenueByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        transactionRepository.GetCompletedTicketRevenueByMonthAsync(payeeId, period, ct);
+
+    public Task<IReadOnlyList<MonthlyPaymentTotal>> GetSettlementPayoutsByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        transactionRepository.GetCompletedSettlementPayoutsByMonthAsync(payeeId, period, ct);
+
+    public Task<IReadOnlyList<SettlementSummary>> GetRecentSettlementsAsync(
+        Guid ownerId,
+        int take,
+        CancellationToken ct = default) =>
+        transactionRepository.GetRecentCompletedSettlementsAsync(ownerId, take, ct);
+
     public async Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         Money gross,
