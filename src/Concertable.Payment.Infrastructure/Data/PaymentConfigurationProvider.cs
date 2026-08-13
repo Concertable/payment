@@ -21,5 +21,6 @@ internal sealed class PaymentConfigurationProvider : IEntityTypeConfigurationPro
         modelBuilder.ApplyConfiguration(new CommissionConfigurationEntityConfiguration());
         modelBuilder.ApplyConfiguration(new CommissionBindingEntityConfiguration());
         modelBuilder.ApplyConfiguration(new PaymentRefundEntityConfiguration());
+        modelBuilder.ApplyConfiguration(new FinancialOperationEntityConfiguration());
     }
 }
