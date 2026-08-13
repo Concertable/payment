@@ -37,7 +37,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                     SourceTransaction = opts.ChargeId,
                     Metadata = opts.Metadata
                 },
-                StripeIdempotency.FromMetadata(opts.Metadata, "release"),
+                StripeRequestOptions.Release(opts.CommissionBindingId),
                 ct);
 
             logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);
@@ -68,9 +68,10 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                         Amount = opts.TransferReversal.Amount.ToMinorUnits(),
                         Metadata = opts.Metadata
                     },
-                    StripeIdempotency.FromMetadata(
-                        opts.Metadata,
-                        $"refund-reversal:{opts.Metadata.GetValue(PaymentMetadataKeys.CumulativeGrossRefundMinor)}"),
+                    StripeRequestOptions.RefundReversal(
+                        opts.OperationId,
+                        opts.CommissionBindingId,
+                        opts.CumulativeGrossRefundMinor),
                     ct);
 
                 logger.StripeTransferReversalSucceeded(
@@ -87,9 +88,10 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                     Reason = opts.Reason,
                     Metadata = opts.Metadata
                 },
-                StripeIdempotency.FromMetadata(
-                    opts.Metadata,
-                    $"refund:{opts.Metadata.GetValue(PaymentMetadataKeys.CumulativeGrossRefundMinor)}"),
+                StripeRequestOptions.Refund(
+                    opts.OperationId,
+                    opts.CommissionBindingId,
+                    opts.CumulativeGrossRefundMinor),
                 ct);
 
             logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);

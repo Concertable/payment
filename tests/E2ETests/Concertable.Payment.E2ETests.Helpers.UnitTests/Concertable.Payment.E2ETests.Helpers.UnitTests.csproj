@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Payment.E2ETests.Helpers\Concertable.Payment.E2ETests.Helpers.csproj" />
+    <ProjectReference Include="..\..\..\src\Concertable.Payment.Hosting\Concertable.Payment.Hosting.csproj" />
   </ItemGroup>
 
   <ItemGroup>

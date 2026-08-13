@@ -10,7 +10,8 @@ internal sealed class PaymentRefundEntity : IGuidEntity
         long grossRefundedMinor,
         long commissionRefundedMinor,
         long commissionVatReversedMinor,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        Guid? operationId)
     {
         if (escrowId is null == settlementTransactionId is null)
             throw new DomainException("A refund must belong to exactly one of an escrow or a settlement.");
@@ -30,6 +31,7 @@ internal sealed class PaymentRefundEntity : IGuidEntity
         PayerTotalRefundedMinor = checked(grossRefundedMinor + commissionRefundedMinor);
         Status = PaymentRefundStatus.Pending;
         CreatedAt = createdAt;
+        OperationId = operationId;
     }
 
     public Guid Id { get; private set; }
@@ -45,6 +47,7 @@ internal sealed class PaymentRefundEntity : IGuidEntity
     public PaymentRefundStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
+    public Guid? OperationId { get; private set; }
 
     public bool CountsTowardCumulative => Status != PaymentRefundStatus.Failed;
 
@@ -53,14 +56,16 @@ internal sealed class PaymentRefundEntity : IGuidEntity
         long grossRefundedMinor,
         long commissionRefundedMinor,
         long commissionVatReversedMinor,
-        DateTimeOffset createdAt) =>
+        DateTimeOffset createdAt,
+        Guid? operationId = null) =>
         new(
             escrowId,
             null,
             grossRefundedMinor,
             commissionRefundedMinor,
             commissionVatReversedMinor,
-            createdAt);
+            createdAt,
+            operationId);
 
     public static PaymentRefundEntity CreatePendingForSettlement(
         int settlementTransactionId,
@@ -74,7 +79,8 @@ internal sealed class PaymentRefundEntity : IGuidEntity
             grossRefundedMinor,
             commissionRefundedMinor,
             commissionVatReversedMinor,
-            createdAt);
+            createdAt,
+            null);
 
     public UnitResult<PaymentRefundTransitionError> Complete(
         string stripeRefundId,

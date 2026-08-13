@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripeEventRepository, StripeEventRepository>();
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IEscrowRepository, EscrowRepository>();
+        services.AddScoped<IFinancialOperationRepository, FinancialOperationRepository>();
         services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
         services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
@@ -126,6 +127,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWebhookProcessor, WebhookProcessor>();
         services.AddScoped<IWebhookQueue, WebhookQueue>();
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
+        services.AddScoped<FinancialOperationHandler>();
+        services.AddScoped<IIntegrationCommandHandler<CaptureEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
+        services.AddScoped<IIntegrationCommandHandler<DepositEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
+        services.AddScoped<IIntegrationCommandHandler<RefundEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
 
         services.AddScoped<IManagerPaymentService, ManagerPaymentService>();
         services.AddScoped<ICustomerPaymentService, CustomerPaymentService>();
