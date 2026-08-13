@@ -4,38 +4,6 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
-## MEDIUM
-
-### Production hosts compile against Payment's E2E-only Stripe adapter
-
-`Concertable.Payment.Web` and `Concertable.Payment.Workers` both project-reference
-`src/Seed/Concertable.Payment.Seed`, import `Concertable.Payment.Seed`, and branch on the `E2E`
-environment to call `UseE2EStripeClient()`. That project contains `E2EStripeAccountClient`, its DI
-replacement, and `StripeE2EAccountResolver` with hard-coded Stripe test-fixture IDs. The adapter's
-behaviour is necessary—the browser tests need real Stripe test-mode intents while linking stable,
-pre-provisioned accounts—but the dependency direction is inverted: deployable production projects
-compile and ship test-only code so the tests can alter their composition.
-
-`Payment.Seed` is also the wrong ownership label. This is Payment-owned E2E host support, not service
-seed data; the production service must not acquire an E2E dependency merely because the replacement
-needs access to Payment internals.
-
-**Resolves when:**
-
-- Extract reusable Web and Workers bootstrap seams plus the production-neutral ports needed to
-  replace Stripe behaviour, so production entry points compose the ordinary Payment hosts while
-  Payment-owned E2E host projects apply test replacements without duplicating startup or requiring
-  friendship from a production assembly.
-- Move `E2EStripeAccountClient`, `StripeE2EAccountResolver`, and their registration into
-  `Concertable.Payment.E2ETests.Helpers` (or dedicated Payment E2E host projects), with test projects
-  referencing production assemblies and never the reverse.
-- Remove the `Concertable.Payment.Seed` references/usings, `UseE2EStripeClient()` environment branches,
-  E2E-specific configuration, and `InternalsVisibleTo` entries naming Seed/E2E assemblies from
-  Payment's production project closure; `api/Concertable.Payment/src` then contains no E2E-specific
-  code or configuration.
-
----
-
 ## LOW
 
 ### Internal Payment DTOs still expose monetary values as primitives

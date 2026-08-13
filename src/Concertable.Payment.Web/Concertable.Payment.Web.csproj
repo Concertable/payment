@@ -23,7 +23,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Concertable.Payment.Api\Concertable.Payment.Api.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
-    <ProjectReference Include="..\Seed\Concertable.Payment.Seed\Concertable.Payment.Seed.csproj" />
   </ItemGroup>
 
   <!-- Never a ProjectReference: would break Payment's standalone carve. -->
