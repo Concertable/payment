@@ -161,6 +161,34 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
             ToProtoRequest(payeeId, period),
             cancellationToken: ct)).ToMoney();
 
+    public async Task<IReadOnlyList<MonthlyPaymentPoint>> GetTicketRevenueByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        (await client.GetTicketRevenueByMonthAsync(
+            ToProtoRequest(payeeId, period),
+            cancellationToken: ct)).Points.Select(point => point.ToMonthlyPaymentPoint()).ToList();
+
+    public async Task<IReadOnlyList<MonthlyPaymentPoint>> GetSettlementPayoutsByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        (await client.GetSettlementPayoutsByMonthAsync(
+            ToProtoRequest(payeeId, period),
+            cancellationToken: ct)).Points.Select(point => point.ToMonthlyPaymentPoint()).ToList();
+
+    public async Task<IReadOnlyList<ManagerSettlement>> GetRecentSettlementsAsync(
+        Guid ownerId,
+        int take,
+        CancellationToken ct = default) =>
+        (await client.GetRecentSettlementsAsync(
+            new Proto.RecentSettlementsRequest
+            {
+                OwnerId = ownerId.ToString(),
+                Take = take
+            },
+            cancellationToken: ct)).Items.Select(item => item.ToManagerSettlement()).ToList();
+
     private static Proto.PaymentPeriodRequest ToProtoRequest(Guid payeeId, DateRange period) => new()
     {
         PayeeId = payeeId.ToString(),

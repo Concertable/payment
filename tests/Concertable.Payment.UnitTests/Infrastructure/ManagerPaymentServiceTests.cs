@@ -98,6 +98,54 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
+    public async Task GetTicketRevenueByMonthAsync_ReturnsRepositorySeries()
+    {
+        var period = new DateRange(
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc));
+        IReadOnlyList<MonthlyPaymentTotal> expected =
+            [new(new DateOnly(2026, 6, 1), 1200, 1200, 2)];
+        transactionRepository
+            .Setup(r => r.GetCompletedTicketRevenueByMonthAsync(payeeId, period, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var points = await SutWithFee(0).GetTicketRevenueByMonthAsync(payeeId, period);
+
+        Assert.Same(expected, points);
+    }
+
+    [Fact]
+    public async Task GetSettlementPayoutsByMonthAsync_ReturnsRepositorySeries()
+    {
+        var period = new DateRange(
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc));
+        IReadOnlyList<MonthlyPaymentTotal> expected =
+            [new(new DateOnly(2026, 6, 1), 5000, 5000, 1)];
+        transactionRepository
+            .Setup(r => r.GetCompletedSettlementPayoutsByMonthAsync(payeeId, period, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var points = await SutWithFee(0).GetSettlementPayoutsByMonthAsync(payeeId, period);
+
+        Assert.Same(expected, points);
+    }
+
+    [Fact]
+    public async Task GetRecentSettlementsAsync_ReturnsRepositoryItems()
+    {
+        IReadOnlyList<SettlementSummary> expected =
+            [new(1, 7, payerId, payeeId, 5000, DateTime.UtcNow)];
+        transactionRepository
+            .Setup(r => r.GetRecentCompletedSettlementsAsync(payeeId, 5, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        var settlements = await SutWithFee(0).GetRecentSettlementsAsync(payeeId, 5);
+
+        Assert.Same(expected, settlements);
+    }
+
+    [Fact]
     public async Task PayAsync_WithPlatformFee_ChargesGrossPlusFeeAndSnapshotsFee()
     {
         var sut = SutWithFee(12m);
