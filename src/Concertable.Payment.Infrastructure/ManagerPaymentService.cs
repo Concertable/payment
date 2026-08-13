@@ -4,6 +4,7 @@ using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
+using Concertable.Kernel.ValueObjects;
 using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure;
@@ -271,6 +272,22 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             ?? throw new NotFoundException($"No Stripe customer for payer {payerId}");
         return await stripeHoldClient.FindHeldIntentAsync(stripeCustomerId, applicationId, ct);
     }
+
+    public async Task<Money> GetTicketRevenueAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        Money.FromMinorUnits(
+            await transactionRepository.GetCompletedTicketRevenueAsync(payeeId, period, ct),
+            Currency.Gbp);
+
+    public async Task<Money> GetSettlementPayoutsAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        Money.FromMinorUnits(
+            await transactionRepository.GetCompletedSettlementPayoutsAsync(payeeId, period, ct),
+            Currency.Gbp);
 
     public async Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
