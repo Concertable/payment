@@ -148,7 +148,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 new ManagerPaymentError.PaymentFailure(new PaymentError.PayerUnavailable()));
 
         var calculation = bound.Calculation;
-        var charge = await paymentManager.SettleAsync(
+        var charge = await paymentManager.SettleBoundCommissionAsync(
             payerId,
             payeeId,
             Money.FromMinorUnits(calculation.PayerTotalMinor, calculation.Currency),
@@ -156,6 +156,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             paymentMethodId,
             session,
             CommissionMetadata(bound, bookingId),
+            commissionBindingId,
             ct);
         if (!charge.TryGetValue(out var outcome))
         {
@@ -249,10 +250,11 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 await stripeAccountClient.GetHoldSessionAsync(stripeCustomerId, boundIntentId, ct));
 
         var calculation = bound.Calculation;
-        var checkoutSession = await stripeAccountClient.CreateHoldSessionAsync(
+        var checkoutSession = await stripeAccountClient.CreateBoundCommissionHoldSessionAsync(
             stripeCustomerId,
             Money.FromMinorUnits(calculation.PayerTotalMinor, calculation.Currency),
             new Dictionary<string, string>(CommissionMetadata(bound, null)).Merge(metadata),
+            commissionBindingId,
             ct);
         if (string.IsNullOrWhiteSpace(checkoutSession.StripeIntentId))
             throw new InvalidOperationException("Stripe hold session response missing PaymentIntent id.");
@@ -347,6 +349,8 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             PaymentIntentId = settlement.PaymentIntentId,
             ReverseTransfer = true,
             Reason = reason,
+            CommissionBindingId = settlement.CommissionBindingId,
+            CumulativeGrossRefundMinor = cumulativeGrossRefund,
             Metadata = metadata
         }, ct);
         if (!refund.TryGetValue(out var completedRefund))
