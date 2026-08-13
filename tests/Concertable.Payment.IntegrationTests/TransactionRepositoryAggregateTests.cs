@@ -66,6 +66,91 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         Assert.Equal(3200, amount);
     }
 
+    [Fact]
+    public async Task GetCompletedTicketRevenueByMonthAsync_GroupsAndOrdersCompletedPayeeTransactions()
+    {
+        await using var context = await CreateMigratedContextAsync();
+        var payeeId = Guid.NewGuid();
+        var period = new DateRange(
+            new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        context.AddRange(
+            Ticket(payeeId, 700, TransactionStatus.Complete, new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc)),
+            Ticket(payeeId, 1200, TransactionStatus.Complete, new DateTime(2026, 6, 5, 0, 0, 0, DateTimeKind.Utc)),
+            Ticket(payeeId, 800, TransactionStatus.Complete, new DateTime(2026, 6, 20, 0, 0, 0, DateTimeKind.Utc)),
+            Ticket(payeeId, 500, TransactionStatus.Pending, new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc)),
+            Ticket(Guid.NewGuid(), 900, TransactionStatus.Complete, new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc)));
+        await context.SaveChangesAsync();
+
+        var points = await new TransactionRepository(context)
+            .GetCompletedTicketRevenueByMonthAsync(payeeId, period);
+
+        Assert.Collection(
+            points,
+            point => Assert.Equal(
+                new(new DateOnly(2026, 6, 1), 2000, 2000, 2),
+                point),
+            point => Assert.Equal(
+                new(new DateOnly(2026, 8, 1), 700, 700, 1),
+                point));
+    }
+
+    [Fact]
+    public async Task GetCompletedSettlementPayoutsByMonthAsync_UsesPayeeGross()
+    {
+        await using var context = await CreateMigratedContextAsync();
+        var payeeId = Guid.NewGuid();
+        var period = new DateRange(
+            new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        context.AddRange(
+            Settlement(payeeId, 2500, 500, TransactionStatus.Complete, new DateTime(2026, 7, 3, 0, 0, 0, DateTimeKind.Utc)),
+            Settlement(payeeId, 1500, 300, TransactionStatus.Complete, new DateTime(2026, 7, 19, 0, 0, 0, DateTimeKind.Utc)),
+            Settlement(payeeId, 900, 100, TransactionStatus.Complete, new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc)),
+            Settlement(payeeId, 700, 100, TransactionStatus.Failed, new DateTime(2026, 8, 4, 0, 0, 0, DateTimeKind.Utc)));
+        await context.SaveChangesAsync();
+
+        var points = await new TransactionRepository(context)
+            .GetCompletedSettlementPayoutsByMonthAsync(payeeId, period);
+
+        Assert.Collection(
+            points,
+            point => Assert.Equal(
+                new(new DateOnly(2026, 7, 1), 3200, 3200, 2),
+                point),
+            point => Assert.Equal(
+                new(new DateOnly(2026, 8, 1), 800, 800, 1),
+                point));
+    }
+
+    [Fact]
+    public async Task GetRecentCompletedSettlementsAsync_FiltersEitherSideAndTakesNewest()
+    {
+        await using var context = await CreateMigratedContextAsync();
+        var ownerId = Guid.NewGuid();
+
+        context.AddRange(
+            Settlement(Guid.NewGuid(), 1000, 100, TransactionStatus.Complete,
+                new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc), ownerId, 101),
+            Settlement(ownerId, 2000, 200, TransactionStatus.Complete,
+                new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 102),
+            Settlement(ownerId, 3000, 300, TransactionStatus.Complete,
+                new DateTime(2026, 8, 11, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 103),
+            Settlement(ownerId, 4000, 400, TransactionStatus.Pending,
+                new DateTime(2026, 8, 13, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 104),
+            Settlement(Guid.NewGuid(), 5000, 500, TransactionStatus.Complete,
+                new DateTime(2026, 8, 14, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 105));
+        await context.SaveChangesAsync();
+
+        var settlements = await new TransactionRepository(context)
+            .GetRecentCompletedSettlementsAsync(ownerId, 2);
+
+        Assert.Equal([102, 103], settlements.Select(s => s.BookingId));
+        Assert.Equal([1800L, 2700L], settlements.Select(s => s.AmountMinor));
+    }
+
     private static TicketTransactionEntity Ticket(
         Guid payeeId,
         long amount,
@@ -89,16 +174,18 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         long amount,
         long fee,
         TransactionStatus status,
-        DateTime createdAt)
+        DateTime createdAt,
+        Guid? payerId = null,
+        int? bookingId = null)
     {
         var transaction = SettlementTransactionEntity.Create(
-            Guid.NewGuid(),
+            payerId ?? Guid.NewGuid(),
             payeeId,
             $"pi_{Guid.NewGuid():N}",
             amount,
             fee,
             status,
-            Random.Shared.Next());
+            bookingId ?? Random.Shared.Next());
         transaction.CreatedAt = createdAt;
         transaction.CreatedBy = "test";
         return transaction;
