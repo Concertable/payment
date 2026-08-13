@@ -72,6 +72,14 @@ internal sealed class FakeStripeAccountClient : IStripeAccountClient
         CancellationToken ct = default) =>
         Task.FromResult(new CheckoutSession("pi_fake_hold_secret", "cuss_fake_secret", stripeCustomerId, "pi_fake_hold"));
 
+    public Task<CheckoutSession> CreateBoundCommissionHoldSessionAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        CancellationToken ct = default) =>
+        CreateHoldSessionAsync(stripeCustomerId, amount, metadata, ct);
+
     public Task<CheckoutSession> GetHoldSessionAsync(
         string stripeCustomerId,
         string paymentIntentId,
