@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 package payment;
 
 option csharp_namespace = "Concertable.Payment.Grpc";
@@ -139,6 +141,14 @@ service ManagerPayment {
   rpc CreateHoldSession(CreateHoldSessionRequest) returns (CheckoutSessionResponse);
   rpc CreateBoundCommissionHoldSession(CreateBoundCommissionHoldSessionRequest) returns (CheckoutSessionResponse);
   rpc FindHeldIntent(FindHeldIntentRequest) returns (FindHeldIntentResponse);
+  rpc GetTicketRevenue(PaymentPeriodRequest) returns (Money);
+  rpc GetSettlementPayouts(PaymentPeriodRequest) returns (Money);
+}
+
+message PaymentPeriodRequest {
+  string payee_id = 1;
+  google.protobuf.Timestamp period_start = 2;
+  google.protobuf.Timestamp period_end = 3;
 }
 
 message ManagerPayRequest {
