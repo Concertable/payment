@@ -56,4 +56,19 @@ public sealed class ManagerPaymentRequestMapperTests
 
         Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
     }
+
+    [Fact]
+    public void ToCommand_WithInvalidTimestamp_ThrowsInvalidArgument()
+    {
+        var request = new PaymentPeriodRequest
+        {
+            PayeeId = Guid.NewGuid().ToString(),
+            PeriodStart = new Timestamp { Seconds = long.MaxValue },
+            PeriodEnd = Timestamp.FromDateTime(DateTime.UtcNow)
+        };
+
+        var exception = Assert.Throws<RpcException>(() => request.ToCommand());
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+    }
 }
