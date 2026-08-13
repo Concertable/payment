@@ -106,12 +106,24 @@ internal static class ManagerPaymentRequestMappers
         if (request.PeriodStart is null || request.PeriodEnd is null)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
 
-        var start = request.PeriodStart.ToDateTime();
-        var end = request.PeriodEnd.ToDateTime();
+        var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
+        var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
         if (end <= start)
             throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
 
         return new DateRange(start, end);
+    }
+
+    private static DateTime ToDateTimeOrThrow(this Google.Protobuf.WellKnownTypes.Timestamp timestamp, string fieldName)
+    {
+        try
+        {
+            return timestamp.ToDateTime();
+        }
+        catch (InvalidOperationException)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+        }
     }
 
     private static string? EmptyToNull(string value) =>
