@@ -62,6 +62,13 @@ internal interface IStripeAccountClient
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
+    Task<CheckoutSession> CreateBoundCommissionHoldSessionAsync(
+        string stripeCustomerId,
+        Money amount,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        CancellationToken ct = default);
+
     /// <summary>
     /// Re-obtains the checkout session for an already-created hold <see cref="Stripe.PaymentIntent"/>,
     /// returning its client secret and a fresh customer session. Used to make hold-session creation

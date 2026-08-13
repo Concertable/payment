@@ -25,6 +25,17 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
+    Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money chargeAmount,
+        Money payeeAmount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
+        CancellationToken ct = default);
+
     Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
         Guid payeeId,
@@ -32,6 +43,26 @@ internal interface IPaymentManager
         string paymentMethodId,
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
+        CancellationToken ct = default);
+
+    Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid operationId,
+        CancellationToken ct = default);
+
+    Task<Result<PaymentOutcome, PaymentError>> HoldBoundCommissionAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid commissionBindingId,
         CancellationToken ct = default);
 
     Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);

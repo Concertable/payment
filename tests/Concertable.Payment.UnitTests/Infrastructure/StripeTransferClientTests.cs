@@ -61,6 +61,8 @@ public sealed class StripeTransferClientTests
             Amount = Money.Gbp(55),
             PaymentIntentId = "pi_test",
             TransferReversal = new("tr_test", Money.Gbp(50)),
+            CommissionBindingId = bindingId,
+            CumulativeGrossRefundMinor = 5500,
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CommissionBindingId] = bindingId.ToString(),
@@ -89,6 +91,7 @@ public sealed class StripeTransferClientTests
             Amount = Money.Gbp(55),
             PaymentIntentId = "pi_test",
             TransferReversal = new("tr_test", Money.Gbp(50)),
+            CumulativeGrossRefundMinor = 5500,
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "5500"
@@ -180,6 +183,7 @@ public sealed class StripeTransferClientTests
         {
             Amount = Money.Gbp(10),
             PaymentIntentId = "pi_test",
+            CumulativeGrossRefundMinor = 1000,
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "1000"
