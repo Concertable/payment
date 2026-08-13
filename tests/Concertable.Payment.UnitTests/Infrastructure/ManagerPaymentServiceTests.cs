@@ -68,6 +68,36 @@ public sealed class ManagerPaymentServiceTests
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
     [Fact]
+    public async Task GetTicketRevenueAsync_PassesPeriodToRepository()
+    {
+        var period = new DateRange(
+            new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+        transactionRepository
+            .Setup(r => r.GetCompletedTicketRevenueAsync(payeeId, period, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(12345);
+
+        var amount = await SutWithFee(0).GetTicketRevenueAsync(payeeId, period);
+
+        Assert.Equal(Money.FromMinorUnits(12345, Currency.Gbp), amount);
+    }
+
+    [Fact]
+    public async Task GetSettlementPayoutsAsync_PassesPeriodToRepository()
+    {
+        var period = new DateRange(
+            new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+        transactionRepository
+            .Setup(r => r.GetCompletedSettlementPayoutsAsync(payeeId, period, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(67890);
+
+        var amount = await SutWithFee(0).GetSettlementPayoutsAsync(payeeId, period);
+
+        Assert.Equal(Money.FromMinorUnits(67890, Currency.Gbp), amount);
+    }
+
+    [Fact]
     public async Task PayAsync_WithPlatformFee_ChargesGrossPlusFeeAndSnapshotsFee()
     {
         var sut = SutWithFee(12m);
