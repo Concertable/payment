@@ -26,7 +26,6 @@ It knows **nothing** of tickets, concerts, deals, or reviews as domain concepts.
 | `Concertable.Payment.Infrastructure` | Shared csproj | EF, services, Stripe clients, gRPC services, event handlers, webhook pipeline. |
 | `Concertable.Payment.Client` | **Packable** package | Refit-free gRPC **client** stubs + typed adapters (`I*Client`). Consumed by B2B/Customer. |
 | `Concertable.Payment.Contracts` | **Packable** package | Integration events + cross-service DTOs + metadata-key/`type` constants. |
-| `Concertable.Payment.Seed` | E2E/dev csproj | `UseE2EStripeClient` + run-scoped Stripe test-mode customer and pre-provisioned Connect account resolver. |
 | `Concertable.Payment.AppHost` | Aspire AppHost | Local-dev orchestrator only. |
 
 **Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
@@ -86,7 +85,7 @@ A succeeded payment routes by its opaque metadata `type` (`Contracts/PaymentMeta
 Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeAccountClient`, `IStripeHoldClient`, `IStripePaymentIntentClient`, `IStripeTransferClient`, `Webhook/IStripeApiClient`, `IWebhookService`). Selection is by environment, never by touching real Stripe in dev/E2E:
 
 - **`ExternalServices:UseRealStripe`** (bool) in `AddPaymentInfrastructure` — `false` (dev default) registers the `Fake*` clients; `true` registers the Stripe-SDK-backed real clients.
-- **`UseE2EStripeClient()`** (`Seed/`, gated on `EnvironmentName == "E2E"`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for `E2EStripeAccountClient`. Each fixture creates its own **real test-mode** customers so concurrent runs cannot detach or reuse one another's cards; pre-provisioned Connect accounts remain shared because tests do not mutate them. The webhook processor accepts only intents owned by the fixture's customers.
+- **`UseStripeAdapter()`** (`tests/E2ETests/Concertable.Payment.E2ETests.Stripe`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for the E2E `StripeAccountClient` and the webhook processor for `StripeWebhookProcessor`. It is applied only by the Payment E2E host projects (`Concertable.Payment.E2ETests.WebHost` / `.WorkersHost`); the E2E stack launches those in place of the production hosts (via the harness's `LaunchAs` swap), so production `Payment.Web`/`Workers` carry no E2E branch. Each fixture creates its own **real test-mode** customers so concurrent runs cannot detach or reuse one another's cards; pre-provisioned Connect accounts remain shared because tests do not mutate them. The webhook processor accepts only intents owned by the fixture's customers.
 
 ---
 

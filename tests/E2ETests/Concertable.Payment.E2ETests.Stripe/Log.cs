@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Concertable.Payment.Seed;
+namespace Concertable.Payment.E2ETests.Stripe;
 
 internal static partial class Log
 {
