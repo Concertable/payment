@@ -1,4 +1,4 @@
-namespace Concertable.E2ETests.Support;
+namespace Concertable.Payment.E2ETests.Helpers.Ui;
 
 public interface IStripePayment
 {

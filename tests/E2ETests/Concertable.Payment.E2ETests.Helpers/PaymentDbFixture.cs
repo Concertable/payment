@@ -1,10 +1,11 @@
 using System.Data.Common;
 using Aspire.Hosting;
 using Concertable.Payment.Hosting;
+using Concertable.Testing.E2E;
 using Respawn;
 using Respawn.Graph;
 
-namespace Concertable.E2ETests;
+namespace Concertable.Payment.E2ETests.Helpers;
 
 /// <summary>
 /// Respawns the Payment DB between scenarios. <c>PayoutAccounts</c> are excluded from resets — they are
