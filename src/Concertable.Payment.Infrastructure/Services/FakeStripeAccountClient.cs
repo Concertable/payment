@@ -6,7 +6,7 @@ namespace Concertable.Payment.Infrastructure.Services;
 /// <summary>
 /// Dev-mode stub used when UseRealStripe=false. Skips all real Stripe API calls so you can
 /// exercise business logic (checkout flows, escrow, etc.) without a live Stripe account.
-/// Never used in E2E — E2EStripeAccountClient handles that.
+/// Never used in E2E — the E2E Stripe adapter handles that.
 /// </summary>
 internal sealed class FakeStripeAccountClient : IStripeAccountClient
 {
