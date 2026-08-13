@@ -1,6 +1,6 @@
 using Microsoft.Playwright;
 
-namespace Concertable.E2ETests.Support;
+namespace Concertable.Payment.E2ETests.Helpers.Ui;
 
 public static class PageNavigationExtensions
 {

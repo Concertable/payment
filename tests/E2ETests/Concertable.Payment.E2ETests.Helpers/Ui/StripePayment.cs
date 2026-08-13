@@ -1,6 +1,7 @@
+using Concertable.Testing.E2E.Ui;
 using Microsoft.Playwright;
 
-namespace Concertable.E2ETests.Support;
+namespace Concertable.Payment.E2ETests.Helpers.Ui;
 
 public sealed class StripePayment(IPageAccessor accessor, StripeCardEntry cardEntry) : IStripePayment
 {
