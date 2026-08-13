@@ -84,7 +84,7 @@ internal sealed class EscrowService : IEscrowService
         if (payerError.TryGetValue(out var error))
             return new EscrowDepositError.PaymentFailure(error);
 
-        var hold = await paymentManager.HoldAsync(
+        var hold = await HoldAsync(
             payerId,
             payeeId,
             amount + platformFee,
@@ -95,6 +95,7 @@ internal sealed class EscrowService : IEscrowService
                 [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
                 [PaymentMetadataKeys.BookingId] = bookingId.ToString()
             }),
+            operationId,
             ct);
         if (!hold.TryGetValue(out var outcome))
         {
@@ -161,13 +162,14 @@ internal sealed class EscrowService : IEscrowService
             return Result<EscrowDeposit, EscrowDepositError>.Failure(new EscrowDepositError.PaymentFailure(error));
 
         var calculation = bound.Calculation;
-        var hold = await paymentManager.HoldAsync(
+        var hold = await paymentManager.HoldBoundCommissionAsync(
             payerId,
             payeeId,
             Money.FromMinorUnits(calculation.PayerTotalMinor, calculation.Currency),
             paymentMethodId,
             session,
             CommissionMetadata(bound, bookingId, TransactionTypes.Escrow),
+            commissionBindingId,
             ct);
         if (!hold.TryGetValue(out var outcome))
         {
@@ -239,6 +241,7 @@ internal sealed class EscrowService : IEscrowService
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {
             PaymentIntentId = paymentIntentId,
+            OperationId = operationId,
             Metadata = OperationMetadata(operationId, new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
@@ -296,6 +299,7 @@ internal sealed class EscrowService : IEscrowService
         var capture = await paymentManager.CaptureAsync(new CaptureRequest
         {
             PaymentIntentId = paymentIntentId,
+            CommissionBindingId = commissionBindingId,
             Metadata = CommissionMetadata(bound, bookingId, TransactionTypes.Escrow)
         }, ct);
         if (capture.TryGetError(out var paymentError))
@@ -339,6 +343,7 @@ internal sealed class EscrowService : IEscrowService
             PayeeId = escrow.ToOwnerId,
             Amount = escrow.PayeeGrossMinor.ToMoney(escrow.Currency),
             ChargeId = escrow.ChargeId,
+            CommissionBindingId = escrow.CommissionBindingId,
             Metadata = EscrowMetadata(escrow, TransactionTypes.EscrowRelease)
         }, ct);
         if (!release.TryGetValue(out var transfer))
@@ -640,6 +645,9 @@ internal sealed class EscrowService : IEscrowService
                 ? null
                 : new TransferReversal(escrow.TransferId, grossRefundMinor.ToMoney(escrow.Currency)),
             Reason = reason,
+            OperationId = reservation.OperationId,
+            CommissionBindingId = escrow.CommissionBindingId,
+            CumulativeGrossRefundMinor = cumulativeGrossRefundMinor,
             Metadata = metadata
         }, ct);
         if (!refund.TryGetValue(out var completedRefund))
@@ -703,6 +711,19 @@ internal sealed class EscrowService : IEscrowService
             ? new PaymentError.PayerUnavailable()
             : null;
     }
+
+    private Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        Guid? operationId,
+        CancellationToken ct) =>
+        operationId is { } id
+            ? paymentManager.HoldAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, id, ct)
+            : paymentManager.HoldAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, ct);
 
     private static Result<EscrowDeposit, EscrowDepositError> ExistingDeposit(
         EscrowEntity escrow,
