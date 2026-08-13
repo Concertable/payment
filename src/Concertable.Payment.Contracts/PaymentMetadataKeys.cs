@@ -23,4 +23,5 @@ public static class PaymentMetadataKeys
     public const string CommissionVatMinor = "commissionVatMinor";
     public const string PayerTotalMinor = "payerTotalMinor";
     public const string CumulativeGrossRefundMinor = "cumulativeGrossRefundMinor";
+    public const string OperationId = "operationId";
 }
