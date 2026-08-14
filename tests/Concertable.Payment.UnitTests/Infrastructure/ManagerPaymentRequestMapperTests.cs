@@ -71,4 +71,20 @@ public sealed class ManagerPaymentRequestMapperTests
 
         Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(51)]
+    public void RecentSettlementsToCommand_WithInvalidTake_ThrowsInvalidArgument(int take)
+    {
+        var request = new RecentSettlementsRequest
+        {
+            OwnerId = Guid.NewGuid().ToString(),
+            Take = take
+        };
+
+        var exception = Assert.Throws<RpcException>(() => request.ToCommand());
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+    }
 }
