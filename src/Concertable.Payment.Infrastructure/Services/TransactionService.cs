@@ -10,19 +10,22 @@ internal sealed class TransactionService : ITransactionService
     private readonly ITransactionMapper transactionMapper;
     private readonly ILedgerService ledger;
     private readonly IUnitOfWork unitOfWork;
+    private readonly TimeProvider timeProvider;
 
     public TransactionService(
         ICurrentUser currentUser,
         ITransactionRepository purchaseRepository,
         ITransactionMapper transactionMapper,
         ILedgerService ledger,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider)
     {
         this.currentUser = currentUser;
         this.purchaseRepository = purchaseRepository;
         this.transactionMapper = transactionMapper;
         this.ledger = ledger;
         this.unitOfWork = unitOfWork;
+        this.timeProvider = timeProvider;
     }
 
     public async Task LogAsync(ITransaction dto)
@@ -38,7 +41,7 @@ internal sealed class TransactionService : ITransactionService
         if (entity is null)
             return;
 
-        if (entity.Complete().IsFailure)
+        if (entity.Complete(timeProvider.GetUtcNow().UtcDateTime).IsFailure)
             return;
 
         if (entity is SettlementTransactionEntity settlement)
