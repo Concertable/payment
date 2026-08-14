@@ -47,6 +47,8 @@ internal sealed record FindHeldIntentCommand(
 
 internal sealed record PaymentPeriodCommand(Guid PayeeId, DateRange Period);
 
+internal sealed record RecentSettlementsCommand(Guid OwnerId, int Take);
+
 internal static class ManagerPaymentRequestMappers
 {
     public static ManagerPayCommand ToCommand(this ManagerPayRequest request) => new(
@@ -100,6 +102,16 @@ internal static class ManagerPaymentRequestMappers
     public static PaymentPeriodCommand ToCommand(this PaymentPeriodRequest request) => new(
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
         request.ToDateRange());
+
+    public static RecentSettlementsCommand ToCommand(this RecentSettlementsRequest request)
+    {
+        if (request.Take is < 1 or > 50)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Take must be between 1 and 50."));
+
+        return new RecentSettlementsCommand(
+            request.OwnerId.ParseOrThrow<Guid>(nameof(request.OwnerId)),
+            request.Take);
+    }
 
     private static DateRange ToDateRange(this PaymentPeriodRequest request)
     {

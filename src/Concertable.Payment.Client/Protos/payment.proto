@@ -143,12 +143,44 @@ service ManagerPayment {
   rpc FindHeldIntent(FindHeldIntentRequest) returns (FindHeldIntentResponse);
   rpc GetTicketRevenue(PaymentPeriodRequest) returns (Money);
   rpc GetSettlementPayouts(PaymentPeriodRequest) returns (Money);
+  rpc GetTicketRevenueByMonth(PaymentPeriodRequest) returns (MonthlyPaymentSeriesResponse);
+  rpc GetSettlementPayoutsByMonth(PaymentPeriodRequest) returns (MonthlyPaymentSeriesResponse);
+  rpc GetRecentSettlements(RecentSettlementsRequest) returns (SettlementReportResponse);
 }
 
 message PaymentPeriodRequest {
   string payee_id = 1;
   google.protobuf.Timestamp period_start = 2;
   google.protobuf.Timestamp period_end = 3;
+}
+
+message MonthlyPaymentPointResponse {
+  google.protobuf.Timestamp month = 1;
+  Money gross = 2;
+  Money net = 3;
+  int32 count = 4;
+}
+
+message MonthlyPaymentSeriesResponse {
+  repeated MonthlyPaymentPointResponse points = 1;
+}
+
+message RecentSettlementsRequest {
+  string owner_id = 1;
+  int32 take = 2;
+}
+
+message SettlementReportItemResponse {
+  int32 id = 1;
+  int32 booking_id = 2;
+  string payer_id = 3;
+  string payee_id = 4;
+  Money amount = 5;
+  google.protobuf.Timestamp at = 6;
+}
+
+message SettlementReportResponse {
+  repeated SettlementReportItemResponse items = 1;
 }
 
 message ManagerPayRequest {
