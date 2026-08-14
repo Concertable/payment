@@ -1,4 +1,5 @@
 using Concertable.Messaging.Infrastructure.Extensions;
+using Concertable.Kernel;
 using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Contracts.Events;
@@ -36,10 +37,10 @@ public static class HostExtensions
             opts =>
             {
                 opts.ConnectionString = builder.Configuration.GetConnectionString("asb")
-                    ?? (builder.Environment.IsEnvironment("Integration") ? null!
+                    ?? (builder.Environment.IsIntegration() ? null!
                         : throw new InvalidOperationException("Connection string 'asb' is required."));
                 opts.ServiceName = builder.Configuration["ServiceBus:ServiceName"]
-                    ?? (builder.Environment.IsEnvironment("Integration") ? "concertable-payment"
+                    ?? (builder.Environment.IsIntegration() ? "concertable-payment"
                         : throw new InvalidOperationException("Configuration 'ServiceBus:ServiceName' is required."));
             },
             reg => reg
