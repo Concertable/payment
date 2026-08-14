@@ -97,7 +97,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             bookingId);
         await transactionRepository.CreateAsync(transaction);
 
-        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
+        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
         {
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
             await unitOfWork.SaveChangesAsync(ct);
@@ -178,7 +178,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionBindingId);
         await transactionRepository.AddAsync(transaction, ct);
 
-        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
+        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         await unitOfWork.SaveChangesAsync(ct);
@@ -288,6 +288,24 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         Money.FromMinorUnits(
             await transactionRepository.GetCompletedSettlementPayoutsAsync(payeeId, period, ct),
             Currency.Gbp);
+
+    public Task<IReadOnlyList<MonthlyPaymentTotal>> GetTicketRevenueByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        transactionRepository.GetCompletedTicketRevenueByMonthAsync(payeeId, period, ct);
+
+    public Task<IReadOnlyList<MonthlyPaymentTotal>> GetSettlementPayoutsByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default) =>
+        transactionRepository.GetCompletedSettlementPayoutsByMonthAsync(payeeId, period, ct);
+
+    public Task<IReadOnlyList<SettlementSummary>> GetRecentSettlementsAsync(
+        Guid ownerId,
+        int take,
+        CancellationToken ct = default) =>
+        transactionRepository.GetRecentCompletedSettlementsAsync(ownerId, take, ct);
 
     public async Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
