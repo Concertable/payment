@@ -1,6 +1,7 @@
 using Concertable.Contracts;
 using Concertable.DataAccess.Infrastructure;
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -57,9 +58,93 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             .Where(t =>
                 t.PayeeId == payeeId &&
                 t.Status == TransactionStatus.Complete &&
+                t.CompletedAt >= period.Start &&
+                t.CompletedAt < period.End)
+            .SumAsync(t => (long?)t.PayeeGrossMinor, ct) ?? 0;
+
+    public async Task<IReadOnlyList<MonthlyPaymentTotal>> GetCompletedTicketRevenueByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default)
+    {
+        var totals = await context.TicketTransactions
+            .Where(t =>
+                t.PayeeId == payeeId &&
+                t.Status == TransactionStatus.Complete &&
                 t.CreatedAt >= period.Start &&
                 t.CreatedAt < period.End)
-            .SumAsync(t => (long?)t.PayeeGrossMinor, ct) ?? 0;
+            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                GrossMinor = g.Sum(t => t.Amount),
+                Count = g.Count()
+            })
+            .OrderBy(p => p.Year)
+            .ThenBy(p => p.Month)
+            .ToListAsync(ct);
+
+        return totals
+            .Select(p => new MonthlyPaymentTotal(
+                new DateOnly(p.Year, p.Month, 1),
+                p.GrossMinor,
+                p.GrossMinor,
+                p.Count))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<MonthlyPaymentTotal>> GetCompletedSettlementPayoutsByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default)
+    {
+        var totals = await context.SettlementTransactions
+            .Where(t =>
+                t.PayeeId == payeeId &&
+                t.Status == TransactionStatus.Complete &&
+                t.CompletedAt >= period.Start &&
+                t.CompletedAt < period.End)
+            .GroupBy(t => new { t.CompletedAt!.Value.Year, t.CompletedAt.Value.Month })
+            .Select(g => new
+            {
+                g.Key.Year,
+                g.Key.Month,
+                GrossMinor = g.Sum(t => t.PayeeGrossMinor),
+                Count = g.Count()
+            })
+            .OrderBy(p => p.Year)
+            .ThenBy(p => p.Month)
+            .ToListAsync(ct);
+
+        return totals
+            .Select(p => new MonthlyPaymentTotal(
+                new DateOnly(p.Year, p.Month, 1),
+                p.GrossMinor,
+                p.GrossMinor,
+                p.Count))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<SettlementSummary>> GetRecentCompletedSettlementsAsync(
+        Guid ownerId,
+        int take,
+        CancellationToken ct = default) =>
+        await context.SettlementTransactions
+            .Where(t =>
+                (t.PayerId == ownerId || t.PayeeId == ownerId) &&
+                t.Status == TransactionStatus.Complete &&
+                t.CompletedAt.HasValue)
+            .OrderByDescending(t => t.CompletedAt)
+            .Take(take)
+            .Select(t => new SettlementSummary(
+                t.Id,
+                t.BookingId,
+                t.PayerId,
+                t.PayeeId,
+                t.PayeeGrossMinor,
+                t.CompletedAt!.Value))
+            .ToListAsync(ct);
 
     public async Task CreateAsync(TransactionEntity entity)
     {
