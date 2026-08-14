@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260812162905_InitialCreate")]
+    [Migration("20260814090050_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -524,6 +524,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

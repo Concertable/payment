@@ -97,7 +97,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             bookingId);
         await transactionRepository.CreateAsync(transaction);
 
-        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
+        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
         {
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
             await unitOfWork.SaveChangesAsync(ct);
@@ -178,7 +178,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             commissionBindingId);
         await transactionRepository.AddAsync(transaction, ct);
 
-        if (!outcome.RequiresAction && transaction.Complete().IsSuccess)
+        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         await unitOfWork.SaveChangesAsync(ct);

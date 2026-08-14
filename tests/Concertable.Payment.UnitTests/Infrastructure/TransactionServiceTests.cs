@@ -1,6 +1,7 @@
 using Concertable.Kernel.Identity;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -11,6 +12,7 @@ public sealed class TransactionServiceTests
     private readonly Mock<ITransactionRepository> repository;
     private readonly Mock<ITransactionMapper> mapper;
     private readonly Mock<ILedgerService> ledger;
+    private readonly FakeTimeProvider timeProvider;
     private readonly TransactionService sut;
 
     private readonly List<LedgerPosting> postings = [];
@@ -24,13 +26,21 @@ public sealed class TransactionServiceTests
         this.repository = new Mock<ITransactionRepository>();
         this.mapper = new Mock<ITransactionMapper>();
         this.ledger = new Mock<ILedgerService>();
+        this.timeProvider = new FakeTimeProvider(
+            new DateTimeOffset(2026, 8, 14, 10, 30, 0, TimeSpan.Zero));
 
         ledger
             .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
             .Callback<LedgerPosting, CancellationToken>((p, _) => postings.Add(p))
             .Returns(Task.CompletedTask);
 
-        this.sut = new TransactionService(currentUser.Object, repository.Object, mapper.Object, ledger.Object, new FakeUnitOfWork());
+        this.sut = new TransactionService(
+            currentUser.Object,
+            repository.Object,
+            mapper.Object,
+            ledger.Object,
+            new FakeUnitOfWork(),
+            timeProvider);
     }
 
     [Fact]
@@ -45,6 +55,7 @@ public sealed class TransactionServiceTests
         await sut.CompleteAsync("pi_3ds");
 
         Assert.Equal(TransactionStatus.Complete, settlement.Status);
+        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, settlement.CompletedAt);
         repository.Verify(r => r.SaveChangesAsync(), Times.Never);
 
         var posting = Assert.Single(postings);
@@ -108,6 +119,7 @@ public sealed class TransactionServiceTests
         await sut.CompleteAsync("pi_ticket");
 
         Assert.Equal(TransactionStatus.Complete, ticket.Status);
+        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, ticket.CompletedAt);
         repository.Verify(r => r.SaveChangesAsync(), Times.Once);
         Assert.Empty(postings);
     }

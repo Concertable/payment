@@ -58,8 +58,8 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             .Where(t =>
                 t.PayeeId == payeeId &&
                 t.Status == TransactionStatus.Complete &&
-                t.CreatedAt >= period.Start &&
-                t.CreatedAt < period.End)
+                t.CompletedAt >= period.Start &&
+                t.CompletedAt < period.End)
             .SumAsync(t => (long?)t.PayeeGrossMinor, ct) ?? 0;
 
     public async Task<IReadOnlyList<MonthlyPaymentTotal>> GetCompletedTicketRevenueByMonthAsync(
@@ -103,9 +103,9 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             .Where(t =>
                 t.PayeeId == payeeId &&
                 t.Status == TransactionStatus.Complete &&
-                t.CreatedAt >= period.Start &&
-                t.CreatedAt < period.End)
-            .GroupBy(t => new { t.CreatedAt.Year, t.CreatedAt.Month })
+                t.CompletedAt >= period.Start &&
+                t.CompletedAt < period.End)
+            .GroupBy(t => new { t.CompletedAt!.Value.Year, t.CompletedAt.Value.Month })
             .Select(g => new
             {
                 g.Key.Year,
@@ -133,8 +133,9 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
         await context.SettlementTransactions
             .Where(t =>
                 (t.PayerId == ownerId || t.PayeeId == ownerId) &&
-                t.Status == TransactionStatus.Complete)
-            .OrderByDescending(t => t.CreatedAt)
+                t.Status == TransactionStatus.Complete &&
+                t.CompletedAt.HasValue)
+            .OrderByDescending(t => t.CompletedAt)
             .Take(take)
             .Select(t => new SettlementSummary(
                 t.Id,
@@ -142,7 +143,7 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
                 t.PayerId,
                 t.PayeeId,
                 t.PayeeGrossMinor,
-                t.CreatedAt))
+                t.CompletedAt!.Value))
             .ToListAsync(ct);
 
     public async Task CreateAsync(TransactionEntity entity)
