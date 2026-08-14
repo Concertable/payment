@@ -22,17 +22,19 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public string PaymentIntentId { get; private set; } = null!;
     public long Amount { get; private set; }
     public TransactionStatus Status { get; private set; }
+    public DateTime? CompletedAt { get; private set; }
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
     public DateTime? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
-    public UnitResult<TransactionTransitionError> Complete()
+    public UnitResult<TransactionTransitionError> Complete(DateTime completedAt)
     {
         if (Status != TransactionStatus.Pending)
             return UnitResult.Failure<TransactionTransitionError>(new TransactionTransitionError.NotPending(Status));
 
         Status = TransactionStatus.Complete;
+        CompletedAt = completedAt;
         return UnitResult.Success<TransactionTransitionError>();
     }
 

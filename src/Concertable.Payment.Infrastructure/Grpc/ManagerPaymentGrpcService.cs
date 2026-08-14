@@ -134,4 +134,37 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
             context.CancellationToken);
         return amount.ToProtoMoney();
     }
+
+    public override async Task<MonthlyPaymentSeriesResponse> GetTicketRevenueByMonth(
+        PaymentPeriodRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        return (await managerPaymentService.GetTicketRevenueByMonthAsync(
+            command.PayeeId,
+            command.Period,
+            context.CancellationToken)).ToProtoResponse();
+    }
+
+    public override async Task<MonthlyPaymentSeriesResponse> GetSettlementPayoutsByMonth(
+        PaymentPeriodRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        return (await managerPaymentService.GetSettlementPayoutsByMonthAsync(
+            command.PayeeId,
+            command.Period,
+            context.CancellationToken)).ToProtoResponse();
+    }
+
+    public override async Task<SettlementReportResponse> GetRecentSettlements(
+        RecentSettlementsRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        return (await managerPaymentService.GetRecentSettlementsAsync(
+            command.OwnerId,
+            command.Take,
+            context.CancellationToken)).ToProtoResponse();
+    }
 }

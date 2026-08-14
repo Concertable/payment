@@ -62,6 +62,21 @@ internal interface IManagerPaymentService
 
     Task<Money> GetSettlementPayoutsAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
 
+    Task<IReadOnlyList<MonthlyPaymentTotal>> GetTicketRevenueByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<MonthlyPaymentTotal>> GetSettlementPayoutsByMonthAsync(
+        Guid payeeId,
+        DateRange period,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<SettlementSummary>> GetRecentSettlementsAsync(
+        Guid ownerId,
+        int take,
+        CancellationToken ct = default);
+
     Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionByBookingIdAsync(
         int bookingId,
         Money gross,
