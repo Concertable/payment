@@ -43,7 +43,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
     }
 
     [Fact]
-    public async Task GetCompletedSettlementPayoutsAsync_SumsPayeeGrossOnly()
+    public async Task GetCompletedSettlementPayoutsAsync_UsesCompletionPeriodAndSumsPayeeGrossOnly()
     {
         await using var context = await CreateMigratedContextAsync();
         var payeeId = Guid.NewGuid();
@@ -52,7 +52,13 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         var period = new DateRange(monthStart, monthStart.AddMonths(1));
 
         context.AddRange(
-            Settlement(payeeId, 2500, 500, TransactionStatus.Complete, monthStart),
+            Settlement(
+                payeeId,
+                2500,
+                500,
+                TransactionStatus.Complete,
+                monthStart.AddMonths(-1),
+                completedAt: monthStart),
             Settlement(payeeId, 1500, 300, TransactionStatus.Complete, monthStart.AddDays(12)),
             Settlement(payeeId, 900, 100, TransactionStatus.Complete, monthStart.AddTicks(-1)),
             Settlement(payeeId, 800, 100, TransactionStatus.Complete, period.End),
@@ -106,7 +112,13 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
             new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
 
         context.AddRange(
-            Settlement(payeeId, 2500, 500, TransactionStatus.Complete, new DateTime(2026, 7, 3, 0, 0, 0, DateTimeKind.Utc)),
+            Settlement(
+                payeeId,
+                2500,
+                500,
+                TransactionStatus.Complete,
+                new DateTime(2026, 6, 3, 0, 0, 0, DateTimeKind.Utc),
+                completedAt: new DateTime(2026, 7, 3, 0, 0, 0, DateTimeKind.Utc)),
             Settlement(payeeId, 1500, 300, TransactionStatus.Complete, new DateTime(2026, 7, 19, 0, 0, 0, DateTimeKind.Utc)),
             Settlement(payeeId, 900, 100, TransactionStatus.Complete, new DateTime(2026, 8, 2, 0, 0, 0, DateTimeKind.Utc)),
             Settlement(payeeId, 700, 100, TransactionStatus.Failed, new DateTime(2026, 8, 4, 0, 0, 0, DateTimeKind.Utc)));
@@ -133,9 +145,11 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
 
         context.AddRange(
             Settlement(Guid.NewGuid(), 1000, 100, TransactionStatus.Complete,
-                new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc), ownerId, 101),
+                new DateTime(2026, 8, 14, 0, 0, 0, DateTimeKind.Utc), ownerId, 101,
+                new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc)),
             Settlement(ownerId, 2000, 200, TransactionStatus.Complete,
-                new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 102),
+                new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 102,
+                new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc)),
             Settlement(ownerId, 3000, 300, TransactionStatus.Complete,
                 new DateTime(2026, 8, 11, 0, 0, 0, DateTimeKind.Utc), Guid.NewGuid(), 103),
             Settlement(ownerId, 4000, 400, TransactionStatus.Pending,
@@ -149,6 +163,12 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
 
         Assert.Equal([102, 103], settlements.Select(s => s.BookingId));
         Assert.Equal([1800L, 2700L], settlements.Select(s => s.AmountMinor));
+        Assert.Equal(
+            [
+                new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 8, 11, 0, 0, 0, DateTimeKind.Utc)
+            ],
+            settlements.Select(s => s.At));
     }
 
     private static TicketTransactionEntity Ticket(
@@ -176,7 +196,8 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         TransactionStatus status,
         DateTime createdAt,
         Guid? payerId = null,
-        int? bookingId = null)
+        int? bookingId = null,
+        DateTime? completedAt = null)
     {
         var transaction = SettlementTransactionEntity.Create(
             payerId ?? Guid.NewGuid(),
@@ -184,8 +205,12 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
             $"pi_{Guid.NewGuid():N}",
             amount,
             fee,
-            status,
+            TransactionStatus.Pending,
             bookingId ?? Random.Shared.Next());
+        if (status == TransactionStatus.Complete)
+            transaction.Complete(completedAt ?? createdAt);
+        else if (status == TransactionStatus.Failed)
+            transaction.Fail();
         transaction.CreatedAt = createdAt;
         transaction.CreatedBy = "test";
         return transaction;

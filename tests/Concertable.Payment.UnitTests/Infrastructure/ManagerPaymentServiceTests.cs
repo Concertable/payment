@@ -23,6 +23,8 @@ public sealed class ManagerPaymentServiceTests
     private readonly Mock<ITransactionRepository> transactionRepository;
     private readonly Mock<ICommissionService> commissionService;
     private readonly Mock<ILedgerService> ledger;
+    private readonly FakeTimeProvider timeProvider = new(
+        new DateTimeOffset(2026, 8, 14, 10, 30, 0, TimeSpan.Zero));
 
     private readonly List<LedgerPosting> postings = [];
 
@@ -64,7 +66,7 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
-            new FakeTimeProvider(),
+            timeProvider,
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
     [Fact]
@@ -171,6 +173,7 @@ public sealed class ManagerPaymentServiceTests
         Assert.NotNull(captured);
         Assert.Equal(6200, captured.Amount);
         Assert.Equal(1200, captured.CommissionGrossMinor);
+        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, captured.CompletedAt);
 
         var posting = Assert.Single(postings);
         Assert.Equal(7, posting.BookingId);
@@ -201,6 +204,7 @@ public sealed class ManagerPaymentServiceTests
         Assert.NotNull(captured);
         Assert.Equal(5000, captured.Amount);
         Assert.Equal(0, captured.CommissionGrossMinor);
+        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, captured.CompletedAt);
 
         var posting = Assert.Single(postings);
         Assert.Equal(2, posting.Legs.Count);
@@ -526,7 +530,7 @@ public sealed class ManagerPaymentServiceTests
             TransactionStatus.Pending,
             bookingId: 7,
             commissionBindingId: commissionBindingId ?? Guid.NewGuid());
-        settlement.Complete();
+        settlement.Complete(DateTime.UtcNow);
         return settlement;
     }
 
