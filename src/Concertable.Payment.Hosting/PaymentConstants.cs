@@ -1,3 +1,5 @@
+using Concertable.Payment.Contracts;
+
 namespace Concertable.Payment.Hosting;
 
 public static class PaymentConstants
@@ -6,5 +8,5 @@ public static class PaymentConstants
     public const string WebResource = "payment-web";
     public const string WorkersResource = "payment-workers";
     public const string StripeCliResource = "stripe-cli";
-    public const string ServiceName = "concertable-payment";
+    public const string ServiceName = PaymentServiceIdentity.Name;
 }
