@@ -38,7 +38,7 @@ internal static class PaymentOperationMappers
     extension(Proto.PaymentOperationFailure failure)
     {
         public PaymentOperationFailure ToPaymentOperationFailure() =>
-            new(failure.Code.ToPaymentOperationFailureCode(), failure.Message);
+            PaymentOperationFailure.FromCode(failure.Code.ToPaymentOperationFailureCode());
     }
 
     extension(Proto.PaymentSessionKind kind)

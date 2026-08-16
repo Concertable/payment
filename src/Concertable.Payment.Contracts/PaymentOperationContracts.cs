@@ -1,3 +1,5 @@
+using Concertable.Payment.Contracts.Errors;
+
 namespace Concertable.Payment.Contracts;
 
 public enum PaymentSessionKind
@@ -57,4 +59,23 @@ public sealed record PaymentOperationIdentity(
 
 public sealed record PaymentOperationFailure(
     PaymentOperationFailureCode Code,
-    string Message);
+    string Message)
+{
+    public static PaymentOperationFailure FromCode(PaymentOperationFailureCode code)
+    {
+        PaymentOperationError error = code switch
+        {
+            PaymentOperationFailureCode.PaymentMethodRequired => new PaymentOperationError.PaymentMethodRequired(),
+            PaymentOperationFailureCode.AuthenticationRequired => new PaymentOperationError.AuthenticationRequired(),
+            PaymentOperationFailureCode.Declined => new PaymentOperationError.Declined(),
+            PaymentOperationFailureCode.Expired => new PaymentOperationError.Expired(),
+            PaymentOperationFailureCode.Canceled => new PaymentOperationError.Canceled(),
+            PaymentOperationFailureCode.OperationConflict => new PaymentOperationError.OperationConflict(),
+            PaymentOperationFailureCode.ProviderUnavailable => new PaymentOperationError.ProviderUnavailable(),
+            PaymentOperationFailureCode.Unknown => new PaymentOperationError.Unknown(),
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
+        };
+
+        return new PaymentOperationFailure(code, error.Definition.Message);
+    }
+}
