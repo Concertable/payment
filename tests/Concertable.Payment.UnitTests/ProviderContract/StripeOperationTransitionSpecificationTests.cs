@@ -293,6 +293,64 @@ public sealed class StripeOperationTransitionSpecificationTests
     }
 
     [Fact]
+    public void SameStateDeclineIsAppliedWhenThePersistedFailureChanges()
+    {
+        var current = Attempt(
+            StripeProviderObjectKind.PaymentIntent,
+            PaymentSessionKind.Payment,
+            PaymentOperationState.RequiresPaymentMethod,
+            "requires_payment_method",
+            observedAt) with
+        {
+            Failure = new PaymentOperationFailure(
+                PaymentOperationFailureCode.PaymentMethodRequired,
+                "A usable payment method is required.")
+        };
+        var observation = Observation(
+            StripeProviderObjectKind.PaymentIntent,
+            PaymentSessionKind.Payment,
+            "requires_payment_method",
+            observedAt) with
+        {
+            FailureClassification = ProviderFailureClassification.Declined
+        };
+
+        var transition = EvaluateSuccess(current, observation);
+
+        Assert.Equal(PaymentOperationTransitionDisposition.Applied, transition.Disposition);
+        Assert.Equal(PaymentOperationFailureCode.Declined, transition.Failure?.Code);
+        Assert.Equal("The payment was declined.", transition.Failure?.Message);
+    }
+
+    [Fact]
+    public void SameStateAuthorizationIsAppliedWhenTheCaptureDeadlineChanges()
+    {
+        var originalCaptureBefore = observedAt.AddDays(7);
+        var revisedCaptureBefore = originalCaptureBefore.AddHours(-1);
+        var current = Attempt(
+            StripeProviderObjectKind.PaymentIntent,
+            PaymentSessionKind.Authorization,
+            PaymentOperationState.Authorized,
+            "requires_capture",
+            observedAt) with
+        {
+            CaptureBefore = originalCaptureBefore
+        };
+
+        var transition = EvaluateSuccess(
+            current,
+            Observation(
+                StripeProviderObjectKind.PaymentIntent,
+                PaymentSessionKind.Authorization,
+                "requires_capture",
+                observedAt,
+                revisedCaptureBefore));
+
+        Assert.Equal(PaymentOperationTransitionDisposition.Applied, transition.Disposition);
+        Assert.Equal(revisedCaptureBefore, transition.CaptureBefore);
+    }
+
+    [Fact]
     public void OlderObservationIsRejected()
     {
         var current = Attempt(

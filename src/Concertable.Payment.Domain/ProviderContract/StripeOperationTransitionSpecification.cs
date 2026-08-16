@@ -152,7 +152,7 @@ internal static class StripeOperationTransitionSpecification
             }
         }
 
-        if (current.State == observed.State)
+        if (IsPersistedProjectionUnchanged(current, observation, observed))
             return CreateTransition(PaymentOperationTransitionDisposition.Duplicate, observation, observed);
 
         if (IsTerminal(current.State))
@@ -167,6 +167,16 @@ internal static class StripeOperationTransitionSpecification
 
         return CreateTransition(PaymentOperationTransitionDisposition.Applied, observation, observed);
     }
+
+    private static bool IsPersistedProjectionUnchanged(
+        PaymentProviderAttempt current,
+        StripeProviderObservation observation,
+        NormalizedProviderObservation normalized) =>
+        current.State == normalized.State
+        && string.Equals(current.LastProviderStatus, observation.Status, StringComparison.Ordinal)
+        && current.LastObservedAt == observation.ObservedAt
+        && current.CaptureBefore == observation.CaptureBefore
+        && current.Failure == normalized.Failure;
 
     internal static bool IsAllowedSameRevisionTransition(
         PaymentOperationState current,
