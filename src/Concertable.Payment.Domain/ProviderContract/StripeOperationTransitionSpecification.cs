@@ -43,6 +43,11 @@ internal enum StripeProviderObjectKind
     Refund
 }
 
+internal enum ProviderFailureClassification
+{
+    Declined
+}
+
 internal enum PaymentOperationTransitionDisposition
 {
     Applied,
@@ -69,7 +74,8 @@ internal enum PaymentOperationTransitionRejectionReason
     ImmutableBindingMismatch,
     InvalidRetryAttempt,
     UnknownRetryTrigger,
-    InvalidAuthorizationExpiry
+    InvalidAuthorizationExpiry,
+    InvalidProviderFailureClassification
 }
 
 internal sealed record PaymentProviderAttempt(
@@ -97,6 +103,7 @@ internal sealed record StripeProviderObservation(
     string Status,
     DateTimeOffset ObservedAt,
     DateTimeOffset? CaptureBefore = null,
+    ProviderFailureClassification? FailureClassification = null,
     bool IsExplicitConsumerCancellation = false);
 
 internal sealed record PaymentOperationTransition(
@@ -330,11 +337,21 @@ internal static class StripeOperationTransitionSpecification
                 state);
         }
 
+        if (observation.FailureClassification is { } failureClassification
+            && (!Enum.IsDefined(failureClassification)
+                || state != PaymentOperationState.RequiresPaymentMethod))
+        {
+            return new PaymentOperationTransitionRejection(
+                PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification,
+                current.State,
+                state);
+        }
+
         return new NormalizedProviderObservation(
             state.Value,
             TerminalDisposition(state.Value, observation.IsExplicitConsumerCancellation),
             RetryDisposition(state.Value),
-            Failure(state.Value));
+            Failure(state.Value, observation.FailureClassification));
     }
 
     private static bool IsProviderObjectValidForSession(
@@ -399,22 +416,29 @@ internal static class StripeOperationTransitionSpecification
             _ => PaymentOperationRetryDisposition.ContinueCurrentAttempt
         };
 
-    private static PaymentOperationFailure? Failure(PaymentOperationState state) =>
-        state switch
+    private static PaymentOperationFailure? Failure(
+        PaymentOperationState state,
+        ProviderFailureClassification? failureClassification) =>
+        (state, failureClassification) switch
         {
-            PaymentOperationState.RequiresPaymentMethod => new PaymentOperationFailure(
+            (PaymentOperationState.RequiresPaymentMethod, ProviderFailureClassification.Declined) =>
+                new PaymentOperationFailure(
+                    PaymentOperationFailureCode.Declined,
+                    "The payment was declined."),
+            (PaymentOperationState.RequiresPaymentMethod, null) => new PaymentOperationFailure(
                 PaymentOperationFailureCode.PaymentMethodRequired,
                 "A usable payment method is required."),
-            PaymentOperationState.RequiresAction => new PaymentOperationFailure(
+            (PaymentOperationState.RequiresAction, null) => new PaymentOperationFailure(
                 PaymentOperationFailureCode.AuthenticationRequired,
                 "Payment authentication is required."),
-            PaymentOperationState.Canceled => new PaymentOperationFailure(
+            (PaymentOperationState.Canceled, null) => new PaymentOperationFailure(
                 PaymentOperationFailureCode.Canceled,
                 "The payment operation was canceled."),
-            PaymentOperationState.Failed => new PaymentOperationFailure(
+            (PaymentOperationState.Failed, null) => new PaymentOperationFailure(
                 PaymentOperationFailureCode.Unknown,
                 "The payment state could not be safely classified."),
-            _ => null
+            (_, null) => null,
+            _ => throw new InvalidOperationException("The provider failure classification was not normalized.")
         };
 
     private static PaymentOperationTransition CreateTransition(
