@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Reunion.Errors;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Google.Protobuf;
 using Grpc.Core;
@@ -40,17 +41,7 @@ internal static class PaymentErrorMappers
                 (PaymentError)new PaymentError.CommissionFailure(error))));
 
     private static readonly FrozenDictionary<string, PaymentOperationError> paymentOperationErrors =
-        Index(new PaymentOperationError[]
-        {
-            new PaymentOperationError.PaymentMethodRequired(),
-            new PaymentOperationError.AuthenticationRequired(),
-            new PaymentOperationError.Declined(),
-            new PaymentOperationError.Expired(),
-            new PaymentOperationError.Canceled(),
-            new PaymentOperationError.OperationConflict(),
-            new PaymentOperationError.ProviderUnavailable(),
-            new PaymentOperationError.Unknown()
-        });
+        Index(Enum.GetValues<PaymentOperationFailureCode>().Select(PaymentOperationError.FromCode));
 
     private static readonly FrozenDictionary<string, ManagerPaymentError> managerPaymentErrors =
         Index(Composite<ManagerPaymentError>(

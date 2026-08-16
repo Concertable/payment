@@ -2,7 +2,7 @@ using Concertable.Payment.Domain.ProviderContract;
 
 namespace Concertable.Payment.UnitTests.ProviderContract;
 
-public sealed class PaymentOperationRetryAndExpirySpecificationTests
+public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
 {
     private static readonly Guid operationId = Guid.Parse("019c1234-0000-7000-8000-000000000011");
     private static readonly Guid attemptId = Guid.Parse("019c1234-0000-7000-8000-000000000012");
@@ -172,7 +172,7 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
             SessionKind = sessionKind,
             CaptureBefore = hasCaptureBefore ? captureBefore : null
         };
-        var result = PaymentAuthorizationExpirySpecification.Evaluate(
+        var result = PaymentAuthorizationExpiryEvaluator.Evaluate(
             current,
             captureBefore,
             providerConfirmedUncaptured: true);
@@ -213,13 +213,13 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
             LastObservedAt = succeeded.ObservedAt
         };
 
-        var stale = StripeOperationTransitionSpecification.Evaluate(
+        var stale = StripeOperationTransitionEvaluator.Evaluate(
             current,
             Observation(current, "requires_action", firstObservedAt));
         Assert.True(stale.TryGetError(out var staleRejection));
         Assert.Equal(PaymentOperationTransitionRejectionReason.StaleObservation, staleRejection.Reason);
 
-        var regression = StripeOperationTransitionSpecification.Evaluate(
+        var regression = StripeOperationTransitionEvaluator.Evaluate(
             current,
             Observation(current, "processing", secondObservedAt.AddSeconds(1)));
         Assert.True(regression.TryGetError(out var regressionRejection));
@@ -266,7 +266,7 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
         PaymentProviderAttempt current,
         PaymentOperationRetryRequest request)
     {
-        var result = PaymentOperationRetrySpecification.Evaluate(current, request);
+        var result = PaymentOperationRetryEvaluator.Evaluate(current, request);
         Assert.True(result.TryGetValue(out var decision));
         return decision;
     }
@@ -275,7 +275,7 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
         PaymentProviderAttempt current,
         PaymentOperationRetryRequest request)
     {
-        var result = PaymentOperationRetrySpecification.Evaluate(current, request);
+        var result = PaymentOperationRetryEvaluator.Evaluate(current, request);
         Assert.True(result.TryGetError(out var rejection));
         return rejection;
     }
@@ -285,7 +285,7 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
         DateTimeOffset observedAt,
         bool providerConfirmedUncaptured)
     {
-        var result = PaymentAuthorizationExpirySpecification.Evaluate(
+        var result = PaymentAuthorizationExpiryEvaluator.Evaluate(
             current,
             observedAt,
             providerConfirmedUncaptured);
@@ -297,7 +297,7 @@ public sealed class PaymentOperationRetryAndExpirySpecificationTests
         PaymentProviderAttempt current,
         StripeProviderObservation observation)
     {
-        var result = StripeOperationTransitionSpecification.Evaluate(current, observation);
+        var result = StripeOperationTransitionEvaluator.Evaluate(current, observation);
         Assert.True(result.TryGetValue(out var transition));
         return transition;
     }
