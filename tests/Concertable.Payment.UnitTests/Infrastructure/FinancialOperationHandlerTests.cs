@@ -149,7 +149,7 @@ public sealed class FinancialOperationHandlerTests
     [Fact]
     public async Task HandleAsync_RefundBeforeEscrow_PublishesDeferredAndKeepsPending()
     {
-        var command = new RefundEscrowCommand(Guid.NewGuid(), 17, "cancelled");
+        var command = new RefundEscrowCommand(Guid.NewGuid(), 17, RefundReasonCodes.RequestedByCustomer);
         FinancialOperationEntity? operation = null;
         operationRepository
             .Setup(repository => repository.GetAsync(command.OperationId, It.IsAny<CancellationToken>()))
