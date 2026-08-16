@@ -24,7 +24,12 @@
     <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" Aliases="global,PaymentInfrastructure" />
+    <ProjectReference Include="..\Compatibility\Concertable.Payment.PublishedContractFixture\Concertable.Payment.PublishedContractFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\E2ETests\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Compatibility\Baselines\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
