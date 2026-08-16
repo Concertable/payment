@@ -88,7 +88,14 @@ public sealed class PaymentErrorDefinitionTests
 
     [Theory]
     [MemberData(nameof(OperationFailures))]
-    public void FromCode_KnownFailure_UsesErrorDefinition(
+    public void ErrorFromCode_KnownFailure_ReturnsTypedError(
+        PaymentOperationFailureCode code,
+        PaymentOperationError expected) =>
+        Assert.Equal(expected, PaymentOperationError.FromCode(code));
+
+    [Theory]
+    [MemberData(nameof(OperationFailures))]
+    public void FailureFromCode_KnownFailure_UsesErrorDefinition(
         PaymentOperationFailureCode code,
         PaymentOperationError error) =>
         Assert.Equal(
@@ -96,7 +103,12 @@ public sealed class PaymentErrorDefinitionTests
             PaymentOperationFailure.FromCode(code));
 
     [Fact]
-    public void FromCode_UnknownFailure_Throws() =>
+    public void ErrorFromCode_UnknownFailure_Throws() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PaymentOperationError.FromCode((PaymentOperationFailureCode)999));
+
+    [Fact]
+    public void FailureFromCode_UnknownFailure_Throws() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             PaymentOperationFailure.FromCode((PaymentOperationFailureCode)999));
 }

@@ -14,7 +14,7 @@ internal sealed record PaymentAuthorizationExpiryDecision(
     PaymentOperationRetryDisposition RetryDisposition,
     PaymentOperationFailure? Failure);
 
-internal static class PaymentAuthorizationExpirySpecification
+internal static class PaymentAuthorizationExpiryEvaluator
 {
     public static Result<PaymentAuthorizationExpiryDecision, PaymentOperationTransitionRejection> Evaluate(
         PaymentProviderAttempt current,
@@ -56,8 +56,6 @@ internal static class PaymentAuthorizationExpirySpecification
             PaymentOperationState.Canceled,
             PaymentOperationTerminalDisposition.AttemptTerminal,
             PaymentOperationRetryDisposition.CreateNewAttempt,
-            new PaymentOperationFailure(
-                PaymentOperationFailureCode.Expired,
-                "The payment attempt expired."));
+            PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Expired));
     }
 }

@@ -4,7 +4,7 @@ using Stripe;
 
 namespace Concertable.Payment.UnitTests.ProviderContract;
 
-public sealed class StripeOperationTransitionSpecificationTests
+public sealed class StripeOperationTransitionEvaluatorTests
 {
     private static readonly Guid operationId = Guid.Parse("019c1234-0000-7000-8000-000000000001");
     private static readonly Guid attemptId = Guid.Parse("019c1234-0000-7000-8000-000000000002");
@@ -27,7 +27,8 @@ public sealed class StripeOperationTransitionSpecificationTests
     [Fact]
     public void StatusInventoriesMatchTheCompletePinnedVocabularies()
     {
-        Assert.Equal(
+        AssertStatuses(
+            StripeProviderObjectKind.PaymentIntent,
             [
                 "requires_payment_method",
                 "requires_confirmation",
@@ -36,9 +37,9 @@ public sealed class StripeOperationTransitionSpecificationTests
                 "requires_capture",
                 "canceled",
                 "succeeded"
-            ],
-            StripeProviderContractBaseline.PaymentIntentStatuses);
-        Assert.Equal(
+            ]);
+        AssertStatuses(
+            StripeProviderObjectKind.SetupIntent,
             [
                 "requires_payment_method",
                 "requires_confirmation",
@@ -46,11 +47,10 @@ public sealed class StripeOperationTransitionSpecificationTests
                 "processing",
                 "canceled",
                 "succeeded"
-            ],
-            StripeProviderContractBaseline.SetupIntentStatuses);
-        Assert.Equal(
-            ["pending", "requires_action", "succeeded", "failed", "canceled"],
-            StripeProviderContractBaseline.RefundStatuses);
+            ]);
+        AssertStatuses(
+            StripeProviderObjectKind.Refund,
+            ["pending", "requires_action", "succeeded", "failed", "canceled"]);
     }
 
     [Theory]
@@ -129,29 +129,26 @@ public sealed class StripeOperationTransitionSpecificationTests
         {
             Assert.Equal(
                 pair.Expected,
-                StripeOperationTransitionSpecification.IsAllowedSameRevisionTransition(
-                    pair.Current,
-                    pair.Next,
-                    pair.ProviderObjectKind,
-                    pair.SessionKind));
+                Attempt(pair.ProviderObjectKind, pair.SessionKind, pair.Current)
+                    .AllowsTransitionTo(pair.Next));
         }
     }
 
     [Fact]
     public void UnknownStatusesFailClosed()
     {
-        var specifications = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind)[]
+        var providerContexts = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind)[]
         {
             (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
             (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodSetup),
             (StripeProviderObjectKind.Refund, null)
         };
 
-        foreach (var specification in specifications)
+        foreach (var providerContext in providerContexts)
         {
             var rejection = EvaluateRejection(
-                Attempt(specification.ProviderObjectKind, specification.SessionKind),
-                Observation(specification.ProviderObjectKind, specification.SessionKind, "future_status"));
+                Attempt(providerContext.ProviderObjectKind, providerContext.SessionKind),
+                Observation(providerContext.ProviderObjectKind, providerContext.SessionKind, "future_status"));
 
             Assert.Equal(PaymentOperationTransitionRejectionReason.UnknownProviderStatus, rejection.Reason);
         }
@@ -465,7 +462,7 @@ public sealed class StripeOperationTransitionSpecificationTests
     {
         Assert.Equal([ProviderFailureClassification.Declined], Enum.GetValues<ProviderFailureClassification>());
 
-        var specifications = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind SessionKind)[]
+        var providerContexts = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind SessionKind)[]
         {
             (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
             (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Authorization),
@@ -473,11 +470,11 @@ public sealed class StripeOperationTransitionSpecificationTests
             (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodVerification)
         };
 
-        foreach (var specification in specifications)
+        foreach (var providerContext in providerContexts)
         {
             var transition = EvaluateSuccess(
-                Attempt(specification.ProviderObjectKind, specification.SessionKind),
-                Observation(specification.ProviderObjectKind, specification.SessionKind, "requires_payment_method") with
+                Attempt(providerContext.ProviderObjectKind, providerContext.SessionKind),
+                Observation(providerContext.ProviderObjectKind, providerContext.SessionKind, "requires_payment_method") with
                 {
                     FailureClassification = ProviderFailureClassification.Declined
                 });
@@ -493,7 +490,7 @@ public sealed class StripeOperationTransitionSpecificationTests
     [Fact]
     public void FailureClassificationsAreRejectedForEveryOtherProviderStatus()
     {
-        var observations = StripeProviderContractBaseline.PaymentIntentStatuses
+        var observations = StripeProviderContractBaseline.NormalizedStates[StripeProviderObjectKind.PaymentIntent].Keys
             .Where(status => status != "requires_payment_method")
             .Select(status => (
                 ProviderObjectKind: StripeProviderObjectKind.PaymentIntent,
@@ -502,14 +499,14 @@ public sealed class StripeOperationTransitionSpecificationTests
                     : PaymentSessionKind.Payment),
                 Status: status,
                 CaptureBefore: status == "requires_capture" ? observedAt.AddDays(7) : (DateTimeOffset?)null))
-            .Concat(StripeProviderContractBaseline.SetupIntentStatuses
+            .Concat(StripeProviderContractBaseline.NormalizedStates[StripeProviderObjectKind.SetupIntent].Keys
                 .Where(status => status != "requires_payment_method")
                 .Select(status => (
                     ProviderObjectKind: StripeProviderObjectKind.SetupIntent,
                     SessionKind: (PaymentSessionKind?)PaymentSessionKind.PaymentMethodSetup,
                     Status: status,
                     CaptureBefore: (DateTimeOffset?)null)))
-            .Concat(StripeProviderContractBaseline.RefundStatuses
+            .Concat(StripeProviderContractBaseline.NormalizedStates[StripeProviderObjectKind.Refund].Keys
                 .Select(status => (
                     ProviderObjectKind: StripeProviderObjectKind.Refund,
                     SessionKind: (PaymentSessionKind?)null,
@@ -561,7 +558,7 @@ public sealed class StripeOperationTransitionSpecificationTests
         PaymentOperationState Next,
         bool Expected)> AllStatePairs()
     {
-        var specifications = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind)[]
+        var providerContexts = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind)[]
         {
             (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
             (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Authorization),
@@ -570,16 +567,16 @@ public sealed class StripeOperationTransitionSpecificationTests
             (StripeProviderObjectKind.Refund, null)
         };
 
-        foreach (var specification in specifications)
+        foreach (var providerContext in providerContexts)
             foreach (var current in Enum.GetValues<PaymentOperationState>())
                 foreach (var next in Enum.GetValues<PaymentOperationState>())
                 {
                     yield return (
-                        specification.ProviderObjectKind,
-                        specification.SessionKind,
+                        providerContext.ProviderObjectKind,
+                        providerContext.SessionKind,
                         current,
                         next,
-                        ExpectedEdge(specification.ProviderObjectKind, specification.SessionKind, current, next));
+                        ExpectedEdge(providerContext.ProviderObjectKind, providerContext.SessionKind, current, next));
                 }
     }
 
@@ -689,6 +686,11 @@ public sealed class StripeOperationTransitionSpecificationTests
         params PaymentOperationState[] nextStates) =>
         nextStates.Select(next => (current, next));
 
+    private static void AssertStatuses(StripeProviderObjectKind providerObjectKind, string[] expected) =>
+        Assert.Equal(
+            expected.Order(StringComparer.Ordinal),
+            StripeProviderContractBaseline.NormalizedStates[providerObjectKind].Keys.Order(StringComparer.Ordinal));
+
     private static PaymentProviderAttempt Attempt(
         StripeProviderObjectKind providerObjectKind,
         PaymentSessionKind? sessionKind,
@@ -738,7 +740,7 @@ public sealed class StripeOperationTransitionSpecificationTests
         PaymentProviderAttempt current,
         StripeProviderObservation observation)
     {
-        var result = StripeOperationTransitionSpecification.Evaluate(current, observation);
+        var result = StripeOperationTransitionEvaluator.Evaluate(current, observation);
         Assert.True(result.TryGetValue(out var transition));
         return transition;
     }
@@ -747,7 +749,7 @@ public sealed class StripeOperationTransitionSpecificationTests
         PaymentProviderAttempt current,
         StripeProviderObservation observation)
     {
-        var result = StripeOperationTransitionSpecification.Evaluate(current, observation);
+        var result = StripeOperationTransitionEvaluator.Evaluate(current, observation);
         Assert.True(result.TryGetError(out var rejection));
         return rejection;
     }
