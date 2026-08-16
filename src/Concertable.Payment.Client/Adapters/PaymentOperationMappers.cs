@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Concertable.Payment.Contracts;
 using Proto = Concertable.Payment.Grpc;
 
@@ -5,6 +6,61 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentOperationMappers
 {
+    private static readonly FrozenDictionary<Proto.PaymentSessionKind, PaymentSessionKind> sessionKinds =
+        new Dictionary<Proto.PaymentSessionKind, PaymentSessionKind>
+        {
+            [Proto.PaymentSessionKind.Payment] = PaymentSessionKind.Payment,
+            [Proto.PaymentSessionKind.Authorization] = PaymentSessionKind.Authorization,
+            [Proto.PaymentSessionKind.PaymentMethodSetup] = PaymentSessionKind.PaymentMethodSetup,
+            [Proto.PaymentSessionKind.PaymentMethodVerification] = PaymentSessionKind.PaymentMethodVerification
+        }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<Proto.PaymentOperationState, PaymentOperationState> operationStates =
+        new Dictionary<Proto.PaymentOperationState, PaymentOperationState>
+        {
+            [Proto.PaymentOperationState.Creating] = PaymentOperationState.Creating,
+            [Proto.PaymentOperationState.RequiresPaymentMethod] = PaymentOperationState.RequiresPaymentMethod,
+            [Proto.PaymentOperationState.RequiresConfirmation] = PaymentOperationState.RequiresConfirmation,
+            [Proto.PaymentOperationState.RequiresAction] = PaymentOperationState.RequiresAction,
+            [Proto.PaymentOperationState.Processing] = PaymentOperationState.Processing,
+            [Proto.PaymentOperationState.Authorized] = PaymentOperationState.Authorized,
+            [Proto.PaymentOperationState.Succeeded] = PaymentOperationState.Succeeded,
+            [Proto.PaymentOperationState.Canceled] = PaymentOperationState.Canceled,
+            [Proto.PaymentOperationState.Failed] = PaymentOperationState.Failed
+        }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<Proto.PaymentOperationTerminalDisposition, PaymentOperationTerminalDisposition>
+        terminalDispositions = new Dictionary<Proto.PaymentOperationTerminalDisposition, PaymentOperationTerminalDisposition>
+        {
+            [Proto.PaymentOperationTerminalDisposition.NonTerminal] = PaymentOperationTerminalDisposition.NonTerminal,
+            [Proto.PaymentOperationTerminalDisposition.AttemptTerminal] = PaymentOperationTerminalDisposition.AttemptTerminal,
+            [Proto.PaymentOperationTerminalDisposition.OperationTerminal] = PaymentOperationTerminalDisposition.OperationTerminal
+        }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<Proto.PaymentOperationRetryDisposition, PaymentOperationRetryDisposition>
+        retryDispositions = new Dictionary<Proto.PaymentOperationRetryDisposition, PaymentOperationRetryDisposition>
+        {
+            [Proto.PaymentOperationRetryDisposition.ContinueCurrentAttempt] = PaymentOperationRetryDisposition.ContinueCurrentAttempt,
+            [Proto.PaymentOperationRetryDisposition.RetryCurrentAttempt] = PaymentOperationRetryDisposition.RetryCurrentAttempt,
+            [Proto.PaymentOperationRetryDisposition.CreateNewAttempt] = PaymentOperationRetryDisposition.CreateNewAttempt,
+            [Proto.PaymentOperationRetryDisposition.CreateNewOperation] = PaymentOperationRetryDisposition.CreateNewOperation,
+            [Proto.PaymentOperationRetryDisposition.Reconcile] = PaymentOperationRetryDisposition.Reconcile,
+            [Proto.PaymentOperationRetryDisposition.NotRetryable] = PaymentOperationRetryDisposition.NotRetryable
+        }.ToFrozenDictionary();
+
+    private static readonly FrozenDictionary<Proto.PaymentOperationFailureCode, PaymentOperationFailureCode> failureCodes =
+        new Dictionary<Proto.PaymentOperationFailureCode, PaymentOperationFailureCode>
+        {
+            [Proto.PaymentOperationFailureCode.PaymentMethodRequired] = PaymentOperationFailureCode.PaymentMethodRequired,
+            [Proto.PaymentOperationFailureCode.AuthenticationRequired] = PaymentOperationFailureCode.AuthenticationRequired,
+            [Proto.PaymentOperationFailureCode.Declined] = PaymentOperationFailureCode.Declined,
+            [Proto.PaymentOperationFailureCode.Expired] = PaymentOperationFailureCode.Expired,
+            [Proto.PaymentOperationFailureCode.Canceled] = PaymentOperationFailureCode.Canceled,
+            [Proto.PaymentOperationFailureCode.OperationConflict] = PaymentOperationFailureCode.OperationConflict,
+            [Proto.PaymentOperationFailureCode.ProviderUnavailable] = PaymentOperationFailureCode.ProviderUnavailable,
+            [Proto.PaymentOperationFailureCode.Unknown] = PaymentOperationFailureCode.Unknown
+        }.ToFrozenDictionary();
+
     extension(Proto.PaymentSessionDescriptor descriptor)
     {
         public PaymentSessionDescriptor ToPaymentSessionDescriptor() =>
@@ -43,73 +99,38 @@ internal static class PaymentOperationMappers
 
     extension(Proto.PaymentSessionKind kind)
     {
-        public PaymentSessionKind ToPaymentSessionKind() => kind switch
-        {
-            Proto.PaymentSessionKind.Payment => PaymentSessionKind.Payment,
-            Proto.PaymentSessionKind.Authorization => PaymentSessionKind.Authorization,
-            Proto.PaymentSessionKind.PaymentMethodSetup => PaymentSessionKind.PaymentMethodSetup,
-            Proto.PaymentSessionKind.PaymentMethodVerification => PaymentSessionKind.PaymentMethodVerification,
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
-        };
+        public PaymentSessionKind ToPaymentSessionKind() => Map(kind, sessionKinds);
     }
 
     extension(Proto.PaymentOperationState state)
     {
-        public PaymentOperationState ToPaymentOperationState() => state switch
-        {
-            Proto.PaymentOperationState.Creating => PaymentOperationState.Creating,
-            Proto.PaymentOperationState.RequiresPaymentMethod => PaymentOperationState.RequiresPaymentMethod,
-            Proto.PaymentOperationState.RequiresConfirmation => PaymentOperationState.RequiresConfirmation,
-            Proto.PaymentOperationState.RequiresAction => PaymentOperationState.RequiresAction,
-            Proto.PaymentOperationState.Processing => PaymentOperationState.Processing,
-            Proto.PaymentOperationState.Authorized => PaymentOperationState.Authorized,
-            Proto.PaymentOperationState.Succeeded => PaymentOperationState.Succeeded,
-            Proto.PaymentOperationState.Canceled => PaymentOperationState.Canceled,
-            Proto.PaymentOperationState.Failed => PaymentOperationState.Failed,
-            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
-        };
+        public PaymentOperationState ToPaymentOperationState() => Map(state, operationStates);
     }
 
     extension(Proto.PaymentOperationTerminalDisposition disposition)
     {
-        public PaymentOperationTerminalDisposition ToPaymentOperationTerminalDisposition() => disposition switch
-        {
-            Proto.PaymentOperationTerminalDisposition.NonTerminal => PaymentOperationTerminalDisposition.NonTerminal,
-            Proto.PaymentOperationTerminalDisposition.AttemptTerminal => PaymentOperationTerminalDisposition.AttemptTerminal,
-            Proto.PaymentOperationTerminalDisposition.OperationTerminal => PaymentOperationTerminalDisposition.OperationTerminal,
-            _ => throw new ArgumentOutOfRangeException(nameof(disposition), disposition, null)
-        };
+        public PaymentOperationTerminalDisposition ToPaymentOperationTerminalDisposition() =>
+            Map(disposition, terminalDispositions);
     }
 
     extension(Proto.PaymentOperationRetryDisposition disposition)
     {
-        public PaymentOperationRetryDisposition ToPaymentOperationRetryDisposition() => disposition switch
-        {
-            Proto.PaymentOperationRetryDisposition.ContinueCurrentAttempt => PaymentOperationRetryDisposition.ContinueCurrentAttempt,
-            Proto.PaymentOperationRetryDisposition.RetryCurrentAttempt => PaymentOperationRetryDisposition.RetryCurrentAttempt,
-            Proto.PaymentOperationRetryDisposition.CreateNewAttempt => PaymentOperationRetryDisposition.CreateNewAttempt,
-            Proto.PaymentOperationRetryDisposition.CreateNewOperation => PaymentOperationRetryDisposition.CreateNewOperation,
-            Proto.PaymentOperationRetryDisposition.Reconcile => PaymentOperationRetryDisposition.Reconcile,
-            Proto.PaymentOperationRetryDisposition.NotRetryable => PaymentOperationRetryDisposition.NotRetryable,
-            _ => throw new ArgumentOutOfRangeException(nameof(disposition), disposition, null)
-        };
+        public PaymentOperationRetryDisposition ToPaymentOperationRetryDisposition() =>
+            Map(disposition, retryDispositions);
     }
 
     extension(Proto.PaymentOperationFailureCode code)
     {
-        public PaymentOperationFailureCode ToPaymentOperationFailureCode() => code switch
-        {
-            Proto.PaymentOperationFailureCode.PaymentMethodRequired => PaymentOperationFailureCode.PaymentMethodRequired,
-            Proto.PaymentOperationFailureCode.AuthenticationRequired => PaymentOperationFailureCode.AuthenticationRequired,
-            Proto.PaymentOperationFailureCode.Declined => PaymentOperationFailureCode.Declined,
-            Proto.PaymentOperationFailureCode.Expired => PaymentOperationFailureCode.Expired,
-            Proto.PaymentOperationFailureCode.Canceled => PaymentOperationFailureCode.Canceled,
-            Proto.PaymentOperationFailureCode.OperationConflict => PaymentOperationFailureCode.OperationConflict,
-            Proto.PaymentOperationFailureCode.ProviderUnavailable => PaymentOperationFailureCode.ProviderUnavailable,
-            Proto.PaymentOperationFailureCode.Unknown => PaymentOperationFailureCode.Unknown,
-            _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
-        };
+        public PaymentOperationFailureCode ToPaymentOperationFailureCode() => Map(code, failureCodes);
     }
+
+    private static TTarget Map<TSource, TTarget>(
+        TSource source,
+        FrozenDictionary<TSource, TTarget> mappings)
+        where TSource : notnull =>
+        mappings.TryGetValue(source, out var target)
+            ? target
+            : throw new ArgumentOutOfRangeException(nameof(source), source, null);
 
     private static string? EmptyToNull(string value) => string.IsNullOrEmpty(value) ? null : value;
 }

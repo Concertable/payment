@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Dunet;
 using Reunion.Errors;
 
@@ -6,6 +7,24 @@ namespace Concertable.Payment.Contracts.Errors;
 [Union(EnableImplicitConversions = false)]
 public abstract partial record PaymentOperationError : IError
 {
+    private static readonly FrozenDictionary<PaymentOperationFailureCode, PaymentOperationError> byCode =
+        new Dictionary<PaymentOperationFailureCode, PaymentOperationError>
+        {
+            [PaymentOperationFailureCode.PaymentMethodRequired] = new PaymentMethodRequired(),
+            [PaymentOperationFailureCode.AuthenticationRequired] = new AuthenticationRequired(),
+            [PaymentOperationFailureCode.Declined] = new Declined(),
+            [PaymentOperationFailureCode.Expired] = new Expired(),
+            [PaymentOperationFailureCode.Canceled] = new Canceled(),
+            [PaymentOperationFailureCode.OperationConflict] = new OperationConflict(),
+            [PaymentOperationFailureCode.ProviderUnavailable] = new ProviderUnavailable(),
+            [PaymentOperationFailureCode.Unknown] = new Unknown()
+        }.ToFrozenDictionary();
+
+    public static PaymentOperationError FromCode(PaymentOperationFailureCode code) =>
+        byCode.TryGetValue(code, out var error)
+            ? error
+            : throw new ArgumentOutOfRangeException(nameof(code), code, null);
+
     public ErrorDefinition Definition => this switch
     {
         PaymentMethodRequired => ErrorDefinition.PaymentRequired<PaymentMethodRequired>("A usable payment method is required."),

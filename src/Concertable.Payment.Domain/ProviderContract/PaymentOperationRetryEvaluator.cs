@@ -19,7 +19,7 @@ internal sealed record PaymentOperationRetryDecision(
     Guid AttemptId,
     long Revision);
 
-internal static class PaymentOperationRetrySpecification
+internal static class PaymentOperationRetryEvaluator
 {
     public static Result<PaymentOperationRetryDecision, PaymentOperationTransitionRejection> Evaluate(
         PaymentProviderAttempt current,
