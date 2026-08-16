@@ -20,12 +20,18 @@ confirmation, or client-secret parser is added or removed without an inventory d
 - On 2026-08-16, a read-only Stripe API query with the configured test-mode key returned endpoint
   `we_1RCqowQ1mmqr287N9MeY0iRV` for
   `https://concertable-app.azurewebsites.net/api/webhook`, with API version
-  `2025-01-27.acacia`, `livemode=false`, and `status=disabled`. Its schema version matches the SDK
-  request version. The available credential cannot inspect live-mode endpoints, so this evidence does
-  not assert production endpoint state.
-- Before a production endpoint processes this contract, deployment evidence must record its endpoint
-  ID, mode, enabled status, and API version. A different version requires version-specific fixtures;
-  changing the endpoint version is a separate deliberate migration.
+  `2025-01-27.acacia`, `livemode=false`, and `status=disabled`. It subscribes only to
+  `payment_intent.succeeded`, so it is schema evidence rather than a production event-selection
+  template.
+- A read-only Stripe MCP query of the only accessible live context, Concertable account
+  `acct_1QqfAGLtYbsqaOIf`, returned zero webhook endpoints. No production endpoint version currently
+  exists. Normalization fixtures and future endpoint creation therefore target `2025-01-27.acacia`;
+  a different version requires version-specific fixtures and a deliberate contract revision.
+- Before production webhook processing is enabled, deployment must provide the actual public Payment
+  Web URL, create the live endpoint for `payment_intent.succeeded`,
+  `payment_intent.payment_failed`, `setup_intent.succeeded`, and `setup_intent.setup_failed`, store its
+  signing secret as `Stripe:WebhookSecret`, and record the returned endpoint ID, mode, status, and API
+  version. The obsolete test URL is not evidence of the future standalone Payment deployment URL.
 - Stripe delivers webhooks at least once, can deliver duplicates, and does not guarantee ordering.
   Arrival order is never provider truth.
 
