@@ -143,6 +143,9 @@ public sealed partial class ProviderContractInventoryTests
     {
         foreach (Match match in ConsumerCallPattern().Matches(source))
             yield return Entry(path, "consumer-call", source, match, $"{match.Groups["receiver"].Value}.{match.Groups["operation"].Value}");
+
+        foreach (Match match in ConsumerCommandPattern().Matches(source))
+            yield return Entry(path, "consumer-call", source, match, $"bus.SendAsync<{match.Groups["command"].Value}>");
     }
 
     private static IEnumerable<DiscoveredEntryPoint> DiscoverFrontendEntries(string path, string source)
@@ -210,6 +213,9 @@ public sealed partial class ProviderContractInventoryTests
 
     [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
     private static partial Regex ConsumerCallPattern();
+
+    [GeneratedRegex(@"\bbus\.SendAsync\s*\(\s*new\s+(?<command>CaptureEscrowCommand|DepositEscrowCommand|RefundEscrowCommand)\s*\(")]
+    private static partial Regex ConsumerCommandPattern();
 
     [GeneratedRegex(@"\bEventUtility\.ValidateSignature\s*\(")]
     private static partial Regex WebhookIngressPattern();
