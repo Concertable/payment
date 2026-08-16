@@ -1,5 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Concertable.Payment.UnitTests.Architecture;
 
@@ -7,12 +10,88 @@ public sealed partial class ProviderContractInventoryTests
 {
     private static readonly string RepositoryRoot = FindRepositoryRoot();
     private static readonly ProviderContractInventory Inventory = LoadInventory();
+    private static readonly IReadOnlyList<MetadataReference> CompilationReferences = CreateCompilationReferences();
     private static readonly HashSet<string> DiscoveredKeys = DiscoverEntryPoints()
         .Select(entry => entry.Key)
         .ToHashSet(StringComparer.Ordinal);
 
     public static IEnumerable<object[]> CommittedEntryPoints =>
         Inventory.EntryPoints.Select(entry => new object[] { entry });
+
+    public static TheoryData<string, string?, string> StripeReceiverSyntaxCases => new()
+    {
+        {
+            """
+            namespace Example;
+
+            public sealed class Adapter
+            {
+                private readonly Stripe.PaymentIntentService paymentIntentService;
+
+                public Adapter(Stripe.PaymentIntentService paymentIntentService)
+                {
+                    this.paymentIntentService = paymentIntentService;
+                }
+
+                public void Execute()
+                {
+                    _ = this.paymentIntentService.CreateAsync(null!);
+                }
+            }
+            """,
+            null,
+            "this.paymentIntentService.CreateAsync"
+        },
+        {
+            """
+            using Stripe.Checkout;
+
+            namespace Example;
+
+            public sealed class Adapter(SessionService sessionService)
+            {
+                public void Execute()
+                {
+                    _ = sessionService.CreateAsync(null!);
+                }
+            }
+            """,
+            null,
+            "sessionService.CreateAsync"
+        },
+        {
+            """
+            namespace Example;
+
+            public sealed class Adapter(PaymentIntentService paymentIntentService)
+            {
+                public void Execute()
+                {
+                    _ = paymentIntentService.GetAsync("pi_test");
+                }
+            }
+            """,
+            "global using Stripe;",
+            "paymentIntentService.GetAsync"
+        },
+        {
+            """
+            using Stripe;
+
+            namespace Example;
+
+            public sealed class Adapter(StripeClient stripeClient)
+            {
+                public void Execute()
+                {
+                    _ = stripeClient.RequestAsync<object>(null!, null!, null!, null);
+                }
+            }
+            """,
+            null,
+            "stripeClient.RequestAsync"
+        }
+    };
 
     [Fact]
     public void SourceEntryPoints_CurrentScanMatchesCommittedInventory()
@@ -69,6 +148,26 @@ public sealed partial class ProviderContractInventoryTests
                 .Except(Inventory.EntryPoints.Select(entry => entry.DecisionId), StringComparer.Ordinal));
     }
 
+    [Theory]
+    [MemberData(nameof(StripeReceiverSyntaxCases))]
+    public void DiscoverPaymentEntries_StripeReceiverSyntax_DiscoversEntryPoint(
+        string source,
+        string? globalUsingsSource,
+        string expectedOperation)
+    {
+        var sources = new List<PaymentSourceFile>
+        {
+            new("Example.cs", source, "Example")
+        };
+        if (globalUsingsSource is not null)
+            sources.Add(new PaymentSourceFile("GlobalUsings.cs", globalUsingsSource, "Example"));
+
+        var entry = Assert.Single(DiscoverPaymentEntries(sources));
+
+        Assert.Equal(expectedOperation, entry.Operation);
+        Assert.Equal("Execute", entry.Member);
+    }
+
     private static ProviderContractInventory LoadInventory()
     {
         var path = Path.Combine(RepositoryRoot, "api", "Concertable.Payment", "provider-contract-inventory.json");
@@ -101,17 +200,31 @@ public sealed partial class ProviderContractInventoryTests
         Assert.True(Directory.Exists(absoluteRoot), $"Inventory scan root does not exist: {root.Path}");
 
         var extension = root.Detector == "frontend" ? "*.ts*" : "*.cs";
-        foreach (var path in Directory.EnumerateFiles(absoluteRoot, extension, SearchOption.AllDirectories))
-        {
-            if (IsGeneratedOrTestPath(path))
-                continue;
+        var paths = Directory
+            .EnumerateFiles(absoluteRoot, extension, SearchOption.AllDirectories)
+            .Where(path => !IsGeneratedOrTestPath(path))
+            .ToArray();
 
+        if (root.Detector == "payment")
+        {
+            var sources = paths
+                .Select(path => new PaymentSourceFile(
+                    Path.GetRelativePath(RepositoryRoot, path).Replace('\\', '/'),
+                    File.ReadAllText(path),
+                    FindContainingProject(path, absoluteRoot)))
+                .ToArray();
+            foreach (var entry in DiscoverPaymentEntries(sources))
+                yield return entry;
+            yield break;
+        }
+
+        foreach (var path in paths)
+        {
             var source = File.ReadAllText(path);
             var relativePath = Path.GetRelativePath(RepositoryRoot, path).Replace('\\', '/');
 
             foreach (var entry in root.Detector switch
             {
-                "payment" => DiscoverPaymentEntries(relativePath, source),
                 "consumer" => DiscoverConsumerEntries(relativePath, source),
                 "frontend" => DiscoverFrontendEntries(relativePath, source),
                 _ => throw new InvalidOperationException($"Unknown inventory detector: {root.Detector}")
@@ -120,23 +233,78 @@ public sealed partial class ProviderContractInventoryTests
         }
     }
 
-    private static IEnumerable<DiscoveredEntryPoint> DiscoverPaymentEntries(string path, string source)
+    private static IEnumerable<DiscoveredEntryPoint> DiscoverPaymentEntries(IReadOnlyCollection<PaymentSourceFile> sources)
     {
-        var stripeServiceReceivers = StripeImportPattern().IsMatch(source)
-            ? StripeServiceFieldPattern()
-                .Matches(source)
-                .Select(match => match.Groups["receiver"].Value)
-                .ToHashSet(StringComparer.Ordinal)
-            : [];
-        foreach (Match match in AsyncCallPattern().Matches(source))
+        foreach (var projectSources in sources.GroupBy(source => source.Project, StringComparer.OrdinalIgnoreCase))
         {
-            var receiver = match.Groups["receiver"].Value;
-            if (stripeServiceReceivers.Contains(receiver))
-                yield return Entry(path, "provider-api", source, match, $"{receiver}.{match.Groups["operation"].Value}");
+            var syntaxTrees = projectSources
+                .Select(source => CSharpSyntaxTree.ParseText(source.Source, path: source.Path))
+                .ToArray();
+            var compilation = CSharpCompilation.Create(
+                $"ProviderContractInventory_{Guid.NewGuid():N}",
+                syntaxTrees,
+                CompilationReferences,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+            foreach (var syntaxTree in syntaxTrees)
+            {
+                var source = projectSources.Single(source => source.Path == syntaxTree.FilePath);
+                var root = syntaxTree.GetRoot();
+                var semanticModel = compilation.GetSemanticModel(syntaxTree);
+
+                foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
+                {
+                    if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess
+                        || !memberAccess.Name.Identifier.ValueText.EndsWith("Async", StringComparison.Ordinal)
+                        || !IsStripeSdkType(semanticModel.GetTypeInfo(memberAccess.Expression).Type))
+                        continue;
+
+                    yield return new DiscoveredEntryPoint(
+                        source.Path,
+                        "provider-api",
+                        FindContainingMember(invocation),
+                        $"{memberAccess.Expression}.{memberAccess.Name.Identifier.ValueText}",
+                        0);
+                }
+
+                foreach (Match match in WebhookIngressPattern().Matches(source.Source))
+                    yield return Entry(source.Path, "webhook-ingress", source.Source, match, "EventUtility.ValidateSignature");
+            }
+        }
+    }
+
+    private static bool IsStripeSdkType(ITypeSymbol? type) =>
+        type?.ContainingNamespace.ToDisplayString() is "Stripe"
+            || type?.ContainingNamespace.ToDisplayString().StartsWith("Stripe.", StringComparison.Ordinal) == true;
+
+    private static string FindContainingMember(InvocationExpressionSyntax invocation) =>
+        invocation.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText
+        ?? throw new InvalidOperationException("Could not identify the member containing an inventoried call.");
+
+    private static string FindContainingProject(string path, string scanRoot)
+    {
+        for (var directory = Directory.GetParent(path); directory is not null; directory = directory.Parent)
+        {
+            var project = Directory.EnumerateFiles(directory.FullName, "*.csproj", SearchOption.TopDirectoryOnly).SingleOrDefault();
+            if (project is not null)
+                return project;
+            if (string.Equals(directory.FullName, scanRoot, StringComparison.OrdinalIgnoreCase))
+                break;
         }
 
-        foreach (Match match in WebhookIngressPattern().Matches(source))
-            yield return Entry(path, "webhook-ingress", source, match, "EventUtility.ValidateSignature");
+        throw new InvalidOperationException($"Could not identify the project containing {path}.");
+    }
+
+    private static IReadOnlyList<MetadataReference> CreateCompilationReferences()
+    {
+        var trustedPlatformAssemblies = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")
+            ?? throw new InvalidOperationException("Trusted platform assemblies are unavailable.");
+        return trustedPlatformAssemblies
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Append(typeof(Stripe.StripeClient).Assembly.Location)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(path => MetadataReference.CreateFromFile(path))
+            .ToArray();
     }
 
     private static IEnumerable<DiscoveredEntryPoint> DiscoverConsumerEntries(string path, string source)
@@ -202,15 +370,6 @@ public sealed partial class ProviderContractInventoryTests
         throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    [GeneratedRegex(@"\busing\s+Stripe\s*;")]
-    private static partial Regex StripeImportPattern();
-
-    [GeneratedRegex(@"\bprivate\s+readonly\s+(?:Stripe\.)?(?:(?!I[A-Z])[A-Z][A-Za-z0-9]*Service|StripeClient)\s+(?<receiver>[A-Za-z_]\w*)\s*;")]
-    private static partial Regex StripeServiceFieldPattern();
-
-    [GeneratedRegex(@"\b(?<receiver>[A-Za-z_]\w*)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
-    private static partial Regex AsyncCallPattern();
-
     [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
     private static partial Regex ConsumerCallPattern();
 
@@ -268,3 +427,5 @@ internal sealed record DiscoveredEntryPoint(
 {
     public string Key => $"{Path}|{Kind}|{Member ?? "-"}|{Operation}|{Occurrence}";
 }
+
+internal sealed record PaymentSourceFile(string Path, string Source, string Project);
