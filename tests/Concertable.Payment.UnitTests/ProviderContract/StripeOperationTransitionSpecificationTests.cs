@@ -1,4 +1,6 @@
+using System.Reflection;
 using Concertable.Payment.Domain.ProviderContract;
+using Stripe;
 
 namespace Concertable.Payment.UnitTests.ProviderContract;
 
@@ -11,7 +13,14 @@ public sealed class StripeOperationTransitionSpecificationTests
     [Fact]
     public void BaselinePinsStripeNetAndApiVersions()
     {
-        Assert.Equal("47.3.0", StripeProviderContractBaseline.StripeNetVersion);
+        var informationalVersion = typeof(StripeClient).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        Assert.NotNull(informationalVersion);
+        Assert.Equal(
+            StripeProviderContractBaseline.StripeNetVersion,
+            informationalVersion.Split('+', 2)[0]);
         Assert.Equal("2025-01-27.acacia", StripeProviderContractBaseline.ApiVersion);
     }
 
