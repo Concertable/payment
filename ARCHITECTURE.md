@@ -2,6 +2,7 @@
 
 > Cross-service plan and design rationale: [`api/docs/MICROSERVICES_ARCHITECTURE.md`](../docs/MICROSERVICES_ARCHITECTURE.md)
 > Keyed-dispatch pattern: [`api/agents/CODE_PATTERNS.md`](../agents/CODE_PATTERNS.md)
+> Provider lifecycle baseline: [`PROVIDER_CONTRACT.md`](./PROVIDER_CONTRACT.md)
 > Outstanding gaps: [`TECH_DEBT.md`](./TECH_DEBT.md)
 
 ---
