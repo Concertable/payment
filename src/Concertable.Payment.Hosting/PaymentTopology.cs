@@ -10,6 +10,15 @@ public static class PaymentTopology
 {
     public static AsbTopology AddPaymentTopology(this AsbTopology topology) =>
         topology
+            .Publish<PaymentSucceededEvent>()
+            .Publish<PaymentFailedEvent>()
+            .Publish<CaptureEscrowSucceededEvent>()
+            .Publish<CaptureEscrowRejectedEvent>()
+            .Publish<DepositEscrowSucceededEvent>()
+            .Publish<DepositEscrowRejectedEvent>()
+            .Publish<RefundEscrowSucceededEvent>()
+            .Publish<RefundEscrowRejectedEvent>()
+            .Publish<RefundEscrowDeferredEvent>()
             .Subscribe<ConcertChangedEvent>(PaymentConstants.ServiceName)
             .Subscribe<CredentialRegisteredEvent>(PaymentConstants.ServiceName)
             .Subscribe<PayoutOwnerRegisteredEvent>(PaymentConstants.ServiceName)
