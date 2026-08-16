@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Concertable.Payment.Api.Controllers;
 using Concertable.Payment.Api.Identity;
 using Concertable.Shared.Api.Extensions;
@@ -12,7 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICurrentPayoutOwner, CurrentPayoutOwner>();
         return services.AddControllers()
-            .AddJsonOptions(opts => opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+            .AddApplicationJson()
             .AddInternalControllers(typeof(WebhookController).Assembly);
     }
 }
