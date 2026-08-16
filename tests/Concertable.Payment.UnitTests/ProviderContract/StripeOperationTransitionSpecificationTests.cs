@@ -402,6 +402,100 @@ public sealed class StripeOperationTransitionSpecificationTests
         Assert.DoesNotContain("_secret_", transition.Failure?.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ClassifiedDeclinesPreserveRecoverableStateAndEmitSafeFailure()
+    {
+        Assert.Equal([ProviderFailureClassification.Declined], Enum.GetValues<ProviderFailureClassification>());
+
+        var specifications = new (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind SessionKind)[]
+        {
+            (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
+            (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Authorization),
+            (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodSetup),
+            (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodVerification)
+        };
+
+        foreach (var specification in specifications)
+        {
+            var transition = EvaluateSuccess(
+                Attempt(specification.ProviderObjectKind, specification.SessionKind),
+                Observation(specification.ProviderObjectKind, specification.SessionKind, "requires_payment_method") with
+                {
+                    FailureClassification = ProviderFailureClassification.Declined
+                });
+
+            Assert.Equal(PaymentOperationState.RequiresPaymentMethod, transition.State);
+            Assert.Equal(PaymentOperationTerminalDisposition.NonTerminal, transition.TerminalDisposition);
+            Assert.Equal(PaymentOperationRetryDisposition.RetryCurrentAttempt, transition.RetryDisposition);
+            Assert.Equal(PaymentOperationFailureCode.Declined, transition.Failure?.Code);
+            Assert.Equal("The payment was declined.", transition.Failure?.Message);
+        }
+    }
+
+    [Fact]
+    public void FailureClassificationsAreRejectedForEveryOtherProviderStatus()
+    {
+        var observations = StripeProviderContractBaseline.PaymentIntentStatuses
+            .Where(status => status != "requires_payment_method")
+            .Select(status => (
+                ProviderObjectKind: StripeProviderObjectKind.PaymentIntent,
+                SessionKind: (PaymentSessionKind?)(status == "requires_capture"
+                    ? PaymentSessionKind.Authorization
+                    : PaymentSessionKind.Payment),
+                Status: status,
+                CaptureBefore: status == "requires_capture" ? observedAt.AddDays(7) : (DateTimeOffset?)null))
+            .Concat(StripeProviderContractBaseline.SetupIntentStatuses
+                .Where(status => status != "requires_payment_method")
+                .Select(status => (
+                    ProviderObjectKind: StripeProviderObjectKind.SetupIntent,
+                    SessionKind: (PaymentSessionKind?)PaymentSessionKind.PaymentMethodSetup,
+                    Status: status,
+                    CaptureBefore: (DateTimeOffset?)null)))
+            .Concat(StripeProviderContractBaseline.RefundStatuses
+                .Select(status => (
+                    ProviderObjectKind: StripeProviderObjectKind.Refund,
+                    SessionKind: (PaymentSessionKind?)null,
+                    Status: status,
+                    CaptureBefore: (DateTimeOffset?)null)));
+
+        foreach (var observation in observations)
+            foreach (var classification in Enum.GetValues<ProviderFailureClassification>())
+            {
+                var rejection = EvaluateRejection(
+                    Attempt(observation.ProviderObjectKind, observation.SessionKind),
+                    Observation(
+                        observation.ProviderObjectKind,
+                        observation.SessionKind,
+                        observation.Status,
+                        captureBefore: observation.CaptureBefore) with
+                    {
+                        FailureClassification = classification
+                    });
+
+                Assert.Equal(
+                    PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification,
+                    rejection.Reason);
+            }
+    }
+
+    [Fact]
+    public void UnknownFailureClassificationFailsClosed()
+    {
+        var rejection = EvaluateRejection(
+            Attempt(StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
+            Observation(
+                StripeProviderObjectKind.PaymentIntent,
+                PaymentSessionKind.Payment,
+                "requires_payment_method") with
+            {
+                FailureClassification = (ProviderFailureClassification)int.MaxValue
+            });
+
+        Assert.Equal(
+            PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification,
+            rejection.Reason);
+    }
+
     private static IEnumerable<(
         StripeProviderObjectKind ProviderObjectKind,
         PaymentSessionKind? SessionKind,
