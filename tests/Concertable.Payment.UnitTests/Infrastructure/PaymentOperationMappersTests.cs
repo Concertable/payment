@@ -94,6 +94,38 @@ public sealed class PaymentOperationMappersTests
         PaymentOperationFailureCode expected) =>
         Assert.Equal(expected, source.ToPaymentOperationFailureCode());
 
+    [Theory]
+    [MemberData(nameof(FailureCodes))]
+    public void ToPaymentOperationFailure_KnownCode_DerivesPublishedMessage(
+        Proto.PaymentOperationFailureCode source,
+        PaymentOperationFailureCode expected)
+    {
+        var failure = new Proto.PaymentOperationFailure
+        {
+            Code = source,
+            Message = nameof(ToPaymentOperationFailure_KnownCode_DerivesPublishedMessage)
+        };
+
+        var mapped = failure.ToPaymentOperationFailure();
+
+        Assert.Equal(PaymentOperationFailure.FromCode(expected), mapped);
+        Assert.NotEqual(failure.Message, mapped.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(999)]
+    public void ToPaymentOperationFailure_UnknownCode_Throws(int code)
+    {
+        var failure = new Proto.PaymentOperationFailure
+        {
+            Code = (Proto.PaymentOperationFailureCode)code,
+            Message = nameof(ToPaymentOperationFailure_UnknownCode_Throws)
+        };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => failure.ToPaymentOperationFailure());
+    }
+
     [Fact]
     public void EnumMappers_UnspecifiedValues_Throw()
     {
