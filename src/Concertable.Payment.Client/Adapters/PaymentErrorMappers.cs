@@ -39,6 +39,19 @@ internal static class PaymentErrorMappers
             commissionErrorCases.Select(error =>
                 (PaymentError)new PaymentError.CommissionFailure(error))));
 
+    private static readonly FrozenDictionary<string, PaymentOperationError> paymentOperationErrors =
+        Index(new PaymentOperationError[]
+        {
+            new PaymentOperationError.PaymentMethodRequired(),
+            new PaymentOperationError.AuthenticationRequired(),
+            new PaymentOperationError.Declined(),
+            new PaymentOperationError.Expired(),
+            new PaymentOperationError.Canceled(),
+            new PaymentOperationError.OperationConflict(),
+            new PaymentOperationError.ProviderUnavailable(),
+            new PaymentOperationError.Unknown()
+        });
+
     private static readonly FrozenDictionary<string, ManagerPaymentError> managerPaymentErrors =
         Index(Composite<ManagerPaymentError>(
             error => new ManagerPaymentError.PaymentFailure(error),
@@ -88,6 +101,12 @@ internal static class PaymentErrorMappers
 
     internal static PaymentError ToPaymentError(this RpcException exception) =>
         ToError(exception, paymentErrors);
+
+    extension(RpcException exception)
+    {
+        internal PaymentOperationError ToPaymentOperationError() =>
+            ToError(exception, paymentOperationErrors);
+    }
 
     internal static ManagerPaymentError ToManagerPaymentError(this RpcException exception) =>
         ToError(exception, managerPaymentErrors);
