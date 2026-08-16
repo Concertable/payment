@@ -90,6 +90,23 @@ public sealed partial class ProviderContractInventoryTests
             """,
             null,
             "stripeClient.RequestAsync"
+        },
+        {
+            """
+            using Stripe;
+
+            namespace Example;
+
+            public sealed class Adapter(RefundService refundService)
+            {
+                public void Execute()
+                {
+                    _ = refundService.Create(null!);
+                }
+            }
+            """,
+            null,
+            "refundService.Create"
         }
     };
 
@@ -255,8 +272,7 @@ public sealed partial class ProviderContractInventoryTests
                 foreach (var invocation in root.DescendantNodes().OfType<InvocationExpressionSyntax>())
                 {
                     if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess
-                        || !memberAccess.Name.Identifier.ValueText.EndsWith("Async", StringComparison.Ordinal)
-                        || !IsStripeSdkType(semanticModel.GetTypeInfo(memberAccess.Expression).Type))
+                        || !IsStripeApiType(semanticModel.GetTypeInfo(memberAccess.Expression).Type))
                         continue;
 
                     yield return new DiscoveredEntryPoint(
@@ -273,9 +289,17 @@ public sealed partial class ProviderContractInventoryTests
         }
     }
 
-    private static bool IsStripeSdkType(ITypeSymbol? type) =>
-        type?.ContainingNamespace.ToDisplayString() is "Stripe"
-            || type?.ContainingNamespace.ToDisplayString().StartsWith("Stripe.", StringComparison.Ordinal) == true;
+    private static bool IsStripeApiType(ITypeSymbol? type)
+    {
+        for (var current = type as INamedTypeSymbol; current is not null; current = current.BaseType)
+        {
+            if (current.ContainingNamespace?.ToDisplayString() is "Stripe"
+                && current.MetadataName is "Service" or "Service`1" or "StripeClient")
+                return true;
+        }
+
+        return false;
+    }
 
     private static string FindContainingMember(InvocationExpressionSyntax invocation) =>
         invocation.Ancestors().OfType<MethodDeclarationSyntax>().FirstOrDefault()?.Identifier.ValueText
