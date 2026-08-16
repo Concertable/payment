@@ -1,11 +1,24 @@
 using Reunion.Errors;
 using Concertable.Payment.Application.Errors;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.UnitTests.Contracts;
 
 public sealed class PaymentErrorDefinitionTests
 {
+    public static TheoryData<PaymentOperationFailureCode, PaymentOperationError> OperationFailures => new()
+    {
+        { PaymentOperationFailureCode.PaymentMethodRequired, new PaymentOperationError.PaymentMethodRequired() },
+        { PaymentOperationFailureCode.AuthenticationRequired, new PaymentOperationError.AuthenticationRequired() },
+        { PaymentOperationFailureCode.Declined, new PaymentOperationError.Declined() },
+        { PaymentOperationFailureCode.Expired, new PaymentOperationError.Expired() },
+        { PaymentOperationFailureCode.Canceled, new PaymentOperationError.Canceled() },
+        { PaymentOperationFailureCode.OperationConflict, new PaymentOperationError.OperationConflict() },
+        { PaymentOperationFailureCode.ProviderUnavailable, new PaymentOperationError.ProviderUnavailable() },
+        { PaymentOperationFailureCode.Unknown, new PaymentOperationError.Unknown() }
+    };
+
     public static TheoryData<IError, string, string, ErrorKind> Cases => new()
     {
         { new PaymentError.PayerNotFound(), "payment.payer_not_found", "The payer account was not found.", ErrorKind.NotFound },
@@ -72,4 +85,18 @@ public sealed class PaymentErrorDefinitionTests
         Assert.Equal(expectedMessage, definition.Message);
         Assert.Equal(expectedKind, definition.Kind);
     }
+
+    [Theory]
+    [MemberData(nameof(OperationFailures))]
+    public void FromCode_KnownFailure_UsesErrorDefinition(
+        PaymentOperationFailureCode code,
+        PaymentOperationError error) =>
+        Assert.Equal(
+            new PaymentOperationFailure(code, error.Definition.Message),
+            PaymentOperationFailure.FromCode(code));
+
+    [Fact]
+    public void FromCode_UnknownFailure_Throws() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PaymentOperationFailure.FromCode((PaymentOperationFailureCode)999));
 }
