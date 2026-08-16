@@ -140,14 +140,14 @@ The closed state vocabulary is `Creating`, `RequiresPaymentMethod`, `RequiresCon
 
 | Provider object | Provider status | Normalized state | Constraint |
 | --- | --- | --- | --- |
-| PaymentIntent | `requires_payment_method` | `RequiresPaymentMethod` | A `payment_failed` event does not override this recoverable current-object truth. |
+| PaymentIntent | `requires_payment_method` | `RequiresPaymentMethod` | A `payment_failed` event does not override this recoverable current-object truth; an internal classified decline attaches the closed `Declined` failure without carrying provider detail. |
 | PaymentIntent | `requires_confirmation` | `RequiresConfirmation` | Confirmation is still required. |
 | PaymentIntent | `requires_action` | `RequiresAction` | Consumer action is required. |
 | PaymentIntent | `processing` | `Processing` | Reconciliation remains authoritative. |
 | PaymentIntent | `requires_capture` | `Authorized` | Legal only for `Authorization`; persist provider `capture_before`. |
 | PaymentIntent | `succeeded` | `Succeeded` | Terminal attempt. |
 | PaymentIntent | `canceled` | `Canceled` | Terminal attempt; reason determines operation retryability. |
-| SetupIntent | `requires_payment_method` | `RequiresPaymentMethod` | Recoverable setup failure. |
+| SetupIntent | `requires_payment_method` | `RequiresPaymentMethod` | Recoverable setup failure; an internal classified decline attaches the closed `Declined` failure without carrying provider detail. |
 | SetupIntent | `requires_confirmation` | `RequiresConfirmation` | Confirmation is still required. |
 | SetupIntent | `requires_action` | `RequiresAction` | Consumer action is required. |
 | SetupIntent | `processing` | `Processing` | Reconciliation remains authoritative. |
