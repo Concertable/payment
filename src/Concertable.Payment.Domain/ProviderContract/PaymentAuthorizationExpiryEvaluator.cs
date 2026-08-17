@@ -21,8 +21,7 @@ internal static class PaymentAuthorizationExpiryEvaluator
         DateTimeOffset observedAt,
         bool providerConfirmedUncaptured)
     {
-        if (current.ProviderObjectKind != StripeProviderObjectKind.PaymentIntent
-            || current.SessionKind != PaymentSessionKind.Authorization
+        if (current.Context is not PaymentProviderOperationContext.Authorization
             || current.State != PaymentOperationState.Authorized
             || current.CaptureBefore is null)
         {

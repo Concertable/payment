@@ -169,7 +169,7 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
     {
         var current = Attempt(state) with
         {
-            SessionKind = sessionKind,
+            Context = OperationContext(sessionKind),
             CaptureBefore = hasCaptureBefore ? captureBefore : null
         };
         var result = PaymentAuthorizationExpiryEvaluator.Evaluate(
@@ -229,7 +229,7 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
     private static PaymentProviderAttempt AuthorizationAttempt() =>
         Attempt(PaymentOperationState.Authorized) with
         {
-            SessionKind = PaymentSessionKind.Authorization,
+            Context = new PaymentProviderOperationContext.Authorization(),
             CaptureBefore = captureBefore
         };
 
@@ -240,9 +240,8 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
             operationId,
             attemptId,
             4,
-            StripeProviderObjectKind.PaymentIntent,
+            new PaymentProviderOperationContext.Payment(),
             "pi_test",
-            PaymentSessionKind.Payment,
             state,
             "fingerprint-v1",
             Failure: failure);
@@ -253,14 +252,30 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
         DateTimeOffset observedAt) =>
         new(
             StripeProviderContractBaseline.ApiVersion,
-            current.ProviderObjectKind,
+            StripeProviderObjectKind.PaymentIntent,
             current.ProviderObjectId,
             current.OperationId,
             current.AttemptId,
             current.Revision,
-            current.SessionKind,
+            SessionKind(current.Context),
             status,
             observedAt);
+
+    private static PaymentProviderOperationContext OperationContext(PaymentSessionKind sessionKind) =>
+        sessionKind switch
+        {
+            PaymentSessionKind.Payment => new PaymentProviderOperationContext.Payment(),
+            PaymentSessionKind.Authorization => new PaymentProviderOperationContext.Authorization(),
+            _ => throw new ArgumentOutOfRangeException(nameof(sessionKind))
+        };
+
+    private static PaymentSessionKind SessionKind(PaymentProviderOperationContext context) =>
+        context switch
+        {
+            PaymentProviderOperationContext.Payment => PaymentSessionKind.Payment,
+            PaymentProviderOperationContext.Authorization => PaymentSessionKind.Authorization,
+            _ => throw new ArgumentOutOfRangeException(nameof(context))
+        };
 
     private static PaymentOperationRetryDecision EvaluateRetrySuccess(
         PaymentProviderAttempt current,

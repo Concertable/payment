@@ -200,7 +200,7 @@ public sealed class StripeOperationTransitionEvaluatorTests
     public void ProviderObjectMustMatchTheSessionProduct()
     {
         var rejection = EvaluateRejection(
-            Attempt(StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.PaymentMethodSetup),
+            Attempt(StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment),
             Observation(
                 StripeProviderObjectKind.PaymentIntent,
                 PaymentSessionKind.PaymentMethodSetup,
@@ -701,9 +701,8 @@ public sealed class StripeOperationTransitionEvaluatorTests
             operationId,
             attemptId,
             1,
-            providerObjectKind,
+            OperationContext(providerObjectKind, sessionKind),
             ProviderObjectId(providerObjectKind),
-            sessionKind,
             state,
             "fingerprint-v1",
             lastProviderStatus,
@@ -734,6 +733,23 @@ public sealed class StripeOperationTransitionEvaluatorTests
             StripeProviderObjectKind.SetupIntent => "seti_test",
             StripeProviderObjectKind.Refund => "re_test",
             _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind))
+        };
+
+    private static PaymentProviderOperationContext OperationContext(
+        StripeProviderObjectKind providerObjectKind,
+        PaymentSessionKind? sessionKind) =>
+        (providerObjectKind, sessionKind) switch
+        {
+            (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment) =>
+                new PaymentProviderOperationContext.Payment(),
+            (StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Authorization) =>
+                new PaymentProviderOperationContext.Authorization(),
+            (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodSetup) =>
+                new PaymentProviderOperationContext.PaymentMethodSetup(),
+            (StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodVerification) =>
+                new PaymentProviderOperationContext.PaymentMethodVerification(),
+            (StripeProviderObjectKind.Refund, null) => new PaymentProviderOperationContext.Refund(),
+            _ => throw new ArgumentOutOfRangeException(nameof(sessionKind))
         };
 
     private static PaymentOperationTransition EvaluateSuccess(
