@@ -84,38 +84,67 @@ internal static class PaymentErrorMappers
         }.Concat(paymentErrors.Values.Select(error =>
             (EscrowRefundError)new EscrowRefundError.PaymentFailure(error))));
 
-    internal static bool HasOperationErrorDetail(this RpcException exception) =>
-        exception.Trailers.Any(entry => entry.Key == TrailerKey && entry.IsBinary);
-
-    internal static CommissionError ToCommissionError(this RpcException exception) =>
-        ToError(exception, commissionErrors);
-
-    internal static PaymentError ToPaymentError(this RpcException exception) =>
-        ToError(exception, paymentErrors);
-
     extension(RpcException exception)
     {
+        internal bool HasOperationErrorDetail() =>
+            exception.Trailers.Any(entry => entry.Key == TrailerKey && entry.IsBinary);
+
+        internal CommissionError ToCommissionError() =>
+            ToError(exception, commissionErrors);
+
+        internal PaymentError ToPaymentError() =>
+            ToError(exception, paymentErrors);
+
         internal PaymentOperationError ToPaymentOperationError() =>
             ToError(exception, paymentOperationErrors);
+
+        internal ManagerPaymentError ToManagerPaymentError() =>
+            ToError(exception, managerPaymentErrors);
+
+        internal HoldSessionError ToHoldSessionError() =>
+            ToError(exception, holdSessionErrors);
+
+        internal EscrowDepositError ToEscrowDepositError() =>
+            ToError(exception, escrowDepositErrors);
+
+        internal EscrowCaptureError ToEscrowCaptureError() =>
+            ToError(exception, escrowCaptureErrors);
+
+        internal EscrowReleaseError ToEscrowReleaseError() =>
+            ToError(exception, escrowReleaseErrors);
+
+        internal EscrowRefundError ToEscrowRefundError() =>
+            ToError(exception, escrowRefundErrors);
+
+        private Proto.OperationErrorDetail ToOperationErrorDetail()
+        {
+            var entry = exception.Trailers.First(item => item.Key == TrailerKey && item.IsBinary);
+
+            try
+            {
+                return Proto.OperationErrorDetail.Parser.ParseFrom(entry.ValueBytes);
+            }
+            catch (InvalidProtocolBufferException)
+            {
+                throw exception;
+            }
+        }
     }
 
-    internal static ManagerPaymentError ToManagerPaymentError(this RpcException exception) =>
-        ToError(exception, managerPaymentErrors);
-
-    internal static HoldSessionError ToHoldSessionError(this RpcException exception) =>
-        ToError(exception, holdSessionErrors);
-
-    internal static EscrowDepositError ToEscrowDepositError(this RpcException exception) =>
-        ToError(exception, escrowDepositErrors);
-
-    internal static EscrowCaptureError ToEscrowCaptureError(this RpcException exception) =>
-        ToError(exception, escrowCaptureErrors);
-
-    internal static EscrowReleaseError ToEscrowReleaseError(this RpcException exception) =>
-        ToError(exception, escrowReleaseErrors);
-
-    internal static EscrowRefundError ToEscrowRefundError(this RpcException exception) =>
-        ToError(exception, escrowRefundErrors);
+    extension(Proto.OperationErrorKind kind)
+    {
+        private bool Matches(ErrorKind expected) =>
+            (kind, expected) switch
+            {
+                (Proto.OperationErrorKind.OperationErrorInvalid, ErrorKind.Invalid) => true,
+                (Proto.OperationErrorKind.OperationErrorNotFound, ErrorKind.NotFound) => true,
+                (Proto.OperationErrorKind.OperationErrorConflict, ErrorKind.Conflict) => true,
+                (Proto.OperationErrorKind.OperationErrorUnauthenticated, ErrorKind.Unauthenticated) => true,
+                (Proto.OperationErrorKind.OperationErrorForbidden, ErrorKind.Forbidden) => true,
+                (Proto.OperationErrorKind.OperationErrorPaymentRequired, ErrorKind.PaymentRequired) => true,
+                _ => false
+            };
+    }
 
     private static FrozenDictionary<string, TError> Index<TError>(IEnumerable<TError> errors)
         where TError : IError =>
@@ -143,29 +172,4 @@ internal static class PaymentErrorMappers
         return error;
     }
 
-    private static Proto.OperationErrorDetail ToOperationErrorDetail(this RpcException exception)
-    {
-        var entry = exception.Trailers.First(item => item.Key == TrailerKey && item.IsBinary);
-
-        try
-        {
-            return Proto.OperationErrorDetail.Parser.ParseFrom(entry.ValueBytes);
-        }
-        catch (InvalidProtocolBufferException)
-        {
-            throw exception;
-        }
-    }
-
-    private static bool Matches(this Proto.OperationErrorKind kind, ErrorKind expected) =>
-        (kind, expected) switch
-        {
-            (Proto.OperationErrorKind.OperationErrorInvalid, ErrorKind.Invalid) => true,
-            (Proto.OperationErrorKind.OperationErrorNotFound, ErrorKind.NotFound) => true,
-            (Proto.OperationErrorKind.OperationErrorConflict, ErrorKind.Conflict) => true,
-            (Proto.OperationErrorKind.OperationErrorUnauthenticated, ErrorKind.Unauthenticated) => true,
-            (Proto.OperationErrorKind.OperationErrorForbidden, ErrorKind.Forbidden) => true,
-            (Proto.OperationErrorKind.OperationErrorPaymentRequired, ErrorKind.PaymentRequired) => true,
-            _ => false
-        };
 }
