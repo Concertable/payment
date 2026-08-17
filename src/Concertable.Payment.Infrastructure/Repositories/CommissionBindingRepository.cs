@@ -7,8 +7,13 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 internal sealed class CommissionBindingRepository
     : GuidRepository<CommissionBindingEntity>, ICommissionBindingRepository
 {
+    private readonly PaymentDbContext context;
+
     public CommissionBindingRepository(PaymentDbContext context)
-        : base(context) { }
+        : base(context)
+    {
+        this.context = context;
+    }
 
     public override Task<CommissionBindingEntity?> GetByIdAsync(
         Guid id,
