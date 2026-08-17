@@ -9,8 +9,13 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 
 internal sealed class TransactionRepository : Repository<TransactionEntity>, ITransactionRepository
 {
+    private readonly PaymentDbContext context;
+
     public TransactionRepository(PaymentDbContext context)
-        : base(context) { }
+        : base(context)
+    {
+        this.context = context;
+    }
 
     public Task<IPagination<TransactionEntity>> GetAsync(IPageParams pageParams, Guid userId)
     {
