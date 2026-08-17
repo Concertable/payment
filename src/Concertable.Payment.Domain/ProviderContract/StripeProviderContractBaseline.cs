@@ -17,30 +17,35 @@ internal static class StripeProviderContractBaseline
     public static readonly FrozenDictionary<StripeProviderObjectKind, FrozenDictionary<string, PaymentOperationState>>
         NormalizedStates = new Dictionary<StripeProviderObjectKind, FrozenDictionary<string, PaymentOperationState>>
         {
-            [StripeProviderObjectKind.PaymentIntent] = Freeze(
-                ("requires_payment_method", PaymentOperationState.RequiresPaymentMethod),
-                ("requires_confirmation", PaymentOperationState.RequiresConfirmation),
-                ("requires_action", PaymentOperationState.RequiresAction),
-                ("processing", PaymentOperationState.Processing),
-                ("requires_capture", PaymentOperationState.Authorized),
-                ("canceled", PaymentOperationState.Canceled),
-                ("succeeded", PaymentOperationState.Succeeded)),
-            [StripeProviderObjectKind.SetupIntent] = Freeze(
-                ("requires_payment_method", PaymentOperationState.RequiresPaymentMethod),
-                ("requires_confirmation", PaymentOperationState.RequiresConfirmation),
-                ("requires_action", PaymentOperationState.RequiresAction),
-                ("processing", PaymentOperationState.Processing),
-                ("canceled", PaymentOperationState.Canceled),
-                ("succeeded", PaymentOperationState.Succeeded)),
-            [StripeProviderObjectKind.Refund] = Freeze(
-                ("pending", PaymentOperationState.Processing),
-                ("requires_action", PaymentOperationState.RequiresAction),
-                ("succeeded", PaymentOperationState.Succeeded),
-                ("failed", PaymentOperationState.Failed),
-                ("canceled", PaymentOperationState.Canceled))
+            [StripeProviderObjectKind.PaymentIntent] =
+                new Dictionary<string, PaymentOperationState>(StringComparer.Ordinal)
+                {
+                    ["requires_payment_method"] = PaymentOperationState.RequiresPaymentMethod,
+                    ["requires_confirmation"] = PaymentOperationState.RequiresConfirmation,
+                    ["requires_action"] = PaymentOperationState.RequiresAction,
+                    ["processing"] = PaymentOperationState.Processing,
+                    ["requires_capture"] = PaymentOperationState.Authorized,
+                    ["canceled"] = PaymentOperationState.Canceled,
+                    ["succeeded"] = PaymentOperationState.Succeeded
+                }.ToFrozenDictionary(StringComparer.Ordinal),
+            [StripeProviderObjectKind.SetupIntent] =
+                new Dictionary<string, PaymentOperationState>(StringComparer.Ordinal)
+                {
+                    ["requires_payment_method"] = PaymentOperationState.RequiresPaymentMethod,
+                    ["requires_confirmation"] = PaymentOperationState.RequiresConfirmation,
+                    ["requires_action"] = PaymentOperationState.RequiresAction,
+                    ["processing"] = PaymentOperationState.Processing,
+                    ["canceled"] = PaymentOperationState.Canceled,
+                    ["succeeded"] = PaymentOperationState.Succeeded
+                }.ToFrozenDictionary(StringComparer.Ordinal),
+            [StripeProviderObjectKind.Refund] =
+                new Dictionary<string, PaymentOperationState>(StringComparer.Ordinal)
+                {
+                    ["pending"] = PaymentOperationState.Processing,
+                    ["requires_action"] = PaymentOperationState.RequiresAction,
+                    ["succeeded"] = PaymentOperationState.Succeeded,
+                    ["failed"] = PaymentOperationState.Failed,
+                    ["canceled"] = PaymentOperationState.Canceled
+                }.ToFrozenDictionary(StringComparer.Ordinal)
         }.ToFrozenDictionary();
-
-    private static FrozenDictionary<string, PaymentOperationState> Freeze(
-        params (string Status, PaymentOperationState State)[] states) =>
-        states.ToFrozenDictionary(entry => entry.Status, entry => entry.State, StringComparer.Ordinal);
 }
