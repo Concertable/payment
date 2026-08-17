@@ -4,72 +4,52 @@ namespace Concertable.Payment.Domain.ProviderContract;
 
 internal static class StripeProviderObservationMappers
 {
-    private static readonly FrozenDictionary<PaymentOperationState, PaymentOperationTerminalDisposition>
-        terminalDispositions = new Dictionary<PaymentOperationState, PaymentOperationTerminalDisposition>
+    private static readonly FrozenDictionary<
+        (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind),
+        PaymentProviderOperationContext> operationContexts =
+        new Dictionary<
+            (StripeProviderObjectKind ProviderObjectKind, PaymentSessionKind? SessionKind),
+            PaymentProviderOperationContext>
         {
-            [PaymentOperationState.Creating] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.RequiresPaymentMethod] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.RequiresConfirmation] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.RequiresAction] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.Processing] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.Authorized] = PaymentOperationTerminalDisposition.NonTerminal,
-            [PaymentOperationState.Succeeded] = PaymentOperationTerminalDisposition.OperationTerminal,
-            [PaymentOperationState.Canceled] = PaymentOperationTerminalDisposition.AttemptTerminal,
-            [PaymentOperationState.Failed] = PaymentOperationTerminalDisposition.AttemptTerminal
-        }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<PaymentOperationState, PaymentOperationRetryDisposition>
-        retryDispositions = new Dictionary<PaymentOperationState, PaymentOperationRetryDisposition>
-        {
-            [PaymentOperationState.Creating] = PaymentOperationRetryDisposition.ContinueCurrentAttempt,
-            [PaymentOperationState.RequiresPaymentMethod] = PaymentOperationRetryDisposition.RetryCurrentAttempt,
-            [PaymentOperationState.RequiresConfirmation] = PaymentOperationRetryDisposition.ContinueCurrentAttempt,
-            [PaymentOperationState.RequiresAction] = PaymentOperationRetryDisposition.ContinueCurrentAttempt,
-            [PaymentOperationState.Processing] = PaymentOperationRetryDisposition.Reconcile,
-            [PaymentOperationState.Authorized] = PaymentOperationRetryDisposition.ContinueCurrentAttempt,
-            [PaymentOperationState.Succeeded] = PaymentOperationRetryDisposition.NotRetryable,
-            [PaymentOperationState.Canceled] = PaymentOperationRetryDisposition.NotRetryable,
-            [PaymentOperationState.Failed] = PaymentOperationRetryDisposition.CreateNewAttempt
-        }.ToFrozenDictionary();
-
-    private static readonly FrozenDictionary<PaymentOperationState, PaymentOperationFailureCode> failures =
-        new Dictionary<PaymentOperationState, PaymentOperationFailureCode>
-        {
-            [PaymentOperationState.RequiresPaymentMethod] = PaymentOperationFailureCode.PaymentMethodRequired,
-            [PaymentOperationState.RequiresAction] = PaymentOperationFailureCode.AuthenticationRequired,
-            [PaymentOperationState.Canceled] = PaymentOperationFailureCode.Canceled,
-            [PaymentOperationState.Failed] = PaymentOperationFailureCode.Unknown
+            [(StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Payment)] =
+                new PaymentProviderOperationContext.Payment(),
+            [(StripeProviderObjectKind.PaymentIntent, PaymentSessionKind.Authorization)] =
+                new PaymentProviderOperationContext.Authorization(),
+            [(StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodSetup)] =
+                new PaymentProviderOperationContext.PaymentMethodSetup(),
+            [(StripeProviderObjectKind.SetupIntent, PaymentSessionKind.PaymentMethodVerification)] =
+                new PaymentProviderOperationContext.PaymentMethodVerification(),
+            [(StripeProviderObjectKind.Refund, null)] = new PaymentProviderOperationContext.Refund()
         }.ToFrozenDictionary();
 
     extension(StripeProviderObservation observation)
     {
-        internal Result<NormalizedProviderObservation, PaymentOperationTransitionRejection> ToNormalized(
-            PaymentProviderAttempt current)
+        internal Result<PaymentProviderObservation, PaymentOperationTransitionRejection> ToNormalized(
+            PaymentOperationState currentState)
         {
+            if (!string.Equals(
+                    observation.ApiVersion,
+                    StripeProviderContractBaseline.ApiVersion,
+                    StringComparison.Ordinal))
+            {
+                return Reject(PaymentOperationTransitionRejectionReason.UnsupportedApiVersion, currentState);
+            }
+
             if (!StripeProviderContractBaseline.NormalizedStates.TryGetValue(
                     observation.ProviderObjectKind,
                     out var states)
                 || !states.TryGetValue(observation.Status, out var state))
             {
-                return new PaymentOperationTransitionRejection(
-                    PaymentOperationTransitionRejectionReason.UnknownProviderStatus,
-                    current.State);
+                return Reject(PaymentOperationTransitionRejectionReason.UnknownProviderStatus, currentState);
             }
 
-            if (state == PaymentOperationState.Authorized
-                && observation.SessionKind != PaymentSessionKind.Authorization)
+            if (!operationContexts.TryGetValue(
+                    (observation.ProviderObjectKind, observation.SessionKind),
+                    out var context))
             {
                 return new PaymentOperationTransitionRejection(
                     PaymentOperationTransitionRejectionReason.InvalidProviderObjectForSessionKind,
-                    current.State,
-                    state);
-            }
-
-            if (state == PaymentOperationState.Authorized && observation.CaptureBefore is null)
-            {
-                return new PaymentOperationTransitionRejection(
-                    PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired,
-                    current.State,
+                    currentState,
                     state);
             }
 
@@ -79,47 +59,29 @@ internal static class StripeProviderObservationMappers
             {
                 return new PaymentOperationTransitionRejection(
                     PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification,
-                    current.State,
+                    currentState,
                     state);
             }
 
-            return new NormalizedProviderObservation(
+            return new PaymentProviderObservation(
+                context,
+                observation.ProviderObjectId,
+                observation.OperationId,
+                observation.AttemptId,
+                observation.Revision,
                 state,
-                ToTerminalDisposition(state, observation.IsExplicitConsumerCancellation),
-                retryDispositions[state],
-                ToFailure(state, observation.FailureClassification));
-        }
-
-        internal PaymentOperationTransition ToTransition(
-            PaymentOperationTransitionDisposition disposition,
-            NormalizedProviderObservation normalized) =>
-            new(
-                disposition,
-                normalized.State,
                 observation.Status,
                 observation.ObservedAt,
                 observation.CaptureBefore,
-                normalized.TerminalDisposition,
-                normalized.RetryDisposition,
-                normalized.Failure);
+                observation.FailureClassification == ProviderFailureClassification.Declined
+                    ? PaymentOperationFailureCode.Declined
+                    : null,
+                observation.IsExplicitConsumerCancellation);
+        }
     }
 
-    private static PaymentOperationTerminalDisposition ToTerminalDisposition(
-        PaymentOperationState state,
-        bool isExplicitConsumerCancellation) =>
-        state == PaymentOperationState.Canceled && isExplicitConsumerCancellation
-            ? PaymentOperationTerminalDisposition.OperationTerminal
-            : terminalDispositions[state];
-
-    private static PaymentOperationFailure? ToFailure(
-        PaymentOperationState state,
-        ProviderFailureClassification? failureClassification)
-    {
-        if (failureClassification == ProviderFailureClassification.Declined)
-            return PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined);
-
-        return failures.TryGetValue(state, out var code)
-            ? PaymentOperationFailure.FromCode(code)
-            : null;
-    }
+    private static PaymentOperationTransitionRejection Reject(
+        PaymentOperationTransitionRejectionReason reason,
+        PaymentOperationState currentState) =>
+        new(reason, currentState);
 }
