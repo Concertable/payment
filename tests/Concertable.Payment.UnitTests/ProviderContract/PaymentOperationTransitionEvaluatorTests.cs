@@ -52,6 +52,72 @@ public sealed class PaymentOperationTransitionEvaluatorTests
         Assert.Equal(PaymentOperationTransitionRejectionReason.ProviderObjectMismatch, rejection.Reason);
     }
 
+    [Fact]
+    public void Evaluate_UndefinedCurrentState_RejectsState()
+    {
+        var current = Attempt() with { State = (PaymentOperationState)999 };
+
+        var result = PaymentOperationTransitionEvaluator.Evaluate(
+            current,
+            Observation(PaymentOperationState.Processing));
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidCurrentStateForProviderObject, rejection.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_UndefinedObservedState_RejectsState()
+    {
+        var result = PaymentOperationTransitionEvaluator.Evaluate(
+            Attempt(),
+            Observation((PaymentOperationState)999));
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidProviderObjectForSessionKind, rejection.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_UndefinedFailureClassification_RejectsFailure()
+    {
+        var observation = Observation(PaymentOperationState.RequiresPaymentMethod) with
+        {
+            FailureClassification = (ProviderFailureClassification)999
+        };
+
+        var result = PaymentOperationTransitionEvaluator.Evaluate(Attempt(), observation);
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification, rejection.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_FailureClassificationOnIncompatibleState_RejectsFailure()
+    {
+        var observation = Observation(PaymentOperationState.Processing) with
+        {
+            FailureClassification = ProviderFailureClassification.Declined
+        };
+
+        var result = PaymentOperationTransitionEvaluator.Evaluate(Attempt(), observation);
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidProviderFailureClassification, rejection.Reason);
+    }
+
+    [Fact]
+    public void Evaluate_DeclinedFailureClassification_MapsSafeFailure()
+    {
+        var observation = Observation(PaymentOperationState.RequiresPaymentMethod) with
+        {
+            FailureClassification = ProviderFailureClassification.Declined
+        };
+
+        var transition = EvaluateSuccess(Attempt(), observation);
+
+        Assert.Equal(PaymentOperationFailureCode.Declined, transition.Failure?.Code);
+        Assert.Equal("The payment was declined.", transition.Failure?.Message);
+    }
+
     private static PaymentProviderAttempt Attempt() =>
         new(
             operationId,
