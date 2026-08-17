@@ -164,6 +164,19 @@ recoverable provider-object status exists. An event type alone never manufacture
 strings, a SetupIntent observed for a payment kind, or `requires_capture` observed for a non-
 authorization kind are typed normalization failures and do not mutate persisted state.
 
+### Executable policy boundary
+
+The Stripe adapter accepts raw provider observations, including nullable or invalid session evidence,
+and normalizes only valid product/session pairs into the closed internal operation contexts `Payment`,
+`Authorization`, `PaymentMethodSetup`, `PaymentMethodVerification`, or `Refund`. The provider-neutral
+transition evaluator receives only that normalized observation.
+
+The transition evaluator is the single orchestration entry point for domain identity, provider
+binding, context validity, freshness, persisted-projection equality, terminal protection, and legal
+state edges. Each rule remains receiver-owned and independently testable. Stripe request idempotency,
+webhook event inbox deduplication, persistence concurrency, and outbox delivery remain adapter or
+infrastructure responsibilities rather than domain-transition rules.
+
 ### Legal same-revision edges
 
 Same-state observations are duplicate/no-op results after freshness and identity checks. Every other

@@ -5,6 +5,23 @@ internal enum ProviderFailureClassification
     Declined
 }
 
+internal abstract record PaymentProviderOperationContext
+{
+    private PaymentProviderOperationContext()
+    {
+    }
+
+    internal sealed record Payment : PaymentProviderOperationContext;
+
+    internal sealed record Authorization : PaymentProviderOperationContext;
+
+    internal sealed record PaymentMethodSetup : PaymentProviderOperationContext;
+
+    internal sealed record PaymentMethodVerification : PaymentProviderOperationContext;
+
+    internal sealed record Refund : PaymentProviderOperationContext;
+}
+
 internal enum PaymentOperationTransitionDisposition
 {
     Applied,
@@ -39,9 +56,8 @@ internal sealed record PaymentProviderAttempt(
     Guid OperationId,
     Guid AttemptId,
     long Revision,
-    StripeProviderObjectKind ProviderObjectKind,
+    PaymentProviderOperationContext Context,
     string ProviderObjectId,
-    PaymentSessionKind? SessionKind,
     PaymentOperationState State,
     string RequestFingerprint,
     string? LastProviderStatus = null,
@@ -63,10 +79,24 @@ internal sealed record StripeProviderObservation(
     ProviderFailureClassification? FailureClassification = null,
     bool IsExplicitConsumerCancellation = false);
 
-internal sealed record NormalizedProviderObservation(
+internal sealed record PaymentProviderObservation(
+    PaymentProviderOperationContext Context,
+    string ProviderObjectId,
+    Guid OperationId,
+    Guid AttemptId,
+    long Revision,
     PaymentOperationState State,
-    PaymentOperationTerminalDisposition TerminalDisposition,
-    PaymentOperationRetryDisposition RetryDisposition,
+    string ProviderStatus,
+    DateTimeOffset ObservedAt,
+    DateTimeOffset? CaptureBefore,
+    PaymentOperationFailureCode? FailureCode,
+    bool IsExplicitConsumerCancellation);
+
+internal sealed record PaymentOperationPersistedProjection(
+    PaymentOperationState State,
+    string? ProviderStatus,
+    DateTimeOffset? ObservedAt,
+    DateTimeOffset? CaptureBefore,
     PaymentOperationFailure? Failure);
 
 internal sealed record PaymentOperationTransition(
