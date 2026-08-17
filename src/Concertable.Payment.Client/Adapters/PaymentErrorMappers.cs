@@ -43,6 +43,17 @@ internal static class PaymentErrorMappers
     private static readonly FrozenDictionary<string, PaymentOperationError> paymentOperationErrors =
         Index(Enum.GetValues<PaymentOperationFailureCode>().Select(PaymentOperationError.FromCode));
 
+    private static readonly FrozenDictionary<Proto.OperationErrorKind, ErrorKind> operationErrorKinds =
+        new Dictionary<Proto.OperationErrorKind, ErrorKind>
+        {
+            [Proto.OperationErrorKind.OperationErrorInvalid] = ErrorKind.Invalid,
+            [Proto.OperationErrorKind.OperationErrorNotFound] = ErrorKind.NotFound,
+            [Proto.OperationErrorKind.OperationErrorConflict] = ErrorKind.Conflict,
+            [Proto.OperationErrorKind.OperationErrorUnauthenticated] = ErrorKind.Unauthenticated,
+            [Proto.OperationErrorKind.OperationErrorForbidden] = ErrorKind.Forbidden,
+            [Proto.OperationErrorKind.OperationErrorPaymentRequired] = ErrorKind.PaymentRequired
+        }.ToFrozenDictionary();
+
     private static readonly FrozenDictionary<string, ManagerPaymentError> managerPaymentErrors =
         Index(Composite<ManagerPaymentError>(
             error => new ManagerPaymentError.PaymentFailure(error),
@@ -133,17 +144,10 @@ internal static class PaymentErrorMappers
 
     extension(Proto.OperationErrorKind kind)
     {
-        private bool Matches(ErrorKind expected) =>
-            (kind, expected) switch
-            {
-                (Proto.OperationErrorKind.OperationErrorInvalid, ErrorKind.Invalid) => true,
-                (Proto.OperationErrorKind.OperationErrorNotFound, ErrorKind.NotFound) => true,
-                (Proto.OperationErrorKind.OperationErrorConflict, ErrorKind.Conflict) => true,
-                (Proto.OperationErrorKind.OperationErrorUnauthenticated, ErrorKind.Unauthenticated) => true,
-                (Proto.OperationErrorKind.OperationErrorForbidden, ErrorKind.Forbidden) => true,
-                (Proto.OperationErrorKind.OperationErrorPaymentRequired, ErrorKind.PaymentRequired) => true,
-                _ => false
-            };
+        private ErrorKind? ToErrorKind() =>
+            operationErrorKinds.TryGetValue(kind, out var errorKind)
+                ? errorKind
+                : null;
     }
 
     private static FrozenDictionary<string, TError> Index<TError>(IEnumerable<TError> errors)
@@ -164,7 +168,7 @@ internal static class PaymentErrorMappers
 
         if (!errors.TryGetValue(detail.Code, out var error)
             || detail.Message != error.Definition.Message
-            || !detail.Kind.Matches(error.Definition.Kind))
+            || detail.Kind.ToErrorKind() != error.Definition.Kind)
         {
             throw new PaymentContractMismatchException(detail.Code, exception);
         }

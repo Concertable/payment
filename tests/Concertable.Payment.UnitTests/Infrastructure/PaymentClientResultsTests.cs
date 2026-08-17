@@ -103,6 +103,7 @@ public sealed class PaymentClientResultsTests
     [Theory]
     [InlineData("Changed.", 5)]
     [InlineData("The payment was rejected.", 0)]
+    [InlineData("The payment was rejected.", 999)]
     public async Task ExecuteAsync_ChangedPaymentContract_ThrowsContractMismatch(string message, int kind)
     {
         var exception = RpcFailure(Detail("payment.rejected", message, kind));
