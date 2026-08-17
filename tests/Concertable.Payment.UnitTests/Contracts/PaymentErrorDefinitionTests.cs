@@ -1,11 +1,24 @@
 using Reunion.Errors;
 using Concertable.Payment.Application.Errors;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.UnitTests.Contracts;
 
 public sealed class PaymentErrorDefinitionTests
 {
+    public static TheoryData<PaymentOperationFailureCode, PaymentOperationError> OperationFailures => new()
+    {
+        { PaymentOperationFailureCode.PaymentMethodRequired, new PaymentOperationError.PaymentMethodRequired() },
+        { PaymentOperationFailureCode.AuthenticationRequired, new PaymentOperationError.AuthenticationRequired() },
+        { PaymentOperationFailureCode.Declined, new PaymentOperationError.Declined() },
+        { PaymentOperationFailureCode.Expired, new PaymentOperationError.Expired() },
+        { PaymentOperationFailureCode.Canceled, new PaymentOperationError.Canceled() },
+        { PaymentOperationFailureCode.OperationConflict, new PaymentOperationError.OperationConflict() },
+        { PaymentOperationFailureCode.ProviderUnavailable, new PaymentOperationError.ProviderUnavailable() },
+        { PaymentOperationFailureCode.Unknown, new PaymentOperationError.Unknown() }
+    };
+
     public static TheoryData<IError, string, string, ErrorKind> Cases => new()
     {
         { new PaymentError.PayerNotFound(), "payment.payer_not_found", "The payer account was not found.", ErrorKind.NotFound },
@@ -14,6 +27,14 @@ public sealed class PaymentErrorDefinitionTests
         { new PaymentError.RecipientUnavailable(), "payment.recipient_unavailable", "The recipient account is not ready for payments.", ErrorKind.Conflict },
         { new PaymentError.PaymentRejected(), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
         { new PaymentError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
+        { new PaymentOperationError.PaymentMethodRequired(), "payment.operation.payment_method_required", "A usable payment method is required.", ErrorKind.PaymentRequired },
+        { new PaymentOperationError.AuthenticationRequired(), "payment.operation.authentication_required", "Payment authentication is required.", ErrorKind.PaymentRequired },
+        { new PaymentOperationError.Declined(), "payment.operation.declined", "The payment was declined.", ErrorKind.PaymentRequired },
+        { new PaymentOperationError.Expired(), "payment.operation.expired", "The payment attempt expired.", ErrorKind.Conflict },
+        { new PaymentOperationError.Canceled(), "payment.operation.canceled", "The payment operation was canceled.", ErrorKind.Conflict },
+        { new PaymentOperationError.OperationConflict(), "payment.operation.conflict", "The operation identity conflicts with an existing payment operation.", ErrorKind.Conflict },
+        { new PaymentOperationError.ProviderUnavailable(), "payment.operation.provider_unavailable", "The payment provider state is temporarily unavailable.", ErrorKind.Conflict },
+        { new PaymentOperationError.Unknown(), "payment.operation.unknown", "The payment state could not be safely classified.", ErrorKind.Conflict },
         { new CommissionError.CurrencyMismatch(), "payment.commission_currency_mismatch", "The commission currency does not match this payment.", ErrorKind.Invalid },
         { new CommissionError.PricingChanged(), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
         { new CommissionError.BindingNotFound(), "payment.commission_binding_not_found", "The commission binding was not found.", ErrorKind.NotFound },
@@ -64,4 +85,30 @@ public sealed class PaymentErrorDefinitionTests
         Assert.Equal(expectedMessage, definition.Message);
         Assert.Equal(expectedKind, definition.Kind);
     }
+
+    [Theory]
+    [MemberData(nameof(OperationFailures))]
+    public void ErrorFromCode_KnownFailure_ReturnsTypedError(
+        PaymentOperationFailureCode code,
+        PaymentOperationError expected) =>
+        Assert.Equal(expected, PaymentOperationError.FromCode(code));
+
+    [Theory]
+    [MemberData(nameof(OperationFailures))]
+    public void FailureFromCode_KnownFailure_UsesErrorDefinition(
+        PaymentOperationFailureCode code,
+        PaymentOperationError error) =>
+        Assert.Equal(
+            new PaymentOperationFailure(code, error.Definition.Message),
+            PaymentOperationFailure.FromCode(code));
+
+    [Fact]
+    public void ErrorFromCode_UnknownFailure_Throws() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PaymentOperationError.FromCode((PaymentOperationFailureCode)999));
+
+    [Fact]
+    public void FailureFromCode_UnknownFailure_Throws() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PaymentOperationFailure.FromCode((PaymentOperationFailureCode)999));
 }
