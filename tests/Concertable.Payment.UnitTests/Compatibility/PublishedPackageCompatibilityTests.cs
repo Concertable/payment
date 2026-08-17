@@ -18,7 +18,7 @@ public sealed class PublishedPackageCompatibilityTests
     public void ContractsPublicApi_CurrentSurfaceIsAdditive() =>
         AssertAdditiveBaseline(
             "Concertable.Payment.Contracts.public-api.txt",
-            PublicApiSnapshot.Create(typeof(PaymentOperationStateChangedV1).Assembly));
+            PublicApiSnapshot.Create(typeof(PaymentOperationStateChanged).Assembly));
 
     [Fact]
     public void ClientPublicApi_CurrentSurfaceIsAdditive() =>
@@ -30,7 +30,7 @@ public sealed class PublishedPackageCompatibilityTests
     public void MessageUrns_CurrentSurfacePreservesPublishedValues() =>
         AssertAdditiveBaseline(
             "Concertable.Payment.Contracts.message-urns.txt",
-            PublicApiSnapshot.CreateMessageUrns(typeof(PaymentOperationStateChangedV1).Assembly));
+            PublicApiSnapshot.CreateMessageUrns(typeof(PaymentOperationStateChanged).Assembly));
 
     [Fact]
     public void ProtobufDescriptor_CurrentSchemaIsAdditive()
@@ -47,7 +47,7 @@ public sealed class PublishedPackageCompatibilityTests
     {
         var assemblies = new[]
         {
-            typeof(PaymentOperationStateChangedV1).Assembly,
+            typeof(PaymentOperationStateChanged).Assembly,
             typeof(ClientSnapshot).Assembly
         };
 

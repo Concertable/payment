@@ -14,7 +14,7 @@ public sealed class PaymentOperationContractTests
     public void StateChanged_MessageTypeReturnsPublishedContract() =>
         Assert.Equal(
             "concertable.payment.payment-operation-state-changed.v1",
-            MessageTypeAttribute.Resolve(typeof(PaymentOperationStateChangedV1)));
+            MessageTypeAttribute.Resolve(typeof(PaymentOperationStateChanged)));
 
     [Fact]
     public void ContractEnums_HaveStableNonZeroValues()
@@ -68,7 +68,7 @@ public sealed class PaymentOperationContractTests
 
     [Theory]
     [InlineData(typeof(PaymentOperationIdentity))]
-    [InlineData(typeof(PaymentOperationStateChangedV1))]
+    [InlineData(typeof(PaymentOperationStateChanged))]
     [InlineData(typeof(ClientSnapshot))]
     public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type)
     {
