@@ -49,6 +49,12 @@ internal static class PaymentOperationStateExtensions
             [PaymentOperationState.Failed] = PaymentOperationFailureCode.Unknown
         }.ToFrozenDictionary();
 
+    private static readonly FrozenDictionary<ProviderFailureClassification, PaymentOperationFailureCode>
+        providerFailures = new Dictionary<ProviderFailureClassification, PaymentOperationFailureCode>
+        {
+            [ProviderFailureClassification.Declined] = PaymentOperationFailureCode.Declined
+        }.ToFrozenDictionary();
+
     extension(PaymentOperationState state)
     {
         internal bool IsTerminal() => terminalStates.Contains(state);
@@ -60,10 +66,10 @@ internal static class PaymentOperationStateExtensions
 
         internal PaymentOperationRetryDisposition ToRetryDisposition() => retryDispositions[state];
 
-        internal PaymentOperationFailure? ToFailure(PaymentOperationFailureCode? providerFailureCode)
+        internal PaymentOperationFailure? ToFailure(ProviderFailureClassification? providerFailureClassification)
         {
-            if (providerFailureCode is { } code)
-                return PaymentOperationFailure.FromCode(code);
+            if (providerFailureClassification is { } classification)
+                return PaymentOperationFailure.FromCode(providerFailures[classification]);
 
             return failures.TryGetValue(state, out var defaultCode)
                 ? PaymentOperationFailure.FromCode(defaultCode)

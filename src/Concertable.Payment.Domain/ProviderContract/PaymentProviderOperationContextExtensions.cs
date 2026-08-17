@@ -4,8 +4,12 @@ internal static class PaymentProviderOperationContextExtensions
 {
     extension(PaymentProviderOperationContext context)
     {
-        internal bool SupportsState(PaymentOperationState state) =>
-            context switch
+        internal bool SupportsState(PaymentOperationState state)
+        {
+            if (!Enum.IsDefined(state))
+                return false;
+
+            return context switch
             {
                 PaymentProviderOperationContext.Payment => state != PaymentOperationState.Authorized,
                 PaymentProviderOperationContext.Authorization => true,
@@ -19,6 +23,7 @@ internal static class PaymentProviderOperationContextExtensions
                     or PaymentOperationState.Failed,
                 _ => false
             };
+        }
 
         internal bool HasSameProviderProductAs(PaymentProviderOperationContext other) =>
             (context, other) switch
