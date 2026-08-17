@@ -3,7 +3,7 @@ using Concertable.Messaging.Contracts;
 namespace Concertable.Payment.Contracts.Events;
 
 [MessageType("concertable.payment.payment-operation-state-changed.v1")]
-public sealed record PaymentOperationStateChangedV1(
+public sealed record PaymentOperationStateChanged(
     PaymentOperationIdentity Identity,
     PaymentSessionKind SessionKind,
     PaymentOperationState State,
