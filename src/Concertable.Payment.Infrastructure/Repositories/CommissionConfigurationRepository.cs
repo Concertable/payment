@@ -6,8 +6,13 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 internal sealed class CommissionConfigurationRepository
     : GuidRepository<CommissionConfigurationEntity>, ICommissionConfigurationRepository
 {
+    private readonly PaymentDbContext context;
+
     public CommissionConfigurationRepository(PaymentDbContext context)
-        : base(context) { }
+        : base(context)
+    {
+        this.context = context;
+    }
 
     public Task<CommissionConfigurationEntity> GetOrCreateAsync(
         CommissionConfigurationEntity candidate,

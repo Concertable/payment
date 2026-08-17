@@ -6,8 +6,13 @@ namespace Concertable.Payment.Infrastructure.Repositories;
 internal sealed class EscrowRepository
     : Repository<EscrowEntity>, IEscrowRepository
 {
+    private readonly PaymentDbContext context;
+
     public EscrowRepository(PaymentDbContext context)
-        : base(context) { }
+        : base(context)
+    {
+        this.context = context;
+    }
 
     public Task<EscrowEntity?> GetWithRefundsByIdAsync(int id, CancellationToken ct = default) =>
         context.Escrows
