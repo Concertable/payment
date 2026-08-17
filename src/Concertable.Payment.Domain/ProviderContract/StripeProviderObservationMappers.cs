@@ -73,9 +73,7 @@ internal static class StripeProviderObservationMappers
                 observation.Status,
                 observation.ObservedAt,
                 observation.CaptureBefore,
-                observation.FailureClassification == ProviderFailureClassification.Declined
-                    ? PaymentOperationFailureCode.Declined
-                    : null,
+                observation.FailureClassification,
                 observation.IsExplicitConsumerCancellation);
         }
     }

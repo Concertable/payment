@@ -14,9 +14,13 @@ internal static class PaymentOperationTransitionEvaluator
         if (providerBindingRejection is not null)
             return providerBindingRejection;
 
-        var operationContextRejection = observation.ValidateContextAgainst(current);
-        if (operationContextRejection is not null)
-            return operationContextRejection;
+        var stateRejection = observation.ValidateStateAgainst(current);
+        if (stateRejection is not null)
+            return stateRejection;
+
+        var failureRejection = observation.ValidateFailureAgainst(current);
+        if (failureRejection is not null)
+            return failureRejection;
 
         var freshnessRejection = observation.ValidateFreshnessAgainst(current);
         if (freshnessRejection is not null)

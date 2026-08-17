@@ -89,7 +89,7 @@ internal sealed record PaymentProviderObservation(
     string ProviderStatus,
     DateTimeOffset ObservedAt,
     DateTimeOffset? CaptureBefore,
-    PaymentOperationFailureCode? FailureCode,
+    ProviderFailureClassification? FailureClassification,
     bool IsExplicitConsumerCancellation);
 
 internal sealed record PaymentOperationPersistedProjection(
