@@ -21,7 +21,7 @@ internal static class PaymentProviderObservationMappers
                 observation.ProviderStatus,
                 observation.ObservedAt,
                 observation.CaptureBefore,
-                observation.State.ToFailure(observation.FailureCode));
+                observation.State.ToFailure(observation.FailureClassification));
 
         internal PaymentOperationTransition ToTransition(PaymentOperationTransitionDisposition disposition) =>
             new(
@@ -32,6 +32,6 @@ internal static class PaymentProviderObservationMappers
                 observation.CaptureBefore,
                 observation.State.ToTerminalDisposition(observation.IsExplicitConsumerCancellation),
                 observation.State.ToRetryDisposition(),
-                observation.State.ToFailure(observation.FailureCode));
+                observation.State.ToFailure(observation.FailureClassification));
     }
 }

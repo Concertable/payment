@@ -35,7 +35,7 @@ internal static class PaymentProviderObservationValidationExtensions
             return null;
         }
 
-        internal PaymentOperationTransitionRejection? ValidateContextAgainst(PaymentProviderAttempt current)
+        internal PaymentOperationTransitionRejection? ValidateStateAgainst(PaymentProviderAttempt current)
         {
             if (!current.Context.SupportsState(current.State))
                 return Reject(current, PaymentOperationTransitionRejectionReason.InvalidCurrentStateForProviderObject);
@@ -56,8 +56,13 @@ internal static class PaymentProviderObservationValidationExtensions
                     observation.State);
             }
 
-            if (observation.FailureCode is { } failureCode
-                && (!Enum.IsDefined(failureCode)
+            return null;
+        }
+
+        internal PaymentOperationTransitionRejection? ValidateFailureAgainst(PaymentProviderAttempt current)
+        {
+            if (observation.FailureClassification is { } failureClassification
+                && (!Enum.IsDefined(failureClassification)
                     || observation.State != PaymentOperationState.RequiresPaymentMethod))
             {
                 return Reject(
