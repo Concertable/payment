@@ -101,31 +101,46 @@ internal static class PaymentErrorMappers
             exception.Trailers.Any(entry => entry.Key == TrailerKey && entry.IsBinary);
 
         internal CommissionError ToCommissionError() =>
-            ToError(exception, commissionErrors);
+            exception.ToError(commissionErrors);
 
         internal PaymentError ToPaymentError() =>
-            ToError(exception, paymentErrors);
+            exception.ToError(paymentErrors);
 
         internal PaymentOperationError ToPaymentOperationError() =>
-            ToError(exception, paymentOperationErrors);
+            exception.ToError(paymentOperationErrors);
 
         internal ManagerPaymentError ToManagerPaymentError() =>
-            ToError(exception, managerPaymentErrors);
+            exception.ToError(managerPaymentErrors);
 
         internal HoldSessionError ToHoldSessionError() =>
-            ToError(exception, holdSessionErrors);
+            exception.ToError(holdSessionErrors);
 
         internal EscrowDepositError ToEscrowDepositError() =>
-            ToError(exception, escrowDepositErrors);
+            exception.ToError(escrowDepositErrors);
 
         internal EscrowCaptureError ToEscrowCaptureError() =>
-            ToError(exception, escrowCaptureErrors);
+            exception.ToError(escrowCaptureErrors);
 
         internal EscrowReleaseError ToEscrowReleaseError() =>
-            ToError(exception, escrowReleaseErrors);
+            exception.ToError(escrowReleaseErrors);
 
         internal EscrowRefundError ToEscrowRefundError() =>
-            ToError(exception, escrowRefundErrors);
+            exception.ToError(escrowRefundErrors);
+
+        private TError ToError<TError>(FrozenDictionary<string, TError> errors)
+            where TError : IError
+        {
+            var detail = exception.ToOperationErrorDetail();
+
+            if (!errors.TryGetValue(detail.Code, out var error)
+                || detail.Message != error.Definition.Message
+                || detail.Kind.ToErrorKind() != error.Definition.Kind)
+            {
+                throw new PaymentContractMismatchException(detail.Code, exception);
+            }
+
+            return error;
+        }
 
         private Proto.OperationErrorDetail ToOperationErrorDetail()
         {
@@ -158,22 +173,5 @@ internal static class PaymentErrorMappers
         Func<PaymentError, TError> payment,
         Func<CommissionError, TError> commission) =>
         directPaymentErrors.Select(payment).Concat(commissionErrorCases.Select(commission));
-
-    private static TError ToError<TError>(
-        RpcException exception,
-        FrozenDictionary<string, TError> errors)
-        where TError : IError
-    {
-        var detail = exception.ToOperationErrorDetail();
-
-        if (!errors.TryGetValue(detail.Code, out var error)
-            || detail.Message != error.Definition.Message
-            || detail.Kind.ToErrorKind() != error.Definition.Kind)
-        {
-            throw new PaymentContractMismatchException(detail.Code, exception);
-        }
-
-        return error;
-    }
 
 }
