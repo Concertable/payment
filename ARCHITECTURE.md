@@ -1,7 +1,7 @@
 # Concertable.Payment — Architecture
 
 > Cross-service plan and design rationale: [`api/docs/MICROSERVICES_ARCHITECTURE.md`](../docs/MICROSERVICES_ARCHITECTURE.md)
-> Keyed-dispatch pattern: [`api/agents/CODE_PATTERNS.md`](../agents/CODE_PATTERNS.md)
+> Keyed-dispatch pattern: the `keyed-strategies` skill
 > Provider lifecycle baseline: [`PROVIDER_CONTRACT.md`](./PROVIDER_CONTRACT.md)
 > Outstanding gaps: [`TECH_DEBT.md`](./TECH_DEBT.md)
 
@@ -39,7 +39,7 @@ Every money movement posts a balanced transaction — the invariant is enforced 
 
 - `LedgerTransactionEntity.Post(legs)` (`Domain/Entities/`) requires ≥2 legs sharing one currency and **throws unless the signed amounts sum to zero** (`"Ledger transaction does not balance"`).
 - `LedgerEntryEntity` stores a leg as a signed `long` minor-unit amount (debit `+`, credit `−`); `LedgerAccountEntity` is keyed `(LedgerAccountType, Guid? OwnerId, Currency)` over accounts `PlatformRevenue / StripeClearing / Payable / Receivable / VatLiability`.
-- **Posting recipes** — which accounts move per financial event — live in one place, `Infrastructure/LedgerPostings.cs` (`DirectSettlement`, `EscrowHold`, `EscrowRelease`, `EscrowRefundBeforeRelease`, `EscrowRefundAfterRelease`, `DirectSettlementRefund`), staged through `LedgerService.StageAsync` (resolves/creates accounts, builds the balanced transaction). The service stages entities then flushes `PaymentDbContext` **once** — the single-context unit-of-work (`api/agents/CODE_PATTERNS.md`).
+- **Posting recipes** — which accounts move per financial event — live in one place, `Infrastructure/LedgerPostings.cs` (`DirectSettlement`, `EscrowHold`, `EscrowRelease`, `EscrowRefundBeforeRelease`, `EscrowRefundAfterRelease`, `DirectSettlementRefund`), staged through `LedgerService.StageAsync` (resolves/creates accounts, builds the balanced transaction). The service stages entities then flushes `PaymentDbContext` **once** — the single-context unit-of-work (`persistence` skill).
 
 **Transactions** are a TPH hierarchy: abstract `TransactionEntity` → `TicketTransactionEntity` / `SettlementTransactionEntity` / `VerifyTransactionEntity`, status `Pending/Complete/Failed`.
 
@@ -77,7 +77,7 @@ A succeeded payment routes by its opaque metadata `type` (`Contracts/PaymentMeta
 | `escrow` | `EscrowConfirmedHandler` |
 | `verify` | `VerifyTransactionHandler` |
 
-`PaymentFailedEvent` dispatches the same way via `PaymentFailureDispatcher` (`escrow` → `EscrowFailedHandler`, `settlement` → `SettlementFailedHandler`). This is the keyed-strategy shape, resolved through a keyed-service-locator factory rather than the canonical `FrozenDictionary` facade — a documented variant, not the pattern's default (`api/agents/CODE_PATTERNS.md`).
+`PaymentFailedEvent` dispatches the same way via `PaymentFailureDispatcher` (`escrow` → `EscrowFailedHandler`, `settlement` → `SettlementFailedHandler`). This is the keyed-strategy shape, resolved through a keyed-service-locator factory rather than the canonical `FrozenDictionary` facade — a documented variant, not the pattern's default (`keyed-strategies` skill).
 
 ---
 
@@ -141,7 +141,7 @@ JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api`
 
 ## Tech stack
 
-.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions ([`../agents/RESULT_PATTERN.md`](../agents/RESULT_PATTERN.md)).
+.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions (`result-errors` skill).
 
 ---
 
