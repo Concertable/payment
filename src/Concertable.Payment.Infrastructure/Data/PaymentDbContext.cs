@@ -20,6 +20,8 @@ internal sealed class PaymentDbContext(
     public DbSet<CommissionBindingEntity> CommissionBindings => Set<CommissionBindingEntity>();
     public DbSet<PaymentRefundEntity> PaymentRefunds => Set<PaymentRefundEntity>();
     public DbSet<FinancialOperationEntity> FinancialOperations => Set<FinancialOperationEntity>();
+    public DbSet<PaymentSessionOperationEntity> PaymentSessionOperations => Set<PaymentSessionOperationEntity>();
+    public DbSet<PaymentSessionAttemptEntity> PaymentSessionAttempts => Set<PaymentSessionAttemptEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
