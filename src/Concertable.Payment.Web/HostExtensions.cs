@@ -3,10 +3,12 @@ using Concertable.Kernel;
 using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Contracts;
+using Concertable.Payment.Api;
 using Concertable.Payment.Api.Extensions;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -109,15 +111,23 @@ public static class HostExtensions
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
 
+        services.Configure<ForwardedHeadersOptions>(options =>
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+
+        builder.AddDefaultRateLimiting();
+        builder.AddRateLimitPolicy(RateLimitPolicies.SetupIntent, new RateLimitWindow { PermitLimit = 10, WindowSeconds = 60 }, perUser: true);
+
         return builder;
     }
 
     public static async Task UseWebHost(this WebApplication app)
     {
+        app.UseForwardedHeaders();
         app.UseExceptionHandler();
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseDefaultRateLimiting();
 
         app.MapPaymentGrpcServices();
         app.MapControllers();

@@ -3,6 +3,7 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Concertable.Payment.Api.Identity;
 
 namespace Concertable.Payment.Api.Controllers;
@@ -39,6 +40,7 @@ internal sealed class StripeAccountController : ControllerBase
         Ok(await payoutAccountService.GetPaymentMethodAsync(currentPayoutOwner.OwnerId));
 
     [HttpPost("setup-intent")]
+    [EnableRateLimiting(RateLimitPolicies.SetupIntent)]
     public async Task<ActionResult<string>> CreateSetupIntent() =>
         await payoutAccountService.CreateSetupIntentAsync(currentPayoutOwner.OwnerId) is { } secret
             ? Ok(secret)
