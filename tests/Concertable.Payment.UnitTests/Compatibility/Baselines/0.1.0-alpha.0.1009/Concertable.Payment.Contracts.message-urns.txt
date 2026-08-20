@@ -1,0 +1,13 @@
+Concertable.Payment.Contracts.CaptureEscrowCommand|concertable.payment.capture-escrow.v1
+Concertable.Payment.Contracts.CaptureEscrowRejectedEvent|concertable.payment.capture-escrow-rejected.v1
+Concertable.Payment.Contracts.CaptureEscrowSucceededEvent|concertable.payment.capture-escrow-succeeded.v1
+Concertable.Payment.Contracts.DepositEscrowCommand|concertable.payment.deposit-escrow.v1
+Concertable.Payment.Contracts.DepositEscrowRejectedEvent|concertable.payment.deposit-escrow-rejected.v1
+Concertable.Payment.Contracts.DepositEscrowSucceededEvent|concertable.payment.deposit-escrow-succeeded.v1
+Concertable.Payment.Contracts.Events.PaymentFailedEvent|concertable.payment.payment-failed.v1
+Concertable.Payment.Contracts.Events.PaymentSucceededEvent|concertable.payment.payment-succeeded.v1
+Concertable.Payment.Contracts.Events.PayoutOwnerRegisteredEvent|concertable.payment.payout-owner-registered.v1
+Concertable.Payment.Contracts.RefundEscrowCommand|concertable.payment.refund-escrow.v1
+Concertable.Payment.Contracts.RefundEscrowDeferredEvent|concertable.payment.refund-escrow-deferred.v1
+Concertable.Payment.Contracts.RefundEscrowRejectedEvent|concertable.payment.refund-escrow-rejected.v1
+Concertable.Payment.Contracts.RefundEscrowSucceededEvent|concertable.payment.refund-escrow-succeeded.v1

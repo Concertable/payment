@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "scanRoots": [
+    { "path": "api/Concertable.Payment/src", "detector": "payment" },
+    { "path": "api/Concertable.Customer/src", "detector": "consumer" },
+    { "path": "api/Concertable.B2B/src", "detector": "consumer" },
+    { "path": "app/web/customer/src", "detector": "frontend" },
+    { "path": "app/web/b2b", "detector": "frontend" },
+    { "path": "app/web/shared/src", "detector": "frontend" },
+    { "path": "app/mobile/customer/src", "detector": "frontend" }
+  ],
+  "decisions": [
+    {
+      "id": "customer-provisioning",
+      "owner": "Payment",
+      "flow": "Provision the Payment-owned Stripe customer for an opaque consumer owner.",
+      "providerProduct": "Customer",
+      "mode": "Server-side account mutation; no client session.",
+      "connectModel": "Platform customer, independent of a connected account.",
+      "identity": "Opaque consumer owner ID maps to one Payment payout-account record and Stripe customer ID.",
+      "compatibility": "Existing provisioning boundary remains unchanged in Phase 1."
+    },
+    {
+      "id": "connect-account-management",
+      "owner": "Payment",
+      "flow": "Provision and inspect a venue or artist Express connected account and create its onboarding link.",
+      "providerProduct": "Account and AccountLink",
+      "mode": "Server-side account management; no payment or client session.",
+      "connectModel": "Express connected account owned by the opaque payout owner.",
+      "identity": "Opaque owner ID maps to the Payment-private Stripe account ID.",
+      "compatibility": "Current B2B payout-account controller and Payment RPCs remain unchanged."
+    },
+    {
+      "id": "payout-card-setup",
+      "owner": "Payment",
+      "flow": "Create or inspect the saved payout card used by the embedded payout setup flow.",
+      "providerProduct": "SetupIntent and PaymentMethod",
+      "mode": "Save only; off-session usage for a known customer and on-session compatibility when no customer is bound.",
+      "connectModel": "Platform customer; setup success never represents money movement.",
+      "identity": "Opaque owner ID resolves the Payment-private customer and payment-method IDs.",
+      "compatibility": "Existing payout setup response remains unchanged; future sessions expose an explicit setup kind."
+    },
+    {
+      "id": "customer-ticket-session",
+      "owner": "Payment",
+      "flow": "Create the Customer ticket checkout PaymentIntent and its CustomerSession.",
+      "providerProduct": "PaymentIntent and CustomerSession",
+      "mode": "On-session automatic capture with future-use setup.",
+      "connectModel": "Current code creates a platform charge; the target contract requires venue on_behalf_of and destination settlement with only the platform fee retained.",
+      "identity": "Current compatibility uses the Stripe intent ID; the durable successor uses caller OperationId and Payment AttemptId.",
+      "compatibility": "CheckoutSession and current Customer web/mobile 3DS bridge remain intact until their later migration."
+    },
+    {
+      "id": "payment-method-save-session",
+      "owner": "Payment",
+      "flow": "Create the Venue Hire application session that saves the artist payment method.",
+      "providerProduct": "SetupIntent and CustomerSession",
+      "mode": "On-session confirmation with usage=off_session for later deposit.",
+      "connectModel": "Platform customer; no charge is created.",
+      "identity": "Current compatibility uses the SetupIntent ID; the durable successor uses operation and attempt identity.",
+      "compatibility": "Existing CreateSetupSession RPC and frontend confirmation remain unchanged."
+    },
+    {
+      "id": "payment-method-verification-session",
+      "owner": "Payment",
+      "flow": "Create the Door Split or Versus acceptance session that verifies and saves the venue payment method.",
+      "providerProduct": "SetupIntent and CustomerSession",
+      "mode": "On-session confirmation with usage=off_session; success is verification, not a charge.",
+      "connectModel": "Platform customer; no money movement.",
+      "identity": "Current compatibility uses the SetupIntent ID; the durable successor uses operation and attempt identity.",
+      "compatibility": "Existing CreateVerifySession RPC and frontend confirmation remain unchanged."
+    },
+    {
+      "id": "manual-authorization-session",
+      "owner": "Payment",
+      "flow": "Create, recover, or capture the Flat Fee manual authorization.",
+      "providerProduct": "PaymentIntent",
+      "mode": "On-session manual capture; requires_capture normalizes to Authorized and expires at capture_before.",
+      "connectModel": "Artist connected account is the settlement merchant and payee under the target contract.",
+      "identity": "Current compatibility may use the intent ID; the durable successor binds OperationId, AttemptId, revision, and capture deadline.",
+      "compatibility": "Existing hold and capture RPCs remain; new code must not discover a hold through the latest-ten search."
+    },
+    {
+      "id": "generic-payment-intent-mutation",
+      "owner": "Payment",
+      "flow": "Execute server-confirmed payment, deposit, settlement, or authorization creation through the Payment-owned Stripe seam.",
+      "providerProduct": "PaymentIntent",
+      "mode": "Presence and capture mode are explicit caller-owned options within Payment.",
+      "connectModel": "Destination, on_behalf_of, transfer, and platform-fee fields follow the selected flow; consumer services never set raw Stripe IDs.",
+      "identity": "Stripe idempotency derives from the Payment operation/action identity.",
+      "compatibility": "Existing payment-manager and financial-operation contracts remain authoritative."
+    },
+    {
+      "id": "transfer-mutation",
+      "owner": "Payment",
+      "flow": "Release settled funds to the connected-account payee.",
+      "providerProduct": "Transfer",
+      "mode": "Server-side financial operation; not a client session.",
+      "connectModel": "Transfer from the original source transaction to the connected account.",
+      "identity": "Existing financial-operation identity and Stripe action idempotency key.",
+      "compatibility": "The existing release command boundary remains authoritative."
+    },
+    {
+      "id": "refund-mutation",
+      "owner": "Payment",
+      "flow": "Refund a PaymentIntent or charge and reverse transfer value when the original Connect model requires it.",
+      "providerProduct": "Refund and TransferReversal",
+      "mode": "Server-side financial operation with an independent refund lifecycle.",
+      "connectModel": "Reverse destination transfer or issue an explicit transfer reversal according to the original charge model.",
+      "identity": "Existing financial-operation ID plus Payment-owned action idempotency.",
+      "compatibility": "PR #552 owns B2B adoption and RefundReasonCodes; this baseline does not replace those contracts."
+    },
+    {
+      "id": "webhook-ingress",
+      "owner": "Payment",
+      "flow": "Verify, deduplicate, and dispatch Stripe webhook observations.",
+      "providerProduct": "Event carrying PaymentIntent or SetupIntent",
+      "mode": "At-least-once, duplicate, and unordered provider observation.",
+      "connectModel": "Payment-private provider data; published events expose only normalized Payment vocabulary.",
+      "identity": "Stripe event ID deduplicates transport; operation, attempt, and revision govern state mutation.",
+      "compatibility": "Existing PaymentSucceeded and PaymentFailed events remain while the later durable pipeline is added."
+    },
+    {
+      "id": "b2b-payout-account",
+      "owner": "B2B",
+      "flow": "Manage the active tenant payout account through Payment.",
+      "providerProduct": "Account, AccountLink, SetupIntent, and PaymentMethod",
+      "mode": "Server-side adapter calls plus an embedded setup client session.",
+      "connectModel": "The active B2B tenant is the opaque connected-account owner.",
+      "identity": "B2B supplies tenant ID; Payment keeps Stripe account, customer, and method IDs private.",
+      "compatibility": "The tenant controller remains unchanged in Phase 1."
+    },
+    {
+      "id": "customer-ticket-payment",
+      "owner": "Customer",
+      "flow": "Create or server-confirm the current ticket checkout payment.",
+      "providerProduct": "PaymentIntent",
+      "mode": "Automatic capture; client confirmation for a new method or server confirmation for a saved method.",
+      "connectModel": "Venue is the target settlement merchant/payee; only the platform fee belongs to Concertable.",
+      "identity": "Current flow correlates by Stripe intent ID; the later Customer attempt persists OperationId before calling Payment.",
+      "compatibility": "No durable Customer attempt or query endpoint is introduced in Phase 1."
+    },
+    {
+      "id": "b2b-flat-fee-authorization",
+      "owner": "B2B",
+      "flow": "Authorize and later capture the Flat Fee amount.",
+      "providerProduct": "PaymentIntent",
+      "mode": "On-session manual authorization followed by server capture before expiry.",
+      "connectModel": "Artist connected account is payee and settlement merchant.",
+      "identity": "Booking/application compatibility IDs remain; the durable successor adds operation and attempt identity.",
+      "compatibility": "Existing hold lookup and capture calls remain until the durable session migration."
+    },
+    {
+      "id": "b2b-venue-hire-deposit",
+      "owner": "B2B",
+      "flow": "Charge the saved artist method for the Venue Hire deposit.",
+      "providerProduct": "PaymentIntent",
+      "mode": "Off-session server-confirmed automatic capture.",
+      "connectModel": "Charge on behalf of the venue connected account and retain escrow ownership until release.",
+      "identity": "Booking ID and existing deposit operation identity remain authoritative.",
+      "compatibility": "PR #552 owns B2B adoption of the durable deposit command."
+    },
+    {
+      "id": "b2b-save-or-verify-method",
+      "owner": "B2B",
+      "flow": "Save the Venue Hire artist method or verify the Door Split/Versus venue method.",
+      "providerProduct": "SetupIntent",
+      "mode": "On-session setup with declared off-session reuse.",
+      "connectModel": "No money movement; connected-account charge posture is applied only by the later payment.",
+      "identity": "Current SetupIntent ID remains compatibility-only; durable operation identity comes later.",
+      "compatibility": "The shared frontend still infers SetupIntent from the secret prefix until the later migration."
+    },
+    {
+      "id": "b2b-escrow-release",
+      "owner": "B2B",
+      "flow": "Release held escrow funds after the booking finishes.",
+      "providerProduct": "Transfer",
+      "mode": "Server-side financial operation.",
+      "connectModel": "Transfer to the payee from the original source transaction.",
+      "identity": "Booking ID resolves the existing Payment-owned escrow and operation receipt.",
+      "compatibility": "Existing release command remains authoritative."
+    },
+    {
+      "id": "b2b-refund",
+      "owner": "B2B",
+      "flow": "Refund canceled escrow by booking or application.",
+      "providerProduct": "Refund",
+      "mode": "Server-side financial operation with its own provider status.",
+      "connectModel": "Reversal follows whether funds were still held or already transferred.",
+      "identity": "Booking ID resolves the existing Payment-owned escrow and refund receipt.",
+      "compatibility": "PR #552 owns B2B refund adoption; Phase 1 does not change it."
+    },
+    {
+      "id": "b2b-settlement-payment",
+      "owner": "B2B",
+      "flow": "Charge the saved venue method for Door Split or Versus settlement.",
+      "providerProduct": "PaymentIntent",
+      "mode": "Off-session server-confirmed automatic capture.",
+      "connectModel": "Charge and transfer direction follows the typed deal calculation; only the platform fee belongs to Concertable.",
+      "identity": "Booking ID and the existing settlement operation remain authoritative.",
+      "compatibility": "Existing manager payment RPC remains unchanged."
+    },
+    {
+      "id": "frontend-ticket-mobile",
+      "owner": "Customer mobile",
+      "flow": "Initialize and present PaymentSheet for ticket checkout.",
+      "providerProduct": "PaymentIntent through PaymentSheet",
+      "mode": "On-session automatic capture.",
+      "connectModel": "Opaque to the app; Payment owns provider and Connect mechanics.",
+      "identity": "Current compatibility parses the intent ID from the client secret for SignalR correlation.",
+      "compatibility": "Finite PR #581 bridge allowlist; replace with explicit identity and consumer query recovery later."
+    },
+    {
+      "id": "frontend-ticket-web-correlation",
+      "owner": "Customer web",
+      "flow": "Correlate current ticket checkout completion with SignalR.",
+      "providerProduct": "PaymentIntent",
+      "mode": "On-session automatic capture.",
+      "connectModel": "Opaque to the frontend.",
+      "identity": "Current compatibility parses the intent ID from the client secret.",
+      "compatibility": "Finite PR #581 bridge allowlist; no new client-secret parser is permitted."
+    },
+    {
+      "id": "frontend-shared-confirmation",
+      "owner": "B2B web and Customer web shared checkout",
+      "flow": "Confirm the current PaymentIntent or SetupIntent in the shared Stripe form.",
+      "providerProduct": "PaymentIntent or SetupIntent",
+      "mode": "On-session client confirmation; PaymentIntent capture mode comes from the server session.",
+      "connectModel": "Opaque to the frontend.",
+      "identity": "Current compatibility infers intent kind from the client-secret prefix.",
+      "compatibility": "Finite legacy inference allowlist; future descriptors carry explicit session kind."
+    },
+    {
+      "id": "frontend-next-action",
+      "owner": "B2B web and Customer web shared payment handling",
+      "flow": "Complete provider-required next action after a server-confirmed payment.",
+      "providerProduct": "PaymentIntent or SetupIntent",
+      "mode": "On-session authentication continuation.",
+      "connectModel": "Opaque to the frontend.",
+      "identity": "Current result carries only the client secret; durable operation identity is added later.",
+      "compatibility": "Existing handle3ds compatibility island remains until the shared orchestration migration."
+    }
+  ],
+  "entryPoints": [
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "ProvisionCustomerAsync", "operation": "customerService.CreateAsync", "occurrence": 1, "decisionId": "customer-provisioning" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "ProvisionConnectAccountAsync", "operation": "accountService.CreateAsync", "occurrence": 1, "decisionId": "connect-account-management" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetOnboardingLinkAsync", "operation": "accountLinkService.CreateAsync", "occurrence": 1, "decisionId": "connect-account-management" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetAccountStatusAsync", "operation": "accountService.GetAsync", "occurrence": 1, "decisionId": "connect-account-management" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateSetupIntentAsync", "operation": "setupIntentService.CreateAsync", "occurrence": 1, "decisionId": "payout-card-setup" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetPaymentMethodDetailsAsync", "operation": "paymentMethodService.ListAsync", "occurrence": 1, "decisionId": "payout-card-setup" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreatePaymentSessionAsync", "operation": "paymentIntentService.CreateAsync", "occurrence": 1, "decisionId": "customer-ticket-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateSetupSessionAsync", "operation": "setupIntentService.CreateAsync", "occurrence": 1, "decisionId": "payment-method-save-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateVerifySessionAsync", "operation": "setupIntentService.CreateAsync", "occurrence": 1, "decisionId": "payment-method-verification-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateHoldSessionInternalAsync", "operation": "paymentIntentService.CreateAsync", "occurrence": 1, "decisionId": "manual-authorization-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetHoldSessionAsync", "operation": "paymentIntentService.GetAsync", "occurrence": 1, "decisionId": "manual-authorization-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateCustomerSessionAsync", "operation": "customerSessionService.CreateAsync", "occurrence": 1, "decisionId": "customer-ticket-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreatePaymentIntentAsync", "operation": "paymentIntentService.CreateAsync", "occurrence": 1, "decisionId": "generic-payment-intent-mutation" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateTransferAsync", "operation": "transferService.CreateAsync", "occurrence": 1, "decisionId": "transfer-mutation" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateRefundAsync", "operation": "refundService.CreateAsync", "occurrence": 1, "decisionId": "refund-mutation" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateTransferReversalAsync", "operation": "transferReversalService.CreateAsync", "occurrence": 1, "decisionId": "refund-mutation" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeHoldClient.cs", "kind": "provider-api", "member": "FindHeldIntentAsync", "operation": "paymentIntentService.ListAsync", "occurrence": 1, "decisionId": "manual-authorization-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeHoldClient.cs", "kind": "provider-api", "member": "CaptureAsync", "operation": "paymentIntentService.CaptureAsync", "occurrence": 1, "decisionId": "manual-authorization-session" },
+    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/Webhook/WebhookService.cs", "kind": "webhook-ingress", "member": "HandleAsync", "operation": "EventUtility.ValidateSignature", "occurrence": 1, "decisionId": "webhook-ingress" },
+
+    { "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs", "kind": "consumer-call", "member": "PayForTicketsAsync", "operation": "customerPaymentClient.PayAsync", "occurrence": 1, "decisionId": "customer-ticket-payment" },
+    { "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs", "kind": "consumer-call", "member": "CreateCheckoutAsync", "operation": "customerPaymentClient.CreatePaymentSessionAsync", "occurrence": 1, "decisionId": "customer-ticket-payment" },
+
+    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetOnboardingLink", "operation": "payoutAccountClient.GetOnboardingLinkAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
+    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetAccountStatus", "operation": "payoutAccountClient.GetAccountStatusAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
+    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetPaymentMethod", "operation": "payoutAccountClient.GetPaymentMethodAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
+    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "CreateSetupIntent", "operation": "payoutAccountClient.CreateSetupIntentAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/HoldCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateHoldSessionAsync", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/DepositEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "bus.SendAsync<DepositEscrowCommand>", "occurrence": 1, "decisionId": "b2b-venue-hire-deposit" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/VerifyCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateVerifySessionAsync", "occurrence": 1, "decisionId": "b2b-save-or-verify-method" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/CaptureEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "managerPaymentClient.FindHeldIntentAsync", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/CaptureEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "bus.SendAsync<CaptureEscrowCommand>", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/SetupCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateSetupSessionAsync", "occurrence": 1, "decisionId": "b2b-save-or-verify-method" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/ReleaseEscrowFinishStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "escrowClient.ReleaseByBookingIdAsync", "occurrence": 1, "decisionId": "b2b-escrow-release" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/RefundEscrowStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "bus.SendAsync<RefundEscrowCommand>", "occurrence": 1, "decisionId": "b2b-refund" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/RefundEscrowByApplicationStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "bus.SendAsync<RefundEscrowCommand>", "occurrence": 1, "decisionId": "b2b-refund" },
+    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/PayoutFinishStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.PayAsync", "occurrence": 1, "decisionId": "b2b-settlement-payment" },
+
+    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "client-secret-parser", "member": null, "operation": "client-secret-id-split", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
+    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "frontend-confirmation", "member": null, "operation": "initPaymentSheet", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
+    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "frontend-confirmation", "member": null, "operation": "presentPaymentSheet", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
+    { "path": "app/web/customer/src/features/concerts/hooks/useTicketPaymentFlow.ts", "kind": "client-secret-parser", "member": null, "operation": "client-secret-id-split", "occurrence": 1, "decisionId": "frontend-ticket-web-correlation" },
+    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "client-secret-parser", "member": null, "operation": "client-secret-kind-prefix", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
+    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "frontend-confirmation", "member": null, "operation": "confirmSetup", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
+    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "frontend-confirmation", "member": null, "operation": "confirmPayment", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
+    { "path": "app/web/shared/src/features/concerts/utils/handle3ds.ts", "kind": "frontend-confirmation", "member": null, "operation": "handleNextAction", "occurrence": 1, "decisionId": "frontend-next-action" }
+  ]
+}

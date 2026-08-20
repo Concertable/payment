@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Reunion.Errors;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Google.Protobuf;
 using Grpc.Core;
@@ -38,6 +39,20 @@ internal static class PaymentErrorMappers
         Index(directPaymentErrors.Concat(
             commissionErrorCases.Select(error =>
                 (PaymentError)new PaymentError.CommissionFailure(error))));
+
+    private static readonly FrozenDictionary<string, PaymentOperationError> paymentOperationErrors =
+        Index(Enum.GetValues<PaymentOperationFailureCode>().Select(PaymentOperationError.FromCode));
+
+    private static readonly FrozenDictionary<Proto.OperationErrorKind, ErrorKind> operationErrorKinds =
+        new Dictionary<Proto.OperationErrorKind, ErrorKind>
+        {
+            [Proto.OperationErrorKind.OperationErrorInvalid] = ErrorKind.Invalid,
+            [Proto.OperationErrorKind.OperationErrorNotFound] = ErrorKind.NotFound,
+            [Proto.OperationErrorKind.OperationErrorConflict] = ErrorKind.Conflict,
+            [Proto.OperationErrorKind.OperationErrorUnauthenticated] = ErrorKind.Unauthenticated,
+            [Proto.OperationErrorKind.OperationErrorForbidden] = ErrorKind.Forbidden,
+            [Proto.OperationErrorKind.OperationErrorPaymentRequired] = ErrorKind.PaymentRequired
+        }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, ManagerPaymentError> managerPaymentErrors =
         Index(Composite<ManagerPaymentError>(
@@ -80,32 +95,75 @@ internal static class PaymentErrorMappers
         }.Concat(paymentErrors.Values.Select(error =>
             (EscrowRefundError)new EscrowRefundError.PaymentFailure(error))));
 
-    internal static bool HasOperationErrorDetail(this RpcException exception) =>
-        exception.Trailers.Any(entry => entry.Key == TrailerKey && entry.IsBinary);
+    extension(RpcException exception)
+    {
+        internal bool HasOperationErrorDetail() =>
+            exception.Trailers.Any(entry => entry.Key == TrailerKey && entry.IsBinary);
 
-    internal static CommissionError ToCommissionError(this RpcException exception) =>
-        ToError(exception, commissionErrors);
+        internal CommissionError ToCommissionError() =>
+            exception.ToError(commissionErrors);
 
-    internal static PaymentError ToPaymentError(this RpcException exception) =>
-        ToError(exception, paymentErrors);
+        internal PaymentError ToPaymentError() =>
+            exception.ToError(paymentErrors);
 
-    internal static ManagerPaymentError ToManagerPaymentError(this RpcException exception) =>
-        ToError(exception, managerPaymentErrors);
+        internal PaymentOperationError ToPaymentOperationError() =>
+            exception.ToError(paymentOperationErrors);
 
-    internal static HoldSessionError ToHoldSessionError(this RpcException exception) =>
-        ToError(exception, holdSessionErrors);
+        internal ManagerPaymentError ToManagerPaymentError() =>
+            exception.ToError(managerPaymentErrors);
 
-    internal static EscrowDepositError ToEscrowDepositError(this RpcException exception) =>
-        ToError(exception, escrowDepositErrors);
+        internal HoldSessionError ToHoldSessionError() =>
+            exception.ToError(holdSessionErrors);
 
-    internal static EscrowCaptureError ToEscrowCaptureError(this RpcException exception) =>
-        ToError(exception, escrowCaptureErrors);
+        internal EscrowDepositError ToEscrowDepositError() =>
+            exception.ToError(escrowDepositErrors);
 
-    internal static EscrowReleaseError ToEscrowReleaseError(this RpcException exception) =>
-        ToError(exception, escrowReleaseErrors);
+        internal EscrowCaptureError ToEscrowCaptureError() =>
+            exception.ToError(escrowCaptureErrors);
 
-    internal static EscrowRefundError ToEscrowRefundError(this RpcException exception) =>
-        ToError(exception, escrowRefundErrors);
+        internal EscrowReleaseError ToEscrowReleaseError() =>
+            exception.ToError(escrowReleaseErrors);
+
+        internal EscrowRefundError ToEscrowRefundError() =>
+            exception.ToError(escrowRefundErrors);
+
+        private TError ToError<TError>(FrozenDictionary<string, TError> errors)
+            where TError : IError
+        {
+            var detail = exception.ToOperationErrorDetail();
+
+            if (!errors.TryGetValue(detail.Code, out var error)
+                || detail.Message != error.Definition.Message
+                || detail.Kind.ToErrorKind() != error.Definition.Kind)
+            {
+                throw new PaymentContractMismatchException(detail.Code, exception);
+            }
+
+            return error;
+        }
+
+        private Proto.OperationErrorDetail ToOperationErrorDetail()
+        {
+            var entry = exception.Trailers.First(item => item.Key == TrailerKey && item.IsBinary);
+
+            try
+            {
+                return Proto.OperationErrorDetail.Parser.ParseFrom(entry.ValueBytes);
+            }
+            catch (InvalidProtocolBufferException)
+            {
+                throw exception;
+            }
+        }
+    }
+
+    extension(Proto.OperationErrorKind kind)
+    {
+        private ErrorKind? ToErrorKind() =>
+            operationErrorKinds.TryGetValue(kind, out var errorKind)
+                ? errorKind
+                : null;
+    }
 
     private static FrozenDictionary<string, TError> Index<TError>(IEnumerable<TError> errors)
         where TError : IError =>
@@ -116,46 +174,4 @@ internal static class PaymentErrorMappers
         Func<CommissionError, TError> commission) =>
         directPaymentErrors.Select(payment).Concat(commissionErrorCases.Select(commission));
 
-    private static TError ToError<TError>(
-        RpcException exception,
-        FrozenDictionary<string, TError> errors)
-        where TError : IError
-    {
-        var detail = exception.ToOperationErrorDetail();
-
-        if (!errors.TryGetValue(detail.Code, out var error)
-            || detail.Message != error.Definition.Message
-            || !detail.Kind.Matches(error.Definition.Kind))
-        {
-            throw new PaymentContractMismatchException(detail.Code, exception);
-        }
-
-        return error;
-    }
-
-    private static Proto.OperationErrorDetail ToOperationErrorDetail(this RpcException exception)
-    {
-        var entry = exception.Trailers.First(item => item.Key == TrailerKey && item.IsBinary);
-
-        try
-        {
-            return Proto.OperationErrorDetail.Parser.ParseFrom(entry.ValueBytes);
-        }
-        catch (InvalidProtocolBufferException)
-        {
-            throw exception;
-        }
-    }
-
-    private static bool Matches(this Proto.OperationErrorKind kind, ErrorKind expected) =>
-        (kind, expected) switch
-        {
-            (Proto.OperationErrorKind.OperationErrorInvalid, ErrorKind.Invalid) => true,
-            (Proto.OperationErrorKind.OperationErrorNotFound, ErrorKind.NotFound) => true,
-            (Proto.OperationErrorKind.OperationErrorConflict, ErrorKind.Conflict) => true,
-            (Proto.OperationErrorKind.OperationErrorUnauthenticated, ErrorKind.Unauthenticated) => true,
-            (Proto.OperationErrorKind.OperationErrorForbidden, ErrorKind.Forbidden) => true,
-            (Proto.OperationErrorKind.OperationErrorPaymentRequired, ErrorKind.PaymentRequired) => true,
-            _ => false
-        };
 }
