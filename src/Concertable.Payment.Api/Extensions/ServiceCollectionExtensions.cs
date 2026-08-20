@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentPayoutOwner, CurrentPayoutOwner>();
         return services.AddControllers()
             .AddJsonOptions(opts => opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
-            .AddInternalControllers(typeof(WebhookController).Assembly);
+            .AddInternalControllers(typeof(WebhookController).Assembly)
+            .AddControllersAsServices();
     }
 }
