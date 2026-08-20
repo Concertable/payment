@@ -5,6 +5,7 @@ using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure.Grpc;
 using Google.Protobuf;
 using Grpc.Core;
+using PaymentClient::Concertable.Payment.Client.Adapters;
 using PaymentContractMismatchException = PaymentClient::Concertable.Payment.Client.PaymentContractMismatchException;
 using PaymentErrorMappers = PaymentClient::Concertable.Payment.Client.Adapters.PaymentErrorMappers;
 using PaymentClientResults = PaymentClient::Concertable.Payment.Client.Adapters.PaymentClientResults;
@@ -13,6 +14,18 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class PaymentClientResultsTests
 {
+    public static TheoryData<PaymentOperationError, int> PaymentOperationErrors => new()
+    {
+        { new PaymentOperationError.PaymentMethodRequired(), 5 },
+        { new PaymentOperationError.AuthenticationRequired(), 5 },
+        { new PaymentOperationError.Declined(), 5 },
+        { new PaymentOperationError.Expired(), 2 },
+        { new PaymentOperationError.Canceled(), 2 },
+        { new PaymentOperationError.OperationConflict(), 2 },
+        { new PaymentOperationError.ProviderUnavailable(), 2 },
+        { new PaymentOperationError.Unknown(), 2 }
+    };
+
     [Fact]
     public async Task ExecuteAsync_Success_ReturnsValue()
     {
@@ -72,8 +85,25 @@ public sealed class PaymentClientResultsTests
     }
 
     [Theory]
+    [MemberData(nameof(PaymentOperationErrors))]
+    public void ToPaymentOperationError_KnownContract_ReturnsTypedError(
+        PaymentOperationError expected,
+        int kind)
+    {
+        var exception = RpcFailure(Detail(
+            expected.Definition.Code,
+            expected.Definition.Message,
+            kind));
+
+        var error = exception.ToPaymentOperationError();
+
+        Assert.Equal(expected, error);
+    }
+
+    [Theory]
     [InlineData("Changed.", 5)]
     [InlineData("The payment was rejected.", 0)]
+    [InlineData("The payment was rejected.", 999)]
     public async Task ExecuteAsync_ChangedPaymentContract_ThrowsContractMismatch(string message, int kind)
     {
         var exception = RpcFailure(Detail("payment.rejected", message, kind));
