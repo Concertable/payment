@@ -147,23 +147,26 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var provider = new FakeStripeSessionClient(TimeProvider.System);
         var specification = Specification(Guid.CreateVersion7());
         Guid predecessorId;
+        string predecessorProviderObjectId;
         await using (var createContext = CreateContext())
         {
             var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
+            predecessorProviderObjectId = attempt.ProviderObjectId!;
             attempt.ApplyTransition(new(
                 PaymentOperationTransitionDisposition.Applied,
                 PaymentOperationState.Failed,
                 "failed",
-                DateTimeOffset.UtcNow.AddSeconds(1),
+                DateTimeOffset.UtcNow.AddMinutes(-1),
                 null,
                 PaymentOperationTerminalDisposition.AttemptTerminal,
                 PaymentOperationRetryDisposition.CreateNewAttempt,
                 PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
             await createContext.SaveChangesAsync();
         }
+        provider.SetDeclined(predecessorProviderObjectId);
 
         await using var retryContext = CreateContext();
         var retried = await Service(retryContext, provider).RetryAsync(
@@ -265,6 +268,67 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             .SingleAsync(attempt => attempt.AttemptId == attemptId)).State);
     }
 
+    [Theory]
+    [InlineData("requires_capture", typeof(PaymentOperationError.OperationConflict))]
+    [InlineData("future_provider_status", typeof(PaymentOperationError.ProviderUnavailable))]
+    public async Task RetryAsync_PersistedFailureWithIneligibleProviderTruth_DoesNotCancelOrCreateSuccessor(
+        string providerStatus,
+        Type expectedErrorType)
+    {
+        await MigrateAsync();
+        var innerProvider = new FakeStripeSessionClient(TimeProvider.System);
+        var specification = Specification(Guid.CreateVersion7());
+        var failedAt = DateTimeOffset.UtcNow.AddMinutes(-1);
+        Guid attemptId;
+        string providerObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
+            attemptId = execution.Identity.AttemptId;
+            var attempt = await createContext.PaymentSessionAttempts
+                .SingleAsync(value => value.AttemptId == attemptId);
+            providerObjectId = attempt.ProviderObjectId!;
+            attempt.ApplyTransition(new(
+                PaymentOperationTransitionDisposition.Applied,
+                PaymentOperationState.Failed,
+                "failed",
+                failedAt,
+                null,
+                PaymentOperationTerminalDisposition.AttemptTerminal,
+                PaymentOperationRetryDisposition.CreateNewAttempt,
+                PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
+            await createContext.SaveChangesAsync();
+        }
+        innerProvider.SetStatus(
+            providerObjectId,
+            providerStatus,
+            string.Equals(providerStatus, "requires_capture", StringComparison.Ordinal)
+                ? DateTimeOffset.UtcNow.AddDays(1)
+                : null);
+        var provider = new CountingStripeSessionClient(innerProvider);
+
+        await using var retryContext = CreateContext();
+        var retried = await Service(retryContext, provider).RetryAsync(
+            specification.OperationId,
+            attemptId,
+            1);
+
+        Assert.True(retried.TryGetError(out PaymentOperationError? error));
+        Assert.Equal(expectedErrorType, error.GetType());
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(0, provider.CancellationCount);
+        var attempts = await retryContext.PaymentSessionAttempts
+            .Where(attempt => attempt.OperationId == specification.OperationId)
+            .ToArrayAsync();
+        var persistedAttempt = Assert.Single(attempts);
+        Assert.Equal(PaymentOperationState.Failed, persistedAttempt.State);
+        Assert.Equal("failed", persistedAttempt.LastProviderStatus);
+        Assert.Equal(failedAt, persistedAttempt.LastObservedAt);
+        Assert.Equal(failedAt, persistedAttempt.TerminalAt);
+        Assert.Equal(PaymentOperationFailureCode.Declined, persistedAttempt.FailureCode);
+    }
+
     [Fact]
     public async Task RetryAsync_ConcurrentDuplicateRetries_ConvergeAfterCancellationRace()
     {
@@ -284,13 +348,14 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
                 PaymentOperationTransitionDisposition.Applied,
                 PaymentOperationState.Failed,
                 "failed",
-                DateTimeOffset.UtcNow.AddSeconds(1),
+                DateTimeOffset.UtcNow.AddMinutes(-1),
                 null,
                 PaymentOperationTerminalDisposition.AttemptTerminal,
                 PaymentOperationRetryDisposition.CreateNewAttempt,
                 PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
             await createContext.SaveChangesAsync();
         }
+        innerProvider.SetDeclined(predecessorProviderObjectId);
         var provider = new ConcurrentCancellationStripeSessionClient(innerProvider, predecessorProviderObjectId);
 
         async Task<Result<PaymentSessionExecution, PaymentOperationError>> RetryAsync()

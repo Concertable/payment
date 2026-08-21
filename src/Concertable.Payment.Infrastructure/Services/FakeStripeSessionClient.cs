@@ -114,6 +114,22 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             byIdempotencyKey[entry.Key] = updated;
     }
 
+    internal void SetDeclined(string providerObjectId)
+    {
+        var current = byProviderObjectId[providerObjectId];
+        var updated = current with
+        {
+            Status = "requires_payment_method",
+            ObservedAt = timeProvider.GetUtcNow(),
+            FailureClassification = ProviderFailureClassification.Declined,
+            CanCancel = true,
+            CaptureBefore = null
+        };
+        byProviderObjectId[providerObjectId] = updated;
+        foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
+            byIdempotencyKey[entry.Key] = updated;
+    }
+
     private PaymentSessionProviderResult Create(PaymentSessionProviderRequest request, string idempotencyKey)
     {
         var isPayment = request.SessionKind is PaymentSessionKind.Payment or PaymentSessionKind.Authorization;
