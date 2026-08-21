@@ -181,6 +181,49 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
+    public async Task RetryAsync_PayeeOwner_ReturnsUnknownWithoutProviderCalls()
+    {
+        await MigrateAsync();
+        var provider = new CountingStripeSessionClient(new FakeStripeSessionClient(TimeProvider.System));
+        var operationId = Guid.CreateVersion7();
+        var payerOwnerId = Guid.CreateVersion7();
+        var payeeOwnerId = Guid.CreateVersion7();
+        var specification = PaymentSessionSpecification.Create(
+            operationId,
+            PaymentSessionKind.Authorization,
+            "escrow",
+            $"booking:{operationId:N}",
+            payerOwnerId.ToString("D"),
+            payeeOwnerId.ToString("D"),
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            $"cus_{operationId:N}",
+            $"acct_{operationId:N}");
+        Guid predecessorId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
+            predecessorId = createdExecution.Identity.AttemptId;
+        }
+        var callCountBeforeRetry = provider.CallCount;
+
+        await using var retryContext = CreateContext();
+        var service = Service(retryContext, provider);
+        var payeeRetry = await service.RetryAsync(
+            new PaymentSessionRetryRequest(operationId, predecessorId, 1, payeeOwnerId));
+        var unknownOperationRetry = await service.RetryAsync(
+            new PaymentSessionRetryRequest(Guid.CreateVersion7(), predecessorId, 1, payeeOwnerId));
+
+        Assert.True(payeeRetry.TryGetError(out PaymentOperationError? payeeError));
+        Assert.True(unknownOperationRetry.TryGetError(out PaymentOperationError? unknownOperationError));
+        Assert.IsType<PaymentOperationError.Unknown>(payeeError);
+        Assert.Equal(unknownOperationError.GetType(), payeeError.GetType());
+        Assert.Equal(callCountBeforeRetry, provider.CallCount);
+    }
+
+    [Fact]
     public async Task RetryAsync_ConcurrentDuplicateRetries_ConvergeAfterCancellationRace()
     {
         await MigrateAsync();
@@ -278,6 +321,53 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionFundsRouting.Destination,
             $"cus_{operationId:N}",
             $"acct_{operationId:N}");
+
+    private sealed class CountingStripeSessionClient : IStripeSessionClient
+    {
+        private readonly IStripeSessionClient inner;
+
+        public CountingStripeSessionClient(IStripeSessionClient inner)
+        {
+            this.inner = inner;
+        }
+
+        public int CallCount { get; private set; }
+
+        public Task<PaymentSessionProviderResult> CreateAsync(
+            PaymentSessionProviderRequest request,
+            string idempotencyKey,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            return inner.CreateAsync(request, idempotencyKey, ct);
+        }
+
+        public Task<PaymentSessionProviderResult> RetrieveAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            return inner.RetrieveAsync(providerObjectKind, providerObjectId, ct);
+        }
+
+        public Task<PaymentSessionProviderResult> CancelAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            return inner.CancelAsync(providerObjectKind, providerObjectId, ct);
+        }
+
+        public Task<string> CreateCustomerSessionAsync(
+            string providerCustomerId,
+            CancellationToken ct = default)
+        {
+            CallCount++;
+            return inner.CreateCustomerSessionAsync(providerCustomerId, ct);
+        }
+    }
 
     private sealed class ConcurrentCancellationStripeSessionClient : IStripeSessionClient
     {
