@@ -212,6 +212,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         new(
             new PaymentSessionOperationRepository(context),
             new PaymentSessionAttemptRepository(context),
+            new PayoutAccountRepository(context),
             provider,
             TimeProvider.System);
 

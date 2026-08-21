@@ -9,19 +9,65 @@ internal sealed class PaymentSessionService : IPaymentSessionService
 {
     private readonly IPaymentSessionOperationRepository operationRepository;
     private readonly IPaymentSessionAttemptRepository attemptRepository;
+    private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly IStripeSessionClient stripeSessionClient;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionService(
         IPaymentSessionOperationRepository operationRepository,
         IPaymentSessionAttemptRepository attemptRepository,
+        IPayoutAccountRepository payoutAccountRepository,
         IStripeSessionClient stripeSessionClient,
         TimeProvider timeProvider)
     {
         this.operationRepository = operationRepository;
         this.attemptRepository = attemptRepository;
+        this.payoutAccountRepository = payoutAccountRepository;
         this.stripeSessionClient = stripeSessionClient;
         this.timeProvider = timeProvider;
+    }
+
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
+        PaymentSessionOperationRequest request,
+        CancellationToken ct = default)
+    {
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(request.PayerOwnerId, ct);
+        if (payer?.StripeCustomerId is null)
+            return new PaymentOperationError.ProviderUnavailable();
+
+        string? providerConnectedAccountId = null;
+        if (request.FundsRouting == PaymentSessionFundsRouting.Destination)
+        {
+            if (request.PayeeOwnerId is not { } payeeOwnerId)
+                return new PaymentOperationError.Unknown();
+
+            var payee = await payoutAccountRepository.GetByOwnerIdAsync(payeeOwnerId, ct);
+            if (payee?.StripeAccountId is null)
+                return new PaymentOperationError.ProviderUnavailable();
+
+            providerConnectedAccountId = payee.StripeAccountId;
+        }
+
+        try
+        {
+            var specification = PaymentSessionSpecification.Create(
+                request.OperationId,
+                request.Kind,
+                request.OperationType,
+                request.ConsumerCorrelation,
+                request.PayerOwnerId.ToString("D"),
+                request.PayeeOwnerId?.ToString("D"),
+                request.AmountMinor,
+                request.Currency,
+                request.FundsRouting,
+                payer.StripeCustomerId,
+                providerConnectedAccountId);
+            return await CreateOrReplayAsync(specification, ct);
+        }
+        catch (DomainException)
+        {
+            return new PaymentOperationError.Unknown();
+        }
     }
 
     public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
@@ -41,13 +87,33 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     }
 
     public async Task<Result<PaymentSessionExecution, PaymentOperationError>> RetryAsync(
+        PaymentSessionRetryRequest request,
+        CancellationToken ct = default) =>
+        await RetryAsync(
+            request.OperationId,
+            request.ExpectedAttemptId,
+            request.ExpectedRevision,
+            request.OwnerId,
+            ct);
+
+    internal Task<Result<PaymentSessionExecution, PaymentOperationError>> RetryAsync(
         Guid operationId,
         Guid expectedAttemptId,
         long expectedRevision,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        RetryAsync(operationId, expectedAttemptId, expectedRevision, null, ct);
+
+    private async Task<Result<PaymentSessionExecution, PaymentOperationError>> RetryAsync(
+        Guid operationId,
+        Guid expectedAttemptId,
+        long expectedRevision,
+        Guid? ownerId,
+        CancellationToken ct)
     {
         var operation = await operationRepository.GetByOperationIdAsync(operationId, ct);
         if (operation is null)
+            return new PaymentOperationError.Unknown();
+        if (ownerId is { } scope && !Owns(operation, scope))
             return new PaymentOperationError.Unknown();
 
         var current = operation.CurrentAttempt;
@@ -103,11 +169,24 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     }
 
     public async Task<Result<PaymentSessionStatus, PaymentOperationError>> RefreshAsync(
+        PaymentSessionStatusRequest request,
+        CancellationToken ct = default) =>
+        await RefreshAsync(request.OperationId, request.OwnerId, ct);
+
+    internal Task<Result<PaymentSessionStatus, PaymentOperationError>> RefreshAsync(
         Guid operationId,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        RefreshAsync(operationId, null, ct);
+
+    private async Task<Result<PaymentSessionStatus, PaymentOperationError>> RefreshAsync(
+        Guid operationId,
+        Guid? ownerId,
+        CancellationToken ct)
     {
         var operation = await operationRepository.GetByOperationIdAsync(operationId, ct);
         if (operation is null)
+            return new PaymentOperationError.Unknown();
+        if (ownerId is { } scope && !Owns(operation, scope))
             return new PaymentOperationError.Unknown();
 
         var attempt = operation.CurrentAttempt;
@@ -171,7 +250,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 operation.SessionKind,
                 canonical.State,
                 provider.ClientSecret,
-                customerSessionSecret);
+                customerSessionSecret,
+                operation.ProviderCustomerId);
         }
         catch (PaymentSessionProviderUnavailableException)
         {
@@ -256,6 +336,18 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         new(
             new(attempt.OperationId, attempt.AttemptId, attempt.Revision),
             attempt.State,
+            attempt.State.ToTerminalDisposition(false),
+            attempt.FailureCode == PaymentOperationFailureCode.Expired
+                ? PaymentOperationRetryDisposition.CreateNewAttempt
+                : attempt.State.ToRetryDisposition(),
+            attempt.ExpiresAt,
             attempt.CaptureBefore,
             attempt.FailureCode is { } code ? PaymentOperationFailure.FromCode(code) : null);
+
+    private static bool Owns(PaymentSessionOperationEntity operation, Guid ownerId)
+    {
+        var ownerKey = ownerId.ToString("D");
+        return string.Equals(operation.PayerOwnerKey, ownerKey, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(operation.PayeeOwnerKey, ownerKey, StringComparison.OrdinalIgnoreCase);
+    }
 }

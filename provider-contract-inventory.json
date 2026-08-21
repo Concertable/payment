@@ -98,7 +98,7 @@
       "mode": "On-session provider execution with explicit automatic/manual capture or setup semantics.",
       "connectModel": "Payment resolves the provider customer and connected account before the adapter call.",
       "identity": "OperationId, AttemptId, revision, and action derive the Stripe idempotency key and metadata.",
-      "compatibility": "The additive internal path leaves every legacy session call operational until consumer migration."
+      "compatibility": "The additive backend PaymentSessionOperations gRPC and typed Client surface leaves every legacy session call operational; no consumer adoption occurs in this producer change."
     },
     {
       "id": "transfer-mutation",

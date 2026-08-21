@@ -110,6 +110,22 @@ public sealed partial class ProviderContractInventoryTests
         }
     };
 
+    public static TheoryData<string, string> ConsumerClientCases => new()
+    {
+        {
+            "paymentSessionOperationsClient.CreateOrReplayAsync(request)",
+            "paymentSessionOperationsClient.CreateOrReplayAsync"
+        },
+        {
+            "paymentSessionOperationsClient.RetryAsync(request)",
+            "paymentSessionOperationsClient.RetryAsync"
+        },
+        {
+            "paymentSessionOperationsClient.GetStatusAsync(request)",
+            "paymentSessionOperationsClient.GetStatusAsync"
+        }
+    };
+
     [Fact]
     public void SourceEntryPoints_CurrentScanMatchesCommittedInventory()
     {
@@ -180,6 +196,30 @@ public sealed partial class ProviderContractInventoryTests
             sources.Add(new PaymentSourceFile("GlobalUsings.cs", globalUsingsSource, "Example"));
 
         var entry = Assert.Single(DiscoverPaymentEntries(sources));
+
+        Assert.Equal(expectedOperation, entry.Operation);
+        Assert.Equal("Execute", entry.Member);
+    }
+
+    [Theory]
+    [MemberData(nameof(ConsumerClientCases))]
+    public void DiscoverConsumerEntries_DurableSessionClientCall_DiscoversEntryPoint(
+        string invocation,
+        string expectedOperation)
+    {
+        var source = $$"""
+            namespace Example;
+
+            public sealed class Consumer
+            {
+                public void Execute()
+                {
+                    _ = {{invocation}};
+                }
+            }
+            """;
+
+        var entry = Assert.Single(DiscoverConsumerEntries("Example.cs", source));
 
         Assert.Equal(expectedOperation, entry.Operation);
         Assert.Equal("Execute", entry.Member);
@@ -394,7 +434,7 @@ public sealed partial class ProviderContractInventoryTests
         throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
+    [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient|paymentSessionOperationsClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
     private static partial Regex ConsumerCallPattern();
 
     [GeneratedRegex(@"\bbus\.SendAsync\s*\(\s*new\s+(?<command>CaptureEscrowCommand|DepositEscrowCommand|RefundEscrowCommand)\s*\(")]
