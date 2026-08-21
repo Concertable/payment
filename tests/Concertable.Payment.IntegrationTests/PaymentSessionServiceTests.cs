@@ -1,4 +1,5 @@
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
@@ -180,6 +181,54 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
+    public async Task RetryAsync_ConcurrentDuplicateRetries_ConvergeAfterCancellationRace()
+    {
+        await MigrateAsync();
+        var innerProvider = new FakeStripeSessionClient(TimeProvider.System);
+        var specification = Specification(Guid.CreateVersion7());
+        Guid predecessorId;
+        string predecessorProviderObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
+            predecessorId = createdExecution.Identity.AttemptId;
+            var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
+            predecessorProviderObjectId = attempt.ProviderObjectId!;
+            attempt.ApplyTransition(new(
+                PaymentOperationTransitionDisposition.Applied,
+                PaymentOperationState.Failed,
+                "failed",
+                DateTimeOffset.UtcNow.AddSeconds(1),
+                null,
+                PaymentOperationTerminalDisposition.AttemptTerminal,
+                PaymentOperationRetryDisposition.CreateNewAttempt,
+                PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
+            await createContext.SaveChangesAsync();
+        }
+        var provider = new ConcurrentCancellationStripeSessionClient(innerProvider, predecessorProviderObjectId);
+
+        async Task<Result<PaymentSessionExecution, PaymentOperationError>> RetryAsync()
+        {
+            await using var context = CreateContext();
+            return await Service(context, provider).RetryAsync(specification.OperationId, predecessorId, 1);
+        }
+
+        var results = await Task.WhenAll(RetryAsync(), RetryAsync());
+
+        Assert.All(results, result => Assert.True(result.TryGetValue(out _)));
+        Assert.Equal(
+            results[0].Match(value => value.Identity.AttemptId, _ => Guid.Empty),
+            results[1].Match(value => value.Identity.AttemptId, _ => Guid.Empty));
+        Assert.Equal(2, innerProvider.ProviderObjectCount);
+        await using var assertContext = CreateContext();
+        Assert.Equal(
+            2,
+            await assertContext.PaymentSessionAttempts.CountAsync(
+                attempt => attempt.OperationId == specification.OperationId));
+    }
+
+    [Fact]
     public void PersistenceModel_ContainsNoSecretColumns()
     {
         using var context = CreateContext();
@@ -208,7 +257,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
     private static PaymentSessionService Service(
         PaymentDbContext context,
-        FakeStripeSessionClient provider) =>
+        IStripeSessionClient provider) =>
         new(
             new PaymentSessionOperationRepository(context),
             new PaymentSessionAttemptRepository(context),
@@ -229,4 +278,53 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionFundsRouting.Destination,
             $"cus_{operationId:N}",
             $"acct_{operationId:N}");
+
+    private sealed class ConcurrentCancellationStripeSessionClient : IStripeSessionClient
+    {
+        private readonly FakeStripeSessionClient inner;
+        private readonly string predecessorProviderObjectId;
+        private readonly TaskCompletionSource retrievalsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int predecessorRetrievalCount;
+
+        public ConcurrentCancellationStripeSessionClient(
+            FakeStripeSessionClient inner,
+            string predecessorProviderObjectId)
+        {
+            this.inner = inner;
+            this.predecessorProviderObjectId = predecessorProviderObjectId;
+        }
+
+        public Task<PaymentSessionProviderResult> CreateAsync(
+            PaymentSessionProviderRequest request,
+            string idempotencyKey,
+            CancellationToken ct = default) =>
+            inner.CreateAsync(request, idempotencyKey, ct);
+
+        public async Task<PaymentSessionProviderResult> RetrieveAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default)
+        {
+            var result = await inner.RetrieveAsync(providerObjectKind, providerObjectId, ct);
+            if (!string.Equals(providerObjectId, predecessorProviderObjectId, StringComparison.Ordinal))
+                return result;
+
+            if (Interlocked.Increment(ref predecessorRetrievalCount) == 2)
+                retrievalsCompleted.TrySetResult();
+
+            await retrievalsCompleted.Task.WaitAsync(ct);
+            return result;
+        }
+
+        public Task<PaymentSessionProviderResult> CancelAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default) =>
+            inner.CancelAsync(providerObjectKind, providerObjectId, ct);
+
+        public Task<string> CreateCustomerSessionAsync(
+            string providerCustomerId,
+            CancellationToken ct = default) =>
+            inner.CreateCustomerSessionAsync(providerCustomerId, ct);
+    }
 }

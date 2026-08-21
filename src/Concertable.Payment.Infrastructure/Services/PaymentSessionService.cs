@@ -136,10 +136,22 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                     ct);
                 if (provider.CanCancel)
                 {
-                    await stripeSessionClient.CancelAsync(
-                        current.ProviderObjectKind,
-                        current.ProviderObjectId,
-                        ct);
+                    try
+                    {
+                        await stripeSessionClient.CancelAsync(
+                            current.ProviderObjectKind,
+                            current.ProviderObjectId,
+                            ct);
+                    }
+                    catch (PaymentSessionProviderUnavailableException)
+                    {
+                        provider = await stripeSessionClient.RetrieveAsync(
+                            current.ProviderObjectKind,
+                            current.ProviderObjectId,
+                            ct);
+                        if (!string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
+                            return new PaymentOperationError.ProviderUnavailable();
+                    }
                 }
                 else if (!string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
                 {
