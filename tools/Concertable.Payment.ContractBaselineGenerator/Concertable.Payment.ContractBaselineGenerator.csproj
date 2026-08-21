@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <CompositionValidationExclusion>No dependency-injection container or host builder.</CompositionValidationExclusion>
     <BaselineVersion>0.1.0-alpha.0.1009</BaselineVersion>
   </PropertyGroup>
 
