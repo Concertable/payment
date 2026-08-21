@@ -113,7 +113,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         var operation = await operationRepository.GetByOperationIdAsync(operationId, ct);
         if (operation is null)
             return new PaymentOperationError.Unknown();
-        if (ownerId is { } scope && !Owns(operation, scope))
+        if (ownerId is { } scope && !IsPayer(operation, scope))
             return new PaymentOperationError.Unknown();
 
         var current = operation.CurrentAttempt;
@@ -359,7 +359,13 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private static bool Owns(PaymentSessionOperationEntity operation, Guid ownerId)
     {
         var ownerKey = ownerId.ToString("D");
-        return string.Equals(operation.PayerOwnerKey, ownerKey, StringComparison.OrdinalIgnoreCase)
+        return IsPayer(operation, ownerId)
             || string.Equals(operation.PayeeOwnerKey, ownerKey, StringComparison.OrdinalIgnoreCase);
     }
+
+    private static bool IsPayer(PaymentSessionOperationEntity operation, Guid ownerId) =>
+        string.Equals(
+            operation.PayerOwnerKey,
+            ownerId.ToString("D"),
+            StringComparison.OrdinalIgnoreCase);
 }
