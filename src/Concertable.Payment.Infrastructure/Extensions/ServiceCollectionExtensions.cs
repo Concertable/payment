@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFinancialOperationRepository, FinancialOperationRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddScoped<IPaymentSessionService, PaymentSessionService>();
         services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
         services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();
         services.AddScoped<ILedgerAccountRepository, LedgerAccountRepository>();
@@ -92,6 +93,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<Stripe.RefundService>();
             services.AddSingleton<Stripe.TransferReversalService>();
             services.AddScoped<IStripeAccountClient, StripeAccountClient>();
+            services.AddSingleton<IStripeSessionClient, StripeSessionClient>();
             services.AddScoped<IStripeHoldClient, StripeHoldClient>();
             services.AddSingleton<IStripeApiClient, StripeApiClient>();
             services.AddKeyedSingleton<IPaymentSessionConfigurator, OnSessionConfigurator>(PaymentSession.OnSession);
@@ -114,6 +116,8 @@ public static class ServiceCollectionExtensions
         else
         {
             services.AddScoped<IStripeAccountClient, FakeStripeAccountClient>();
+            services.AddSingleton<FakeStripeSessionClient>();
+            services.AddSingleton<IStripeSessionClient>(sp => sp.GetRequiredService<FakeStripeSessionClient>());
             services.AddScoped<IStripeHoldClient, FakeStripeHoldClient>();
             services.AddKeyedScoped<IStripePaymentIntentClient, FakeStripePaymentIntentClient>(PaymentSession.OnSession);
             services.AddKeyedScoped<IStripePaymentIntentClient, FakeStripePaymentIntentClient>(PaymentSession.OffSession);

@@ -10,4 +10,8 @@ internal interface IPaymentSessionAttemptRepository
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default);
+
+    Task SaveChangesAsync(CancellationToken ct = default);
+
+    void Detach(PaymentSessionAttemptEntity attempt);
 }
