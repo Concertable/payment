@@ -134,6 +134,26 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                     current.ProviderObjectKind,
                     current.ProviderObjectId,
                     ct);
+                var canonical = current;
+                if (!current.State.IsTerminal())
+                {
+                    var applied = await ApplyAsync(operation, current, provider, ct);
+                    if (!applied.TryGetValue(out canonical))
+                        return new PaymentOperationError.ProviderUnavailable();
+                }
+
+                var retry = PaymentOperationRetryEvaluator.Evaluate(
+                    canonical.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
+                    new(
+                        PaymentOperationRetryTrigger.ExplicitConsumerRetry,
+                        operation.RequestFingerprint,
+                        Guid.CreateVersion7(timeProvider.GetUtcNow())));
+                if (!retry.TryGetValue(out var decision)
+                    || decision.Disposition != PaymentOperationRetryDisposition.CreateNewAttempt)
+                {
+                    return new PaymentOperationError.OperationConflict();
+                }
+
                 if (provider.CanCancel)
                 {
                     try

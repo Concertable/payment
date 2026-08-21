@@ -223,6 +223,48 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         Assert.Equal(callCountBeforeRetry, provider.CallCount);
     }
 
+    [Theory]
+    [InlineData("requires_confirmation", PaymentOperationState.RequiresConfirmation)]
+    [InlineData("requires_capture", PaymentOperationState.Authorized)]
+    public async Task RetryAsync_NonRetryableProviderState_DoesNotCancel(
+        string providerStatus,
+        PaymentOperationState expectedState)
+    {
+        await MigrateAsync();
+        var innerProvider = new FakeStripeSessionClient(TimeProvider.System);
+        var specification = Specification(Guid.CreateVersion7());
+        Guid attemptId;
+        string providerObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
+            attemptId = execution.Identity.AttemptId;
+            providerObjectId = (await createContext.PaymentSessionAttempts
+                .SingleAsync(attempt => attempt.AttemptId == attemptId)).ProviderObjectId!;
+        }
+        innerProvider.SetStatus(
+            providerObjectId,
+            providerStatus,
+            expectedState == PaymentOperationState.Authorized
+                ? DateTimeOffset.UtcNow.AddDays(1)
+                : null);
+        var provider = new CountingStripeSessionClient(innerProvider);
+
+        await using var retryContext = CreateContext();
+        var retried = await Service(retryContext, provider).RetryAsync(
+            specification.OperationId,
+            attemptId,
+            1);
+
+        Assert.True(retried.TryGetError(out PaymentOperationError? error));
+        Assert.IsType<PaymentOperationError.OperationConflict>(error);
+        Assert.Equal(1, provider.CallCount);
+        Assert.Equal(0, provider.CancellationCount);
+        Assert.Equal(expectedState, (await retryContext.PaymentSessionAttempts
+            .SingleAsync(attempt => attempt.AttemptId == attemptId)).State);
+    }
+
     [Fact]
     public async Task RetryAsync_ConcurrentDuplicateRetries_ConvergeAfterCancellationRace()
     {
@@ -332,6 +374,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         }
 
         public int CallCount { get; private set; }
+        public int CancellationCount { get; private set; }
 
         public Task<PaymentSessionProviderResult> CreateAsync(
             PaymentSessionProviderRequest request,
@@ -357,6 +400,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             CancellationToken ct = default)
         {
             CallCount++;
+            CancellationCount++;
             return inner.CancelAsync(providerObjectKind, providerObjectId, ct);
         }
 
