@@ -1,6 +1,6 @@
 # Concertable.Payment
 
-Adapter service — agnostic payment/ledger/escrow/payout, a shared runtime dependency of B2B + Customer (called over gRPC). Inherits root [`AGENTS.md`](../../AGENTS.md) + [`api/AGENTS.md`](../AGENTS.md); internal design → [`ARCHITECTURE.md`](./ARCHITECTURE.md) (read first, don't duplicate).
+Adapter service — agnostic payment/ledger/escrow/payout, a shared runtime dependency of B2B + Customer (called over gRPC). Inherits root [`AGENTS.md`](../../AGENTS.md); internal design → [`ARCHITECTURE.md`](./ARCHITECTURE.md) (read first, don't duplicate).
 
 ## Stay agnostic — a payment kind is a metadata `type`, never a domain concept
 
