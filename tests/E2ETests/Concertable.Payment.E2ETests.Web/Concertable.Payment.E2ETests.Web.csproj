@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
+    <CompositionValidationExclusion>E2E adapter executable covered by the production Payment Web composition root.</CompositionValidationExclusion>
   </PropertyGroup>
 
   <ItemGroup>
