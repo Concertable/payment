@@ -109,12 +109,13 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
             PaymentOperationTransitionDisposition.Applied,
             Concertable.Payment.Contracts.PaymentOperationState.Failed,
             "failed",
-            DateTimeOffset.UtcNow.AddSeconds(1),
+            DateTimeOffset.UtcNow.AddMinutes(-1),
             null,
             Concertable.Payment.Contracts.PaymentOperationTerminalDisposition.AttemptTerminal,
             Concertable.Payment.Contracts.PaymentOperationRetryDisposition.CreateNewAttempt,
             PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
         await context.SaveChangesAsync();
+        provider.SetDeclined(attempt.ProviderObjectId!);
 
         var retried = await service.Retry(
             new Proto.PaymentSessionRetryRequest
