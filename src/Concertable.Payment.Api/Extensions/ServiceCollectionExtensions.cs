@@ -12,7 +12,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentPayoutOwner, CurrentPayoutOwner>();
         return services.AddControllers()
             .AddApplicationJson()
-            .AddInternalControllers(typeof(WebhookController).Assembly)
-            .AddControllersAsServices();
+            .AddInternalControllers(typeof(WebhookController).Assembly);
     }
 }
