@@ -3,6 +3,7 @@ extern alias PaymentClient;
 using System.Reflection;
 using System.Xml.Linq;
 using Concertable.Payment.Contracts.Events;
+using Concertable.Testing;
 using Google.Protobuf;
 using Google.Protobuf.Reflection;
 using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
@@ -52,12 +53,7 @@ public sealed class PublishedPackageCompatibilityTests
         };
 
         var forbidden = assemblies
-            .SelectMany(assembly => assembly.GetReferencedAssemblies())
-            .Select(reference => reference.Name)
-            .Where(name => name is not null && (name.StartsWith("Stripe", StringComparison.Ordinal)
-                || name.StartsWith("Concertable.B2B", StringComparison.Ordinal)
-                || name.StartsWith("Concertable.Customer", StringComparison.Ordinal)))
-            .ToArray();
+            .SelectMany(assembly => assembly.ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
 
         Assert.Empty(forbidden);
     }

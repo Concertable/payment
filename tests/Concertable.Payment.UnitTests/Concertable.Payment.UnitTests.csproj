@@ -27,6 +27,8 @@
     <ProjectReference Include="..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" Aliases="global,PaymentInfrastructure" />
     <ProjectReference Include="..\Compatibility\Concertable.Payment.PublishedContractFixture\Concertable.Payment.PublishedContractFixture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\E2ETests\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
+    <ProjectReference Include="..\..\..\Concertable.Shared\tests\Concertable.Testing\Concertable.Testing.csproj" Condition="'$(UseLocalPlatformPackages)' != 'true' And Exists('..\..\..\Concertable.Shared\tests\Concertable.Testing\Concertable.Testing.csproj')" />
+    <PackageReference Include="Concertable.Testing" Condition="'$(UseLocalPlatformPackages)' == 'true' Or !Exists('..\..\..\Concertable.Shared\tests\Concertable.Testing\Concertable.Testing.csproj')" />
   </ItemGroup>
 
   <ItemGroup>
