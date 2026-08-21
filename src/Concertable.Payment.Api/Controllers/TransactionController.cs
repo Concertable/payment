@@ -1,9 +1,11 @@
 using Concertable.Contracts;
 using Concertable.Payment.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Concertable.Payment.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 internal sealed class TransactionController : ControllerBase
