@@ -10,6 +10,13 @@ public enum PaymentSessionKind
     PaymentMethodVerification = 4
 }
 
+public enum PaymentSessionFundsRouting
+{
+    None = 1,
+    Platform = 2,
+    Destination = 3
+}
+
 public enum PaymentOperationState
 {
     Creating = 1,
