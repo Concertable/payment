@@ -108,9 +108,11 @@ internal sealed class PaymentSessionAttemptEntity
         if (transition.Disposition == PaymentOperationTransitionDisposition.Duplicate)
             return;
 
+        LastAttemptedAt = transition.ObservedAt;
         State = transition.State;
         LastProviderStatus = RequiredDiagnostic(transition.ProviderStatus, "provider status", 100);
         LastObservedAt = transition.ObservedAt;
+        NextReconcileAt = null;
         CaptureBefore = transition.CaptureBefore;
         FailureCode = transition.Failure?.Code;
         ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
@@ -124,6 +126,22 @@ internal sealed class PaymentSessionAttemptEntity
         TerminalAt = transition.TerminalDisposition == PaymentOperationTerminalDisposition.NonTerminal
             ? null
             : transition.ObservedAt;
+    }
+
+    internal void RecordReconciliationRequired(
+        DateTimeOffset attemptedAt,
+        string? providerRequestId,
+        string? providerDiagnosticCode,
+        string? providerDiagnosticMessage)
+    {
+        LastAttemptedAt = attemptedAt;
+        NextReconcileAt = attemptedAt;
+        ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
+        ProviderDiagnosticCode = OptionalDiagnostic(providerDiagnosticCode, "provider diagnostic code", 100);
+        ProviderDiagnosticMessage = OptionalDiagnostic(
+            providerDiagnosticMessage,
+            "provider diagnostic message",
+            1000);
     }
 
     internal PaymentProviderAttempt ToProviderAttempt(
