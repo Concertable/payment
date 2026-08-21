@@ -96,14 +96,18 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         return Task.FromResult($"cuss_fake_{providerCustomerId}_{Guid.CreateVersion7():N}_secret");
     }
 
-    internal void SetStatus(string providerObjectId, string status)
+    internal void SetStatus(
+        string providerObjectId,
+        string status,
+        DateTimeOffset? captureBefore = null)
     {
         var current = byProviderObjectId[providerObjectId];
         var updated = current with
         {
             Status = status,
             ObservedAt = timeProvider.GetUtcNow(),
-            CanCancel = status is not ("succeeded" or "canceled")
+            CanCancel = status is not ("succeeded" or "canceled"),
+            CaptureBefore = captureBefore
         };
         byProviderObjectId[providerObjectId] = updated;
         foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
