@@ -1,6 +1,6 @@
 # Concertable.Payment — Architecture
 
-> Cross-service plan and design rationale: [`api/docs/MICROSERVICES_ARCHITECTURE.md`](../docs/MICROSERVICES_ARCHITECTURE.md)
+> Cross-service design rationale and decision history: the `microservices-architecture` skill
 > Keyed-dispatch pattern: the `keyed-strategies` skill
 > Provider lifecycle baseline: [`PROVIDER_CONTRACT.md`](./PROVIDER_CONTRACT.md)
 > Outstanding gaps: [`TECH_DEBT.md`](./TECH_DEBT.md)
