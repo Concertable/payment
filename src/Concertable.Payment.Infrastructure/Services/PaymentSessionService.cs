@@ -135,7 +135,26 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                     current.ProviderObjectId,
                     ct);
                 var canonical = current;
-                if (!current.State.IsTerminal())
+                if (current.State.IsTerminal())
+                {
+                    var transition = EvaluateTransition(operation, current, provider);
+                    PaymentOperationState? providerState = null;
+                    if (transition.TryGetValue(out var duplicate))
+                    {
+                        providerState = duplicate.State;
+                    }
+                    else if (transition.TryGetError(out var rejection)
+                        && rejection.Reason == PaymentOperationTransitionRejectionReason.TerminalStateProtected)
+                    {
+                        providerState = rejection.ObservedState;
+                    }
+
+                    if (providerState is null)
+                        return new PaymentOperationError.ProviderUnavailable();
+                    if (!IsRetryCompatibleProviderTruth(current, providerState.Value, provider))
+                        return new PaymentOperationError.OperationConflict();
+                }
+                else
                 {
                     var applied = await ApplyAsync(operation, current, provider, ct);
                     if (!applied.TryGetValue(out canonical))
@@ -306,23 +325,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         }
 
         attempt.BindProviderObject(provider.ProviderObjectId);
-        var transition = StripeOperationTransitionEvaluator.Evaluate(
-            attempt.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
-            new StripeProviderObservation(
-                StripeProviderContractBaseline.ApiVersion,
-                provider.ProviderObjectKind == PaymentSessionProviderObjectKind.PaymentIntent
-                    ? StripeProviderObjectKind.PaymentIntent
-                    : StripeProviderObjectKind.SetupIntent,
-                provider.ProviderObjectId,
-                operation.OperationId,
-                attempt.AttemptId,
-                attempt.Revision,
-                operation.SessionKind,
-                provider.Status,
-                provider.ObservedAt,
-                provider.CaptureBefore,
-                provider.FailureClassification,
-                provider.IsExplicitConsumerCancellation));
+        var transition = EvaluateTransition(operation, attempt, provider);
 
         if (transition.TryGetValue(out var applied))
         {
@@ -363,6 +366,49 @@ internal sealed class PaymentSessionService : IPaymentSessionService
 
         return transition.TryGetValue(out _) ? attempt : new PaymentOperationError.ProviderUnavailable();
     }
+
+    private static Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
+        PaymentSessionOperationEntity operation,
+        PaymentSessionAttemptEntity attempt,
+        PaymentSessionProviderResult provider) =>
+        StripeOperationTransitionEvaluator.Evaluate(
+            attempt.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
+            new StripeProviderObservation(
+                StripeProviderContractBaseline.ApiVersion,
+                provider.ProviderObjectKind == PaymentSessionProviderObjectKind.PaymentIntent
+                    ? StripeProviderObjectKind.PaymentIntent
+                    : StripeProviderObjectKind.SetupIntent,
+                provider.ProviderObjectId,
+                operation.OperationId,
+                attempt.AttemptId,
+                attempt.Revision,
+                operation.SessionKind,
+                provider.Status,
+                provider.ObservedAt,
+                provider.CaptureBefore,
+                provider.FailureClassification,
+                provider.IsExplicitConsumerCancellation));
+
+    private bool IsRetryCompatibleProviderTruth(
+        PaymentSessionAttemptEntity current,
+        PaymentOperationState providerState,
+        PaymentSessionProviderResult provider) =>
+        (current.State, current.FailureCode, providerState, provider.FailureClassification) switch
+        {
+            (_, _, PaymentOperationState.Canceled, _) => true,
+            (PaymentOperationState.Failed, _, PaymentOperationState.Failed, _) => true,
+            (
+                PaymentOperationState.Failed,
+                PaymentOperationFailureCode.Declined,
+                PaymentOperationState.RequiresPaymentMethod,
+                ProviderFailureClassification.Declined) => true,
+            (
+                PaymentOperationState.Canceled,
+                PaymentOperationFailureCode.Expired,
+                PaymentOperationState.Authorized,
+                _) => provider.CaptureBefore <= timeProvider.GetUtcNow(),
+            _ => false
+        };
 
     private static PaymentSessionStatus ToStatus(PaymentSessionAttemptEntity attempt) =>
         new(
