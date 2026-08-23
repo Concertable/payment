@@ -1,13 +1,13 @@
-using Concertable.Composition.Testing;
 using Concertable.Payment.Web;
 using Concertable.Payment.Workers;
+using Concertable.Testing.Architecture;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
-namespace Concertable.Payment.CompositionTests;
+namespace Concertable.Payment.ArchitectureTests;
 
-public sealed class PaymentCompositionTests
+public sealed class PaymentArchitectureTests
 {
     [Fact]
     public void Web_ProductionGraphAndStrictValidation_AreValid()
