@@ -1,6 +1,6 @@
-using Concertable.Composition.Testing;
 using Concertable.Payment.Web;
 using Concertable.Payment.Workers;
+using Concertable.Testing.Architecture;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 using Xunit;
