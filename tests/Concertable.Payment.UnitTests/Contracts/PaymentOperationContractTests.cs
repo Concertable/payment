@@ -2,6 +2,7 @@ extern alias PaymentClient;
 
 using Concertable.Messaging.Contracts;
 using Concertable.Payment.Contracts.Events;
+using Concertable.Testing;
 using Google.Protobuf.Reflection;
 using PaymentSessionOperationsClient = PaymentClient::Concertable.Payment.Client.IPaymentSessionOperationsClient;
 using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
@@ -112,18 +113,9 @@ public sealed class PaymentOperationContractTests
     [InlineData(typeof(PaymentOperationStateChanged))]
     [InlineData(typeof(ClientSnapshot))]
     [InlineData(typeof(PaymentSessionOperationsClient))]
-    public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type)
-    {
-        var references = type.Assembly
-            .GetReferencedAssemblies()
-            .Select(reference => reference.Name)
-            .Where(name => name is not null)
-            .ToArray();
-
-        Assert.DoesNotContain(references, name => name!.StartsWith("Stripe", StringComparison.Ordinal));
-        Assert.DoesNotContain(references, name => name!.StartsWith("Concertable.B2B", StringComparison.Ordinal));
-        Assert.DoesNotContain(references, name => name!.StartsWith("Concertable.Customer", StringComparison.Ordinal));
-    }
+    public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type) =>
+        Assert.Empty(type.Assembly
+            .ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
 
     private static void AssertValues<TEnum>(params int[] expected)
         where TEnum : struct, Enum =>
