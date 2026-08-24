@@ -275,7 +275,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 var request = PaymentSessionProviderRequestFactory.Create(operation, attempt);
                 provider = await stripeSessionClient.CreateAsync(
                     request,
-                    PaymentSessionIdempotencyKeyGenerator.Create(
+                    new PaymentSessionIdempotencyKey(
                         operation.OperationId,
                         attempt.AttemptId,
                         attempt.Revision),
