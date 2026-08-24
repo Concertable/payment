@@ -8,24 +8,11 @@ namespace Concertable.Payment.UnitTests;
 public sealed class PaymentSessionProviderExecutionTests
 {
     [Fact]
-    public void Create_SameIdentity_ReturnsDeterministicKey()
-    {
-        var operationId = Guid.CreateVersion7();
-        var attemptId = Guid.CreateVersion7();
-
-        var first = PaymentSessionIdempotencyKeyGenerator.Create(operationId, attemptId, 1);
-        var second = PaymentSessionIdempotencyKeyGenerator.Create(operationId, attemptId, 1);
-
-        Assert.Equal(first, second);
-        Assert.Equal($"payment-session:{operationId:D}:{attemptId:D}:1:create", first);
-    }
-
-    [Fact]
     public async Task CreateAsync_FailureAfterAcceptance_ReplayReturnsSameObject()
     {
         var provider = new FakeStripeSessionClient(TimeProvider.System);
         var request = Request();
-        var key = PaymentSessionIdempotencyKeyGenerator.Create(
+        var key = new PaymentSessionIdempotencyKey(
             request.OperationId,
             request.AttemptId,
             request.Revision);
@@ -46,7 +33,7 @@ public sealed class PaymentSessionProviderExecutionTests
         var request = Request();
         var created = await provider.CreateAsync(
             request,
-            PaymentSessionIdempotencyKeyGenerator.Create(
+            new PaymentSessionIdempotencyKey(
                 request.OperationId,
                 request.AttemptId,
                 request.Revision));

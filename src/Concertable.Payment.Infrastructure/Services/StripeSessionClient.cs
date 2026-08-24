@@ -25,22 +25,23 @@ internal sealed class StripeSessionClient : IStripeSessionClient
 
     public async Task<PaymentSessionProviderResult> CreateAsync(
         PaymentSessionProviderRequest request,
-        string idempotencyKey,
+        PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         try
         {
+            var providerIdempotencyKey = idempotencyKey.ToString();
             return request.SessionKind switch
             {
                 PaymentSessionKind.Payment or PaymentSessionKind.Authorization =>
                     ToResult(await paymentIntentService.CreateAsync(
                         PaymentIntentOptions(request),
-                        new RequestOptions { IdempotencyKey = idempotencyKey },
+                        new RequestOptions { IdempotencyKey = providerIdempotencyKey },
                         ct)),
                 PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification =>
                     ToResult(await setupIntentService.CreateAsync(
                         SetupIntentOptions(request),
-                        new RequestOptions { IdempotencyKey = idempotencyKey },
+                        new RequestOptions { IdempotencyKey = providerIdempotencyKey },
                         ct)),
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.SessionKind, null)
             };
