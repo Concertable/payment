@@ -443,7 +443,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
         public Task<PaymentSessionProviderResult> CreateAsync(
             PaymentSessionProviderRequest request,
-            string idempotencyKey,
+            PaymentSessionIdempotencyKey idempotencyKey,
             CancellationToken ct = default)
         {
             CallCount++;
@@ -495,7 +495,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
         public Task<PaymentSessionProviderResult> CreateAsync(
             PaymentSessionProviderRequest request,
-            string idempotencyKey,
+            PaymentSessionIdempotencyKey idempotencyKey,
             CancellationToken ct = default) =>
             inner.CreateAsync(request, idempotencyKey, ct);
 

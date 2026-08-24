@@ -6,7 +6,7 @@ internal interface IStripeSessionClient
 {
     Task<PaymentSessionProviderResult> CreateAsync(
         PaymentSessionProviderRequest request,
-        string idempotencyKey,
+        PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default);
 
     Task<PaymentSessionProviderResult> RetrieveAsync(
