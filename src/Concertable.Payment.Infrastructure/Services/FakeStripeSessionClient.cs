@@ -15,7 +15,9 @@ internal enum FakeStripeSessionFaultPoint
 
 internal sealed class FakeStripeSessionClient : IStripeSessionClient
 {
-    private readonly ConcurrentDictionary<string, PaymentSessionProviderResult> byIdempotencyKey = [];
+    private readonly ConcurrentDictionary<
+        PaymentSessionIdempotencyKey,
+        PaymentSessionProviderResult> byIdempotencyKey = [];
     private readonly ConcurrentDictionary<string, PaymentSessionProviderResult> byProviderObjectId = [];
     private readonly ConcurrentDictionary<FakeStripeSessionFaultPoint, byte> oneShotFaults = [];
     private readonly TimeProvider timeProvider;
@@ -32,7 +34,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 
     public Task<PaymentSessionProviderResult> CreateAsync(
         PaymentSessionProviderRequest request,
-        string idempotencyKey,
+        PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
@@ -130,11 +132,15 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             byIdempotencyKey[entry.Key] = updated;
     }
 
-    private PaymentSessionProviderResult Create(PaymentSessionProviderRequest request, string idempotencyKey)
+    private PaymentSessionProviderResult Create(
+        PaymentSessionProviderRequest request,
+        PaymentSessionIdempotencyKey idempotencyKey)
     {
         var isPayment = request.SessionKind is PaymentSessionKind.Payment or PaymentSessionKind.Authorization;
         var prefix = isPayment ? "pi_fake" : "seti_fake";
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(idempotencyKey))).ToLowerInvariant();
+        var hash = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(idempotencyKey.ToString())))
+            .ToLowerInvariant();
         var id = $"{prefix}_{hash[..24]}";
         return new(
             isPayment
