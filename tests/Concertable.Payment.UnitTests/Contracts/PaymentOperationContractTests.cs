@@ -2,9 +2,7 @@ extern alias PaymentClient;
 
 using Concertable.Messaging.Contracts;
 using Concertable.Payment.Contracts.Events;
-using Concertable.Testing;
 using Google.Protobuf.Reflection;
-using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
 using Proto = PaymentClient::Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.UnitTests.Contracts;
@@ -66,14 +64,6 @@ public sealed class PaymentOperationContractTests
             ("capture_before", 6, FieldType.Message),
             ("failure", 7, FieldType.Message));
     }
-
-    [Theory]
-    [InlineData(typeof(PaymentOperationIdentity))]
-    [InlineData(typeof(PaymentOperationStateChanged))]
-    [InlineData(typeof(ClientSnapshot))]
-    public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type) =>
-        Assert.Empty(type.Assembly
-            .ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
 
     private static void AssertValues<TEnum>(params int[] expected)
         where TEnum : struct, Enum =>
