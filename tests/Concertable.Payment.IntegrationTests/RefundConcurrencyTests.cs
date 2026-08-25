@@ -55,7 +55,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 $"pi_escrow_{Guid.NewGuid():N}");
             escrow.Confirm();
             escrow.CreatedBy = "integration";
-            escrow.CreatedAt = DateTime.UtcNow;
+            escrow.CreatedAt = DateTimeOffset.UtcNow;
             seed.Escrows.Add(escrow);
             await seed.SaveChangesAsync();
         }
@@ -131,7 +131,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 bookingId,
                 binding.Id);
             settlement.CreatedBy = "integration";
-            settlement.CreatedAt = DateTime.UtcNow;
+            settlement.CreatedAt = DateTimeOffset.UtcNow;
             seed.SettlementTransactions.Add(settlement);
             await seed.SaveChangesAsync();
         }

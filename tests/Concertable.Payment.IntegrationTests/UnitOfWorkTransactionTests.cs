@@ -167,7 +167,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
             Money.Gbp(50),
             Money.Gbp(0),
             $"pi_{Guid.NewGuid():N}");
-        escrow.CreatedAt = DateTime.UtcNow;
+        escrow.CreatedAt = DateTimeOffset.UtcNow;
         escrow.CreatedBy = "integration-test";
 
         context.Escrows.Add(escrow);

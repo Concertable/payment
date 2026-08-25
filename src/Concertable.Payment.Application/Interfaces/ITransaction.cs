@@ -14,5 +14,5 @@ internal interface ITransaction
     string PaymentIntentId { get; }
     long Amount { get; }
     TransactionStatus Status { get; }
-    DateTime CreatedAt { get; }
+    DateTimeOffset CreatedAt { get; }
 }

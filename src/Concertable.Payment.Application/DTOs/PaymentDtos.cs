@@ -24,7 +24,7 @@ internal sealed record TicketTransactionDto : ITransaction
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
     public TransactionStatus Status { get; init; }
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
 internal sealed record SettlementTransactionDto : ITransaction
@@ -38,7 +38,7 @@ internal sealed record SettlementTransactionDto : ITransaction
     public long Amount { get; init; }
     public long PlatformFee { get; init; }
     public TransactionStatus Status { get; init; }
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
 internal sealed record VerifyTransactionDto : ITransaction
@@ -51,7 +51,7 @@ internal sealed record VerifyTransactionDto : ITransaction
     public required string PaymentIntentId { get; init; }
     public long Amount { get; init; }
     public TransactionStatus Status { get; init; }
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
 internal sealed record CheckoutSession(
