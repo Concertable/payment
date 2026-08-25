@@ -197,9 +197,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
@@ -227,9 +227,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(34)", maxLength: 34, nullable: false),
                     ContextId = table.Column<int>(type: "int", nullable: true),
