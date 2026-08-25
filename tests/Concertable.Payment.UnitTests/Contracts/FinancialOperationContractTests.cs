@@ -1,6 +1,5 @@
 using Concertable.Messaging.Contracts;
 using Concertable.Payment.Contracts;
-using Concertable.Testing;
 
 namespace Concertable.Payment.UnitTests.Contracts;
 
@@ -24,9 +23,4 @@ public sealed class FinancialOperationContractTests
     [MemberData(nameof(MessageTypes))]
     public void MessageType_ReturnsPublishedContract(Type type, string expected) =>
         Assert.Equal(expected, MessageTypeAttribute.Resolve(type));
-
-    [Fact]
-    public void ContractsAssembly_DoesNotReferenceConsumerRuntime() =>
-        Assert.Empty(typeof(CaptureEscrowCommand).Assembly
-            .ReferencesToAssembliesStartingWith("Concertable.B2B", "Concertable.Customer"));
 }

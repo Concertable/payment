@@ -71,9 +71,9 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     /// </summary>
     public long RefundedGrossMinor { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
-    public DateTime? LastModifiedAt { get; set; }
+    public DateTimeOffset? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
     public static EscrowEntity Create(

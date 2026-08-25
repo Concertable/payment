@@ -23,9 +23,9 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public long Amount { get; private set; }
     public TransactionStatus Status { get; private set; }
     public DateTime? CompletedAt { get; private set; }
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
-    public DateTime? LastModifiedAt { get; set; }
+    public DateTimeOffset? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
     public UnitResult<TransactionTransitionError> Complete(DateTime completedAt)
