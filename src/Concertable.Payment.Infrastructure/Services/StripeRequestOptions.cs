@@ -10,14 +10,18 @@ internal static class StripeRequestOptions
     public static RequestOptions? Deposit(Guid? operationId, Guid? commissionBindingId) =>
         Create(operationId, commissionBindingId, "deposit");
 
-    public static RequestOptions? Charge(Guid? commissionBindingId) =>
-        Create(null, commissionBindingId, "charge");
+    public static RequestOptions? Charge(Guid? operationId, Guid? commissionBindingId) =>
+        operationId is not null
+            ? Create(operationId, null, "charge")
+            : Create(null, commissionBindingId, "charge");
 
     public static RequestOptions? HoldSession(Guid? commissionBindingId) =>
         Create(null, commissionBindingId, "hold-session");
 
-    public static RequestOptions? Release(Guid? commissionBindingId) =>
-        Create(null, commissionBindingId, "release");
+    public static RequestOptions? Release(Guid? operationId, Guid? commissionBindingId) =>
+        operationId is not null
+            ? Create(operationId, null, "release")
+            : Create(null, commissionBindingId, "release");
 
     public static RequestOptions? Refund(Guid? operationId, Guid? commissionBindingId, long cumulativeGrossRefundMinor) =>
         operationId is not null
