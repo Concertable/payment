@@ -1,5 +1,5 @@
 using Concertable.Messaging.Contracts;
-using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Contracts;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services.Webhook;
