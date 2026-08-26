@@ -17,5 +17,7 @@ internal static class Schema
         public const string CommissionBindings = "CommissionBindings";
         public const string PaymentRefunds = "PaymentRefunds";
         public const string FinancialOperations = "FinancialOperations";
+        public const string PaymentSessionOperations = "PaymentSessionOperations";
+        public const string PaymentSessionAttempts = "PaymentSessionAttempts";
     }
 }
