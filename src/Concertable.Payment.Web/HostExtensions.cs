@@ -1,6 +1,5 @@
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Kernel;
-using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Api;

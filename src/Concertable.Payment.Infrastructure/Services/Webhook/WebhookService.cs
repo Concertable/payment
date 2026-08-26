@@ -1,5 +1,5 @@
 using Concertable.Messaging.Contracts;
-using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Infrastructure.Settings;
 using Microsoft.Extensions.Options;
 using Stripe;
