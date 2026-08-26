@@ -14,6 +14,9 @@ internal interface ITransactionRepository : IRepository<TransactionEntity>
     Task<SettlementTransactionEntity?> GetSettlementByOperationIdAsync(
         Guid operationId,
         CancellationToken ct = default);
+    Task<SettlementTransactionEntity?> ReloadSettlementByOperationIdAsync(
+        Guid operationId,
+        CancellationToken ct = default);
     Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default);
@@ -31,6 +34,7 @@ internal interface ITransactionRepository : IRepository<TransactionEntity>
         Guid ownerId,
         int take,
         CancellationToken ct = default);
+    Task CreateAsync(TransactionEntity entity);
     /// <summary>
     /// Atomically reserves <paramref name="grossMinor"/> against the settlement's cumulative gross-refund
     /// ceiling in a single conditional write. Returns <see langword="true"/> when the reservation fits
