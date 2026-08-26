@@ -4,13 +4,20 @@ using System.Text.Json;
 
 namespace Concertable.Payment.Domain;
 
-internal sealed record PaymentSessionFingerprint(int Version, string Value);
-
-internal static class PaymentSessionFingerprintGenerator
+internal readonly record struct PaymentSessionFingerprint
 {
-    public const int CurrentVersion = 1;
+    private PaymentSessionFingerprint(int version, string value)
+    {
+        Version = version;
+        Value = value;
+    }
 
-    public static PaymentSessionFingerprint Create(PaymentSessionSpecification specification) =>
+    internal const int CurrentVersion = 1;
+
+    public int Version { get; }
+    public string Value { get; }
+
+    internal static PaymentSessionFingerprint Create(PaymentSessionSpecification specification) =>
         Create(specification, CurrentVersion);
 
     internal static PaymentSessionFingerprint Create(
@@ -27,6 +34,7 @@ internal static class PaymentSessionFingerprintGenerator
             writer.WriteNumber("version", version);
             writer.WriteString("operationId", specification.OperationId.ToString("N"));
             writer.WriteString("sessionKind", specification.SessionKind.ToString());
+            writer.WriteString("session", specification.Session.ToString());
             writer.WriteString("operationType", specification.OperationType);
             writer.WriteString("consumerCorrelation", specification.ConsumerCorrelation);
             writer.WriteString("payerOwnerKey", specification.PayerOwnerKey);
@@ -41,7 +49,7 @@ internal static class PaymentSessionFingerprintGenerator
                 writer.WriteNull("currency");
             writer.WriteString("fundsRouting", specification.FundsRouting.ToString());
             writer.WriteString("captureMode", specification.CaptureMode.ToString());
-            writer.WriteString("customerPresence", specification.CustomerPresence.ToString());
+            WriteNullable(writer, "paymentMethodId", specification.PaymentMethodId);
             writer.WriteString("providerCustomerId", specification.ProviderCustomerId);
             WriteNullable(
                 writer,

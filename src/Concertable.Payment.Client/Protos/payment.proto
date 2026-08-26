@@ -138,6 +138,8 @@ message PaymentSessionOperationRequest {
   optional int64 amount_minor = 7;
   optional Currency currency = 8;
   PaymentSessionFundsRouting funds_routing = 9;
+  PaymentSessionType session = 10;
+  optional string payment_method_id = 11;
 }
 
 message PaymentSessionRetryRequest {

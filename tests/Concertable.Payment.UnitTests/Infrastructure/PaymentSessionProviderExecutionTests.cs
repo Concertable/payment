@@ -1,5 +1,6 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Infrastructure.Services;
 
@@ -17,13 +18,17 @@ public sealed class PaymentSessionProviderExecutionTests
             request.AttemptId,
             request.Revision);
         provider.FailOnce(FakeStripeSessionFaultPoint.AfterProviderAcceptance);
-        await Assert.ThrowsAsync<PaymentSessionProviderUnavailableException>(
-            () => provider.CreateAsync(request, key));
+        var failed = await provider.CreateAsync(request, key);
 
         var replay = await provider.CreateAsync(request, key);
+        Assert.True(replay.TryGetValue(out var replayed));
+        var retrieved = await provider.RetrieveAsync(replayed.ProviderObjectKind, replayed.ProviderObjectId);
 
+        Assert.True(failed.TryGetError(out var error));
+        Assert.IsType<PaymentOperationError.ProviderUnavailable>(error);
         Assert.Equal(1, provider.ProviderObjectCount);
-        Assert.Equal(replay, await provider.RetrieveAsync(replay.ProviderObjectKind, replay.ProviderObjectId));
+        Assert.True(retrieved.TryGetValue(out var observation));
+        Assert.Equal(replayed, observation);
     }
 
     [Fact]
@@ -37,12 +42,16 @@ public sealed class PaymentSessionProviderExecutionTests
                 request.OperationId,
                 request.AttemptId,
                 request.Revision));
+        Assert.True(created.TryGetValue(out var createdObservation));
 
-        var canceled = await provider.CancelAsync(created.ProviderObjectKind, created.ProviderObjectId);
+        var canceled = await provider.CancelAsync(
+            createdObservation.ProviderObjectKind,
+            createdObservation.ProviderObjectId);
 
-        Assert.Equal("canceled", canceled.Status);
-        Assert.True(canceled.IsExplicitConsumerCancellation);
-        Assert.False(canceled.CanCancel);
+        Assert.True(canceled.TryGetValue(out var canceledObservation));
+        Assert.Equal("canceled", canceledObservation.Status);
+        Assert.True(canceledObservation.IsExplicitConsumerCancellation);
+        Assert.False(canceledObservation.CanCancel);
     }
 
     private static PaymentSessionProviderRequest Request()
@@ -54,11 +63,13 @@ public sealed class PaymentSessionProviderExecutionTests
             attemptId,
             1,
             PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
             "escrow",
             $"booking:{operationId:N}",
             5000,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
             $"cus_{operationId:N}",
             $"acct_{operationId:N}",
             new Dictionary<string, string>());

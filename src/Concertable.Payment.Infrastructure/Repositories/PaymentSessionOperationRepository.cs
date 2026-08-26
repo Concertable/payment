@@ -26,7 +26,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
         DateTimeOffset createdAt,
         CancellationToken ct = default)
     {
-        var fingerprint = PaymentSessionFingerprintGenerator.Create(specification);
+        var fingerprint = PaymentSessionFingerprint.Create(specification);
         var existing = await GetByOperationIdAsync(specification.OperationId, ct);
         if (existing is not null)
             return existing.EvaluateInitialReservation(fingerprint);
