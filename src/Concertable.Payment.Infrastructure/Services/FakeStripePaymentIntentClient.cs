@@ -23,6 +23,14 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         CancellationToken ct = default) =>
         CompleteAsync(options.Amount, options.Metadata, ct);
 
+    public Task<Result<PaymentOutcome, PaymentError>> GetAsync(
+        string paymentIntentId,
+        CancellationToken ct = default) =>
+        Task.FromResult(Result<PaymentOutcome, PaymentError>.Success(new PaymentOutcome
+        {
+            TransactionId = paymentIntentId
+        }));
+
     private async Task<Result<PaymentOutcome, PaymentError>> CompleteAsync(
         Money amount,
         Dictionary<string, string> metadata,

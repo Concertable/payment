@@ -21,8 +21,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
         Guid? commissionBindingId,
         Guid? operationId,
         SettlementOperationFingerprint? operationFingerprint,
-        bool requiresAction,
-        string? clientSecret)
+        bool requiresAction)
         : base(
             payerId,
             payeeId,
@@ -43,7 +42,6 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
         OperationFingerprintVersion = operationFingerprint?.Version;
         OperationFingerprint = operationFingerprint?.Value;
         RequiresAction = requiresAction;
-        ClientSecret = clientSecret;
     }
 
     public override TransactionType TransactionType => TransactionType.Settlement;
@@ -61,7 +59,6 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
     public int? OperationFingerprintVersion { get; private set; }
     public string? OperationFingerprint { get; private set; }
     public bool RequiresAction { get; private set; }
-    public string? ClientSecret { get; private set; }
 
     /// <summary>
     /// Running total of cumulative gross reserved across non-failed refunds. Maintained by the
@@ -132,8 +129,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
             null,
             null,
             null,
-            false,
-            null);
+            false);
 
     internal static SettlementTransactionEntity CreateForOperation(
         Guid payerId,
@@ -145,8 +141,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
         int bookingId,
         Guid operationId,
         SettlementOperationFingerprint operationFingerprint,
-        bool requiresAction,
-        string? clientSecret) =>
+        bool requiresAction) =>
         new(
             payerId,
             payeeId,
@@ -162,8 +157,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
             null,
             operationId,
             operationFingerprint,
-            requiresAction,
-            clientSecret);
+            requiresAction);
 
     internal static SettlementTransactionEntity CreateBound(
         Guid payerId,
@@ -188,8 +182,7 @@ internal sealed class SettlementTransactionEntity : TransactionEntity
             commissionBindingId,
             null,
             null,
-            false,
-            null);
+            false);
 
     internal bool MatchesOperation(
         Guid operationId,

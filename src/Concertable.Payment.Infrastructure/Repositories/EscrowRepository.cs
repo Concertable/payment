@@ -1,4 +1,5 @@
 using Concertable.Payment.Infrastructure.Data;
+using Concertable.Payment.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
@@ -37,6 +38,39 @@ internal sealed class EscrowRepository
             .FirstOrDefaultAsync(
             e => e.CommissionBindingId == commissionBindingId,
             ct);
+
+    public async Task<EscrowEntity?> ReserveReleaseAsync(
+        int escrowId,
+        Guid operationId,
+        SettlementOperationFingerprint fingerprint,
+        CancellationToken ct = default)
+    {
+        await context.Escrows
+            .Where(escrow =>
+                escrow.Id == escrowId &&
+                escrow.Status == EscrowStatus.Held &&
+                escrow.ReleaseOperationId == null)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(escrow => escrow.ReleaseOperationId, operationId)
+                    .SetProperty(escrow => escrow.ReleaseOperationFingerprintVersion, fingerprint.Version)
+                    .SetProperty(escrow => escrow.ReleaseOperationFingerprint, fingerprint.Value),
+                ct);
+
+        return await ReloadByIdAsync(escrowId, ct);
+    }
+
+    public Task<EscrowEntity?> ReloadByIdAsync(int escrowId, CancellationToken ct = default)
+    {
+        foreach (var entry in context.ChangeTracker.Entries<EscrowEntity>()
+            .Where(entry => entry.Entity.Id == escrowId)
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        return context.Escrows.SingleOrDefaultAsync(escrow => escrow.Id == escrowId, ct);
+    }
 
     public async Task<bool> TryReserveRefundGrossAsync(int escrowId, long grossMinor, CancellationToken ct = default)
     {
