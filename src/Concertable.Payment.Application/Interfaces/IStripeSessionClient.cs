@@ -4,22 +4,22 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripeSessionClient
 {
-    Task<PaymentSessionProviderResult> CreateAsync(
+    Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default);
 
-    Task<PaymentSessionProviderResult> RetrieveAsync(
+    Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default);
 
-    Task<PaymentSessionProviderResult> CancelAsync(
+    Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default);
 
-    Task<string> CreateCustomerSessionAsync(
+    Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
         string providerCustomerId,
         CancellationToken ct = default);
 }

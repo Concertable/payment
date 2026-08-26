@@ -1,8 +1,24 @@
+using Concertable.Payment.Domain.ProviderContract;
+
 namespace Concertable.Payment.Application.PaymentSessions;
 
-internal static class PaymentSessionProviderRequestFactory
+internal sealed record PaymentSessionProviderRequest(
+    Guid OperationId,
+    Guid AttemptId,
+    long Revision,
+    PaymentSessionKind SessionKind,
+    PaymentSession Session,
+    string OperationType,
+    string ConsumerCorrelation,
+    long? AmountMinor,
+    Currency? Currency,
+    PaymentSessionFundsRouting FundsRouting,
+    string? PaymentMethodId,
+    string ProviderCustomerId,
+    string? ProviderConnectedAccountId,
+    IReadOnlyDictionary<string, string> Metadata)
 {
-    public static PaymentSessionProviderRequest Create(
+    internal static PaymentSessionProviderRequest Create(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt) =>
         new(
@@ -10,11 +26,13 @@ internal static class PaymentSessionProviderRequestFactory
             attempt.AttemptId,
             attempt.Revision,
             operation.SessionKind,
+            operation.Session,
             operation.OperationType,
             operation.ConsumerCorrelation,
             operation.AmountMinor,
             operation.Currency,
             operation.FundsRouting,
+            operation.PaymentMethodId,
             operation.ProviderCustomerId,
             operation.ProviderConnectedAccountId,
             new Dictionary<string, string>(StringComparer.Ordinal)

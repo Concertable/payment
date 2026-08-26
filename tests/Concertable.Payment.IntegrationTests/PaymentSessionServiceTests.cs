@@ -194,6 +194,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var specification = PaymentSessionSpecification.Create(
             operationId,
             PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
             "escrow",
             $"booking:{operationId:N}",
             payerOwnerId.ToString("D"),
@@ -201,6 +202,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             5000,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
             $"cus_{operationId:N}",
             $"acct_{operationId:N}");
         Guid predecessorId;
@@ -419,6 +421,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         PaymentSessionSpecification.Create(
             operationId,
             PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
             "escrow",
             $"booking:{operationId:N}",
             $"payer:{operationId:N}",
@@ -426,6 +429,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             amountMinor,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
             $"cus_{operationId:N}",
             $"acct_{operationId:N}");
 
@@ -441,7 +445,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         public int CallCount { get; private set; }
         public int CancellationCount { get; private set; }
 
-        public Task<PaymentSessionProviderResult> CreateAsync(
+        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
             PaymentSessionProviderRequest request,
             PaymentSessionIdempotencyKey idempotencyKey,
             CancellationToken ct = default)
@@ -450,7 +454,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return inner.CreateAsync(request, idempotencyKey, ct);
         }
 
-        public Task<PaymentSessionProviderResult> RetrieveAsync(
+        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -459,7 +463,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return inner.RetrieveAsync(providerObjectKind, providerObjectId, ct);
         }
 
-        public Task<PaymentSessionProviderResult> CancelAsync(
+        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -469,7 +473,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return inner.CancelAsync(providerObjectKind, providerObjectId, ct);
         }
 
-        public Task<string> CreateCustomerSessionAsync(
+        public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
             string providerCustomerId,
             CancellationToken ct = default)
         {
@@ -493,13 +497,13 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             this.predecessorProviderObjectId = predecessorProviderObjectId;
         }
 
-        public Task<PaymentSessionProviderResult> CreateAsync(
+        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
             PaymentSessionProviderRequest request,
             PaymentSessionIdempotencyKey idempotencyKey,
             CancellationToken ct = default) =>
             inner.CreateAsync(request, idempotencyKey, ct);
 
-        public async Task<PaymentSessionProviderResult> RetrieveAsync(
+        public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -515,13 +519,13 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return result;
         }
 
-        public Task<PaymentSessionProviderResult> CancelAsync(
+        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default) =>
             inner.CancelAsync(providerObjectKind, providerObjectId, ct);
 
-        public Task<string> CreateCustomerSessionAsync(
+        public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
             string providerCustomerId,
             CancellationToken ct = default) =>
             inner.CreateCustomerSessionAsync(providerCustomerId, ct);

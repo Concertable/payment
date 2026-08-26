@@ -13,6 +13,7 @@ internal static class PaymentSessionOperationRequestMappers
             {
                 OperationId = request.OperationId.ToString("D"),
                 Kind = request.Kind.ToProto(),
+                Session = request.Session.ToProto(),
                 OperationType = request.OperationType,
                 ConsumerCorrelation = request.ConsumerCorrelation,
                 PayerOwnerId = request.PayerOwnerId.ToString("D"),
@@ -24,9 +25,21 @@ internal static class PaymentSessionOperationRequestMappers
                 message.AmountMinor = amountMinor;
             if (request.Currency is { } currency)
                 message.Currency = currency.ToProtoCurrency();
+            if (request.PaymentMethodId is { } paymentMethodId)
+                message.PaymentMethodId = paymentMethodId;
 
             return message;
         }
+    }
+
+    extension(PaymentSession session)
+    {
+        private Proto.PaymentSessionType ToProto() => session switch
+        {
+            PaymentSession.OnSession => Proto.PaymentSessionType.OnSession,
+            PaymentSession.OffSession => Proto.PaymentSessionType.OffSession,
+            _ => throw new ArgumentOutOfRangeException(nameof(session), session, null)
+        };
     }
 
     extension(PaymentSessionRetryRequest request)
