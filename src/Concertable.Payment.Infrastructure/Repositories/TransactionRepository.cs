@@ -43,6 +43,14 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             transaction => transaction.OperationId == operationId,
             ct);
 
+    public Task<SettlementTransactionEntity?> ReloadSettlementByOperationIdAsync(
+        Guid operationId,
+        CancellationToken ct = default)
+    {
+        context.ChangeTracker.Clear();
+        return GetSettlementByOperationIdAsync(operationId, ct);
+    }
+
     public Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default) =>
@@ -171,6 +179,12 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
                 s => s.SetProperty(t => t.RefundedGrossMinor, t => t.RefundedGrossMinor + grossMinor),
                 ct);
         return affected == 1;
+    }
+
+    public async Task CreateAsync(TransactionEntity entity)
+    {
+        await context.Transactions.AddAsync(entity);
+        await context.SaveChangesAsync();
     }
 
     public Task ReleaseReservedSettlementRefundGrossAsync(

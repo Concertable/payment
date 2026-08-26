@@ -1,11 +1,13 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using Concertable.Kernel.ValueObjects;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -105,17 +107,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         {
             var existing = await transactionRepository.GetSettlementByOperationIdAsync(replayOperationId, ct);
             if (existing is not null)
-            {
-                if (!existing.MatchesOperation(replayOperationId, fingerprint!.Value))
-                    return new ManagerPaymentOperationError.OperationConflict();
-
-                return new PaymentOutcome
-                {
-                    TransactionId = existing.PaymentIntentId,
-                    RequiresAction = existing.RequiresAction,
-                    ClientSecret = existing.ClientSecret
-                };
-            }
+                return await ReplayAsync(existing, replayOperationId, fingerprint!.Value, session, ct);
         }
 
         var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
@@ -177,8 +169,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 bookingId,
                 transactionOperationId,
                 fingerprint!.Value,
-                outcome.RequiresAction,
-                outcome.ClientSecret)
+                outcome.RequiresAction)
             : SettlementTransactionEntity.Create(
                 payerId,
                 payeeId,
@@ -192,9 +183,46 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (operationId is not null && ex.IsDuplicateKey())
+        {
+            var canonical = await transactionRepository.ReloadSettlementByOperationIdAsync(operationId.Value, ct);
+            if (canonical is null)
+                throw;
+
+            return await ReplayAsync(canonical, operationId.Value, fingerprint!.Value, session, ct);
+        }
 
         return outcome;
+    }
+
+    private async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> ReplayAsync(
+        SettlementTransactionEntity transaction,
+        Guid operationId,
+        SettlementOperationFingerprint fingerprint,
+        PaymentSession session,
+        CancellationToken ct)
+    {
+        if (!transaction.MatchesOperation(operationId, fingerprint))
+            return new ManagerPaymentOperationError.OperationConflict();
+        if (!transaction.RequiresAction)
+        {
+            return new PaymentOutcome
+            {
+                TransactionId = transaction.PaymentIntentId
+            };
+        }
+
+        var result = await paymentManager.GetPaymentOutcomeAsync(transaction.PaymentIntentId, session, ct);
+        if (result.TryGetValue(out var outcome))
+            return outcome;
+
+        result.TryGetError(out var error);
+        return new ManagerPaymentOperationError.ManagerFailure(
+            new ManagerPaymentError.PaymentFailure(error!));
     }
 
     public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(

@@ -106,6 +106,12 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         HoldInternalAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, null, commissionBindingId, ct);
 
+    public Task<Result<PaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
+        string paymentIntentId,
+        PaymentSession session,
+        CancellationToken ct = default) =>
+        intentClientFactory.Create(session).GetAsync(paymentIntentId, ct);
+
     private async Task<Result<PaymentOutcome, PaymentError>> HoldInternalAsync(
         Guid payerId,
         Guid payeeId,

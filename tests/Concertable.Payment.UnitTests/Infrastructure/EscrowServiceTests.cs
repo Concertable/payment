@@ -291,7 +291,6 @@ public sealed class EscrowServiceTests
         escrowRepository
             .Setup(r => r.GetByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
-
         paymentManager
             .Setup(p => p.ReleaseAsync(It.IsAny<ReleaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<Transfer, PaymentError>.Success(new Transfer("tr_test")));
@@ -316,6 +315,13 @@ public sealed class EscrowServiceTests
             .ReturnsAsync(heldEscrow);
         escrowRepository
             .Setup(r => r.GetByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+        escrowRepository
+            .Setup(r => r.ReserveReleaseAsync(
+                heldEscrow.Id,
+                operationId,
+                It.IsAny<SettlementOperationFingerprint>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
 
         ReleaseRequest? captured = null;
@@ -349,6 +355,13 @@ public sealed class EscrowServiceTests
         escrowRepository
             .Setup(r => r.GetByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
+        escrowRepository
+            .Setup(r => r.ReserveReleaseAsync(
+                heldEscrow.Id,
+                operationId,
+                It.IsAny<SettlementOperationFingerprint>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
 
         var result = await sut.ReleaseByBookingIdAsync(operationId, 7);
 
@@ -375,6 +388,13 @@ public sealed class EscrowServiceTests
             .ReturnsAsync(heldEscrow);
         escrowRepository
             .Setup(r => r.GetByIdAsync(heldEscrow.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(heldEscrow);
+        escrowRepository
+            .Setup(r => r.ReserveReleaseAsync(
+                heldEscrow.Id,
+                secondOperationId,
+                It.IsAny<SettlementOperationFingerprint>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(heldEscrow);
 
         var result = await sut.ReleaseByBookingIdAsync(secondOperationId, 7);

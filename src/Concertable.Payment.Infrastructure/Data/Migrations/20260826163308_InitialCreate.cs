@@ -323,7 +323,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     OperationFingerprintVersion = table.Column<int>(type: "int", nullable: true),
                     OperationFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: true),
                     RequiresAction = table.Column<bool>(type: "bit", nullable: true),
-                    ClientSecret = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>

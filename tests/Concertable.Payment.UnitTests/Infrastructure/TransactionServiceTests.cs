@@ -44,6 +44,24 @@ public sealed class TransactionServiceTests
     }
 
     [Fact]
+    public async Task LogAsync_PersistsMappedTransaction()
+    {
+        var dto = new Mock<ITransaction>().Object;
+        var transaction = TicketTransactionEntity.Create(
+            payerId,
+            payeeId,
+            "pi_logged",
+            2000,
+            TransactionStatus.Pending,
+            3);
+        mapper.Setup(value => value.ToEntity(dto)).Returns(transaction);
+
+        await sut.LogAsync(dto);
+
+        repository.Verify(value => value.CreateAsync(transaction), Times.Once);
+    }
+
+    [Fact]
     public async Task CompleteAsync_SettlementPending_CompletesAndPostsDirectSettlement()
     {
         var settlement = SettlementTransactionEntity.Create(

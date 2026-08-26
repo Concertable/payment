@@ -807,10 +807,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("ContextId");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
 
