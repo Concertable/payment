@@ -259,7 +259,6 @@ public sealed class ManagerPaymentServiceTests
         Assert.Equal(SettlementOperationFingerprint.CurrentVersion, captured.OperationFingerprintVersion);
         Assert.NotNull(captured.OperationFingerprint);
         Assert.True(captured.RequiresAction);
-        Assert.Equal("secret_operation", captured.ClientSecret);
     }
 
     [Fact]
@@ -285,8 +284,18 @@ public sealed class ManagerPaymentServiceTests
             7,
             operationId,
             fingerprint,
-            true,
-            "secret_existing");
+            true);
+        paymentManager
+            .Setup(manager => manager.GetPaymentOutcomeAsync(
+                "pi_existing",
+                PaymentSession.OnSession,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(new PaymentOutcome
+            {
+                TransactionId = "pi_existing",
+                RequiresAction = true,
+                ClientSecret = "secret_existing"
+            }));
         transactionRepository
             .Setup(r => r.GetSettlementByOperationIdAsync(operationId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
@@ -343,8 +352,7 @@ public sealed class ManagerPaymentServiceTests
                 7,
                 operationId,
                 fingerprint,
-                false,
-                null));
+                false));
 
         var result = await SutWithFee(12).PayAsync(
             operationId,

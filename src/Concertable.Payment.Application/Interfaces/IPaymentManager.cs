@@ -76,6 +76,11 @@ internal interface IPaymentManager
         Guid commissionBindingId,
         CancellationToken ct = default);
 
+    Task<Result<PaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
+        string paymentIntentId,
+        PaymentSession session,
+        CancellationToken ct = default);
+
     Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);
     Task<Result<Refund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default);
     Task<UnitResult<PaymentError>> CaptureAsync(CaptureRequest request, CancellationToken ct = default);

@@ -1,10 +1,12 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -354,6 +356,10 @@ internal sealed class EscrowService : IEscrowService
         if (operationId is { } id)
         {
             var fingerprint = SettlementOperationFingerprint.CreateRelease(id, escrow);
+            escrow = await escrowRepository.ReserveReleaseAsync(escrow.Id, id, fingerprint, ct);
+            if (escrow is null)
+                return new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotFound());
+
             var reservation = escrow.BeginRelease(id, fingerprint);
             if (reservation.TryGetError(out var error))
             {
@@ -364,7 +370,6 @@ internal sealed class EscrowService : IEscrowService
             if (escrow.TransferId is { } existingTransferId)
                 return new Transfer(existingTransferId);
 
-            await unitOfWork.SaveChangesAsync(ct);
         }
         else if (escrow.Status != EscrowStatus.Held)
         {
@@ -398,7 +403,18 @@ internal sealed class EscrowService : IEscrowService
                 escrow.ChargeId,
                 transfer.TransferId),
             ct);
-        await unitOfWork.SaveChangesAsync(ct);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (operationId is not null && ex.IsDuplicateKey())
+        {
+            var canonical = await escrowRepository.ReloadByIdAsync(escrow.Id, ct);
+            if (canonical?.ReleaseOperationId != operationId || canonical.TransferId is null)
+                throw;
+
+            return new Transfer(canonical.TransferId);
+        }
         return transfer;
     }
 

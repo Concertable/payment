@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260826153111_InitialCreate")]
+    [Migration("20260826163308_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -809,10 +809,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .ValueGeneratedOnUpdateSometimes()
                         .HasColumnType("int")
                         .HasColumnName("ContextId");
-
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
