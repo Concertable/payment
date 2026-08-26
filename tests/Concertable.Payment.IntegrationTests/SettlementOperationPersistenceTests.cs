@@ -1,3 +1,5 @@
+using Concertable.DataAccess.Infrastructure.Data;
+using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Contracts.Errors;
@@ -259,6 +261,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
             .UseSqlServer(sql.ConnectionString)
+            .AddInterceptors(new AuditInterceptor(Mock.Of<ICurrentUser>(), TimeProvider.System))
             .Options;
         return new PaymentDbContext(options, new PaymentConfigurationProvider());
     }
