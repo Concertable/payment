@@ -54,6 +54,10 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
             1,
             await verification.PaymentSessionAttempts.CountAsync(
                 attempt => attempt.OperationId == specification.OperationId));
+        var operation = await verification.PaymentSessionOperations.SingleAsync(
+            value => value.OperationId == specification.OperationId);
+        Assert.Equal(PaymentSession.OffSession, operation.Session);
+        Assert.Equal(specification.PaymentMethodId, operation.PaymentMethodId);
     }
 
     [Fact]
@@ -191,6 +195,7 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
         PaymentSessionSpecification.Create(
             operationId,
             PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
             "escrow",
             $"booking:{operationId:N}",
             $"payer:{operationId:N}",
@@ -198,6 +203,7 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
             amountMinor,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
             $"cus_{operationId:N}",
             $"acct_{operationId:N}");
 }

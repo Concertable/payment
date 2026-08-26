@@ -5,6 +5,7 @@ internal sealed class PaymentSessionSpecification
     private PaymentSessionSpecification(
         Guid operationId,
         PaymentSessionKind sessionKind,
+        PaymentSession session,
         string operationType,
         string consumerCorrelation,
         string payerOwnerKey,
@@ -12,11 +13,13 @@ internal sealed class PaymentSessionSpecification
         long? amountMinor,
         Currency? currency,
         PaymentSessionFundsRouting fundsRouting,
+        string? paymentMethodId,
         string providerCustomerId,
         string? providerConnectedAccountId)
     {
         OperationId = operationId;
         SessionKind = sessionKind;
+        Session = session;
         OperationType = operationType;
         ConsumerCorrelation = consumerCorrelation;
         PayerOwnerKey = payerOwnerKey;
@@ -24,12 +27,14 @@ internal sealed class PaymentSessionSpecification
         AmountMinor = amountMinor;
         Currency = currency;
         FundsRouting = fundsRouting;
+        PaymentMethodId = paymentMethodId;
         ProviderCustomerId = providerCustomerId;
         ProviderConnectedAccountId = providerConnectedAccountId;
     }
 
     public Guid OperationId { get; }
     public PaymentSessionKind SessionKind { get; }
+    public PaymentSession Session { get; }
     public string OperationType { get; }
     public string ConsumerCorrelation { get; }
     public string PayerOwnerKey { get; }
@@ -37,6 +42,7 @@ internal sealed class PaymentSessionSpecification
     public long? AmountMinor { get; }
     public Currency? Currency { get; }
     public PaymentSessionFundsRouting FundsRouting { get; }
+    public string? PaymentMethodId { get; }
     public string ProviderCustomerId { get; }
     public string? ProviderConnectedAccountId { get; }
     public PaymentSessionCaptureMode CaptureMode => SessionKind switch
@@ -47,11 +53,10 @@ internal sealed class PaymentSessionSpecification
             PaymentSessionCaptureMode.None,
         _ => throw new DomainException("Payment session kind is invalid.")
     };
-    public PaymentSessionCustomerPresence CustomerPresence => PaymentSessionCustomerPresence.OnSession;
-
     public static PaymentSessionSpecification Create(
         Guid operationId,
         PaymentSessionKind sessionKind,
+        PaymentSession session,
         string operationType,
         string consumerCorrelation,
         string payerOwnerKey,
@@ -59,6 +64,7 @@ internal sealed class PaymentSessionSpecification
         long? amountMinor,
         Currency? currency,
         PaymentSessionFundsRouting fundsRouting,
+        string? paymentMethodId,
         string providerCustomerId,
         string? providerConnectedAccountId)
     {
@@ -68,18 +74,25 @@ internal sealed class PaymentSessionSpecification
             throw new DomainException("Payment session operation id must be UUIDv7.");
         if (!Enum.IsDefined(sessionKind))
             throw new DomainException("Payment session kind is invalid.");
+        if (!Enum.IsDefined(session))
+            throw new DomainException("Payment session mode is invalid.");
         if (!Enum.IsDefined(fundsRouting))
             throw new DomainException("Payment session funds routing is invalid.");
 
-        operationType = Required(operationType, "Payment session operation type", 100);
-        consumerCorrelation = Required(consumerCorrelation, "Payment session consumer correlation", 200);
-        payerOwnerKey = Required(payerOwnerKey, "Payment session payer owner", 200);
-        providerCustomerId = Required(providerCustomerId, "Payment session provider customer", 100);
-        payeeOwnerKey = Optional(payeeOwnerKey, "Payment session payee owner", 200);
-        providerConnectedAccountId = Optional(
-            providerConnectedAccountId,
-            "Payment session provider connected account",
-            100);
+        operationType = Normalize(operationType, "Payment session operation type", 100);
+        consumerCorrelation = Normalize(consumerCorrelation, "Payment session consumer correlation", 200);
+        payerOwnerKey = Normalize(payerOwnerKey, "Payment session payer owner", 200);
+        providerCustomerId = Normalize(providerCustomerId, "Payment session provider customer", 100);
+
+        if (paymentMethodId is not null)
+            paymentMethodId = Normalize(paymentMethodId, "Payment session payment method", 100);
+        if (payeeOwnerKey is not null)
+            payeeOwnerKey = Normalize(payeeOwnerKey, "Payment session payee owner", 200);
+        if (providerConnectedAccountId is not null)
+            providerConnectedAccountId = Normalize(
+                providerConnectedAccountId,
+                "Payment session provider connected account",
+                100);
 
         if (sessionKind is PaymentSessionKind.Payment or PaymentSessionKind.Authorization)
         {
@@ -95,11 +108,14 @@ internal sealed class PaymentSessionSpecification
                 throw new DomainException("Destination routing requires a provider connected account.");
             if (fundsRouting == PaymentSessionFundsRouting.Platform && providerConnectedAccountId is not null)
                 throw new DomainException("Platform routing cannot bind a provider connected account.");
+            if (session == PaymentSession.OffSession && paymentMethodId is null)
+                throw new DomainException("An off-session payment requires a payment method.");
         }
         else if (amountMinor is not null
             || currency is not null
             || payeeOwnerKey is not null
             || fundsRouting != PaymentSessionFundsRouting.None
+            || paymentMethodId is not null
             || providerConnectedAccountId is not null)
         {
             throw new DomainException("A setup payment session cannot contain money-movement inputs.");
@@ -108,6 +124,7 @@ internal sealed class PaymentSessionSpecification
         return new(
             operationId,
             sessionKind,
+            session,
             operationType,
             consumerCorrelation,
             payerOwnerKey,
@@ -115,22 +132,19 @@ internal sealed class PaymentSessionSpecification
             amountMinor,
             currency,
             fundsRouting,
+            paymentMethodId,
             providerCustomerId,
             providerConnectedAccountId);
     }
 
-    private static string Required(string value, string name, int maxLength)
+    private static string Normalize(string value, string name, int maxLength)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException($"{name} is required.");
+        DomainException.ThrowIfNullOrWhiteSpace(value, name);
 
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
+        var normalizedValue = value.Trim();
+        if (normalizedValue.Length > maxLength)
             throw new DomainException($"{name} cannot exceed {maxLength} characters.");
 
-        return normalized;
+        return normalizedValue;
     }
-
-    private static string? Optional(string? value, string name, int maxLength) =>
-        value is null ? null : Required(value, name, maxLength);
 }

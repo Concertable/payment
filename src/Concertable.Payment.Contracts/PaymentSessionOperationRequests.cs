@@ -5,13 +5,15 @@ namespace Concertable.Payment.Contracts;
 public sealed record PaymentSessionOperationRequest(
     Guid OperationId,
     PaymentSessionKind Kind,
+    PaymentSession Session,
     string OperationType,
     string ConsumerCorrelation,
     Guid PayerOwnerId,
     Guid? PayeeOwnerId,
     long? AmountMinor,
     Currency? Currency,
-    PaymentSessionFundsRouting FundsRouting);
+    PaymentSessionFundsRouting FundsRouting,
+    string? PaymentMethodId);
 
 public sealed record PaymentSessionRetryRequest(
     Guid OperationId,

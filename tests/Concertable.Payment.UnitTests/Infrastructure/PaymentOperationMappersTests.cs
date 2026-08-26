@@ -193,18 +193,21 @@ public sealed class PaymentOperationMappersTests
         var request = new PaymentSessionOperationRequest(
             operationId,
             PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
             "escrow",
             "booking:42",
             payerOwnerId,
             payeeOwnerId,
             5000,
             Currency.Gbp,
-            PaymentSessionFundsRouting.Destination);
+            PaymentSessionFundsRouting.Destination,
+            "pm_test");
 
         var message = request.ToProto();
 
         Assert.Equal(operationId.ToString("D"), message.OperationId);
         Assert.Equal(Proto.PaymentSessionKind.Authorization, message.Kind);
+        Assert.Equal(Proto.PaymentSessionType.OffSession, message.Session);
         Assert.Equal(payeeOwnerId.ToString("D"), message.PayeeOwnerId);
         Assert.True(message.HasPayeeOwnerId);
         Assert.Equal(5000, message.AmountMinor);
@@ -212,6 +215,8 @@ public sealed class PaymentOperationMappersTests
         Assert.Equal(Proto.Currency.Gbp, message.Currency);
         Assert.True(message.HasCurrency);
         Assert.Equal(Proto.PaymentSessionFundsRouting.Destination, message.FundsRouting);
+        Assert.Equal("pm_test", message.PaymentMethodId);
+        Assert.True(message.HasPaymentMethodId);
     }
 
     [Fact]
@@ -220,13 +225,15 @@ public sealed class PaymentOperationMappersTests
         var request = new PaymentSessionOperationRequest(
             Guid.CreateVersion7(),
             PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
             "setup",
             "account:42",
             Guid.CreateVersion7(),
             null,
             null,
             null,
-            PaymentSessionFundsRouting.None);
+            PaymentSessionFundsRouting.None,
+            null);
 
         var message = request.ToProto();
 
@@ -234,6 +241,8 @@ public sealed class PaymentOperationMappersTests
         Assert.False(message.HasAmountMinor);
         Assert.False(message.HasCurrency);
         Assert.Equal(Proto.PaymentSessionFundsRouting.None, message.FundsRouting);
+        Assert.Equal(Proto.PaymentSessionType.OnSession, message.Session);
+        Assert.False(message.HasPaymentMethodId);
     }
 
     [Fact]

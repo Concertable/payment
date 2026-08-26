@@ -53,6 +53,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             var specification = PaymentSessionSpecification.Create(
                 request.OperationId,
                 request.Kind,
+                request.Session,
                 request.OperationType,
                 request.ConsumerCorrelation,
                 request.PayerOwnerId.ToString("D"),
@@ -60,6 +61,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 request.AmountMinor,
                 request.Currency,
                 request.FundsRouting,
+                request.PaymentMethodId,
                 payer.StripeCustomerId,
                 providerConnectedAccountId);
             return await CreateOrReplayAsync(specification, ct);
@@ -128,76 +130,72 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 return new PaymentOperationError.OperationConflict();
             }
 
-            try
+            var retrieved = await stripeSessionClient.RetrieveAsync(
+                current.ProviderObjectKind,
+                current.ProviderObjectId,
+                ct);
+            if (!retrieved.TryGetValue(out var provider))
+                return new PaymentOperationError.ProviderUnavailable();
+
+            var canonical = current;
+            if (current.State.IsTerminal())
             {
-                var provider = await stripeSessionClient.RetrieveAsync(
+                var transition = EvaluateTransition(operation, current, provider);
+                PaymentOperationState? providerState = null;
+                if (transition.TryGetValue(out var duplicate))
+                {
+                    providerState = duplicate.State;
+                }
+                else if (transition.TryGetError(out var rejection)
+                    && rejection.Reason == PaymentOperationTransitionRejectionReason.TerminalStateProtected)
+                {
+                    providerState = rejection.ObservedState;
+                }
+
+                if (providerState is null)
+                    return new PaymentOperationError.ProviderUnavailable();
+                if (!IsRetryCompatibleProviderTruth(current, providerState.Value, provider))
+                    return new PaymentOperationError.OperationConflict();
+            }
+            else
+            {
+                var applied = await ApplyAsync(operation, current, provider, ct);
+                if (!applied.TryGetValue(out canonical))
+                    return new PaymentOperationError.ProviderUnavailable();
+            }
+
+            var retry = PaymentOperationRetryEvaluator.Evaluate(
+                canonical.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
+                new(
+                    PaymentOperationRetryTrigger.ExplicitConsumerRetry,
+                    operation.RequestFingerprint,
+                    Guid.CreateVersion7(timeProvider.GetUtcNow())));
+            if (!retry.TryGetValue(out var decision)
+                || decision.Disposition != PaymentOperationRetryDisposition.CreateNewAttempt)
+            {
+                return new PaymentOperationError.OperationConflict();
+            }
+
+            if (provider.CanCancel)
+            {
+                var canceled = await stripeSessionClient.CancelAsync(
                     current.ProviderObjectKind,
                     current.ProviderObjectId,
                     ct);
-                var canonical = current;
-                if (current.State.IsTerminal())
+                if (!canceled.TryGetValue(out _))
                 {
-                    var transition = EvaluateTransition(operation, current, provider);
-                    PaymentOperationState? providerState = null;
-                    if (transition.TryGetValue(out var duplicate))
+                    retrieved = await stripeSessionClient.RetrieveAsync(
+                        current.ProviderObjectKind,
+                        current.ProviderObjectId,
+                        ct);
+                    if (!retrieved.TryGetValue(out provider)
+                        || !string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
                     {
-                        providerState = duplicate.State;
-                    }
-                    else if (transition.TryGetError(out var rejection)
-                        && rejection.Reason == PaymentOperationTransitionRejectionReason.TerminalStateProtected)
-                    {
-                        providerState = rejection.ObservedState;
-                    }
-
-                    if (providerState is null)
                         return new PaymentOperationError.ProviderUnavailable();
-                    if (!IsRetryCompatibleProviderTruth(current, providerState.Value, provider))
-                        return new PaymentOperationError.OperationConflict();
-                }
-                else
-                {
-                    var applied = await ApplyAsync(operation, current, provider, ct);
-                    if (!applied.TryGetValue(out canonical))
-                        return new PaymentOperationError.ProviderUnavailable();
-                }
-
-                var retry = PaymentOperationRetryEvaluator.Evaluate(
-                    canonical.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
-                    new(
-                        PaymentOperationRetryTrigger.ExplicitConsumerRetry,
-                        operation.RequestFingerprint,
-                        Guid.CreateVersion7(timeProvider.GetUtcNow())));
-                if (!retry.TryGetValue(out var decision)
-                    || decision.Disposition != PaymentOperationRetryDisposition.CreateNewAttempt)
-                {
-                    return new PaymentOperationError.OperationConflict();
-                }
-
-                if (provider.CanCancel)
-                {
-                    try
-                    {
-                        await stripeSessionClient.CancelAsync(
-                            current.ProviderObjectKind,
-                            current.ProviderObjectId,
-                            ct);
                     }
-                    catch (PaymentSessionProviderUnavailableException)
-                    {
-                        provider = await stripeSessionClient.RetrieveAsync(
-                            current.ProviderObjectKind,
-                            current.ProviderObjectId,
-                            ct);
-                        if (!string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
-                            return new PaymentOperationError.ProviderUnavailable();
-                    }
-                }
-                else if (!string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
-                {
-                    return new PaymentOperationError.ProviderUnavailable();
                 }
             }
-            catch (PaymentSessionProviderUnavailableException)
+            else if (!string.Equals(provider.Status, "canceled", StringComparison.Ordinal))
             {
                 return new PaymentOperationError.ProviderUnavailable();
             }
@@ -244,22 +242,18 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         if (attempt.ProviderObjectId is null)
             return ToStatus(attempt);
 
-        try
-        {
-            var provider = await stripeSessionClient.RetrieveAsync(
-                attempt.ProviderObjectKind,
-                attempt.ProviderObjectId,
-                ct);
-            var applied = await ApplyAsync(operation, attempt, provider, ct);
-            if (!applied.TryGetValue(out var canonical))
-                return new PaymentOperationError.ProviderUnavailable();
-
-            return ToStatus(canonical);
-        }
-        catch (PaymentSessionProviderUnavailableException)
-        {
+        var retrieved = await stripeSessionClient.RetrieveAsync(
+            attempt.ProviderObjectKind,
+            attempt.ProviderObjectId,
+            ct);
+        if (!retrieved.TryGetValue(out var provider))
             return new PaymentOperationError.ProviderUnavailable();
-        }
+
+        var applied = await ApplyAsync(operation, attempt, provider, ct);
+        if (!applied.TryGetValue(out var canonical))
+            return new PaymentOperationError.ProviderUnavailable();
+
+        return ToStatus(canonical);
     }
 
     private async Task<Result<PaymentSessionExecution, PaymentOperationError>> ExecuteAsync(
@@ -267,47 +261,46 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentSessionAttemptEntity attempt,
         CancellationToken ct)
     {
-        try
+        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> providerResult;
+        if (attempt.ProviderObjectId is null)
         {
-            PaymentSessionProviderResult provider;
-            if (attempt.ProviderObjectId is null)
-            {
-                var request = PaymentSessionProviderRequestFactory.Create(operation, attempt);
-                provider = await stripeSessionClient.CreateAsync(
-                    request,
-                    new PaymentSessionIdempotencyKey(
-                        operation.OperationId,
-                        attempt.AttemptId,
-                        attempt.Revision),
-                    ct);
-            }
-            else
-            {
-                provider = await stripeSessionClient.RetrieveAsync(
-                    attempt.ProviderObjectKind,
-                    attempt.ProviderObjectId,
-                    ct);
-            }
-
-            var applied = await ApplyAsync(operation, attempt, provider, ct);
-            if (!applied.TryGetValue(out var canonical))
-                return new PaymentOperationError.ProviderUnavailable();
-
-            var customerSessionSecret = await stripeSessionClient.CreateCustomerSessionAsync(
-                operation.ProviderCustomerId,
+            var request = PaymentSessionProviderRequest.Create(operation, attempt);
+            providerResult = await stripeSessionClient.CreateAsync(
+                request,
+                new PaymentSessionIdempotencyKey(
+                    operation.OperationId,
+                    attempt.AttemptId,
+                    attempt.Revision),
                 ct);
-            return new PaymentSessionExecution(
-                new(operation.OperationId, canonical.AttemptId, canonical.Revision),
-                operation.SessionKind,
-                canonical.State,
-                provider.ClientSecret,
-                customerSessionSecret,
-                operation.ProviderCustomerId);
         }
-        catch (PaymentSessionProviderUnavailableException)
+        else
         {
-            return new PaymentOperationError.ProviderUnavailable();
+            providerResult = await stripeSessionClient.RetrieveAsync(
+                attempt.ProviderObjectKind,
+                attempt.ProviderObjectId,
+                ct);
         }
+
+        if (!providerResult.TryGetValue(out var provider))
+            return new PaymentOperationError.ProviderUnavailable();
+
+        var applied = await ApplyAsync(operation, attempt, provider, ct);
+        if (!applied.TryGetValue(out var canonical))
+            return new PaymentOperationError.ProviderUnavailable();
+
+        var customerSession = await stripeSessionClient.CreateCustomerSessionAsync(
+            operation.ProviderCustomerId,
+            ct);
+        if (!customerSession.TryGetValue(out var customerSessionSecret))
+            return new PaymentOperationError.ProviderUnavailable();
+
+        return new PaymentSessionExecution(
+            new(operation.OperationId, canonical.AttemptId, canonical.Revision),
+            operation.SessionKind,
+            canonical.State,
+            provider.ClientSecret,
+            customerSessionSecret,
+            operation.ProviderCustomerId);
     }
 
     private async Task<Result<PaymentSessionAttemptEntity, PaymentOperationError>> ApplyAsync(

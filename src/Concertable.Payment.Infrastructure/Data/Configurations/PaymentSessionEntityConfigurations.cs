@@ -27,12 +27,14 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.HasKey(operation => operation.OperationId);
         builder.Property(operation => operation.OperationId).ValueGeneratedNever();
         builder.Property(operation => operation.SessionKind).HasConversion<string>().HasMaxLength(40);
+        builder.Property(operation => operation.Session).HasConversion<string>().HasMaxLength(20);
         builder.Property(operation => operation.OperationType).HasMaxLength(100);
         builder.Property(operation => operation.ConsumerCorrelation).HasMaxLength(200);
         builder.Property(operation => operation.PayerOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.PayeeOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.Currency).HasConversion<string>().HasMaxLength(3);
         builder.Property(operation => operation.FundsRouting).HasConversion<string>().HasMaxLength(20);
+        builder.Property(operation => operation.PaymentMethodId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderCustomerId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderConnectedAccountId).HasMaxLength(100);
         builder.Property(operation => operation.RequestFingerprint).HasMaxLength(64).IsFixedLength();
