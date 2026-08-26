@@ -34,7 +34,9 @@ internal partial record EscrowTransitionError : IError
         NotRefundable(var status) => ErrorDefinition.Conflict<NotRefundable>(
             $"Escrow is {status} and cannot be refunded."),
         NotDisputable(var status) => ErrorDefinition.Conflict<NotDisputable>(
-            $"Escrow is {status}; only held escrow can be disputed.")
+            $"Escrow is {status}; only held escrow can be disputed."),
+        OperationConflict => ErrorDefinition.Conflict<OperationConflict>(
+            "The operation identity conflicts with the escrow release.")
     };
 
     [ErrorCode("escrow.not_pending")]
@@ -48,6 +50,9 @@ internal partial record EscrowTransitionError : IError
 
     [ErrorCode("escrow.not_disputable")]
     public partial record NotDisputable(EscrowStatus Status);
+
+    [ErrorCode("escrow.operation_conflict")]
+    public partial record OperationConflict;
 }
 
 [Union(EnableImplicitConversions = false)]

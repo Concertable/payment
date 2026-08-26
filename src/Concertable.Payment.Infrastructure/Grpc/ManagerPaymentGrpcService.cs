@@ -16,16 +16,32 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
     public override async Task<PaymentResponse> Pay(ManagerPayRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
-        var result = await managerPaymentService.PayAsync(
-            command.PayerId,
-            command.PayeeId,
-            command.Amount,
-            command.PaymentMethodId,
-            command.Session,
-            command.BookingId,
-            context.CancellationToken);
+        PaymentOutcome outcome;
+        if (command.OperationId is { } operationId)
+        {
+            outcome = (await managerPaymentService.PayAsync(
+                operationId,
+                command.PayerId,
+                command.PayeeId,
+                command.Amount,
+                command.PaymentMethodId,
+                command.Session,
+                command.BookingId,
+                context.CancellationToken)).ValueOrRpcException();
+        }
+        else
+        {
+            outcome = (await managerPaymentService.PayAsync(
+                command.PayerId,
+                command.PayeeId,
+                command.Amount,
+                command.PaymentMethodId,
+                command.Session,
+                command.BookingId,
+                context.CancellationToken)).ValueOrRpcException();
+        }
 
-        return result.ValueOrRpcException().ToProtoPaymentResponse();
+        return outcome.ToProtoPaymentResponse();
     }
 
     public override async Task<PaymentResponse> PayBoundCommission(

@@ -34,6 +34,11 @@ internal sealed class StripeApiClient : IStripeApiClient
         CancellationToken ct = default) =>
         paymentIntentService.CreateAsync(options, requestOptions, ct);
 
+    public Task<PaymentIntent> GetPaymentIntentAsync(
+        string paymentIntentId,
+        CancellationToken ct = default) =>
+        paymentIntentService.GetAsync(paymentIntentId, cancellationToken: ct);
+
     public Task<Transfer> CreateTransferAsync(
         TransferCreateOptions options,
         RequestOptions? requestOptions = null,
