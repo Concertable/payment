@@ -67,6 +67,11 @@ internal interface IEscrowService
 
     Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
 
+    Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+        Guid operationId,
+        int bookingId,
+        CancellationToken ct = default);
+
     Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
         int bookingId,
         Money? amount = null,

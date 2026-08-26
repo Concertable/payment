@@ -161,9 +161,9 @@ public sealed class ManagerPaymentServiceTests
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
-            .Setup(r => r.CreateAsync(It.IsAny<TransactionEntity>()))
-            .Callback<TransactionEntity>(e => captured = (SettlementTransactionEntity)e)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddAsync(It.IsAny<TransactionEntity>(), It.IsAny<CancellationToken>()))
+            .Callback<TransactionEntity, CancellationToken>((e, _) => captured = (SettlementTransactionEntity)e)
+            .ReturnsAsync(() => captured!);
 
         var result = await sut.PayAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, bookingId: 7);
 
@@ -194,9 +194,9 @@ public sealed class ManagerPaymentServiceTests
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
-            .Setup(r => r.CreateAsync(It.IsAny<TransactionEntity>()))
-            .Callback<TransactionEntity>(e => captured = (SettlementTransactionEntity)e)
-            .Returns(Task.CompletedTask);
+            .Setup(r => r.AddAsync(It.IsAny<TransactionEntity>(), It.IsAny<CancellationToken>()))
+            .Callback<TransactionEntity, CancellationToken>((e, _) => captured = (SettlementTransactionEntity)e)
+            .ReturnsAsync(() => captured!);
 
         var result = await sut.PayAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, bookingId: 7);
 
@@ -210,6 +210,153 @@ public sealed class ManagerPaymentServiceTests
         Assert.Equal(2, posting.Legs.Count);
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.DoesNotContain(posting.Legs, l => l.Account.Type == LedgerAccountType.PlatformRevenue);
+    }
+
+    [Fact]
+    public async Task PayAsync_WithOperationId_PersistsReplayStateAndCallsDurableProviderOperation()
+    {
+        var operationId = Guid.CreateVersion7();
+        var outcome = new PaymentOutcome
+        {
+            TransactionId = "pi_operation",
+            RequiresAction = true,
+            ClientSecret = "secret_operation"
+        };
+        paymentManager
+            .Setup(p => p.SettleAsync(
+                operationId,
+                payerId,
+                payeeId,
+                Money.Gbp(62),
+                Money.Gbp(50),
+                "pm_test",
+                PaymentSession.OnSession,
+                It.Is<IReadOnlyDictionary<string, string>>(metadata =>
+                    metadata[PaymentMetadataKeys.OperationId] == operationId.ToString()),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(outcome));
+
+        SettlementTransactionEntity? captured = null;
+        transactionRepository
+            .Setup(r => r.AddAsync(It.IsAny<TransactionEntity>(), It.IsAny<CancellationToken>()))
+            .Callback<TransactionEntity, CancellationToken>((entity, _) =>
+                captured = (SettlementTransactionEntity)entity)
+            .ReturnsAsync(() => captured!);
+
+        var result = await SutWithFee(12).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+
+        Assert.True(result.TryGetValue(out var payment));
+        Assert.Equal(outcome, payment);
+        Assert.NotNull(captured);
+        Assert.Equal(operationId, captured.OperationId);
+        Assert.Equal(SettlementOperationFingerprint.CurrentVersion, captured.OperationFingerprintVersion);
+        Assert.NotNull(captured.OperationFingerprint);
+        Assert.True(captured.RequiresAction);
+        Assert.Equal("secret_operation", captured.ClientSecret);
+    }
+
+    [Fact]
+    public async Task PayAsync_ReplayedOperation_ReturnsPersistedOutcomeWithoutProviderCall()
+    {
+        var operationId = Guid.CreateVersion7();
+        var fingerprint = SettlementOperationFingerprint.CreateCharge(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            Money.Gbp(12),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+        var existing = SettlementTransactionEntity.CreateForOperation(
+            payerId,
+            payeeId,
+            "pi_existing",
+            6200,
+            1200,
+            TransactionStatus.Pending,
+            7,
+            operationId,
+            fingerprint,
+            true,
+            "secret_existing");
+        transactionRepository
+            .Setup(r => r.GetSettlementByOperationIdAsync(operationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        var result = await SutWithFee(12).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+
+        Assert.True(result.TryGetValue(out var payment));
+        Assert.Equal("pi_existing", payment.TransactionId);
+        Assert.True(payment.RequiresAction);
+        Assert.Equal("secret_existing", payment.ClientSecret);
+        paymentManager.Verify(
+            manager => manager.SettleAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Guid>(),
+                It.IsAny<Money>(),
+                It.IsAny<Money>(),
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task PayAsync_ReusedOperationWithChangedRequest_ReturnsConflict()
+    {
+        var operationId = Guid.CreateVersion7();
+        var fingerprint = SettlementOperationFingerprint.CreateCharge(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            Money.Gbp(12),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+        transactionRepository
+            .Setup(r => r.GetSettlementByOperationIdAsync(operationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SettlementTransactionEntity.CreateForOperation(
+                payerId,
+                payeeId,
+                "pi_existing",
+                6200,
+                1200,
+                TransactionStatus.Complete,
+                7,
+                operationId,
+                fingerprint,
+                false,
+                null));
+
+        var result = await SutWithFee(12).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(51),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.Equal(new ManagerPaymentOperationError.OperationConflict(), error);
     }
 
     [Fact]

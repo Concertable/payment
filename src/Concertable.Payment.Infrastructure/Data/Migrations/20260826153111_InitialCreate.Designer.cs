@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260826094428_InitialCreate")]
+    [Migration("20260826153111_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -233,6 +233,17 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ReleaseOperationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<int?>("ReleaseOperationFingerprintVersion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ReleaseOperationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("ReleasedAt")
                         .HasColumnType("datetime2");
 
@@ -256,6 +267,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("CommissionBindingId")
                         .IsUnique()
                         .HasFilter("[CommissionBindingId] IS NOT NULL");
+
+                    b.HasIndex("ReleaseOperationId")
+                        .IsUnique()
+                        .HasFilter("[ReleaseOperationId] IS NOT NULL");
 
                     b.HasIndex("Status");
 
@@ -795,6 +810,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("ContextId");
 
+                    b.Property<string>("ClientSecret")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
 
@@ -817,6 +836,17 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<string>("OperationFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<int?>("OperationFingerprintVersion")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<long>("PayeeGrossMinor")
                         .HasColumnType("bigint");
 
@@ -826,9 +856,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("RefundedGrossMinor")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("RequiresAction")
+                        .HasColumnType("bit");
+
                     b.HasIndex("CommissionBindingId")
                         .IsUnique()
                         .HasFilter("[CommissionBindingId] IS NOT NULL");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasFilter("[OperationId] IS NOT NULL");
 
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });

@@ -7,6 +7,16 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IManagerPaymentService
 {
+    Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default);
+
     Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,

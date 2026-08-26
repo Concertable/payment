@@ -59,7 +59,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
                 options,
-                StripeRequestOptions.Charge(opts.CommissionBindingId),
+                StripeRequestOptions.Charge(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
             if (paymentIntent.Status == "succeeded")

@@ -17,6 +17,8 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
         builder.HasIndex(e => e.BookingId).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
         builder.HasIndex(e => e.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
+        builder.Property(e => e.ReleaseOperationFingerprint).HasMaxLength(64).IsFixedLength();
+        builder.HasIndex(e => e.ReleaseOperationId).IsUnique().HasFilter("[ReleaseOperationId] IS NOT NULL");
         builder.HasIndex(e => e.Status);
         builder.HasOne(e => e.CommissionBinding)
             .WithMany()
