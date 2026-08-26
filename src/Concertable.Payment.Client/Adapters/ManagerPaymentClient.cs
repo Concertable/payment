@@ -16,7 +16,8 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         this.client = client;
     }
 
-    public Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
+    public Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
+        Guid operationId,
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -33,7 +34,43 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
                     Amount = amount.ToProtoMoney(),
                     PaymentMethodId = paymentMethodId,
                     Session = session.ToProtoSession(),
-                    BookingId = bookingId
+                    BookingId = bookingId,
+                    OperationId = operationId.ToString("D")
+                },
+                cancellationToken: ct)).ToPaymentOutcome(),
+            error => error.ToManagerPaymentOperationError(),
+            ct);
+
+    public Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default) =>
+        PayCoreAsync(null, payerId, payeeId, amount, paymentMethodId, session, bookingId, ct);
+
+    private Task<Result<PaymentOutcome, ManagerPaymentError>> PayCoreAsync(
+        Guid? operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayAsync(
+                new Proto.ManagerPayRequest
+                {
+                    PayerId = payerId.ToString(),
+                    PayeeId = payeeId.ToString(),
+                    Amount = amount.ToProtoMoney(),
+                    PaymentMethodId = paymentMethodId,
+                    Session = session.ToProtoSession(),
+                    BookingId = bookingId,
+                    OperationId = operationId?.ToString("D") ?? string.Empty
                 },
                 cancellationToken: ct)).ToPaymentOutcome(),
             error => error.ToManagerPaymentError(),

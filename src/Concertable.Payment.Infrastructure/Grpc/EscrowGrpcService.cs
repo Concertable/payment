@@ -84,9 +84,22 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         ReleaseByBookingIdRequest request,
         ServerCallContext context)
     {
-        var result = await escrowService.ReleaseByBookingIdAsync(request.BookingId, context.CancellationToken);
+        var command = request.ToCommand();
+        Option<Transfer> transfer;
+        if (command.OperationId is { } operationId)
+        {
+            transfer = (await escrowService.ReleaseByBookingIdAsync(
+                operationId,
+                command.BookingId,
+                context.CancellationToken)).ValueOrRpcException();
+        }
+        else
+        {
+            transfer = (await escrowService.ReleaseByBookingIdAsync(
+                command.BookingId,
+                context.CancellationToken)).ValueOrRpcException();
+        }
 
-        var transfer = result.ValueOrRpcException();
         return new ReleaseByBookingIdResponse
         {
             Transfer = transfer.Match<TransferResponse?>(

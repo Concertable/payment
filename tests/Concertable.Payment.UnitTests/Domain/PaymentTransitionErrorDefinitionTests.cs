@@ -13,6 +13,7 @@ public sealed class PaymentTransitionErrorDefinitionTests
         { new EscrowTransitionError.NotHeld(EscrowStatus.Pending), "escrow.not_held", "Escrow is Pending; only held escrow can be released.", ErrorKind.Conflict },
         { new EscrowTransitionError.NotRefundable(EscrowStatus.Failed), "escrow.not_refundable", "Escrow is Failed and cannot be refunded.", ErrorKind.Conflict },
         { new EscrowTransitionError.NotDisputable(EscrowStatus.Released), "escrow.not_disputable", "Escrow is Released; only held escrow can be disputed.", ErrorKind.Conflict },
+        { new EscrowTransitionError.OperationConflict(), "escrow.operation_conflict", "The operation identity conflicts with the escrow release.", ErrorKind.Conflict },
         { new PaymentRefundTransitionError.NotPending(PaymentRefundStatus.Completed), "payment.refund_not_pending", "Refund is Completed and cannot transition from pending.", ErrorKind.Conflict }
     };
 

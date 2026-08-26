@@ -113,14 +113,45 @@ internal sealed class EscrowClient : IEscrowOperationsClient
             error => error.ToEscrowCaptureError(),
             ct);
 
-    public Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
+    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+        Guid operationId,
         int bookingId,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () =>
             {
                 var response = await client.ReleaseByBookingIdAsync(
-                    new Proto.ReleaseByBookingIdRequest { BookingId = bookingId },
+                    new Proto.ReleaseByBookingIdRequest
+                    {
+                        BookingId = bookingId,
+                        OperationId = operationId.ToString("D")
+                    },
+                    cancellationToken: ct);
+                return string.IsNullOrEmpty(response.Transfer?.TransferId)
+                    ? Option.None<Transfer>()
+                    : Option.Some(new Transfer(response.Transfer.TransferId));
+            },
+            error => error.ToEscrowReleaseOperationError(),
+            ct);
+
+    public Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default) =>
+        ReleaseByBookingIdCoreAsync(null, bookingId, ct);
+
+    private Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdCoreAsync(
+        Guid? operationId,
+        int bookingId,
+        CancellationToken ct) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
+            {
+                var response = await client.ReleaseByBookingIdAsync(
+                    new Proto.ReleaseByBookingIdRequest
+                    {
+                        BookingId = bookingId,
+                        OperationId = operationId?.ToString("D") ?? string.Empty
+                    },
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Transfer?.TransferId)
                     ? Option.None<Transfer>()

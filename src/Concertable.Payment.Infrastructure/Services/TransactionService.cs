@@ -31,7 +31,7 @@ internal sealed class TransactionService : ITransactionService
     public async Task LogAsync(ITransaction dto)
     {
         var entity = transactionMapper.ToEntity(dto);
-        await purchaseRepository.CreateAsync(entity);
+        await purchaseRepository.AddAsync(entity);
     }
 
     public async Task CompleteAsync(string paymentIntentId, CancellationToken ct = default)
