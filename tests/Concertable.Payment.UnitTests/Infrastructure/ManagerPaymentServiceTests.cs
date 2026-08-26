@@ -328,6 +328,56 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
+    public async Task PayAsync_ReplayedCompletedOperation_ReturnsPersistedOutcomeWithoutProviderCall()
+    {
+        var operationId = Guid.CreateVersion7();
+        var fingerprint = SettlementOperationFingerprint.CreateCharge(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            Money.Gbp(12),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+        var existing = SettlementTransactionEntity.CreateForOperation(
+            payerId,
+            payeeId,
+            "pi_existing",
+            6200,
+            1200,
+            TransactionStatus.Pending,
+            7,
+            operationId,
+            fingerprint,
+            true);
+        Assert.True(existing.Complete(DateTime.UtcNow).IsSuccess);
+        transactionRepository
+            .Setup(r => r.GetSettlementByOperationIdAsync(operationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        var result = await SutWithFee(12).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            "pm_test",
+            PaymentSession.OnSession,
+            7);
+
+        Assert.True(result.TryGetValue(out var payment));
+        Assert.Equal("pi_existing", payment.TransactionId);
+        Assert.False(payment.RequiresAction);
+        Assert.Null(payment.ClientSecret);
+        paymentManager.Verify(
+            manager => manager.GetPaymentOutcomeAsync(
+                It.IsAny<string>(),
+                It.IsAny<PaymentSession>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task PayAsync_ReusedOperationWithChangedRequest_ReturnsConflict()
     {
         var operationId = Guid.CreateVersion7();

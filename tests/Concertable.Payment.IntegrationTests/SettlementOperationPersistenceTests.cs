@@ -118,10 +118,53 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
             firstRepository.ReserveReleaseAsync(escrow.Id, firstOperationId, firstFingerprint),
             secondRepository.ReserveReleaseAsync(escrow.Id, secondOperationId, secondFingerprint));
 
-        var winner = Assert.Single(reservations.Select(value => value!.ReleaseOperationId).Distinct());
+        Assert.DoesNotContain(reservations, value => value.Conflict);
+        var winner = Assert.Single(reservations.Select(value => value.Escrow!.ReleaseOperationId).Distinct());
         Assert.Contains(winner, new Guid?[] { firstOperationId, secondOperationId });
         await using var verification = CreateContext();
         Assert.Equal(winner, (await verification.Escrows.SingleAsync(value => value.Id == escrow.Id)).ReleaseOperationId);
+    }
+
+    [Fact]
+    public async Task ReserveReleaseAsync_OperationAlreadyBoundToAnotherEscrow_ReturnsConflict()
+    {
+        await using (var migration = CreateContext())
+            await migration.Database.MigrateAsync();
+
+        var payerId = Guid.NewGuid();
+        var payeeId = Guid.NewGuid();
+        var firstEscrow = EscrowEntity.Create(46, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_first_release");
+        var secondEscrow = EscrowEntity.Create(47, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_second_release");
+        firstEscrow.Confirm();
+        secondEscrow.Confirm();
+        await using (var seed = CreateContext())
+        {
+            seed.AddRange(firstEscrow, secondEscrow);
+            await seed.SaveChangesAsync();
+        }
+
+        var operationId = Guid.CreateVersion7();
+        var firstFingerprint = SettlementOperationFingerprint.CreateRelease(operationId, firstEscrow);
+        var secondFingerprint = SettlementOperationFingerprint.CreateRelease(operationId, secondEscrow);
+        await using var firstContext = CreateContext();
+        await using var secondContext = CreateContext();
+        var firstRepository = new EscrowRepository(firstContext);
+        var secondRepository = new EscrowRepository(secondContext);
+
+        var firstReservation = await firstRepository.ReserveReleaseAsync(
+            firstEscrow.Id,
+            operationId,
+            firstFingerprint);
+        var secondReservation = await secondRepository.ReserveReleaseAsync(
+            secondEscrow.Id,
+            operationId,
+            secondFingerprint);
+
+        Assert.False(firstReservation.Conflict);
+        Assert.Equal(operationId, firstReservation.Escrow!.ReleaseOperationId);
+        Assert.True(secondReservation.Conflict);
+        await using var verification = CreateContext();
+        Assert.Null((await verification.Escrows.SingleAsync(value => value.Id == secondEscrow.Id)).ReleaseOperationId);
     }
 
     [Fact]
