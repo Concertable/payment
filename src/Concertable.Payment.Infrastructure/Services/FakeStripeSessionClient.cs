@@ -32,22 +32,34 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
     internal void FailOnce(FakeStripeSessionFaultPoint faultPoint) =>
         oneShotFaults[faultPoint] = 0;
 
-    public Task<PaymentSessionProviderResult> CreateAsync(
+    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        ThrowIfRequested(FakeStripeSessionFaultPoint.BeforeProviderAcceptance);
+        if (TakeFault(FakeStripeSessionFaultPoint.BeforeProviderAcceptance))
+        {
+            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+                new PaymentOperationError.ProviderUnavailable();
+            return Task.FromResult(unavailable);
+        }
 
         var result = byIdempotencyKey.GetOrAdd(idempotencyKey, _ => Create(request, idempotencyKey));
         byProviderObjectId.TryAdd(result.ProviderObjectId, result);
 
-        ThrowIfRequested(FakeStripeSessionFaultPoint.AfterProviderAcceptance);
-        return Task.FromResult(result);
+        if (TakeFault(FakeStripeSessionFaultPoint.AfterProviderAcceptance))
+        {
+            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+                new PaymentOperationError.ProviderUnavailable();
+            return Task.FromResult(unavailable);
+        }
+
+        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = result;
+        return Task.FromResult(success);
     }
 
-    public Task<PaymentSessionProviderResult> RetrieveAsync(
+    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -56,13 +68,16 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         if (!byProviderObjectId.TryGetValue(providerObjectId, out var result)
             || result.ProviderObjectKind != providerObjectKind)
         {
-            throw new PaymentSessionProviderUnavailableException("The fake Stripe session does not exist.");
+            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+                new PaymentOperationError.ProviderUnavailable();
+            return Task.FromResult(unavailable);
         }
 
-        return Task.FromResult(result);
+        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = result;
+        return Task.FromResult(success);
     }
 
-    public Task<PaymentSessionProviderResult> CancelAsync(
+    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -72,7 +87,9 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             || current.ProviderObjectKind != providerObjectKind
             || !current.CanCancel)
         {
-            throw new PaymentSessionProviderUnavailableException("The fake Stripe session cannot be canceled.");
+            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+                new PaymentOperationError.ProviderUnavailable();
+            return Task.FromResult(unavailable);
         }
 
         var canceled = current with
@@ -86,16 +103,25 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
             byIdempotencyKey[entry.Key] = canceled;
 
-        return Task.FromResult(canceled);
+        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = canceled;
+        return Task.FromResult(success);
     }
 
-    public Task<string> CreateCustomerSessionAsync(
+    public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
         string providerCustomerId,
         CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        ThrowIfRequested(FakeStripeSessionFaultPoint.BeforeCustomerSessionResponse);
-        return Task.FromResult($"cuss_fake_{providerCustomerId}_{Guid.CreateVersion7():N}_secret");
+        if (TakeFault(FakeStripeSessionFaultPoint.BeforeCustomerSessionResponse))
+        {
+            Result<string, PaymentOperationError.ProviderUnavailable> unavailable =
+                new PaymentOperationError.ProviderUnavailable();
+            return Task.FromResult(unavailable);
+        }
+
+        Result<string, PaymentOperationError.ProviderUnavailable> success =
+            $"cuss_fake_{providerCustomerId}_{Guid.CreateVersion7():N}_secret";
+        return Task.FromResult(success);
     }
 
     internal void SetStatus(
@@ -159,9 +185,6 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             null);
     }
 
-    private void ThrowIfRequested(FakeStripeSessionFaultPoint faultPoint)
-    {
-        if (oneShotFaults.TryRemove(faultPoint, out _))
-            throw new PaymentSessionProviderUnavailableException($"Injected fake Stripe fault at {faultPoint}.");
-    }
+    private bool TakeFault(FakeStripeSessionFaultPoint faultPoint) =>
+        oneShotFaults.TryRemove(faultPoint, out _);
 }

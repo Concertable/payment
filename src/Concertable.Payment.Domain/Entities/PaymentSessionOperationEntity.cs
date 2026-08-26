@@ -16,6 +16,7 @@ internal sealed class PaymentSessionOperationEntity
     {
         OperationId = specification.OperationId;
         SessionKind = specification.SessionKind;
+        Session = specification.Session;
         OperationType = specification.OperationType;
         ConsumerCorrelation = specification.ConsumerCorrelation;
         PayerOwnerKey = specification.PayerOwnerKey;
@@ -23,6 +24,7 @@ internal sealed class PaymentSessionOperationEntity
         AmountMinor = specification.AmountMinor;
         Currency = specification.Currency;
         FundsRouting = specification.FundsRouting;
+        PaymentMethodId = specification.PaymentMethodId;
         ProviderCustomerId = specification.ProviderCustomerId;
         ProviderConnectedAccountId = specification.ProviderConnectedAccountId;
         FingerprintVersion = fingerprint.Version;
@@ -40,6 +42,7 @@ internal sealed class PaymentSessionOperationEntity
 
     public Guid OperationId { get; private set; }
     public PaymentSessionKind SessionKind { get; private set; }
+    public PaymentSession Session { get; private set; }
     public string OperationType { get; private set; } = null!;
     public string ConsumerCorrelation { get; private set; } = null!;
     public string PayerOwnerKey { get; private set; } = null!;
@@ -47,6 +50,7 @@ internal sealed class PaymentSessionOperationEntity
     public long? AmountMinor { get; private set; }
     public Currency? Currency { get; private set; }
     public PaymentSessionFundsRouting FundsRouting { get; private set; }
+    public string? PaymentMethodId { get; private set; }
     public string ProviderCustomerId { get; private set; } = null!;
     public string? ProviderConnectedAccountId { get; private set; }
     public int FingerprintVersion { get; private set; }
@@ -65,7 +69,7 @@ internal sealed class PaymentSessionOperationEntity
         DateTimeOffset createdAt) =>
         new(
             specification,
-            PaymentSessionFingerprintGenerator.Create(specification),
+            PaymentSessionFingerprint.Create(specification),
             attemptId,
             createdAt);
 

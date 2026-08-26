@@ -12,6 +12,7 @@ public sealed class PaymentSessionSpecificationTests
         Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
             Guid.NewGuid(),
             PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
             "setup",
             "profile:42",
             "payer:7",
@@ -19,6 +20,7 @@ public sealed class PaymentSessionSpecificationTests
             null,
             null,
             PaymentSessionFundsRouting.None,
+            null,
             "cus_test",
             null));
     }
@@ -29,6 +31,7 @@ public sealed class PaymentSessionSpecificationTests
         Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
             Guid.CreateVersion7(),
             PaymentSessionKind.Payment,
+            PaymentSession.OnSession,
             "ticket",
             "purchase:42",
             "payer:7",
@@ -36,6 +39,7 @@ public sealed class PaymentSessionSpecificationTests
             null,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            null,
             "cus_test",
             "acct_test"));
     }
@@ -46,6 +50,7 @@ public sealed class PaymentSessionSpecificationTests
         Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
             Guid.CreateVersion7(),
             PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
             "setup",
             "profile:42",
             "payer:7",
@@ -53,6 +58,7 @@ public sealed class PaymentSessionSpecificationTests
             5000,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            null,
             "cus_test",
             "acct_test"));
     }
@@ -63,6 +69,7 @@ public sealed class PaymentSessionSpecificationTests
         var specification = PaymentSessionSpecification.Create(
             Guid.CreateVersion7(),
             PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OffSession,
             " setup ",
             " profile:42 ",
             " payer:7 ",
@@ -70,6 +77,7 @@ public sealed class PaymentSessionSpecificationTests
             null,
             null,
             PaymentSessionFundsRouting.None,
+            null,
             " cus_test ",
             null);
 
@@ -78,6 +86,47 @@ public sealed class PaymentSessionSpecificationTests
         Assert.Equal("payer:7", specification.PayerOwnerKey);
         Assert.Equal("cus_test", specification.ProviderCustomerId);
         Assert.Equal(PaymentSessionCaptureMode.None, specification.CaptureMode);
-        Assert.Equal(PaymentSessionCustomerPresence.OnSession, specification.CustomerPresence);
+        Assert.Equal(PaymentSession.OffSession, specification.Session);
+    }
+
+    [Fact]
+    public void Create_OffSessionPaymentWithoutPaymentMethod_ThrowsDomainException()
+    {
+        Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
+            Guid.CreateVersion7(),
+            PaymentSessionKind.Payment,
+            PaymentSession.OffSession,
+            "ticket",
+            "purchase:42",
+            "payer:7",
+            "payee:9",
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            null,
+            "cus_test",
+            "acct_test"));
+    }
+
+    [Fact]
+    public void Create_OffSessionPayment_NormalizesPaymentMethod()
+    {
+        var specification = PaymentSessionSpecification.Create(
+            Guid.CreateVersion7(),
+            PaymentSessionKind.Payment,
+            PaymentSession.OffSession,
+            "ticket",
+            "purchase:42",
+            "payer:7",
+            "payee:9",
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            " pm_test ",
+            "cus_test",
+            "acct_test");
+
+        Assert.Equal(PaymentSession.OffSession, specification.Session);
+        Assert.Equal("pm_test", specification.PaymentMethodId);
     }
 }

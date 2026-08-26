@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain.ProviderContract;
+using Concertable.Payment.Infrastructure.Mappers;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -23,7 +24,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         this.timeProvider = timeProvider;
     }
 
-    public async Task<PaymentSessionProviderResult> CreateAsync(
+    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
@@ -46,13 +47,13 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.SessionKind, null)
             };
         }
-        catch (StripeException ex)
+        catch (StripeException)
         {
-            throw new PaymentSessionProviderUnavailableException("Stripe session creation failed.", ex);
+            return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
-    public async Task<PaymentSessionProviderResult> RetrieveAsync(
+    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -71,13 +72,13 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException ex)
+        catch (StripeException)
         {
-            throw new PaymentSessionProviderUnavailableException("Stripe session retrieval failed.", ex);
+            return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
-    public async Task<PaymentSessionProviderResult> CancelAsync(
+    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -93,13 +94,13 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException ex)
+        catch (StripeException)
         {
-            throw new PaymentSessionProviderUnavailableException("Stripe session cancellation failed.", ex);
+            return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
-    public async Task<string> CreateCustomerSessionAsync(
+    public async Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
         string providerCustomerId,
         CancellationToken ct = default)
     {
@@ -127,9 +128,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 cancellationToken: ct);
             return session.ClientSecret;
         }
-        catch (StripeException ex)
+        catch (StripeException)
         {
-            throw new PaymentSessionProviderUnavailableException("Stripe customer session creation failed.", ex);
+            return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
@@ -141,7 +142,10 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             Currency = request.Currency?.ToString().ToLowerInvariant(),
             Customer = request.ProviderCustomerId,
             CaptureMethod = request.SessionKind == PaymentSessionKind.Authorization ? "manual" : "automatic",
-            SetupFutureUsage = "off_session",
+            PaymentMethod = request.PaymentMethodId,
+            Confirm = request.Session == PaymentSession.OffSession,
+            OffSession = request.Session == PaymentSession.OffSession,
+            SetupFutureUsage = request.Session.ToStripeUsage(),
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
             {
                 Enabled = true,
@@ -166,7 +170,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         new()
         {
             Customer = request.ProviderCustomerId,
-            Usage = "off_session",
+            Usage = request.Session.ToStripeUsage(),
             AutomaticPaymentMethods = new SetupIntentAutomaticPaymentMethodsOptions
             {
                 Enabled = true,

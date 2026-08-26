@@ -32,7 +32,7 @@ public sealed class PaymentSessionOperationEntityTests
             CreatedAt);
 
         var reservation = operation.EvaluateInitialReservation(
-            PaymentSessionFingerprintGenerator.Create(specification));
+            PaymentSessionFingerprint.Create(specification));
 
         Assert.Equal(PaymentSessionReservationDisposition.Replayed, reservation.Disposition);
         Assert.Same(operation.CurrentAttempt, reservation.Attempt);
@@ -44,7 +44,7 @@ public sealed class PaymentSessionOperationEntityTests
         var operation = CreateOperation();
 
         var reservation = operation.EvaluateInitialReservation(
-            PaymentSessionFingerprintGenerator.Create(Specification(amountMinor: 5001)));
+            PaymentSessionFingerprint.Create(Specification(amountMinor: 5001)));
 
         Assert.Equal(PaymentSessionReservationDisposition.Conflict, reservation.Disposition);
         Assert.Null(reservation.Attempt);
@@ -142,6 +142,7 @@ public sealed class PaymentSessionOperationEntityTests
         PaymentSessionSpecification.Create(
             Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
             PaymentSessionKind.Authorization,
+            PaymentSession.OnSession,
             "escrow",
             "booking:42",
             "payer:7",
@@ -149,6 +150,7 @@ public sealed class PaymentSessionOperationEntityTests
             amountMinor,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,
+            null,
             "cus_test",
             "acct_test");
 }

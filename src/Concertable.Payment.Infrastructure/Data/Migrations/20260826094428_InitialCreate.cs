@@ -91,6 +91,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     SessionKind = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    Session = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ConsumerCorrelation = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     PayerOwnerKey = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -98,6 +99,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     AmountMinor = table.Column<long>(type: "bigint", nullable: true),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: true),
                     FundsRouting = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    PaymentMethodId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ProviderCustomerId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ProviderConnectedAccountId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     FingerprintVersion = table.Column<int>(type: "int", nullable: false),

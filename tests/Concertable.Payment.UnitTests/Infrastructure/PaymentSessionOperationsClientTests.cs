@@ -35,13 +35,15 @@ public sealed class PaymentSessionOperationsClientTests
         var created = await client.CreateOrReplayAsync(new(
             operationId,
             PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
             "setup",
             "account:42",
             ownerId,
             null,
             null,
             null,
-            PaymentSessionFundsRouting.None));
+            PaymentSessionFundsRouting.None,
+            null));
         var retried = await client.RetryAsync(new(operationId, attemptId, 1, ownerId));
         var status = await client.GetStatusAsync(new(operationId, ownerId));
 

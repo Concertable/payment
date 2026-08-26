@@ -18,6 +18,7 @@ internal static class PaymentSessionOperationGrpcMappers
             new(
                 request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
                 request.Kind.ToContract(),
+                request.Session.ToContract(),
                 request.OperationType,
                 request.ConsumerCorrelation,
                 request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
@@ -26,7 +27,8 @@ internal static class PaymentSessionOperationGrpcMappers
                     : null,
                 request.HasAmountMinor ? request.AmountMinor : null,
                 request.HasCurrency ? request.Currency.ToContract() : null,
-                request.FundsRouting.ToContract());
+                request.FundsRouting.ToContract(),
+                request.HasPaymentMethodId ? request.PaymentMethodId : null);
     }
 
     extension(Proto.PaymentSessionRetryRequest request)
@@ -109,6 +111,16 @@ internal static class PaymentSessionOperationGrpcMappers
             Proto.PaymentSessionKind.PaymentMethodSetup => PaymentSessionKind.PaymentMethodSetup,
             Proto.PaymentSessionKind.PaymentMethodVerification => PaymentSessionKind.PaymentMethodVerification,
             _ => Invalid<PaymentSessionKind>(nameof(kind), kind)
+        };
+    }
+
+    extension(Proto.PaymentSessionType session)
+    {
+        private PaymentSession ToContract() => session switch
+        {
+            Proto.PaymentSessionType.OnSession => PaymentSession.OnSession,
+            Proto.PaymentSessionType.OffSession => PaymentSession.OffSession,
+            _ => Invalid<PaymentSession>(nameof(session), session)
         };
     }
 

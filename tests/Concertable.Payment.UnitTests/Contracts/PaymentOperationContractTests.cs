@@ -75,7 +75,9 @@ public sealed class PaymentOperationContractTests
             ("payee_owner_id", 6, FieldType.String),
             ("amount_minor", 7, FieldType.Int64),
             ("currency", 8, FieldType.Enum),
-            ("funds_routing", 9, FieldType.Enum));
+            ("funds_routing", 9, FieldType.Enum),
+            ("session", 10, FieldType.Enum),
+            ("payment_method_id", 11, FieldType.String));
         AssertFields(
             Proto.PaymentSessionRetryRequest.Descriptor,
             ("operation_id", 1, FieldType.String),
