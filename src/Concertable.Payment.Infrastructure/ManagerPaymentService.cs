@@ -208,7 +208,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     {
         if (!transaction.MatchesOperation(operationId, fingerprint))
             return new ManagerPaymentOperationError.OperationConflict();
-        if (!transaction.RequiresAction)
+        if (transaction.Status == TransactionStatus.Complete || !transaction.RequiresAction)
         {
             return new PaymentOutcome
             {
