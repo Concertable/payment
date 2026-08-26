@@ -13,6 +13,7 @@ public static class RoutingExtensions
         endpoints.MapGrpcService<CustomerPaymentGrpcService>().RequireAuthorization("ServiceToken");
         endpoints.MapGrpcService<PayoutAccountGrpcService>().RequireAuthorization("ServiceToken");
         endpoints.MapGrpcService<CommissionPricingGrpcService>().RequireAuthorization("ServiceToken");
+        endpoints.MapGrpcService<PaymentSessionOperationsGrpcService>().RequireAuthorization("ServiceToken");
         return endpoints;
     }
 }
