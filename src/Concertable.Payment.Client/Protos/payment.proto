@@ -308,6 +308,7 @@ message ManagerPayRequest {
   string payment_method_id = 4;
   PaymentSessionType session = 5;
   int32 booking_id = 6;
+  string operation_id = 7;
 }
 
 message BoundCommissionManagerPayRequest {
@@ -485,6 +486,7 @@ message BoundCommissionCaptureRequest {
 
 message ReleaseByBookingIdRequest {
   int32 booking_id = 1;
+  string operation_id = 2;
 }
 
 message ReleaseByBookingIdResponse {
