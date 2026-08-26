@@ -47,6 +47,14 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(request), request.SessionKind, null)
             };
         }
+        catch (StripeException ex) when (ex.StripeError?.PaymentIntent is { } intent)
+        {
+            return ToResult(intent);
+        }
+        catch (StripeException ex) when (ex.StripeError?.SetupIntent is { } intent)
+        {
+            return ToResult(intent);
+        }
         catch (StripeException)
         {
             return new PaymentOperationError.ProviderUnavailable();
@@ -143,9 +151,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             Customer = request.ProviderCustomerId,
             CaptureMethod = request.SessionKind == PaymentSessionKind.Authorization ? "manual" : "automatic",
             PaymentMethod = request.PaymentMethodId,
-            Confirm = request.Session == PaymentSession.OffSession,
-            OffSession = request.Session == PaymentSession.OffSession,
-            SetupFutureUsage = request.Session.ToStripeUsage(),
+            Confirm = request.Session == PaymentSession.OffSession ? true : null,
+            OffSession = request.Session == PaymentSession.OffSession ? true : null,
+            SetupFutureUsage = "off_session",
             AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
             {
                 Enabled = true,
