@@ -356,7 +356,11 @@ internal sealed class EscrowService : IEscrowService
         if (operationId is { } id)
         {
             var fingerprint = SettlementOperationFingerprint.CreateRelease(id, escrow);
-            escrow = await escrowRepository.ReserveReleaseAsync(escrow.Id, id, fingerprint, ct);
+            var reserved = await escrowRepository.ReserveReleaseAsync(escrow.Id, id, fingerprint, ct);
+            if (reserved.Conflict)
+                return new EscrowReleaseOperationError.OperationConflict();
+
+            escrow = reserved.Escrow;
             if (escrow is null)
                 return new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotFound());
 

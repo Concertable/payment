@@ -1,5 +1,7 @@
-using Concertable.Payment.Infrastructure.Data;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
+using Concertable.Payment.Infrastructure.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
@@ -39,25 +41,36 @@ internal sealed class EscrowRepository
             e => e.CommissionBindingId == commissionBindingId,
             ct);
 
-    public async Task<EscrowEntity?> ReserveReleaseAsync(
+    public async Task<(EscrowEntity? Escrow, bool Conflict)> ReserveReleaseAsync(
         int escrowId,
         Guid operationId,
         SettlementOperationFingerprint fingerprint,
         CancellationToken ct = default)
     {
-        await context.Escrows
-            .Where(escrow =>
-                escrow.Id == escrowId &&
-                escrow.Status == EscrowStatus.Held &&
-                escrow.ReleaseOperationId == null)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(escrow => escrow.ReleaseOperationId, operationId)
-                    .SetProperty(escrow => escrow.ReleaseOperationFingerprintVersion, fingerprint.Version)
-                    .SetProperty(escrow => escrow.ReleaseOperationFingerprint, fingerprint.Value),
-                ct);
+        try
+        {
+            await context.Escrows
+                .Where(escrow =>
+                    escrow.Id == escrowId &&
+                    escrow.Status == EscrowStatus.Held &&
+                    escrow.ReleaseOperationId == null)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(escrow => escrow.ReleaseOperationId, operationId)
+                        .SetProperty(escrow => escrow.ReleaseOperationFingerprintVersion, fingerprint.Version)
+                        .SetProperty(escrow => escrow.ReleaseOperationFingerprint, fingerprint.Value),
+                    ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
+        {
+            return (await ReloadByIdAsync(escrowId, ct), true);
+        }
+        catch (SqlException ex) when (ex.IsDuplicateKey())
+        {
+            return (await ReloadByIdAsync(escrowId, ct), true);
+        }
 
-        return await ReloadByIdAsync(escrowId, ct);
+        return (await ReloadByIdAsync(escrowId, ct), false);
     }
 
     public Task<EscrowEntity?> ReloadByIdAsync(int escrowId, CancellationToken ct = default)

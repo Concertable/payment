@@ -11,7 +11,7 @@ internal interface IEscrowRepository : IRepository<EscrowEntity>
     Task<EscrowEntity?> GetByCommissionBindingIdAsync(
         Guid commissionBindingId,
         CancellationToken ct = default);
-    Task<EscrowEntity?> ReserveReleaseAsync(
+    Task<(EscrowEntity? Escrow, bool Conflict)> ReserveReleaseAsync(
         int escrowId,
         Guid operationId,
         SettlementOperationFingerprint fingerprint,
