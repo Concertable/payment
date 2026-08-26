@@ -2,7 +2,7 @@ using Concertable.DataAccess;
 using Concertable.Seed.Shared;
 using Concertable.Seed.Shared.Extensions;
 using Concertable.Auth.Contracts.Events;
-using Concertable.Payment.Application.Commands;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;

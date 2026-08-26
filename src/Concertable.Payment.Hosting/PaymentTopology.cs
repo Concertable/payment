@@ -1,6 +1,5 @@
 using Concertable.Auth.Contracts.Events;
 using Concertable.B2B.Concert.Contracts.Events;
-using Concertable.Payment.Application.Commands;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 
