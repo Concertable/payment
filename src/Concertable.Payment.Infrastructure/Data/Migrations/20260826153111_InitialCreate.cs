@@ -271,6 +271,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReleaseOperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReleaseOperationFingerprintVersion = table.Column<int>(type: "int", nullable: true),
+                    ReleaseOperationFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -316,6 +319,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatRatePercentage = table.Column<decimal>(type: "decimal(7,4)", precision: 7, scale: 4, nullable: true),
                     PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    OperationFingerprintVersion = table.Column<int>(type: "int", nullable: true),
+                    OperationFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: true),
+                    RequiresAction = table.Column<bool>(type: "bit", nullable: true),
+                    ClientSecret = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
@@ -418,6 +426,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "CommissionBindingId",
                 unique: true,
                 filter: "[CommissionBindingId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Escrows_ReleaseOperationId",
+                schema: "payment",
+                table: "Escrows",
+                column: "ReleaseOperationId",
+                unique: true,
+                filter: "[ReleaseOperationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Escrows_Status",
@@ -582,6 +598,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "CommissionBindingId",
                 unique: true,
                 filter: "[CommissionBindingId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_OperationId",
+                schema: "payment",
+                table: "Transactions",
+                column: "OperationId",
+                unique: true,
+                filter: "[OperationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_PayeeId",

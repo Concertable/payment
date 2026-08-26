@@ -6,6 +6,7 @@ using Money = Concertable.Kernel.ValueObjects.Money;
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal sealed record ManagerPayCommand(
+    Guid? OperationId,
     Guid PayerId,
     Guid PayeeId,
     Money Amount,
@@ -52,6 +53,7 @@ internal sealed record RecentSettlementsCommand(Guid OwnerId, int Take);
 internal static class ManagerPaymentRequestMappers
 {
     public static ManagerPayCommand ToCommand(this ManagerPayRequest request) => new(
+        ParseOptionalGuid(request.OperationId, nameof(request.OperationId)),
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
         request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
         request.Amount.ToMoney(),
@@ -140,4 +142,9 @@ internal static class ManagerPaymentRequestMappers
 
     private static string? EmptyToNull(string value) =>
         string.IsNullOrEmpty(value) ? null : value;
+
+    private static Guid? ParseOptionalGuid(string value, string fieldName) =>
+        string.IsNullOrEmpty(value)
+            ? null
+            : value.ParseOrThrow<Guid>(fieldName);
 }

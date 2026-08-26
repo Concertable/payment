@@ -38,6 +38,8 @@ internal sealed record BoundCommissionCaptureCommand(
     Guid CommissionBindingId,
     string ExternalReference);
 
+internal sealed record ReleaseByBookingIdCommand(Guid? OperationId, int BookingId);
+
 internal static class EscrowRequestMappers
 {
     public static DepositCommand ToCommand(this DepositRequest request) => new(
@@ -78,6 +80,12 @@ internal static class EscrowRequestMappers
         request.CommissionBindingId.ParseOrThrow<Guid>(
             nameof(request.CommissionBindingId)),
         request.ExternalReference);
+
+    public static ReleaseByBookingIdCommand ToCommand(this ReleaseByBookingIdRequest request) => new(
+        string.IsNullOrEmpty(request.OperationId)
+            ? null
+            : request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+        request.BookingId);
 
     private static string? EmptyToNull(string value) =>
         string.IsNullOrEmpty(value) ? null : value;
