@@ -1,6 +1,7 @@
 extern alias PaymentClient;
 
 using Concertable.Payment.Contracts;
+using Concertable.Kernel.ValueObjects;
 using Google.Protobuf.WellKnownTypes;
 using PaymentClient::Concertable.Payment.Client.Adapters;
 using Proto = PaymentClient::Concertable.Payment.Grpc;
@@ -181,6 +182,84 @@ public sealed class PaymentOperationMappersTests
                 PaymentOperationFailureCode.AuthenticationRequired,
                 "Payment authentication is required."),
             snapshot.Failure);
+    }
+
+    [Fact]
+    public void ToProto_PopulatedOperationRequest_PreservesOptionalValues()
+    {
+        var operationId = Guid.CreateVersion7();
+        var payerOwnerId = Guid.CreateVersion7();
+        var payeeOwnerId = Guid.CreateVersion7();
+        var request = new PaymentSessionOperationRequest(
+            operationId,
+            PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
+            "escrow",
+            "booking:42",
+            payerOwnerId,
+            payeeOwnerId,
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            "pm_test");
+
+        var message = request.ToProto();
+
+        Assert.Equal(operationId.ToString("D"), message.OperationId);
+        Assert.Equal(Proto.PaymentSessionKind.Authorization, message.Kind);
+        Assert.Equal(Proto.PaymentSessionType.OffSession, message.Session);
+        Assert.Equal(payeeOwnerId.ToString("D"), message.PayeeOwnerId);
+        Assert.True(message.HasPayeeOwnerId);
+        Assert.Equal(5000, message.AmountMinor);
+        Assert.True(message.HasAmountMinor);
+        Assert.Equal(Proto.Currency.Gbp, message.Currency);
+        Assert.True(message.HasCurrency);
+        Assert.Equal(Proto.PaymentSessionFundsRouting.Destination, message.FundsRouting);
+        Assert.Equal("pm_test", message.PaymentMethodId);
+        Assert.True(message.HasPaymentMethodId);
+    }
+
+    [Fact]
+    public void ToProto_SetupOperationRequest_OmitsMoneyValues()
+    {
+        var request = new PaymentSessionOperationRequest(
+            Guid.CreateVersion7(),
+            PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
+            "setup",
+            "account:42",
+            Guid.CreateVersion7(),
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null);
+
+        var message = request.ToProto();
+
+        Assert.False(message.HasPayeeOwnerId);
+        Assert.False(message.HasAmountMinor);
+        Assert.False(message.HasCurrency);
+        Assert.Equal(Proto.PaymentSessionFundsRouting.None, message.FundsRouting);
+        Assert.Equal(Proto.PaymentSessionType.OnSession, message.Session);
+        Assert.False(message.HasPaymentMethodId);
+    }
+
+    [Fact]
+    public void ToProto_RetryAndStatusRequests_PreserveOwnerScope()
+    {
+        var operationId = Guid.CreateVersion7();
+        var attemptId = Guid.CreateVersion7();
+        var ownerId = Guid.CreateVersion7();
+
+        var retry = new PaymentSessionRetryRequest(operationId, attemptId, 3, ownerId).ToProto();
+        var status = new PaymentSessionStatusRequest(operationId, ownerId).ToProto();
+
+        Assert.Equal(attemptId.ToString("D"), retry.ExpectedAttemptId);
+        Assert.Equal(3, retry.ExpectedRevision);
+        Assert.Equal(ownerId.ToString("D"), retry.OwnerId);
+        Assert.Equal(operationId.ToString("D"), status.OperationId);
+        Assert.Equal(ownerId.ToString("D"), status.OwnerId);
     }
 
     private static Proto.PaymentOperationIdentity Identity() => new()
