@@ -36,6 +36,13 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             t => t.CommissionBindingId == commissionBindingId,
             ct);
 
+    public Task<SettlementTransactionEntity?> GetSettlementByOperationIdAsync(
+        Guid operationId,
+        CancellationToken ct = default) =>
+        context.SettlementTransactions.SingleOrDefaultAsync(
+            transaction => transaction.OperationId == operationId,
+            ct);
+
     public Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default) =>
@@ -150,12 +157,6 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
                 t.PayeeGrossMinor,
                 t.CompletedAt!.Value))
             .ToListAsync(ct);
-
-    public async Task CreateAsync(TransactionEntity entity)
-    {
-        await context.Transactions.AddAsync(entity);
-        await context.SaveChangesAsync();
-    }
 
     public async Task<bool> TryReserveSettlementRefundGrossAsync(
         int settlementId,
