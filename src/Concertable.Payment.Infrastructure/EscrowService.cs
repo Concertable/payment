@@ -1,10 +1,12 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
+using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -332,24 +334,66 @@ internal sealed class EscrowService : IEscrowService
         int escrowId,
         CancellationToken ct = default)
     {
-        var escrow = await escrowRepository.GetByIdAsync(escrowId);
+        var result = await ReleaseByIdCoreAsync(escrowId, null, ct);
+        if (result.TryGetValue(out var transfer))
+            return Result<Transfer, EscrowReleaseError>.Success(transfer);
+
+        result.TryGetError(out var error);
+        return error is EscrowReleaseOperationError.ReleaseFailure(var releaseError)
+            ? Result<Transfer, EscrowReleaseError>.Failure(releaseError)
+            : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
+    }
+
+    private async Task<Result<Transfer, EscrowReleaseOperationError>> ReleaseByIdCoreAsync(
+        int escrowId,
+        Guid? operationId,
+        CancellationToken ct)
+    {
+        var escrow = await escrowRepository.GetByIdAsync(escrowId, ct);
         if (escrow is null)
-            return Result<Transfer, EscrowReleaseError>.Failure(new EscrowReleaseError.EscrowNotFound());
-        if (escrow.Status != EscrowStatus.Held)
-            return Result<Transfer, EscrowReleaseError>.Failure(new EscrowReleaseError.EscrowNotHeld());
+            return new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotFound());
+
+        if (operationId is { } id)
+        {
+            var fingerprint = SettlementOperationFingerprint.CreateRelease(id, escrow);
+            var reserved = await escrowRepository.ReserveReleaseAsync(escrow.Id, id, fingerprint, ct);
+            if (reserved.Conflict)
+                return new EscrowReleaseOperationError.OperationConflict();
+
+            escrow = reserved.Escrow;
+            if (escrow is null)
+                return new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotFound());
+
+            var reservation = escrow.BeginRelease(id, fingerprint);
+            if (reservation.TryGetError(out var error))
+            {
+                return error is EscrowTransitionError.OperationConflict
+                    ? new EscrowReleaseOperationError.OperationConflict()
+                    : new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotHeld());
+            }
+            if (escrow.TransferId is { } existingTransferId)
+                return new Transfer(existingTransferId);
+
+        }
+        else if (escrow.Status != EscrowStatus.Held)
+        {
+            return new EscrowReleaseOperationError.ReleaseFailure(new EscrowReleaseError.EscrowNotHeld());
+        }
 
         var release = await paymentManager.ReleaseAsync(new ReleaseRequest
         {
             PayeeId = escrow.ToOwnerId,
             Amount = escrow.PayeeGrossMinor.ToMoney(escrow.Currency),
             ChargeId = escrow.ChargeId,
+            OperationId = operationId,
             CommissionBindingId = escrow.CommissionBindingId,
             Metadata = EscrowMetadata(escrow, TransactionTypes.EscrowRelease)
         }, ct);
         if (!release.TryGetValue(out var transfer))
         {
             release.TryGetError(out var paymentError);
-            return Result<Transfer, EscrowReleaseError>.Failure(new EscrowReleaseError.PaymentFailure(paymentError!));
+            return new EscrowReleaseOperationError.ReleaseFailure(
+                new EscrowReleaseError.PaymentFailure(paymentError!));
         }
 
         EnsureTransition(escrow.Release(transfer.TransferId, timeProvider.GetUtcNow().DateTime));
@@ -363,33 +407,65 @@ internal sealed class EscrowService : IEscrowService
                 escrow.ChargeId,
                 transfer.TransferId),
             ct);
-        await unitOfWork.SaveChangesAsync(ct);
-        return Result<Transfer, EscrowReleaseError>.Success(transfer);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (operationId is not null && ex.IsDuplicateKey())
+        {
+            var canonical = await escrowRepository.ReloadByIdAsync(escrow.Id, ct);
+            if (canonical?.ReleaseOperationId != operationId || canonical.TransferId is null)
+                throw;
+
+            return new Transfer(canonical.TransferId);
+        }
+        return transfer;
     }
 
     public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default)
     {
+        var result = await ReleaseByBookingIdCoreAsync(null, bookingId, ct);
+        if (result.TryGetValue(out var transfer))
+            return Result<Option<Transfer>, EscrowReleaseError>.Success(transfer);
+
+        result.TryGetError(out var error);
+        return error is EscrowReleaseOperationError.ReleaseFailure(var releaseError)
+            ? Result<Option<Transfer>, EscrowReleaseError>.Failure(releaseError)
+            : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
+    }
+
+    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+        Guid operationId,
+        int bookingId,
+        CancellationToken ct = default) =>
+        ReleaseByBookingIdCoreAsync(operationId, bookingId, ct);
+
+    private async Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdCoreAsync(
+        Guid? operationId,
+        int bookingId,
+        CancellationToken ct)
+    {
         var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
         if (escrow is null)
         {
             logger.NoEscrowFoundForBooking(bookingId);
-            return Result<Option<Transfer>, EscrowReleaseError>.Success(Option.None<Transfer>());
+            return Result<Option<Transfer>, EscrowReleaseOperationError>.Success(Option.None<Transfer>());
         }
-        if (escrow.Status != EscrowStatus.Held)
+        if (operationId is null && escrow.Status != EscrowStatus.Held)
         {
             logger.EscrowNotHeldSkippingRelease(escrow.Id, bookingId, escrow.Status);
-            return Result<Option<Transfer>, EscrowReleaseError>.Success(Option.None<Transfer>());
+            return Result<Option<Transfer>, EscrowReleaseOperationError>.Success(Option.None<Transfer>());
         }
 
-        var release = await ReleaseAsync(escrow.Id, ct);
+        var release = await ReleaseByIdCoreAsync(escrow.Id, operationId, ct);
         if (!release.TryGetValue(out var transfer))
         {
             release.TryGetError(out var error);
-            return Result<Option<Transfer>, EscrowReleaseError>.Failure(error!);
+            return error!;
         }
-        return Result<Option<Transfer>, EscrowReleaseError>.Success(Option.Some(transfer));
+        return Option.Some(transfer);
     }
 
     public Task<Result<Refund, EscrowRefundError>> RefundAsync(

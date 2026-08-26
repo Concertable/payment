@@ -37,7 +37,7 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, ct);
+        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct);
 
     public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
         Guid payerId,
@@ -48,7 +48,19 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, ct);
+        ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, null, ct);
+
+    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money chargeAmount,
+        Money payeeAmount,
+        string paymentMethodId,
+        PaymentSession session,
+        IReadOnlyDictionary<string, string> metadata,
+        CancellationToken ct = default) =>
+        ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, operationId, null, ct);
 
     public Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
         Guid payerId,
@@ -60,7 +72,7 @@ internal sealed class PaymentManager : IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         Guid commissionBindingId,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, commissionBindingId, ct);
+        ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, commissionBindingId, ct);
 
     public Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
@@ -93,6 +105,12 @@ internal sealed class PaymentManager : IPaymentManager
         Guid commissionBindingId,
         CancellationToken ct = default) =>
         HoldInternalAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, null, commissionBindingId, ct);
+
+    public Task<Result<PaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
+        string paymentIntentId,
+        PaymentSession session,
+        CancellationToken ct = default) =>
+        intentClientFactory.Create(session).GetAsync(paymentIntentId, ct);
 
     private async Task<Result<PaymentOutcome, PaymentError>> HoldInternalAsync(
         Guid payerId,
@@ -149,6 +167,7 @@ internal sealed class PaymentManager : IPaymentManager
             Amount = request.Amount,
             ChargeId = request.ChargeId,
             DestinationStripeId = payeeAccount.StripeAccountId,
+            OperationId = request.OperationId,
             CommissionBindingId = request.CommissionBindingId,
             Metadata = metadata
         }, ct);
@@ -210,6 +229,7 @@ internal sealed class PaymentManager : IPaymentManager
         string paymentMethodId,
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
+        Guid? operationId,
         Guid? commissionBindingId,
         CancellationToken ct)
     {
@@ -232,6 +252,7 @@ internal sealed class PaymentManager : IPaymentManager
             StripeCustomerId = resolved.stripeCustomerId,
             DestinationStripeId = resolved.destinationStripeId,
             ReceiptEmail = resolved.email,
+            OperationId = operationId,
             CommissionBindingId = commissionBindingId,
             Metadata = merged
         }, ct);

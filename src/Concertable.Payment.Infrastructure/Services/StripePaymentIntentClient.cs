@@ -59,7 +59,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
 
             var paymentIntent = await stripeClient.CreatePaymentIntentAsync(
                 options,
-                StripeRequestOptions.Charge(opts.CommissionBindingId),
+                StripeRequestOptions.Charge(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
             if (paymentIntent.Status == "succeeded")
@@ -120,6 +120,23 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         catch (StripeException ex)
         {
             logger.StripeHoldFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
+                return Result<PaymentOutcome, PaymentError>.Failure(error);
+            throw;
+        }
+    }
+
+    public async Task<Result<PaymentOutcome, PaymentError>> GetAsync(
+        string paymentIntentId,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var paymentIntent = await stripeClient.GetPaymentIntentAsync(paymentIntentId, ct);
+            return paymentIntent.ToPaymentResult();
+        }
+        catch (StripeException ex)
+        {
             if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
                 return Result<PaymentOutcome, PaymentError>.Failure(error);
             throw;
