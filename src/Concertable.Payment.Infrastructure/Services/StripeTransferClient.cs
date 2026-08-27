@@ -37,7 +37,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                     SourceTransaction = opts.ChargeId,
                     Metadata = opts.Metadata
                 },
-                StripeRequestOptions.Release(opts.CommissionBindingId),
+                StripeRequestOptions.Release(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
             logger.StripeEscrowReleaseSucceeded(transfer.Id, transfer.Amount, opts.DestinationStripeId, opts.ChargeId);

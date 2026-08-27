@@ -25,7 +25,7 @@ internal sealed class TicketTransactionHandler : ITransactionHandler
             PaymentIntentId = @event.TransactionId,
             Amount = long.TryParse(meta.GetValueOrDefault(PaymentMetadataKeys.Amount), out var a) ? a : 0,
             Status = TransactionStatus.Complete,
-            CreatedAt = timeProvider.GetUtcNow().DateTime
+            CreatedAt = timeProvider.GetUtcNow()
         });
     }
 }

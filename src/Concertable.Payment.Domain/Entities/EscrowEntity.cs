@@ -62,6 +62,9 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public string ChargeId { get; private set; } = null!;
     public string? TransferId { get; private set; }
     public DateTime? ReleasedAt { get; private set; }
+    public Guid? ReleaseOperationId { get; private set; }
+    public int? ReleaseOperationFingerprintVersion { get; private set; }
+    public string? ReleaseOperationFingerprint { get; private set; }
 
     /// <summary>
     /// Running total of cumulative gross reserved across non-failed refunds. Maintained by the
@@ -71,9 +74,9 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     /// </summary>
     public long RefundedGrossMinor { get; private set; }
     public IReadOnlyCollection<PaymentRefundEntity> Refunds => refunds;
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;
-    public DateTime? LastModifiedAt { get; set; }
+    public DateTimeOffset? LastModifiedAt { get; set; }
     public string? LastModifiedBy { get; set; }
 
     public static EscrowEntity Create(
@@ -142,6 +145,27 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
         TransferId = transferId;
         ReleasedAt = now;
         Status = EscrowStatus.Released;
+        return UnitResult.Success<EscrowTransitionError>();
+    }
+
+    public UnitResult<EscrowTransitionError> BeginRelease(
+        Guid operationId,
+        SettlementOperationFingerprint fingerprint)
+    {
+        if (ReleaseOperationId is not null)
+        {
+            return ReleaseOperationId == operationId
+                && ReleaseOperationFingerprintVersion == fingerprint.Version
+                && string.Equals(ReleaseOperationFingerprint, fingerprint.Value, StringComparison.Ordinal)
+                    ? UnitResult.Success<EscrowTransitionError>()
+                    : UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.OperationConflict());
+        }
+        if (Status != EscrowStatus.Held)
+            return UnitResult.Failure<EscrowTransitionError>(new EscrowTransitionError.NotHeld(Status));
+
+        ReleaseOperationId = operationId;
+        ReleaseOperationFingerprintVersion = fingerprint.Version;
+        ReleaseOperationFingerprint = fingerprint.Value;
         return UnitResult.Success<EscrowTransitionError>();
     }
 

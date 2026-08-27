@@ -25,7 +25,7 @@ internal sealed class VerifyTransactionHandler : ITransactionHandler
             PaymentIntentId = @event.TransactionId,
             Amount = 100,
             Status = TransactionStatus.Complete,
-            CreatedAt = timeProvider.GetUtcNow().DateTime
+            CreatedAt = timeProvider.GetUtcNow()
         });
     }
 }

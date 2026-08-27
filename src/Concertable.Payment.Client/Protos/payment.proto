@@ -44,6 +44,13 @@ enum PaymentSessionKind {
   PAYMENT_SESSION_KIND_PAYMENT_METHOD_VERIFICATION = 4;
 }
 
+enum PaymentSessionFundsRouting {
+  PAYMENT_SESSION_FUNDS_ROUTING_UNSPECIFIED = 0;
+  PAYMENT_SESSION_FUNDS_ROUTING_NONE = 1;
+  PAYMENT_SESSION_FUNDS_ROUTING_PLATFORM = 2;
+  PAYMENT_SESSION_FUNDS_ROUTING_DESTINATION = 3;
+}
+
 enum PaymentOperationState {
   PAYMENT_OPERATION_STATE_UNSPECIFIED = 0;
   PAYMENT_OPERATION_STATE_CREATING = 1;
@@ -113,6 +120,38 @@ message PaymentOperationSnapshot {
   google.protobuf.Timestamp expires_at = 5;
   google.protobuf.Timestamp capture_before = 6;
   PaymentOperationFailure failure = 7;
+}
+
+service PaymentSessionOperations {
+  rpc CreateOrReplay(PaymentSessionOperationRequest) returns (PaymentSessionDescriptor);
+  rpc Retry(PaymentSessionRetryRequest) returns (PaymentSessionDescriptor);
+  rpc GetStatus(PaymentSessionStatusRequest) returns (PaymentOperationSnapshot);
+}
+
+message PaymentSessionOperationRequest {
+  string operation_id = 1;
+  PaymentSessionKind kind = 2;
+  string operation_type = 3;
+  string consumer_correlation = 4;
+  string payer_owner_id = 5;
+  optional string payee_owner_id = 6;
+  optional int64 amount_minor = 7;
+  optional Currency currency = 8;
+  PaymentSessionFundsRouting funds_routing = 9;
+  PaymentSessionType session = 10;
+  optional string payment_method_id = 11;
+}
+
+message PaymentSessionRetryRequest {
+  string operation_id = 1;
+  string expected_attempt_id = 2;
+  int64 expected_revision = 3;
+  string owner_id = 4;
+}
+
+message PaymentSessionStatusRequest {
+  string operation_id = 1;
+  string owner_id = 2;
 }
 
 enum EscrowStatusType {
@@ -269,6 +308,7 @@ message ManagerPayRequest {
   string payment_method_id = 4;
   PaymentSessionType session = 5;
   int32 booking_id = 6;
+  string operation_id = 7;
 }
 
 message BoundCommissionManagerPayRequest {
@@ -446,6 +486,7 @@ message BoundCommissionCaptureRequest {
 
 message ReleaseByBookingIdRequest {
   int32 booking_id = 1;
+  string operation_id = 2;
 }
 
 message ReleaseByBookingIdResponse {

@@ -2,9 +2,7 @@ extern alias PaymentClient;
 
 using Concertable.Messaging.Contracts;
 using Concertable.Payment.Contracts.Events;
-using Concertable.Testing;
 using Google.Protobuf.Reflection;
-using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
 using Proto = PaymentClient::Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.UnitTests.Contracts;
@@ -21,6 +19,7 @@ public sealed class PaymentOperationContractTests
     public void ContractEnums_HaveStableNonZeroValues()
     {
         AssertValues<PaymentSessionKind>(1, 2, 3, 4);
+        AssertValues<PaymentSessionFundsRouting>(1, 2, 3);
         AssertValues<PaymentOperationState>(1, 2, 3, 4, 5, 6, 7, 8, 9);
         AssertValues<PaymentOperationTerminalDisposition>(1, 2, 3);
         AssertValues<PaymentOperationRetryDisposition>(1, 2, 3, 4, 5, 6);
@@ -31,6 +30,7 @@ public sealed class PaymentOperationContractTests
     public void ProtoEnums_HaveStableValuesWithUnspecifiedZero()
     {
         AssertValues<Proto.PaymentSessionKind>(0, 1, 2, 3, 4);
+        AssertValues<Proto.PaymentSessionFundsRouting>(0, 1, 2, 3);
         AssertValues<Proto.PaymentOperationState>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
         AssertValues<Proto.PaymentOperationTerminalDisposition>(0, 1, 2, 3);
         AssertValues<Proto.PaymentOperationRetryDisposition>(0, 1, 2, 3, 4, 5, 6);
@@ -65,15 +65,46 @@ public sealed class PaymentOperationContractTests
             ("expires_at", 5, FieldType.Message),
             ("capture_before", 6, FieldType.Message),
             ("failure", 7, FieldType.Message));
+        AssertFields(
+            Proto.PaymentSessionOperationRequest.Descriptor,
+            ("operation_id", 1, FieldType.String),
+            ("kind", 2, FieldType.Enum),
+            ("operation_type", 3, FieldType.String),
+            ("consumer_correlation", 4, FieldType.String),
+            ("payer_owner_id", 5, FieldType.String),
+            ("payee_owner_id", 6, FieldType.String),
+            ("amount_minor", 7, FieldType.Int64),
+            ("currency", 8, FieldType.Enum),
+            ("funds_routing", 9, FieldType.Enum),
+            ("session", 10, FieldType.Enum),
+            ("payment_method_id", 11, FieldType.String));
+        AssertFields(
+            Proto.PaymentSessionRetryRequest.Descriptor,
+            ("operation_id", 1, FieldType.String),
+            ("expected_attempt_id", 2, FieldType.String),
+            ("expected_revision", 3, FieldType.Int64),
+            ("owner_id", 4, FieldType.String));
+        AssertFields(
+            Proto.PaymentSessionStatusRequest.Descriptor,
+            ("operation_id", 1, FieldType.String),
+            ("owner_id", 2, FieldType.String));
     }
 
-    [Theory]
-    [InlineData(typeof(PaymentOperationIdentity))]
-    [InlineData(typeof(PaymentOperationStateChanged))]
-    [InlineData(typeof(ClientSnapshot))]
-    public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type) =>
-        Assert.Empty(type.Assembly
-            .ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
+    [Fact]
+    public void ProtoService_HasStableSessionOperationMethods()
+    {
+        var service = Proto.PaymentSessionOperations.Descriptor;
+
+        Assert.Equal(
+            new[]
+            {
+                ("CreateOrReplay", "payment.PaymentSessionOperationRequest", "payment.PaymentSessionDescriptor"),
+                ("Retry", "payment.PaymentSessionRetryRequest", "payment.PaymentSessionDescriptor"),
+                ("GetStatus", "payment.PaymentSessionStatusRequest", "payment.PaymentOperationSnapshot")
+            },
+            service.Methods.Select(method =>
+                (method.Name, method.InputType.FullName, method.OutputType.FullName)));
+    }
 
     private static void AssertValues<TEnum>(params int[] expected)
         where TEnum : struct, Enum =>

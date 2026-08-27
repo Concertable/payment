@@ -14,6 +14,8 @@ public sealed class StripeTransferClientTests
     private readonly Mock<IStripeApiClient> stripeClient;
     private readonly StripeTransferClient sut;
 
+    private TransferCreateOptions? transfer;
+    private RequestOptions? transferRequest;
     private TransferReversalCreateOptions? reversal;
     private RequestOptions? reversalRequest;
     private RefundCreateOptions? refund;
@@ -23,6 +25,17 @@ public sealed class StripeTransferClientTests
     {
         this.stripeClient = new Mock<IStripeApiClient>();
 
+        stripeClient
+            .Setup(c => c.CreateTransferAsync(
+                It.IsAny<TransferCreateOptions>(),
+                It.IsAny<RequestOptions?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<TransferCreateOptions, RequestOptions?, CancellationToken>((options, request, _) =>
+            {
+                transfer = options;
+                transferRequest = request;
+            })
+            .ReturnsAsync(new Stripe.Transfer { Id = "tr_test", Amount = 5000 });
         stripeClient
             .Setup(c => c.CreateTransferReversalAsync(
                 "tr_test",
@@ -50,6 +63,25 @@ public sealed class StripeTransferClientTests
         this.sut = new StripeTransferClient(
             stripeClient.Object,
             NullLogger<StripeTransferClient>.Instance);
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_WithOperationId_UsesDurableIdempotencyKey()
+    {
+        var operationId = Guid.CreateVersion7();
+
+        var result = await sut.ReleaseAsync(new StripeReleaseOptions
+        {
+            OperationId = operationId,
+            Amount = Money.Gbp(50),
+            DestinationStripeId = "acct_test",
+            ChargeId = "ch_test",
+            Metadata = new Dictionary<string, string>()
+        });
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(transfer);
+        Assert.Equal($"operation:{operationId}:release", transferRequest?.IdempotencyKey);
     }
 
     [Fact]
