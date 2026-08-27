@@ -16,6 +16,29 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         this.client = client;
     }
 
+    public Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayAsync(
+                Proto.ManagerPayRequest.Create(
+                    operationId,
+                    payerId,
+                    payeeId,
+                    amount,
+                    paymentMethodId,
+                    session,
+                    bookingId),
+                cancellationToken: ct)).ToPaymentOutcome(),
+            error => error.ToManagerPaymentOperationError(),
+            ct);
+
     public Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
         Guid payeeId,
@@ -26,15 +49,13 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.PayAsync(
-                new Proto.ManagerPayRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Amount = amount.ToProtoMoney(),
-                    PaymentMethodId = paymentMethodId,
-                    Session = session.ToProtoSession(),
-                    BookingId = bookingId
-                },
+                Proto.ManagerPayRequest.Create(
+                    payerId,
+                    payeeId,
+                    amount,
+                    paymentMethodId,
+                    session,
+                    bookingId),
                 cancellationToken: ct)).ToPaymentOutcome(),
             error => error.ToManagerPaymentError(),
             ct);

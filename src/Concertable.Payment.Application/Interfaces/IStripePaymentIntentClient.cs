@@ -13,4 +13,8 @@ internal interface IStripePaymentIntentClient
     Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
         StripeHoldOptions options,
         CancellationToken ct = default);
+
+    Task<Result<PaymentOutcome, PaymentError>> GetAsync(
+        string paymentIntentId,
+        CancellationToken ct = default);
 }

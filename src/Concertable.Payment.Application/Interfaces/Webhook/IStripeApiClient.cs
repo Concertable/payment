@@ -10,6 +10,7 @@ internal interface IStripeApiClient
         PaymentIntentCreateOptions options,
         RequestOptions? requestOptions = null,
         CancellationToken ct = default);
+    Task<PaymentIntent> GetPaymentIntentAsync(string paymentIntentId, CancellationToken ct = default);
     Task<Transfer> CreateTransferAsync(
         TransferCreateOptions options,
         RequestOptions? requestOptions = null,

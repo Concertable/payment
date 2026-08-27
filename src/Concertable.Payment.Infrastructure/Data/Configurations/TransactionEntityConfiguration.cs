@@ -35,6 +35,8 @@ internal sealed class SettlementTransactionEntityConfiguration : IEntityTypeConf
             .HasColumnName("CommissionVatRatePercentage")
             .HasPrecision(7, 4);
         builder.HasIndex(t => t.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
+        builder.Property(t => t.OperationFingerprint).HasMaxLength(64).IsFixedLength();
+        builder.HasIndex(t => t.OperationId).IsUnique().HasFilter("[OperationId] IS NOT NULL");
         builder.HasOne(t => t.CommissionBinding)
             .WithMany()
             .HasForeignKey(t => t.CommissionBindingId)

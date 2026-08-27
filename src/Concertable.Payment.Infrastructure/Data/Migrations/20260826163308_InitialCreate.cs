@@ -85,6 +85,39 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PaymentSessionOperations",
+                schema: "payment",
+                columns: table => new
+                {
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    SessionKind = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
+                    Session = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ConsumerCorrelation = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    PayerOwnerKey = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    PayeeOwnerKey = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    AmountMinor = table.Column<long>(type: "bigint", nullable: true),
+                    Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: true),
+                    FundsRouting = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    PaymentMethodId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ProviderCustomerId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ProviderConnectedAccountId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FingerprintVersion = table.Column<int>(type: "int", nullable: false),
+                    RequestFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: false),
+                    CurrentRevision = table.Column<long>(type: "bigint", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    CanceledAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentSessionOperations", x => x.OperationId);
+                    table.CheckConstraint("CK_PaymentSessionOperations_CurrentRevision", "[CurrentRevision] >= 1");
+                    table.CheckConstraint("CK_PaymentSessionOperations_FingerprintVersion", "[FingerprintVersion] >= 1");
+                    table.CheckConstraint("CK_PaymentSessionOperations_RequestFingerprint", "LEN([RequestFingerprint]) = 64");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PayoutAccounts",
                 schema: "payment",
                 columns: table => new
@@ -175,6 +208,48 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PaymentSessionAttempts",
+                schema: "payment",
+                columns: table => new
+                {
+                    AttemptId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Revision = table.Column<long>(type: "bigint", nullable: false),
+                    PredecessorAttemptId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ProviderObjectKind = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    ProviderObjectId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    State = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    LastProviderStatus = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    FailureCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true),
+                    ProviderRequestId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ProviderDiagnosticCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ProviderDiagnosticMessage = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastAttemptedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
+                    LastObservedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    NextReconcileAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    TerminalAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    ExpiresAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    CaptureBefore = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LastProviderEventId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    LastProviderEventCreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentSessionAttempts", x => x.AttemptId);
+                    table.CheckConstraint("CK_PaymentSessionAttempts_ProviderBinding", "[ProviderObjectId] IS NOT NULL OR [State] = 'Creating'");
+                    table.CheckConstraint("CK_PaymentSessionAttempts_Revision", "[Revision] >= 1");
+                    table.ForeignKey(
+                        name: "FK_PaymentSessionAttempts_PaymentSessionOperations_OperationId",
+                        column: x => x.OperationId,
+                        principalSchema: "payment",
+                        principalTable: "PaymentSessionOperations",
+                        principalColumn: "OperationId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Escrows",
                 schema: "payment",
                 columns: table => new
@@ -196,10 +271,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     ChargeId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TransferId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReleasedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReleaseOperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ReleaseOperationFingerprintVersion = table.Column<int>(type: "int", nullable: true),
+                    ReleaseOperationFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
@@ -227,9 +305,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastModifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastModifiedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Discriminator = table.Column<string>(type: "nvarchar(34)", maxLength: 34, nullable: false),
                     ContextId = table.Column<int>(type: "int", nullable: true),
@@ -241,6 +319,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     CommissionVatMinor = table.Column<long>(type: "bigint", nullable: true),
                     CommissionVatRatePercentage = table.Column<decimal>(type: "decimal(7,4)", precision: 7, scale: 4, nullable: true),
                     PayerTotalMinor = table.Column<long>(type: "bigint", nullable: true),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    OperationFingerprintVersion = table.Column<int>(type: "int", nullable: true),
+                    OperationFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: true),
+                    RequiresAction = table.Column<bool>(type: "bit", nullable: true),
                     RefundedGrossMinor = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
@@ -345,6 +427,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 filter: "[CommissionBindingId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Escrows_ReleaseOperationId",
+                schema: "payment",
+                table: "Escrows",
+                column: "ReleaseOperationId",
+                unique: true,
+                filter: "[ReleaseOperationId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Escrows_Status",
                 schema: "payment",
                 table: "Escrows",
@@ -429,6 +519,59 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 filter: "[StripeRefundId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PaymentSessionAttempts_NextReconcileAt",
+                schema: "payment",
+                table: "PaymentSessionAttempts",
+                column: "NextReconcileAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSessionAttempts_State",
+                schema: "payment",
+                table: "PaymentSessionAttempts",
+                column: "State");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_PaymentSessionAttempts_OperationId_PredecessorAttemptId",
+                schema: "payment",
+                table: "PaymentSessionAttempts",
+                columns: new[] { "OperationId", "PredecessorAttemptId" },
+                unique: true,
+                filter: "[PredecessorAttemptId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_PaymentSessionAttempts_OperationId_Revision",
+                schema: "payment",
+                table: "PaymentSessionAttempts",
+                columns: new[] { "OperationId", "Revision" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "UX_PaymentSessionAttempts_ProviderObjectKind_ProviderObjectId",
+                schema: "payment",
+                table: "PaymentSessionAttempts",
+                columns: new[] { "ProviderObjectKind", "ProviderObjectId" },
+                unique: true,
+                filter: "[ProviderObjectId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSessionOperations_OperationType_ConsumerCorrelation",
+                schema: "payment",
+                table: "PaymentSessionOperations",
+                columns: new[] { "OperationType", "ConsumerCorrelation" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSessionOperations_PayeeOwnerKey",
+                schema: "payment",
+                table: "PaymentSessionOperations",
+                column: "PayeeOwnerKey");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PaymentSessionOperations_PayerOwnerKey",
+                schema: "payment",
+                table: "PaymentSessionOperations",
+                column: "PayerOwnerKey");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PayoutAccounts_OwnerId",
                 schema: "payment",
                 table: "PayoutAccounts",
@@ -454,6 +597,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 column: "CommissionBindingId",
                 unique: true,
                 filter: "[CommissionBindingId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_OperationId",
+                schema: "payment",
+                table: "Transactions",
+                column: "OperationId",
+                unique: true,
+                filter: "[OperationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_PayeeId",
@@ -491,6 +642,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 schema: "payment");
 
             migrationBuilder.DropTable(
+                name: "PaymentSessionAttempts",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
                 name: "PayoutAccounts",
                 schema: "payment");
 
@@ -512,6 +667,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Transactions",
+                schema: "payment");
+
+            migrationBuilder.DropTable(
+                name: "PaymentSessionOperations",
                 schema: "payment");
 
             migrationBuilder.DropTable(

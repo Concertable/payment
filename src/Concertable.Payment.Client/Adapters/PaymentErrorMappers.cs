@@ -59,6 +59,13 @@ internal static class PaymentErrorMappers
             error => new ManagerPaymentError.PaymentFailure(error),
             error => new ManagerPaymentError.CommissionFailure(error)));
 
+    private static readonly FrozenDictionary<string, ManagerPaymentOperationError> managerPaymentOperationErrors =
+        Index(new ManagerPaymentOperationError[]
+        {
+            new ManagerPaymentOperationError.OperationConflict()
+        }.Concat(managerPaymentErrors.Values.Select(error =>
+            (ManagerPaymentOperationError)new ManagerPaymentOperationError.ManagerFailure(error))));
+
     private static readonly FrozenDictionary<string, HoldSessionError> holdSessionErrors =
         Index(Composite<HoldSessionError>(
             error => new HoldSessionError.PaymentFailure(error),
@@ -81,6 +88,13 @@ internal static class PaymentErrorMappers
             new EscrowReleaseError.EscrowNotHeld()
         }.Concat(paymentErrors.Values.Select(error =>
             (EscrowReleaseError)new EscrowReleaseError.PaymentFailure(error))));
+
+    private static readonly FrozenDictionary<string, EscrowReleaseOperationError> escrowReleaseOperationErrors =
+        Index(new EscrowReleaseOperationError[]
+        {
+            new EscrowReleaseOperationError.OperationConflict()
+        }.Concat(escrowReleaseErrors.Values.Select(error =>
+            (EscrowReleaseOperationError)new EscrowReleaseOperationError.ReleaseFailure(error))));
 
     private static readonly FrozenDictionary<string, EscrowRefundError> escrowRefundErrors =
         Index(new EscrowRefundError[]
@@ -112,6 +126,9 @@ internal static class PaymentErrorMappers
         internal ManagerPaymentError ToManagerPaymentError() =>
             exception.ToError(managerPaymentErrors);
 
+        internal ManagerPaymentOperationError ToManagerPaymentOperationError() =>
+            exception.ToError(managerPaymentOperationErrors);
+
         internal HoldSessionError ToHoldSessionError() =>
             exception.ToError(holdSessionErrors);
 
@@ -123,6 +140,9 @@ internal static class PaymentErrorMappers
 
         internal EscrowReleaseError ToEscrowReleaseError() =>
             exception.ToError(escrowReleaseErrors);
+
+        internal EscrowReleaseOperationError ToEscrowReleaseOperationError() =>
+            exception.ToError(escrowReleaseOperationErrors);
 
         internal EscrowRefundError ToEscrowRefundError() =>
             exception.ToError(escrowRefundErrors);
