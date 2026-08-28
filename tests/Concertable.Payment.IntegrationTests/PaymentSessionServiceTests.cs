@@ -142,6 +142,40 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
+    public async Task RefreshAsync_ProviderRetrievalUnavailable_PersistsReconciliationRequirement()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var specification = Specification(Guid.CreateVersion7());
+        PaymentOperationState initialState;
+        DateTimeOffset? initialObservedAt;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out _));
+            var attempt = await createContext.PaymentSessionAttempts
+                .SingleAsync(value => value.OperationId == specification.OperationId);
+            initialState = attempt.State;
+            initialObservedAt = attempt.LastObservedAt;
+        }
+
+        await using var refreshContext = CreateContext();
+        var refreshed = await Service(
+            refreshContext,
+            new UnavailableRetrievalStripeSessionClient(provider))
+            .RefreshAsync(specification.OperationId);
+
+        Assert.True(refreshed.TryGetError(out PaymentOperationError? error));
+        Assert.IsType<PaymentOperationError.ProviderUnavailable>(error);
+        var persisted = await refreshContext.PaymentSessionAttempts
+            .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
+        Assert.Equal(initialState, persisted.State);
+        Assert.Equal(initialObservedAt, persisted.LastObservedAt);
+        Assert.NotNull(persisted.NextReconcileAt);
+        Assert.Equal(persisted.LastAttemptedAt, persisted.NextReconcileAt);
+    }
+
+    [Fact]
     public async Task RetryAsync_EligibleAttempt_CancelsPredecessorAndCreatesOneSuccessor()
     {
         await MigrateAsync();
