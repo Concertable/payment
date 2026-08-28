@@ -9,6 +9,11 @@ internal static class PaymentSessionOperationRequestMappers
     {
         public Proto.PaymentSessionOperationRequest ToProto()
         {
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+            ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationType);
+            ArgumentException.ThrowIfNullOrWhiteSpace(request.ConsumerCorrelation);
+
             var message = new Proto.PaymentSessionOperationRequest
             {
                 OperationId = request.OperationId.ToString("D"),
@@ -44,22 +49,35 @@ internal static class PaymentSessionOperationRequestMappers
 
     extension(PaymentSessionRetryRequest request)
     {
-        public Proto.PaymentSessionRetryRequest ToProto() => new()
+        public Proto.PaymentSessionRetryRequest ToProto()
         {
-            OperationId = request.OperationId.ToString("D"),
-            ExpectedAttemptId = request.ExpectedAttemptId.ToString("D"),
-            ExpectedRevision = request.ExpectedRevision,
-            OwnerId = request.OwnerId.ToString("D")
-        };
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.ExpectedAttemptId, nameof(request.ExpectedAttemptId));
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.OwnerId, nameof(request.OwnerId));
+
+            return new()
+            {
+                OperationId = request.OperationId.ToString("D"),
+                ExpectedAttemptId = request.ExpectedAttemptId.ToString("D"),
+                ExpectedRevision = request.ExpectedRevision,
+                OwnerId = request.OwnerId.ToString("D")
+            };
+        }
     }
 
     extension(PaymentSessionStatusRequest request)
     {
-        public Proto.PaymentSessionStatusRequest ToProto() => new()
+        public Proto.PaymentSessionStatusRequest ToProto()
         {
-            OperationId = request.OperationId.ToString("D"),
-            OwnerId = request.OwnerId.ToString("D")
-        };
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.OwnerId, nameof(request.OwnerId));
+
+            return new()
+            {
+                OperationId = request.OperationId.ToString("D"),
+                OwnerId = request.OwnerId.ToString("D")
+            };
+        }
     }
 
     extension(PaymentSessionKind kind)
