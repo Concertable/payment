@@ -113,8 +113,6 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     {
         if (ProviderObjectId is null)
             throw new DomainException("A payment session attempt must be provider-bound before observation.");
-        if (transition.Disposition == PaymentOperationTransitionDisposition.Duplicate)
-            return;
 
         var observableChange = State != transition.State
             || FailureCode != transition.Failure?.Code

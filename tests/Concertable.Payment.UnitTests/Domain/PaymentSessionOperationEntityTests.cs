@@ -127,7 +127,6 @@ public sealed class PaymentSessionOperationEntityTests
         var operation = CreateOperation();
         operation.CurrentAttempt.BindProviderObject("pi_failed");
         operation.CurrentAttempt.ApplyTransition(operation.SessionKind, new(
-            PaymentOperationTransitionDisposition.Applied,
             PaymentOperationState.Failed,
             "failed",
             CreatedAt.AddSeconds(1),

@@ -181,51 +181,6 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
         Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidAuthorizationExpiry, rejection.Reason);
     }
 
-    [Fact]
-    public void DuplicateAndOutOfOrderSequenceCannotRegressCurrentTruth()
-    {
-        var firstObservedAt = captureBefore.AddDays(-2);
-        var secondObservedAt = captureBefore.AddDays(-1);
-        var current = Attempt(PaymentOperationState.Creating) with
-        {
-            Revision = 7,
-            LastObservedAt = null,
-            LastProviderStatus = null
-        };
-        var processing = Observation(current, "processing", firstObservedAt);
-
-        var applied = EvaluateTransitionSuccess(current, processing);
-        current = current with
-        {
-            State = applied.State,
-            LastProviderStatus = applied.ProviderStatus,
-            LastObservedAt = applied.ObservedAt
-        };
-
-        var duplicate = EvaluateTransitionSuccess(current, processing);
-        Assert.Equal(PaymentOperationTransitionDisposition.Duplicate, duplicate.Disposition);
-
-        var succeeded = EvaluateTransitionSuccess(current, Observation(current, "succeeded", secondObservedAt));
-        current = current with
-        {
-            State = succeeded.State,
-            LastProviderStatus = succeeded.ProviderStatus,
-            LastObservedAt = succeeded.ObservedAt
-        };
-
-        var stale = StripeOperationTransitionEvaluator.Evaluate(
-            current,
-            Observation(current, "requires_action", firstObservedAt));
-        Assert.True(stale.TryGetError(out var staleRejection));
-        Assert.Equal(PaymentOperationTransitionRejectionReason.StaleObservation, staleRejection.Reason);
-
-        var regression = StripeOperationTransitionEvaluator.Evaluate(
-            current,
-            Observation(current, "processing", secondObservedAt.AddSeconds(1)));
-        Assert.True(regression.TryGetError(out var regressionRejection));
-        Assert.Equal(PaymentOperationTransitionRejectionReason.TerminalStateProtected, regressionRejection.Reason);
-    }
-
     private static PaymentProviderAttempt AuthorizationAttempt() =>
         Attempt(PaymentOperationState.Authorized) with
         {
@@ -246,35 +201,12 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
             "fingerprint-v1",
             Failure: failure);
 
-    private static StripeProviderObservation Observation(
-        PaymentProviderAttempt current,
-        string status,
-        DateTimeOffset observedAt) =>
-        new(
-            StripeProviderContractBaseline.ApiVersion,
-            StripeProviderObjectKind.PaymentIntent,
-            current.ProviderObjectId,
-            current.OperationId,
-            current.AttemptId,
-            current.Revision,
-            SessionKind(current.Context),
-            status,
-            observedAt);
-
     private static PaymentProviderOperationContext OperationContext(PaymentSessionKind sessionKind) =>
         sessionKind switch
         {
             PaymentSessionKind.Payment => new PaymentProviderOperationContext.Payment(),
             PaymentSessionKind.Authorization => new PaymentProviderOperationContext.Authorization(),
             _ => throw new ArgumentOutOfRangeException(nameof(sessionKind))
-        };
-
-    private static PaymentSessionKind SessionKind(PaymentProviderOperationContext context) =>
-        context switch
-        {
-            PaymentProviderOperationContext.Payment => PaymentSessionKind.Payment,
-            PaymentProviderOperationContext.Authorization => PaymentSessionKind.Authorization,
-            _ => throw new ArgumentOutOfRangeException(nameof(context))
         };
 
     private static PaymentOperationRetryDecision EvaluateRetrySuccess(
@@ -308,12 +240,4 @@ public sealed class PaymentOperationRetryAndExpiryEvaluatorTests
         return decision;
     }
 
-    private static PaymentOperationTransition EvaluateTransitionSuccess(
-        PaymentProviderAttempt current,
-        StripeProviderObservation observation)
-    {
-        var result = StripeOperationTransitionEvaluator.Evaluate(current, observation);
-        Assert.True(result.TryGetValue(out var transition));
-        return transition;
-    }
 }

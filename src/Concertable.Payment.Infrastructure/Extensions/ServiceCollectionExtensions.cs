@@ -9,6 +9,7 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Data.Seeders;
 using Concertable.Payment.Domain.Events;
+using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Infrastructure.Events;
 using Concertable.Payment.Infrastructure.Handlers;
 using Concertable.Payment.Infrastructure.Repositories;
@@ -65,6 +66,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFinancialOperationRepository, FinancialOperationRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddSingleton<PaymentSessionStateMachine>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();
         services.AddScoped<IDomainEventHandler<PaymentOperationStateChangedDomainEvent>, PaymentOperationStateChangedDomainEventHandler>();
