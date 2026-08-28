@@ -544,11 +544,11 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
     private sealed class CountingStripeSessionClient : IStripeSessionClient
     {
-        private readonly IStripeSessionClient inner;
+        private readonly IStripeSessionClient stripeSessionClient;
 
-        public CountingStripeSessionClient(IStripeSessionClient inner)
+        public CountingStripeSessionClient(IStripeSessionClient stripeSessionClient)
         {
-            this.inner = inner;
+            this.stripeSessionClient = stripeSessionClient;
         }
 
         public int CallCount { get; private set; }
@@ -560,7 +560,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             CancellationToken ct = default)
         {
             CallCount++;
-            return inner.CreateAsync(request, idempotencyKey, ct);
+            return stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
         }
 
         public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
@@ -569,7 +569,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             CancellationToken ct = default)
         {
             CallCount++;
-            return inner.RetrieveAsync(providerObjectKind, providerObjectId, ct);
+            return stripeSessionClient.RetrieveAsync(providerObjectKind, providerObjectId, ct);
         }
 
         public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
@@ -579,7 +579,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         {
             CallCount++;
             CancellationCount++;
-            return inner.CancelAsync(providerObjectKind, providerObjectId, ct);
+            return stripeSessionClient.CancelAsync(providerObjectKind, providerObjectId, ct);
         }
 
         public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
@@ -587,22 +587,22 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             CancellationToken ct = default)
         {
             CallCount++;
-            return inner.CreateCustomerSessionAsync(providerCustomerId, ct);
+            return stripeSessionClient.CreateCustomerSessionAsync(providerCustomerId, ct);
         }
     }
 
     private sealed class ConcurrentCancellationStripeSessionClient : IStripeSessionClient
     {
-        private readonly FakeStripeSessionClient inner;
+        private readonly FakeStripeSessionClient stripeSessionClient;
         private readonly string predecessorProviderObjectId;
         private readonly TaskCompletionSource retrievalsCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int predecessorRetrievalCount;
 
         public ConcurrentCancellationStripeSessionClient(
-            FakeStripeSessionClient inner,
+            FakeStripeSessionClient stripeSessionClient,
             string predecessorProviderObjectId)
         {
-            this.inner = inner;
+            this.stripeSessionClient = stripeSessionClient;
             this.predecessorProviderObjectId = predecessorProviderObjectId;
         }
 
@@ -610,14 +610,14 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionProviderRequest request,
             PaymentSessionIdempotencyKey idempotencyKey,
             CancellationToken ct = default) =>
-            inner.CreateAsync(request, idempotencyKey, ct);
+            stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
 
         public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
         {
-            var result = await inner.RetrieveAsync(providerObjectKind, providerObjectId, ct);
+            var result = await stripeSessionClient.RetrieveAsync(providerObjectKind, providerObjectId, ct);
             if (!string.Equals(providerObjectId, predecessorProviderObjectId, StringComparison.Ordinal))
                 return result;
 
@@ -632,11 +632,11 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default) =>
-            inner.CancelAsync(providerObjectKind, providerObjectId, ct);
+            stripeSessionClient.CancelAsync(providerObjectKind, providerObjectId, ct);
 
         public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
             string providerCustomerId,
             CancellationToken ct = default) =>
-            inner.CreateCustomerSessionAsync(providerCustomerId, ct);
+            stripeSessionClient.CreateCustomerSessionAsync(providerCustomerId, ct);
     }
 }

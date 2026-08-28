@@ -7,16 +7,16 @@ namespace Concertable.Payment.IntegrationTests.Fixtures;
 
 internal sealed class CoordinatedPaymentSessionAttemptRepository : IPaymentSessionAttemptRepository
 {
-    private readonly IPaymentSessionAttemptRepository inner;
+    private readonly IPaymentSessionAttemptRepository paymentSessionAttemptRepository;
     private readonly TaskCompletionSource savesMayProceed;
     private readonly Func<int> incrementSaveCount;
 
     public CoordinatedPaymentSessionAttemptRepository(
-        IPaymentSessionAttemptRepository inner,
+        IPaymentSessionAttemptRepository paymentSessionAttemptRepository,
         TaskCompletionSource savesMayProceed,
         Func<int> incrementSaveCount)
     {
-        this.inner = inner;
+        this.paymentSessionAttemptRepository = paymentSessionAttemptRepository;
         this.savesMayProceed = savesMayProceed;
         this.incrementSaveCount = incrementSaveCount;
     }
@@ -24,13 +24,13 @@ internal sealed class CoordinatedPaymentSessionAttemptRepository : IPaymentSessi
     public Task<PaymentSessionAttemptEntity?> GetByAttemptIdAsync(
         Guid attemptId,
         CancellationToken ct = default) =>
-        inner.GetByAttemptIdAsync(attemptId, ct);
+        paymentSessionAttemptRepository.GetByAttemptIdAsync(attemptId, ct);
 
     public Task<PaymentSessionAttemptEntity?> GetByProviderObjectAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default) =>
-        inner.GetByProviderObjectAsync(providerObjectKind, providerObjectId, ct);
+        paymentSessionAttemptRepository.GetByProviderObjectAsync(providerObjectKind, providerObjectId, ct);
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
@@ -38,9 +38,9 @@ internal sealed class CoordinatedPaymentSessionAttemptRepository : IPaymentSessi
             savesMayProceed.TrySetResult();
 
         await savesMayProceed.Task.WaitAsync(ct);
-        await inner.SaveChangesAsync(ct);
+        await paymentSessionAttemptRepository.SaveChangesAsync(ct);
     }
 
     public void Detach(PaymentSessionAttemptEntity attempt) =>
-        inner.Detach(attempt);
+        paymentSessionAttemptRepository.Detach(attempt);
 }
