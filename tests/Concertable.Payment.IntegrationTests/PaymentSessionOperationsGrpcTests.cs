@@ -3,6 +3,7 @@ using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.ProviderContract;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
@@ -204,8 +205,11 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
         FakeStripeSessionClient provider) =>
         new(new PaymentSessionService(
             new PaymentSessionOperationRepository(context),
-            new PaymentSessionAttemptRepository(context),
             new PayoutAccountRepository(context),
+            new PaymentSessionReconciliationService(
+                new PaymentSessionAttemptRepository(context),
+                new UnitOfWork(context),
+                TimeProvider.System),
             provider,
             TimeProvider.System));
 
