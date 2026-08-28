@@ -25,15 +25,13 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.DepositAsync(
-                new Proto.DepositRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Amount = amount.ToProtoMoney(),
-                    PaymentMethodId = paymentMethodId,
-                    Session = session.ToProtoSession(),
-                    BookingId = bookingId
-                },
+                Proto.DepositRequest.Create(
+                    payerId,
+                    payeeId,
+                    amount,
+                    paymentMethodId,
+                    session,
+                    bookingId),
                 cancellationToken: ct)).ToEscrowDeposit(),
             error => error.ToEscrowDepositError(),
             ct);
@@ -51,18 +49,16 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.DepositBoundCommissionAsync(
-                new Proto.BoundCommissionDepositRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Gross = gross.ToProtoMoney(),
-                    PaymentMethodId = paymentMethodId,
-                    Session = session.ToProtoSession(),
-                    BookingId = bookingId,
-                    CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference,
-                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-                },
+                Proto.BoundCommissionDepositRequest.Create(
+                    payerId,
+                    payeeId,
+                    gross,
+                    paymentMethodId,
+                    session,
+                    bookingId,
+                    commissionBindingId,
+                    externalReference,
+                    stripeSetupIntentId),
                 cancellationToken: ct)).ToEscrowDeposit(),
             error => error.ToEscrowDepositError(),
             ct);
@@ -76,14 +72,12 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.CaptureAsync(
-                new Proto.CaptureRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Amount = amount.ToProtoMoney(),
-                    PaymentIntentId = paymentIntentId,
-                    BookingId = bookingId
-                },
+                Proto.CaptureRequest.Create(
+                    payerId,
+                    payeeId,
+                    amount,
+                    paymentIntentId,
+                    bookingId),
                 cancellationToken: ct)).ToEscrowDeposit(),
             error => error.ToEscrowCaptureError(),
             ct);
@@ -99,16 +93,14 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.CaptureBoundCommissionAsync(
-                new Proto.BoundCommissionCaptureRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Gross = gross.ToProtoMoney(),
-                    PaymentIntentId = paymentIntentId,
-                    BookingId = bookingId,
-                    CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference
-                },
+                Proto.BoundCommissionCaptureRequest.Create(
+                    payerId,
+                    payeeId,
+                    gross,
+                    paymentIntentId,
+                    bookingId,
+                    commissionBindingId,
+                    externalReference),
                 cancellationToken: ct)).ToEscrowDeposit(),
             error => error.ToEscrowCaptureError(),
             ct);
@@ -117,15 +109,15 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         Guid operationId,
         int bookingId,
         CancellationToken ct = default) =>
-        PaymentClientResults.ExecuteAsync(
+        PaymentClientResults.ExecuteAsync<Option<Transfer>, EscrowReleaseOperationError>(
             async () =>
             {
                 var response = await client.ReleaseByBookingIdAsync(
                     Proto.ReleaseByBookingIdRequest.Create(operationId, bookingId),
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Transfer?.TransferId)
-                    ? Option.None<Transfer>()
-                    : Option.Some(new Transfer(response.Transfer.TransferId));
+                    ? null
+                    : new Transfer(response.Transfer.TransferId);
             },
             error => error.ToEscrowReleaseOperationError(),
             ct);
@@ -133,15 +125,15 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default) =>
-        PaymentClientResults.ExecuteAsync(
+        PaymentClientResults.ExecuteAsync<Option<Transfer>, EscrowReleaseError>(
             async () =>
             {
                 var response = await client.ReleaseByBookingIdAsync(
                     Proto.ReleaseByBookingIdRequest.Create(bookingId),
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Transfer?.TransferId)
-                    ? Option.None<Transfer>()
-                    : Option.Some(new Transfer(response.Transfer.TransferId));
+                    ? null
+                    : new Transfer(response.Transfer.TransferId);
             },
             error => error.ToEscrowReleaseError(),
             ct);
@@ -149,15 +141,15 @@ internal sealed class EscrowClient : IEscrowOperationsClient
     public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default) =>
-        PaymentClientResults.ExecuteAsync(
+        PaymentClientResults.ExecuteAsync<Option<Refund>, EscrowRefundError>(
             async () =>
             {
                 var response = await client.RefundByBookingIdAsync(
-                    new Proto.RefundByBookingIdRequest { BookingId = bookingId },
+                    Proto.RefundByBookingIdRequest.Create(bookingId),
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Refund?.RefundId)
-                    ? Option.None<Refund>()
-                    : Option.Some(new Refund(response.Refund.RefundId));
+                    ? null
+                    : new Refund(response.Refund.RefundId);
             },
             error => error.ToEscrowRefundError(),
             ct);
@@ -166,19 +158,15 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         int bookingId,
         Money gross,
         CancellationToken ct = default) =>
-        PaymentClientResults.ExecuteAsync(
+        PaymentClientResults.ExecuteAsync<Option<Refund>, EscrowRefundError>(
             async () =>
             {
                 var response = await client.RefundBoundCommissionByBookingIdAsync(
-                    new Proto.BoundCommissionRefundByBookingIdRequest
-                    {
-                        BookingId = bookingId,
-                        Gross = gross.ToProtoMoney()
-                    },
+                    Proto.BoundCommissionRefundByBookingIdRequest.Create(bookingId, gross),
                     cancellationToken: ct);
                 return string.IsNullOrEmpty(response.Refund?.RefundId)
-                    ? Option.None<Refund>()
-                    : Option.Some(new Refund(response.Refund.RefundId));
+                    ? null
+                    : new Refund(response.Refund.RefundId);
             },
             error => error.ToEscrowRefundError(),
             ct);
