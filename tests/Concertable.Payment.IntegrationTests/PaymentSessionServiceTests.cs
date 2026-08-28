@@ -6,6 +6,7 @@ using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.ProviderContract;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Repositories;
 using Concertable.Payment.Infrastructure.Services;
@@ -449,11 +450,12 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             var operation = await new PaymentSessionOperationRepository(context)
                 .GetByOperationIdAsync(specification.OperationId);
             Assert.NotNull(operation);
-            var repository = new CoordinatedPaymentSessionAttemptRepository(
-                new PaymentSessionAttemptRepository(context),
+            var repository = new PaymentSessionAttemptRepository(context);
+            var unitOfWork = new CoordinatedUnitOfWork(
+                new UnitOfWork(context),
                 savesMayProceed,
                 () => Interlocked.Increment(ref saveCount));
-            var service = new PaymentSessionReconciliationService(repository, TimeProvider.System);
+            var service = new PaymentSessionReconciliationService(repository, unitOfWork, TimeProvider.System);
             return await service.ReconcileAsync(
                 new(
                     operation,
@@ -521,7 +523,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         return new(
             new PaymentSessionOperationRepository(context),
             new PayoutAccountRepository(context),
-            new PaymentSessionReconciliationService(attemptRepository, TimeProvider.System),
+            new PaymentSessionReconciliationService(attemptRepository, new UnitOfWork(context), TimeProvider.System),
             provider,
             TimeProvider.System);
     }
