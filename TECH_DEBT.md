@@ -6,17 +6,17 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ## MEDIUM
 
-### Outgoing protobuf requests lack validated creation boundaries
+### Operation-less settlement overloads remain until consumers carry durable operation identities
 
-Payment client adapters still construct most generated request messages inline. Required identifiers,
-positive numeric keys, and non-empty strings therefore rely on every call site remembering the same checks,
-while proto3 defaults can silently turn an omitted value into a valid-looking wire value. The settlement
-requests now use validated Create methods on their generated partial classes, but the remaining outgoing
-request types have not yet been migrated. The operation-less manager-pay and escrow-release overloads also
-remain temporarily for consumers that have not adopted durable operation identities.
+Every outgoing Payment protobuf request is now created through one validated boundary: each generated
+request partial class carries a `Create` factory (required identifiers non-empty, positive numeric keys,
+non-empty strings), and every client adapter routes through it; the session-operation requests validate in
+their `ToProto()` mappers. Proto3 defaults can no longer turn an omitted value into a valid-looking wire
+value. What remains is the operation-less manager-pay and escrow-release **client overloads**, kept
+temporarily for consumers that have not adopted durable operation identities.
 
-**Resolves when:** every outgoing Payment protobuf request is created through one validated boundary and the
-operation-less settlement overloads are removed after all consumers provide durable operation identities.
+**Resolves when:** the operation-less settlement overloads are removed after all consumers provide durable
+operation identities.
 
 ## LOW
 
