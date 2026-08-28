@@ -1,4 +1,6 @@
-namespace Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Interfaces;
+
+namespace Concertable.Payment.Application.Mappers;
 
 internal interface ITransactionMapper
 {
