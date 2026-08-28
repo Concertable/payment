@@ -7,6 +7,8 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
 {
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
+    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
+
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
