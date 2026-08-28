@@ -52,5 +52,5 @@ internal sealed class PayoutAccountClient : IPayoutAccountOperationsClient
     }
 
     private static Proto.PayoutOwnerRequest Request(Guid ownerId) =>
-        new() { OwnerId = ownerId.ToString() };
+        Proto.PayoutOwnerRequest.Create(ownerId);
 }
