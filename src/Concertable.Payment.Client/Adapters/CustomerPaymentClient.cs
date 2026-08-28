@@ -26,15 +26,13 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
         PaymentClientResults.ExecuteAsync(
             async () =>
             {
-                var request = new Proto.CustomerPayRequest
-                {
-                    PayerId = payerId.ToString(),
-                    ConcertId = concertId,
-                    PayeeId = payeeId.ToString(),
-                    Amount = amount.ToProtoMoney(),
-                    PaymentMethodId = paymentMethodId
-                };
-                request.Metadata.Add(new Dictionary<string, string>(metadata));
+                var request = Proto.CustomerPayRequest.Create(
+                    payerId,
+                    concertId,
+                    payeeId,
+                    amount,
+                    paymentMethodId,
+                    metadata);
                 return (await client.PayAsync(request, cancellationToken: ct)).ToPaymentOutcome();
             },
             error => error.ToPaymentError(),
@@ -47,13 +45,7 @@ internal sealed class CustomerPaymentClient : ICustomerPaymentOperationsClient
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var request = new Proto.CreatePaymentSessionRequest
-        {
-            PayerId = payerId.ToString(),
-            ConcertId = concertId,
-            PayeeId = payeeId.ToString()
-        };
-        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        var request = Proto.CreatePaymentSessionRequest.Create(payerId, concertId, payeeId, metadata);
         return (await client.CreatePaymentSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
