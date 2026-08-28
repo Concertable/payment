@@ -29,6 +29,18 @@ internal sealed class PaymentSessionAttemptRepository : IPaymentSessionAttemptRe
     public Task SaveChangesAsync(CancellationToken ct = default) =>
         context.SaveChangesAsync(ct);
 
-    public void Detach(PaymentSessionAttemptEntity attempt) =>
-        context.Entry(attempt).State = EntityState.Detached;
+    public void Detach(PaymentSessionAttemptEntity attempt)
+    {
+        foreach (var entry in context.ChangeTracker.Entries()
+            .Where(entry => entry.Entity switch
+            {
+                PaymentSessionOperationEntity operation => operation.OperationId == attempt.OperationId,
+                PaymentSessionAttemptEntity candidate => candidate.OperationId == attempt.OperationId,
+                _ => false
+            })
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
 }
