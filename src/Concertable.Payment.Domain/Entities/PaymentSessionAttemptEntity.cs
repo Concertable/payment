@@ -1,9 +1,12 @@
+using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Domain.ProviderContract;
 
 namespace Concertable.Payment.Domain.Entities;
 
-internal sealed class PaymentSessionAttemptEntity
+internal sealed class PaymentSessionAttemptEntity : IEventRaiser
 {
+    private readonly EventRaiser events = new();
+
     private PaymentSessionAttemptEntity() { }
 
     private PaymentSessionAttemptEntity(
@@ -62,6 +65,10 @@ internal sealed class PaymentSessionAttemptEntity
     public DateTimeOffset? LastProviderEventCreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = null!;
 
+    public IReadOnlyList<IDomainEvent> DomainEvents => events.DomainEvents;
+
+    public void ClearDomainEvents() => events.Clear();
+
     internal static PaymentSessionAttemptEntity Create(
         Guid attemptId,
         Guid operationId,
@@ -96,6 +103,7 @@ internal sealed class PaymentSessionAttemptEntity
     }
 
     internal void ApplyTransition(
+        PaymentSessionKind sessionKind,
         PaymentOperationTransition transition,
         string? providerRequestId = null,
         string? providerDiagnosticCode = null,
@@ -107,6 +115,10 @@ internal sealed class PaymentSessionAttemptEntity
             throw new DomainException("A payment session attempt must be provider-bound before observation.");
         if (transition.Disposition == PaymentOperationTransitionDisposition.Duplicate)
             return;
+
+        var observableChange = State != transition.State
+            || FailureCode != transition.Failure?.Code
+            || CaptureBefore != transition.CaptureBefore;
 
         LastAttemptedAt = transition.ObservedAt;
         State = transition.State;
@@ -126,6 +138,20 @@ internal sealed class PaymentSessionAttemptEntity
         TerminalAt = transition.TerminalDisposition == PaymentOperationTerminalDisposition.NonTerminal
             ? null
             : transition.ObservedAt;
+
+        if (observableChange)
+        {
+            events.Raise(new PaymentOperationStateChangedDomainEvent(
+                new PaymentOperationIdentity(OperationId, AttemptId, Revision),
+                sessionKind,
+                transition.State,
+                transition.TerminalDisposition,
+                transition.RetryDisposition,
+                transition.Failure,
+                ExpiresAt,
+                transition.CaptureBefore,
+                transition.ObservedAt));
+        }
     }
 
     internal void RecordReconciliationRequired(

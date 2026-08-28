@@ -8,6 +8,7 @@ using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Data.Seeders;
+using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Infrastructure.Events;
 using Concertable.Payment.Infrastructure.Handlers;
 using Concertable.Payment.Infrastructure.Repositories;
@@ -65,6 +66,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
+        services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();
+        services.AddScoped<IDomainEventHandler<PaymentOperationStateChangedDomainEvent>, PaymentOperationStateChangedDomainEventHandler>();
         services.AddScoped<IPaymentSessionService, PaymentSessionService>();
         services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
         services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();

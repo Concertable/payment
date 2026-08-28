@@ -106,7 +106,7 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
             CallContext());
         var attempt = await context.PaymentSessionAttempts.SingleAsync(
             value => value.AttemptId == Guid.Parse(created.Identity.AttemptId));
-        attempt.ApplyTransition(new(
+        attempt.ApplyTransition(Concertable.Payment.Contracts.PaymentSessionKind.Authorization, new(
             PaymentOperationTransitionDisposition.Applied,
             Concertable.Payment.Contracts.PaymentOperationState.Failed,
             "failed",

@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.PaymentSessions;
 using Microsoft.Extensions.Logging;
 using GrpcStatusCode = global::Grpc.Core.StatusCode;
 
@@ -206,6 +207,19 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Unhandled exception in gRPC handler {Method}")]
     internal static partial void GrpcHandlerUnhandledException(this ILogger logger, string method, Exception ex);
+
+    #endregion
+
+    #region PaymentSessionResourceReconciler
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Reconciling session resource {ProviderObjectId} ({ProviderObjectKind}) from {Source}")]
+    internal static partial void ReconcilingSessionResource(this ILogger logger, string providerObjectId, PaymentSessionProviderObjectKind providerObjectKind, PaymentSessionReconciliationSource source);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Skipping session resource {ProviderObjectId} ({ProviderObjectKind}) from {Source}: no tracked payment session attempt")]
+    internal static partial void SkippingUntrackedSessionResource(this ILogger logger, string providerObjectId, PaymentSessionProviderObjectKind providerObjectKind, PaymentSessionReconciliationSource source);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session resource {ProviderObjectId} ({ProviderObjectKind}) from {Source} could not reconcile: provider unavailable; reconciliation deferred")]
+    internal static partial void SessionResourceReconciliationDeferred(this ILogger logger, string providerObjectId, PaymentSessionProviderObjectKind providerObjectKind, PaymentSessionReconciliationSource source);
 
     #endregion
 }

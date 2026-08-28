@@ -58,6 +58,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         if (transition.TryGetValue(out var applied))
         {
             attempt.ApplyTransition(
+                request.Operation.SessionKind,
                 applied,
                 provider.ProviderRequestId,
                 provider.ProviderDiagnosticCode,
