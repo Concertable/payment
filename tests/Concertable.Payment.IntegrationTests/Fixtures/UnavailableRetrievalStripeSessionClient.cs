@@ -8,18 +8,18 @@ namespace Concertable.Payment.IntegrationTests.Fixtures;
 
 internal sealed class UnavailableRetrievalStripeSessionClient : IStripeSessionClient
 {
-    private readonly IStripeSessionClient inner;
+    private readonly IStripeSessionClient stripeSessionClient;
 
-    public UnavailableRetrievalStripeSessionClient(IStripeSessionClient inner)
+    public UnavailableRetrievalStripeSessionClient(IStripeSessionClient stripeSessionClient)
     {
-        this.inner = inner;
+        this.stripeSessionClient = stripeSessionClient;
     }
 
     public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default) =>
-        inner.CreateAsync(request, idempotencyKey, ct);
+        stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
 
     public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
@@ -35,10 +35,10 @@ internal sealed class UnavailableRetrievalStripeSessionClient : IStripeSessionCl
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default) =>
-        inner.CancelAsync(providerObjectKind, providerObjectId, ct);
+        stripeSessionClient.CancelAsync(providerObjectKind, providerObjectId, ct);
 
     public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
         string providerCustomerId,
         CancellationToken ct = default) =>
-        inner.CreateCustomerSessionAsync(providerCustomerId, ct);
+        stripeSessionClient.CreateCustomerSessionAsync(providerCustomerId, ct);
 }
