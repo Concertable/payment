@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFinancialOperationRepository, FinancialOperationRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionService, PaymentSessionService>();
         services.AddScoped<ICommissionConfigurationRepository, CommissionConfigurationRepository>();
         services.AddScoped<ICommissionBindingRepository, CommissionBindingRepository>();
