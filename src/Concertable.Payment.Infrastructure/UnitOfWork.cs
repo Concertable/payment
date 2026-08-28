@@ -21,6 +21,9 @@ internal sealed class UnitOfWork : IUnitOfWork
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         SaveChangesWithAccountReconciliationAsync(cancellationToken);
 
+    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
+        context.TrySaveChangesAsync(cancellationToken);
+
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
         context.Database.BeginTransactionAsync(cancellationToken);
 
