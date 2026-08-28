@@ -22,12 +22,6 @@ internal abstract record PaymentProviderOperationContext
     internal sealed record Refund : PaymentProviderOperationContext;
 }
 
-internal enum PaymentOperationTransitionDisposition
-{
-    Applied,
-    Duplicate
-}
-
 internal enum PaymentOperationTransitionRejectionReason
 {
     UnsupportedApiVersion,
@@ -92,15 +86,7 @@ internal sealed record PaymentProviderObservation(
     ProviderFailureClassification? FailureClassification,
     bool IsExplicitConsumerCancellation);
 
-internal sealed record PaymentOperationPersistedProjection(
-    PaymentOperationState State,
-    string? ProviderStatus,
-    DateTimeOffset? ObservedAt,
-    DateTimeOffset? CaptureBefore,
-    PaymentOperationFailure? Failure);
-
 internal sealed record PaymentOperationTransition(
-    PaymentOperationTransitionDisposition Disposition,
     PaymentOperationState State,
     string ProviderStatus,
     DateTimeOffset ObservedAt,
