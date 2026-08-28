@@ -1,19 +1,21 @@
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain.ProviderContract;
-using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
 internal sealed class PaymentSessionReconciliationService : IPaymentSessionReconciliationService
 {
     private readonly IPaymentSessionAttemptRepository attemptRepository;
+    private readonly IUnitOfWork unitOfWork;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionReconciliationService(
         IPaymentSessionAttemptRepository attemptRepository,
+        IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         this.attemptRepository = attemptRepository;
+        this.unitOfWork = unitOfWork;
         this.timeProvider = timeProvider;
     }
 
@@ -101,21 +103,16 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         string? providerObjectId,
         CancellationToken ct)
     {
-        try
-        {
-            await attemptRepository.SaveChangesAsync(ct);
+        var committed = await unitOfWork.TrySaveChangesAsync(ct);
+        if (committed)
             return new(attempt, true);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            attemptRepository.Detach(attempt);
-            var canonical = await attemptRepository.GetByAttemptIdAsync(attempt.AttemptId, ct);
-            return canonical is not null
-                && (providerObjectId is null
-                    || string.Equals(canonical.ProviderObjectId, providerObjectId, StringComparison.Ordinal))
-                ? new(canonical, false)
-                : null;
-        }
+
+        var canonical = await attemptRepository.GetByAttemptIdAsync(attempt.AttemptId, ct);
+        return canonical is not null
+            && (providerObjectId is null
+                || string.Equals(canonical.ProviderObjectId, providerObjectId, StringComparison.Ordinal))
+            ? new(canonical, false)
+            : null;
     }
 
     private static Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
