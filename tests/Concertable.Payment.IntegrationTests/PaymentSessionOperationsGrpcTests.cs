@@ -2,6 +2,7 @@ using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
@@ -107,7 +108,6 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
         var attempt = await context.PaymentSessionAttempts.SingleAsync(
             value => value.AttemptId == Guid.Parse(created.Identity.AttemptId));
         attempt.ApplyTransition(Concertable.Payment.Contracts.PaymentSessionKind.Authorization, new(
-            PaymentOperationTransitionDisposition.Applied,
             Concertable.Payment.Contracts.PaymentOperationState.Failed,
             "failed",
             DateTimeOffset.UtcNow.AddMinutes(-1),
@@ -209,6 +209,7 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
             new PaymentSessionReconciliationService(
                 new PaymentSessionAttemptRepository(context),
                 new UnitOfWork(context),
+                new PaymentSessionStateMachine(),
                 TimeProvider.System),
             provider,
             TimeProvider.System));

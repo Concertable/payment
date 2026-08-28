@@ -12,6 +12,7 @@ using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Events;
+using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Events;
@@ -65,6 +66,7 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddSingleton<PaymentSessionStateMachine>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();
         services.AddScoped<PaymentSessionService>();

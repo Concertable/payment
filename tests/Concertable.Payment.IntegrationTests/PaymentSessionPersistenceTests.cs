@@ -165,7 +165,6 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
         var attempt = reservation.Attempt!;
         attempt.BindProviderObject($"pi_{Guid.NewGuid():N}");
         attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
-            PaymentOperationTransitionDisposition.Applied,
             PaymentOperationState.Failed,
             "failed",
             DateTimeOffset.UtcNow,

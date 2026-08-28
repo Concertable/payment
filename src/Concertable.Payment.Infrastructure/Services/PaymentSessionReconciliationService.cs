@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -7,15 +8,18 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
 {
     private readonly IPaymentSessionAttemptRepository attemptRepository;
     private readonly IUnitOfWork unitOfWork;
+    private readonly PaymentSessionStateMachine stateMachine;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionReconciliationService(
         IPaymentSessionAttemptRepository attemptRepository,
         IUnitOfWork unitOfWork,
+        PaymentSessionStateMachine stateMachine,
         TimeProvider timeProvider)
     {
         this.attemptRepository = attemptRepository;
         this.unitOfWork = unitOfWork;
+        this.stateMachine = stateMachine;
         this.timeProvider = timeProvider;
     }
 
@@ -116,27 +120,51 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
             : null;
     }
 
-    private static Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
+    private Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult provider) =>
-        StripeOperationTransitionEvaluator.Evaluate(
-            attempt.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
-            new StripeProviderObservation(
-                StripeProviderContractBaseline.ApiVersion,
-                provider.ProviderObjectKind == PaymentSessionProviderObjectKind.PaymentIntent
-                    ? StripeProviderObjectKind.PaymentIntent
-                    : StripeProviderObjectKind.SetupIntent,
-                provider.ProviderObjectId,
-                operation.OperationId,
-                attempt.AttemptId,
-                attempt.Revision,
-                operation.SessionKind,
-                provider.Status,
-                provider.ObservedAt,
-                provider.CaptureBefore,
-                provider.FailureClassification,
-                provider.IsExplicitConsumerCancellation));
+        PaymentSessionProviderResult provider)
+    {
+        var stripeObservation = new StripeProviderObservation(
+            StripeProviderContractBaseline.ApiVersion,
+            provider.ProviderObjectKind == PaymentSessionProviderObjectKind.PaymentIntent
+                ? StripeProviderObjectKind.PaymentIntent
+                : StripeProviderObjectKind.SetupIntent,
+            provider.ProviderObjectId,
+            operation.OperationId,
+            attempt.AttemptId,
+            attempt.Revision,
+            operation.SessionKind,
+            provider.Status,
+            provider.ObservedAt,
+            provider.CaptureBefore,
+            provider.FailureClassification,
+            provider.IsExplicitConsumerCancellation);
+
+        var normalized = stripeObservation.ToNormalized(attempt.State);
+        if (!normalized.TryGetValue(out var observation))
+        {
+            normalized.TryGetError(out var normalizationRejection);
+            return normalizationRejection!;
+        }
+
+        if (attempt.LastObservedAt is { } lastObservedAt)
+        {
+            if (observation.ObservedAt < lastObservedAt)
+                return Reject(attempt, PaymentOperationTransitionRejectionReason.StaleObservation, observation.State);
+            if (observation.ObservedAt == lastObservedAt
+                && !string.Equals(observation.ProviderStatus, attempt.LastProviderStatus, StringComparison.Ordinal))
+                return Reject(attempt, PaymentOperationTransitionRejectionReason.AmbiguousObservationOrder, observation.State);
+        }
+
+        return stateMachine.Evaluate(attempt.State, observation);
+    }
+
+    private static PaymentOperationTransitionRejection Reject(
+        PaymentSessionAttemptEntity attempt,
+        PaymentOperationTransitionRejectionReason reason,
+        PaymentOperationState observedState) =>
+        new(reason, attempt.State, observedState);
 
     private sealed record PaymentSessionSave(
         PaymentSessionAttemptEntity Attempt,
