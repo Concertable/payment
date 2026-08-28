@@ -1,28 +1,27 @@
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.ProviderContract;
-using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
 internal sealed class PaymentSessionService : IPaymentSessionService
 {
     private readonly IPaymentSessionOperationRepository operationRepository;
-    private readonly IPaymentSessionAttemptRepository attemptRepository;
     private readonly IPayoutAccountRepository payoutAccountRepository;
+    private readonly IPaymentSessionReconciliationService reconciliationService;
     private readonly IStripeSessionClient stripeSessionClient;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionService(
         IPaymentSessionOperationRepository operationRepository,
-        IPaymentSessionAttemptRepository attemptRepository,
         IPayoutAccountRepository payoutAccountRepository,
+        IPaymentSessionReconciliationService reconciliationService,
         IStripeSessionClient stripeSessionClient,
         TimeProvider timeProvider)
     {
         this.operationRepository = operationRepository;
-        this.attemptRepository = attemptRepository;
         this.payoutAccountRepository = payoutAccountRepository;
+        this.reconciliationService = reconciliationService;
         this.stripeSessionClient = stripeSessionClient;
         this.timeProvider = timeProvider;
     }
@@ -135,34 +134,32 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 current.ProviderObjectId,
                 ct);
             if (!retrieved.TryGetValue(out var provider))
+            {
+                await ReconcileAsync(operation, current, null, ct);
+                return new PaymentOperationError.ProviderUnavailable();
+            }
+
+            var reconciled = await ReconcileAsync(operation, current, provider, ct);
+            if (!reconciled.TryGetValue(out var outcome))
                 return new PaymentOperationError.ProviderUnavailable();
 
-            var canonical = current;
+            var canonical = outcome.Attempt;
             if (current.State.IsTerminal())
             {
-                var transition = EvaluateTransition(operation, current, provider);
                 PaymentOperationState? providerState = null;
-                if (transition.TryGetValue(out var duplicate))
-                {
+                if (outcome.Evaluation.TryGetValue(out var duplicate))
                     providerState = duplicate.State;
-                }
-                else if (transition.TryGetError(out var rejection)
+                else if (outcome.Evaluation.TryGetError(out var rejection)
                     && rejection.Reason == PaymentOperationTransitionRejectionReason.TerminalStateProtected)
-                {
                     providerState = rejection.ObservedState;
-                }
 
                 if (providerState is null)
                     return new PaymentOperationError.ProviderUnavailable();
                 if (!IsRetryCompatibleProviderTruth(current, providerState.Value, provider))
                     return new PaymentOperationError.OperationConflict();
             }
-            else
-            {
-                var applied = await ApplyAsync(operation, current, provider, ct);
-                if (!applied.TryGetValue(out canonical))
-                    return new PaymentOperationError.ProviderUnavailable();
-            }
+            else if (!outcome.Evaluation.TryGetValue(out _))
+                return new PaymentOperationError.ProviderUnavailable();
 
             var retry = PaymentOperationRetryEvaluator.Evaluate(
                 canonical.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
@@ -247,13 +244,19 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             attempt.ProviderObjectId,
             ct);
         if (!retrieved.TryGetValue(out var provider))
+        {
+            await ReconcileAsync(operation, attempt, null, ct);
             return new PaymentOperationError.ProviderUnavailable();
+        }
 
-        var applied = await ApplyAsync(operation, attempt, provider, ct);
-        if (!applied.TryGetValue(out var canonical))
+        var reconciled = await ReconcileAsync(operation, attempt, provider, ct);
+        if (!reconciled.TryGetValue(out var outcome)
+            || !outcome.Evaluation.TryGetValue(out _))
+        {
             return new PaymentOperationError.ProviderUnavailable();
+        }
 
-        return ToStatus(canonical);
+        return ToStatus(outcome.Attempt);
     }
 
     private async Task<Result<PaymentSessionExecution, PaymentOperationError>> ExecuteAsync(
@@ -282,11 +285,17 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         }
 
         if (!providerResult.TryGetValue(out var provider))
+        {
+            await ReconcileAsync(operation, attempt, null, ct);
             return new PaymentOperationError.ProviderUnavailable();
+        }
 
-        var applied = await ApplyAsync(operation, attempt, provider, ct);
-        if (!applied.TryGetValue(out var canonical))
+        var reconciled = await ReconcileAsync(operation, attempt, provider, ct);
+        if (!reconciled.TryGetValue(out var outcome)
+            || !outcome.Evaluation.TryGetValue(out _))
+        {
             return new PaymentOperationError.ProviderUnavailable();
+        }
 
         var customerSession = await stripeSessionClient.CreateCustomerSessionAsync(
             operation.ProviderCustomerId,
@@ -295,92 +304,26 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             return new PaymentOperationError.ProviderUnavailable();
 
         return new PaymentSessionExecution(
-            new(operation.OperationId, canonical.AttemptId, canonical.Revision),
+            new(operation.OperationId, outcome.Attempt.AttemptId, outcome.Attempt.Revision),
             operation.SessionKind,
-            canonical.State,
+            outcome.Attempt.State,
             provider.ClientSecret,
             customerSessionSecret,
             operation.ProviderCustomerId);
     }
 
-    private async Task<Result<PaymentSessionAttemptEntity, PaymentOperationError>> ApplyAsync(
+    private Task<Result<PaymentSessionReconciliation, PaymentOperationError.ProviderUnavailable>> ReconcileAsync(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult provider,
-        CancellationToken ct)
-    {
-        if (provider.ProviderObjectKind != attempt.ProviderObjectKind)
-            return new PaymentOperationError.ProviderUnavailable();
-        if (attempt.ProviderObjectId is { } providerObjectId
-            && !string.Equals(providerObjectId, provider.ProviderObjectId, StringComparison.Ordinal))
-        {
-            return new PaymentOperationError.ProviderUnavailable();
-        }
-
-        attempt.BindProviderObject(provider.ProviderObjectId);
-        var transition = EvaluateTransition(operation, attempt, provider);
-
-        if (transition.TryGetValue(out var applied))
-        {
-            attempt.ApplyTransition(
-                applied,
-                provider.ProviderRequestId,
-                provider.ProviderDiagnosticCode,
-                provider.ProviderDiagnosticMessage);
-        }
-        else
-        {
-            attempt.RecordReconciliationRequired(
-                provider.ObservedAt,
-                provider.ProviderRequestId,
-                provider.ProviderDiagnosticCode,
-                provider.ProviderDiagnosticMessage);
-        }
-
-        try
-        {
-            await attemptRepository.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            attemptRepository.Detach(attempt);
-            var canonical = await attemptRepository.GetByAttemptIdAsync(attempt.AttemptId, ct);
-            if (canonical is null
-                || !string.Equals(
-                    canonical.ProviderObjectId,
-                    provider.ProviderObjectId,
-                    StringComparison.Ordinal))
-            {
-                return new PaymentOperationError.ProviderUnavailable();
-            }
-
-            attempt = canonical;
-        }
-
-        return transition.TryGetValue(out _) ? attempt : new PaymentOperationError.ProviderUnavailable();
-    }
-
-    private static Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
-        PaymentSessionOperationEntity operation,
-        PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult provider) =>
-        StripeOperationTransitionEvaluator.Evaluate(
-            attempt.ToProviderAttempt(operation.SessionKind, operation.RequestFingerprint),
-            new StripeProviderObservation(
-                StripeProviderContractBaseline.ApiVersion,
-                provider.ProviderObjectKind == PaymentSessionProviderObjectKind.PaymentIntent
-                    ? StripeProviderObjectKind.PaymentIntent
-                    : StripeProviderObjectKind.SetupIntent,
-                provider.ProviderObjectId,
-                operation.OperationId,
-                attempt.AttemptId,
-                attempt.Revision,
-                operation.SessionKind,
-                provider.Status,
-                provider.ObservedAt,
-                provider.CaptureBefore,
-                provider.FailureClassification,
-                provider.IsExplicitConsumerCancellation));
+        PaymentSessionProviderResult? provider,
+        CancellationToken ct = default) =>
+        reconciliationService.ReconcileAsync(
+            new(
+                operation,
+                attempt,
+                PaymentSessionReconciliationSource.Eager,
+                provider),
+            ct);
 
     private bool IsRetryCompatibleProviderTruth(
         PaymentSessionAttemptEntity current,
