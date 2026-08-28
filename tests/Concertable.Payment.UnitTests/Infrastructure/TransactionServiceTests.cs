@@ -1,5 +1,6 @@
 using Concertable.Kernel.Identity;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Mappers;
 using Concertable.Payment.Infrastructure.Services;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
