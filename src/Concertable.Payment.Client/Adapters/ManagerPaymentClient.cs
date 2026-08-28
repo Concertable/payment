@@ -2,7 +2,6 @@ using Reunion;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
-using Google.Protobuf.WellKnownTypes;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Client.Adapters;
@@ -73,18 +72,16 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.PayBoundCommissionAsync(
-                new Proto.BoundCommissionManagerPayRequest
-                {
-                    PayerId = payerId.ToString(),
-                    PayeeId = payeeId.ToString(),
-                    Gross = gross.ToProtoMoney(),
-                    PaymentMethodId = paymentMethodId,
-                    Session = session.ToProtoSession(),
-                    BookingId = bookingId,
-                    CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference,
-                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-                },
+                Proto.BoundCommissionManagerPayRequest.Create(
+                    payerId,
+                    payeeId,
+                    gross,
+                    paymentMethodId,
+                    session,
+                    bookingId,
+                    commissionBindingId,
+                    externalReference,
+                    stripeSetupIntentId),
                 cancellationToken: ct)).ToPaymentOutcome(),
             error => error.ToManagerPaymentError(),
             ct);
@@ -94,8 +91,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var request = new Proto.CreateSetupSessionRequest { PayerId = payerId.ToString() };
-        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        var request = Proto.CreateSetupSessionRequest.Create(payerId, metadata);
         return (await client.CreateSetupSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
@@ -104,8 +100,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var request = new Proto.CreateVerifySessionRequest { PayerId = payerId.ToString() };
-        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        var request = Proto.CreateVerifySessionRequest.Create(payerId, metadata);
         return (await client.CreateVerifySessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
@@ -115,12 +110,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default)
     {
-        var request = new Proto.CreateHoldSessionRequest
-        {
-            PayerId = payerId.ToString(),
-            Amount = amount.ToProtoMoney()
-        };
-        request.Metadata.Add(new Dictionary<string, string>(metadata));
+        var request = Proto.CreateHoldSessionRequest.Create(payerId, amount, metadata);
         return (await client.CreateHoldSessionAsync(request, cancellationToken: ct)).ToCheckoutSession();
     }
 
@@ -135,15 +125,13 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         PaymentClientResults.ExecuteAsync(
             async () =>
             {
-                var request = new Proto.CreateBoundCommissionHoldSessionRequest
-                {
-                    PayerId = payerId.ToString(),
-                    Gross = gross.ToProtoMoney(),
-                    CommissionBindingId = commissionBindingId.ToString(),
-                    ExternalReference = externalReference,
-                    StripeSetupIntentId = stripeSetupIntentId ?? string.Empty
-                };
-                request.Metadata.Add(new Dictionary<string, string>(metadata));
+                var request = Proto.CreateBoundCommissionHoldSessionRequest.Create(
+                    payerId,
+                    gross,
+                    metadata,
+                    commissionBindingId,
+                    externalReference,
+                    stripeSetupIntentId);
                 return (await client.CreateBoundCommissionHoldSessionAsync(
                     request,
                     cancellationToken: ct)).ToCheckoutSession();
@@ -157,11 +145,7 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         CancellationToken ct = default)
     {
         var response = await client.FindHeldIntentAsync(
-            new Proto.FindHeldIntentRequest
-            {
-                PayerId = payerId.ToString(),
-                ApplicationId = applicationId
-            },
+            Proto.FindHeldIntentRequest.Create(payerId, applicationId),
             cancellationToken: ct);
         return response.PaymentIntentId;
     }
@@ -203,18 +187,10 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         int take,
         CancellationToken ct = default) =>
         (await client.GetRecentSettlementsAsync(
-            new Proto.RecentSettlementsRequest
-            {
-                OwnerId = ownerId.ToString(),
-                Take = take
-            },
+            Proto.RecentSettlementsRequest.Create(ownerId, take),
             cancellationToken: ct)).Items.Select(item => item.ToManagerSettlement()).ToList();
 
-    private static Proto.PaymentPeriodRequest ToProtoRequest(Guid payeeId, DateRange period) => new()
-    {
-        PayeeId = payeeId.ToString(),
-        PeriodStart = Timestamp.FromDateTime(period.Start),
-        PeriodEnd = Timestamp.FromDateTime(period.End)
-    };
+    private static Proto.PaymentPeriodRequest ToProtoRequest(Guid payeeId, DateRange period) =>
+        Proto.PaymentPeriodRequest.Create(payeeId, period);
 
 }
