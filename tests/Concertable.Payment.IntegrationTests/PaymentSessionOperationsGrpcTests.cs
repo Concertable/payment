@@ -204,8 +204,10 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
         FakeStripeSessionClient provider) =>
         new(new PaymentSessionService(
             new PaymentSessionOperationRepository(context),
-            new PaymentSessionAttemptRepository(context),
             new PayoutAccountRepository(context),
+            new PaymentSessionReconciliationService(
+                new PaymentSessionAttemptRepository(context),
+                TimeProvider.System),
             provider,
             TimeProvider.System));
 
