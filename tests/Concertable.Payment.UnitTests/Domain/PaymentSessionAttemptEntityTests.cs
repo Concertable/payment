@@ -27,21 +27,6 @@ public sealed class PaymentSessionAttemptEntityTests
     }
 
     [Fact]
-    public void ApplyTransition_DuplicateDisposition_RaisesNoEvent()
-    {
-        var attempt = BoundAttempt();
-
-        attempt.ApplyTransition(
-            PaymentSessionKind.Payment,
-            Transition(
-                PaymentOperationState.Processing,
-                CreatedAt.AddSeconds(1),
-                disposition: PaymentOperationTransitionDisposition.Duplicate));
-
-        Assert.Empty(attempt.DomainEvents);
-    }
-
-    [Fact]
     public void ApplyTransition_SameProjectionNewerObservation_RaisesNoSecondEvent()
     {
         var attempt = BoundAttempt();
@@ -93,10 +78,8 @@ public sealed class PaymentSessionAttemptEntityTests
     private static PaymentOperationTransition Transition(
         PaymentOperationState state,
         DateTimeOffset observedAt,
-        PaymentOperationFailure? failure = null,
-        PaymentOperationTransitionDisposition disposition = PaymentOperationTransitionDisposition.Applied) =>
+        PaymentOperationFailure? failure = null) =>
         new(
-            disposition,
             state,
             state.ToString(),
             observedAt,
