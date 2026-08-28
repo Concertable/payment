@@ -18,14 +18,13 @@ public static class PaymentTopology
             .Publish<RefundEscrowSucceededEvent>()
             .Publish<RefundEscrowRejectedEvent>()
             .Publish<RefundEscrowDeferredEvent>()
-            .ForService(PaymentConstants.ServiceName)
-            .Subscribe<ConcertChangedEvent>()
-            .Subscribe<CredentialRegisteredEvent>()
-            .Subscribe<PayoutOwnerRegisteredEvent>()
-            .Subscribe<PaymentSucceededEvent>()
-            .Subscribe<PaymentFailedEvent>()
-            .Queue<CaptureEscrowCommand>()
-            .Queue<DepositEscrowCommand>()
-            .Queue<RefundEscrowCommand>()
-            .Queue<ProcessStripeWebhookCommand>();
+            .Subscribe<ConcertChangedEvent>(PaymentConstants.ServiceName)
+            .Subscribe<CredentialRegisteredEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PayoutOwnerRegisteredEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PaymentSucceededEvent>(PaymentConstants.ServiceName)
+            .Subscribe<PaymentFailedEvent>(PaymentConstants.ServiceName)
+            .Queue<CaptureEscrowCommand>(PaymentConstants.ServiceName)
+            .Queue<DepositEscrowCommand>(PaymentConstants.ServiceName)
+            .Queue<RefundEscrowCommand>(PaymentConstants.ServiceName)
+            .Queue<ProcessStripeWebhookCommand>(PaymentConstants.ServiceName);
 }
