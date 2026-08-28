@@ -25,10 +25,4 @@ internal sealed class PaymentSessionAttemptRepository : IPaymentSessionAttemptRe
             attempt => attempt.ProviderObjectKind == providerObjectKind
                 && attempt.ProviderObjectId == providerObjectId,
             ct);
-
-    public Task SaveChangesAsync(CancellationToken ct = default) =>
-        context.SaveChangesAsync(ct);
-
-    public void Detach(PaymentSessionAttemptEntity attempt) =>
-        context.Entry(attempt).State = EntityState.Detached;
 }
