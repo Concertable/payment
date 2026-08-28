@@ -191,7 +191,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
             predecessorProviderObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationTransitionDisposition.Applied,
                 PaymentOperationState.Failed,
                 "failed",
@@ -327,7 +327,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             var attempt = await createContext.PaymentSessionAttempts
                 .SingleAsync(value => value.AttemptId == attemptId);
             providerObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationTransitionDisposition.Applied,
                 PaymentOperationState.Failed,
                 "failed",
@@ -382,7 +382,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
             predecessorProviderObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationTransitionDisposition.Applied,
                 PaymentOperationState.Failed,
                 "failed",

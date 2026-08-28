@@ -21,6 +21,18 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(operation => operation.OperationId == operationId, ct);
 
+    public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
+        PaymentSessionProviderObjectKind providerObjectKind,
+        string providerObjectId,
+        CancellationToken ct = default) =>
+        context.PaymentSessionOperations
+            .Include(operation => operation.Attempts)
+            .SingleOrDefaultAsync(
+                operation => operation.Attempts.Any(attempt =>
+                    attempt.ProviderObjectKind == providerObjectKind
+                    && attempt.ProviderObjectId == providerObjectId),
+                ct);
+
     public async Task<PaymentSessionReservation> ReserveInitialAsync(
         PaymentSessionSpecification specification,
         DateTimeOffset createdAt,
