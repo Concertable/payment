@@ -9,6 +9,7 @@ using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Repositories;
 using Concertable.Payment.Infrastructure.Services;
+using Concertable.Payment.IntegrationTests.Fixtures;
 using Concertable.Testing.Integration;
 using Microsoft.EntityFrameworkCore;
 using Reunion;
@@ -381,6 +382,77 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
+    public async Task ReconcileAsync_ConcurrentObservation_ReportsOneAppliedTransitionAndOneDuplicate()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var specification = Specification(Guid.CreateVersion7());
+        string providerObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
+            providerObjectId = (await createContext.PaymentSessionAttempts
+                .SingleAsync(attempt => attempt.AttemptId == execution.Identity.AttemptId)).ProviderObjectId!;
+        }
+
+        var retrieved = await provider.RetrieveAsync(
+            PaymentSessionProviderObjectKind.PaymentIntent,
+            providerObjectId);
+        Assert.True(retrieved.TryGetValue(out var currentProvider));
+        var observation = currentProvider with
+        {
+            Status = "processing",
+            ObservedAt = currentProvider.ObservedAt.AddSeconds(1)
+        };
+        var savesMayProceed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var saveCount = 0;
+
+        async Task<Result<PaymentSessionReconciliation, PaymentOperationError.ProviderUnavailable>>
+            ReconcileAsync()
+        {
+            await using var context = CreateContext();
+            var operation = await new PaymentSessionOperationRepository(context)
+                .GetByOperationIdAsync(specification.OperationId);
+            Assert.NotNull(operation);
+            var repository = new CoordinatedPaymentSessionAttemptRepository(
+                new PaymentSessionAttemptRepository(context),
+                savesMayProceed,
+                () => Interlocked.Increment(ref saveCount));
+            var service = new PaymentSessionReconciliationService(repository, TimeProvider.System);
+            return await service.ReconcileAsync(
+                new(
+                    operation,
+                    operation.CurrentAttempt,
+                    PaymentSessionReconciliationSource.Eager,
+                    observation));
+        }
+
+        var results = await Task.WhenAll(ReconcileAsync(), ReconcileAsync());
+
+        var reconciliations = results.Select(result =>
+        {
+            Assert.True(result.TryGetValue(out var reconciliation));
+            return reconciliation;
+        }).ToArray();
+        Assert.Equal(
+            [
+                PaymentOperationTransitionDisposition.Applied,
+                PaymentOperationTransitionDisposition.Duplicate
+            ],
+            reconciliations.Select(reconciliation =>
+            {
+                Assert.True(reconciliation.Evaluation.TryGetValue(out var transition));
+                return transition.Disposition;
+            }).Order().ToArray());
+        await using var assertContext = CreateContext();
+        var persisted = await assertContext.PaymentSessionAttempts
+            .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
+        Assert.Equal(PaymentOperationState.Processing, persisted.State);
+        Assert.Equal(observation.ObservedAt, persisted.LastObservedAt);
+    }
+
+    [Fact]
     public void PersistenceModel_ContainsNoSecretColumns()
     {
         using var context = CreateContext();
@@ -409,13 +481,16 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
     private static PaymentSessionService Service(
         PaymentDbContext context,
-        IStripeSessionClient provider) =>
-        new(
+        IStripeSessionClient provider)
+    {
+        var attemptRepository = new PaymentSessionAttemptRepository(context);
+        return new(
             new PaymentSessionOperationRepository(context),
-            new PaymentSessionAttemptRepository(context),
             new PayoutAccountRepository(context),
+            new PaymentSessionReconciliationService(attemptRepository, TimeProvider.System),
             provider,
             TimeProvider.System);
+    }
 
     private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
         PaymentSessionSpecification.Create(
