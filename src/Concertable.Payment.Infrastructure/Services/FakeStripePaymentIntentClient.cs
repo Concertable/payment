@@ -1,6 +1,6 @@
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Requests;
-using Concertable.Payment.Infrastructure.Mappers;
+using Concertable.Payment.Infrastructure;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -47,7 +47,7 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
                 Object = new PaymentIntent
                 {
                     Id = transactionId,
-                    Status = StripePaymentIntentStatus.Succeeded,
+                    Status = StripePaymentIntentStatuses.Succeeded,
                     AmountReceived = amount.ToMinorUnits(),
                     Metadata = metadata
                 }
