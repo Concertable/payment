@@ -10,7 +10,7 @@ internal static class EscrowMappers
             EscrowId = r.EscrowId,
             ChargeId = r.ChargeId,
             Status = r.Status.ToProtoStatus(),
-            ClientSecret = r.ClientSecret ?? ""
+            ClientSecret = r.ClientSecret ?? string.Empty
         };
 
     public static EscrowStatusType ToProtoStatus(this EscrowStatus s) => s switch
