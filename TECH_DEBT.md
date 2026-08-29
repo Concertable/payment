@@ -20,6 +20,23 @@ operation identities.
 
 ## LOW
 
+### Published-contract compatibility baseline is stale after the `client_secret` presence fix
+
+`PaymentResponse.client_secret`/`EscrowResponse.client_secret` became `optional string`
+(`Payment.Client/Protos/payment.proto`) so absence is a real presence bit (`HasClientSecret`) instead of
+an ambiguous empty-string sentinel — wire-compatible with the currently-published schema (proto3 implicit
+and explicit-optional presence encode identically; a field is omitted when unset either way). But
+`Concertable.Payment.UnitTests.Compatibility.PublishedPackageCompatibilityTests.ProtobufDescriptor_CurrentSchemaIsAdditive`
+compares the live descriptor against a baseline snapshotted from the last **published** package
+(`Baselines/0.1.0-alpha.0.1009/payment.protoset.base64`, captured via
+`Concertable.Payment.ContractBaselineGenerator`, which installs that exact version as a
+`PackageReference`) — it can only be regenerated from a real published artifact, never from this
+branch's own candidate, so the test is expected-red until this change publishes.
+
+**Resolves when:** after this change publishes, bump `BaselineVersion` (in
+`PublishedPackageCompatibilityTests.cs` and `ContractBaselineGenerator.csproj`) to the new version and
+run `Concertable.Payment.ContractBaselineGenerator` against it to regenerate all four baseline files.
+
 ### Internal Payment DTOs still expose monetary values as primitives
 
 `Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published
