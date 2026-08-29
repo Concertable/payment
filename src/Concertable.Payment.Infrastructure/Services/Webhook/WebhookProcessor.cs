@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -7,6 +8,7 @@ namespace Concertable.Payment.Infrastructure.Services.Webhook;
 internal sealed class WebhookProcessor : IWebhookProcessor
 {
     private readonly IStripeEventRepository stripeEventRepository;
+    private readonly IPaymentSessionResourceReconciler resourceReconciler;
     private readonly IOutboxUnitOfWorkBehavior outboxBehavior;
     private readonly TimeProvider timeProvider;
     private readonly IStripeWebhookHandler<PaymentIntent> paymentIntentHandler;
@@ -15,6 +17,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
 
     public WebhookProcessor(
         IStripeEventRepository stripeEventRepository,
+        IPaymentSessionResourceReconciler resourceReconciler,
         IOutboxUnitOfWorkBehavior outboxBehavior,
         TimeProvider timeProvider,
         IStripeWebhookHandler<PaymentIntent> paymentIntentHandler,
@@ -22,6 +25,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
         ILogger<WebhookProcessor> logger)
     {
         this.stripeEventRepository = stripeEventRepository;
+        this.resourceReconciler = resourceReconciler;
         this.outboxBehavior = outboxBehavior;
         this.timeProvider = timeProvider;
         this.paymentIntentHandler = paymentIntentHandler;
@@ -46,6 +50,31 @@ internal sealed class WebhookProcessor : IWebhookProcessor
             {
                 logger.SkippingStripeEventAlreadyProcessed(stripeEvent.Id);
                 return;
+            }
+
+            var evidence = new PaymentSessionProviderEventEvidence(
+                stripeEvent.Id,
+                new DateTimeOffset(DateTime.SpecifyKind(stripeEvent.Created, DateTimeKind.Utc), TimeSpan.Zero));
+
+            switch (dataObject)
+            {
+                case PaymentIntent intent:
+                    await resourceReconciler.ReconcileByProviderObjectAsync(
+                        PaymentSessionProviderObjectKind.PaymentIntent,
+                        intent.Id,
+                        PaymentSessionReconciliationSource.Webhook,
+                        evidence,
+                        cancellationToken);
+                    break;
+
+                case SetupIntent intent:
+                    await resourceReconciler.ReconcileByProviderObjectAsync(
+                        PaymentSessionProviderObjectKind.SetupIntent,
+                        intent.Id,
+                        PaymentSessionReconciliationSource.Webhook,
+                        evidence,
+                        cancellationToken);
+                    break;
             }
 
             await outboxBehavior.ExecuteAsync(async () =>
