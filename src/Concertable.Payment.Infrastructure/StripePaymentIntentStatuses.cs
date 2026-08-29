@@ -1,6 +1,6 @@
-namespace Concertable.Payment.Infrastructure.Mappers;
+namespace Concertable.Payment.Infrastructure;
 
-internal static class StripePaymentIntentStatus
+internal static class StripePaymentIntentStatuses
 {
     public const string Succeeded = "succeeded";
     public const string RequiresAction = "requires_action";
