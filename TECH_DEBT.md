@@ -20,6 +20,23 @@ operation identities.
 
 ## LOW
 
+### Published-contract compatibility baseline is stale after the `client_secret` presence fix
+
+`PaymentResponse.client_secret`/`EscrowResponse.client_secret` became `optional string`
+(`Payment.Client/Protos/payment.proto`) so absence is a real presence bit (`HasClientSecret`) instead of
+an ambiguous empty-string sentinel — wire-compatible with the currently-published schema (proto3 implicit
+and explicit-optional presence encode identically; a field is omitted when unset either way). But
+`Concertable.Payment.UnitTests.Compatibility.PublishedPackageCompatibilityTests.ProtobufDescriptor_CurrentSchemaIsAdditive`
+compares the live descriptor against a baseline snapshotted from the last **published** package
+(`Baselines/0.1.0-alpha.0.1009/payment.protoset.base64`, captured via
+`Concertable.Payment.ContractBaselineGenerator`, which installs that exact version as a
+`PackageReference`) — it can only be regenerated from a real published artifact, never from this
+branch's own candidate, so the test is expected-red until this change publishes.
+
+**Resolves when:** after this change publishes, bump `BaselineVersion` (in
+`PublishedPackageCompatibilityTests.cs` and `ContractBaselineGenerator.csproj`) to the new version and
+run `Concertable.Payment.ContractBaselineGenerator` against it to regenerate all four baseline files.
+
 ### Internal Payment DTOs still expose monetary values as primitives
 
 `Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published
@@ -36,12 +53,6 @@ conversion to minor units confined to persistence, provider, and protobuf mapper
 Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund, and the Stripe idempotency key (`commission:{authId}:refund:{cumulativeGross}`) would collapse a same-amount retry onto the same Stripe refund anyway. But the reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.
 
 **Resolves when:** a reconcile path exists — e.g. a background sweep (or webhook handler) that, for a `Pending` `PaymentRefundEntity` older than some threshold, queries Stripe for a refund under the reservation's idempotency key and either `Complete`s it (Stripe refund exists) or `Fail`s it (none), freeing the reserved gross.
-
-### gRPC mappers use the `""` literal and erase value presence
-
-`Grpc/PaymentMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`, `TransactionId = r.TransactionId ?? ""`) and `Grpc/EscrowMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`). Proto3 strings can't be null, so a fallback at the wire boundary is genuinely required — but the `""` literal violates the `csharp-style` skill (`string.Empty` for semantic fallbacks), and the receiver has to interpret empty string as "absent" (e.g. no client secret when `RequiresAction` is false).
-
-**Resolves when:** the literals become `string.Empty` at minimum; ideally the proto fields become `optional string` so presence survives the wire and callers test `Has*` instead of empty-string sentinels.
 
 ---
 

@@ -165,7 +165,7 @@ enum EscrowStatusType {
 
 message PaymentResponse {
   bool requires_action = 1;
-  string client_secret = 2;
+  optional string client_secret = 2;
   string transaction_id = 3;
 }
 
@@ -179,7 +179,7 @@ message EscrowResponse {
   int32 escrow_id = 1;
   string charge_id = 2;
   EscrowStatusType status = 3;
-  string client_secret = 4;
+  optional string client_secret = 4;
 }
 
 message TransferResponse {
