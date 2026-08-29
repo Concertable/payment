@@ -4,14 +4,19 @@ namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class EscrowMappers
 {
-    public static EscrowResponse ToProtoEscrowResponse(this EscrowDeposit r) =>
-        new()
+    public static EscrowResponse ToProtoEscrowResponse(this EscrowDeposit r)
+    {
+        var message = new EscrowResponse
         {
             EscrowId = r.EscrowId,
             ChargeId = r.ChargeId,
-            Status = r.Status.ToProtoStatus(),
-            ClientSecret = r.ClientSecret ?? ""
+            Status = r.Status.ToProtoStatus()
         };
+        if (r.ClientSecret is { } clientSecret)
+            message.ClientSecret = clientSecret;
+
+        return message;
+    }
 
     public static EscrowStatusType ToProtoStatus(this EscrowStatus s) => s switch
     {
