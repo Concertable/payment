@@ -29,10 +29,24 @@ public sealed class PaymentSessionStateMachineTests
     {
         var result = machine.Evaluate(
             PaymentOperationState.Creating,
-            Observation(PaymentOperationState.Authorized, captureBefore: ObservedAt.AddDays(7)));
+            Observation(
+                PaymentOperationState.Authorized,
+                captureBefore: ObservedAt.AddDays(7),
+                context: new PaymentProviderOperationContext.Authorization()));
 
         Assert.True(result.TryGetValue(out var transition));
         Assert.Equal(PaymentOperationState.Authorized, transition.State);
+    }
+
+    [Fact]
+    public void Evaluate_AuthorizedForAutomaticPayment_IsRejected()
+    {
+        var result = machine.Evaluate(
+            PaymentOperationState.Creating,
+            Observation(PaymentOperationState.Authorized, captureBefore: ObservedAt.AddDays(7)));
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentOperationTransitionRejectionReason.InvalidProviderObjectForSessionKind, rejection.Reason);
     }
 
     [Fact]
@@ -67,7 +81,10 @@ public sealed class PaymentSessionStateMachineTests
     {
         var result = machine.Evaluate(
             PaymentOperationState.Creating,
-            Observation(PaymentOperationState.Authorized, captureBefore: null));
+            Observation(
+                PaymentOperationState.Authorized,
+                captureBefore: null,
+                context: new PaymentProviderOperationContext.Authorization()));
 
         Assert.True(result.TryGetError(out var rejection));
         Assert.Equal(PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, rejection.Reason);
@@ -115,12 +132,6 @@ public sealed class PaymentSessionStateMachineTests
     public void SessionEdges_MatchTheDeclaredGraph()
     {
         AssertEdges(machine, SessionEdges);
-    }
-
-    [Fact]
-    public void RefundEdges_MatchTheDeclaredGraph()
-    {
-        AssertEdges(new PaymentRefundStateMachine(), RefundEdges);
     }
 
     private static void AssertEdges(
@@ -171,22 +182,6 @@ public sealed class PaymentSessionStateMachineTests
             PaymentOperationState.Processing, PaymentOperationState.Succeeded, PaymentOperationState.Canceled)
     ];
 
-    private static readonly HashSet<(PaymentOperationState, PaymentOperationState)> RefundEdges =
-    [
-        .. Edges(PaymentOperationState.Processing, PaymentOperationState.Processing),
-        .. Edges(PaymentOperationState.RequiresAction, PaymentOperationState.RequiresAction),
-        .. Edges(PaymentOperationState.Succeeded, PaymentOperationState.Succeeded),
-        .. Edges(PaymentOperationState.Canceled, PaymentOperationState.Canceled),
-        .. Edges(PaymentOperationState.Failed, PaymentOperationState.Failed),
-        .. Edges(PaymentOperationState.Creating, PaymentOperationState.Processing, PaymentOperationState.RequiresAction),
-        .. Edges(PaymentOperationState.Processing,
-            PaymentOperationState.RequiresAction, PaymentOperationState.Succeeded,
-            PaymentOperationState.Canceled, PaymentOperationState.Failed),
-        .. Edges(PaymentOperationState.RequiresAction,
-            PaymentOperationState.Processing, PaymentOperationState.Succeeded,
-            PaymentOperationState.Canceled, PaymentOperationState.Failed)
-    ];
-
     private static IEnumerable<(PaymentOperationState, PaymentOperationState)> Edges(
         PaymentOperationState from,
         params PaymentOperationState[] targets) =>
@@ -194,9 +189,10 @@ public sealed class PaymentSessionStateMachineTests
 
     private static PaymentProviderObservation Observation(
         PaymentOperationState state,
-        DateTimeOffset? captureBefore = null) =>
+        DateTimeOffset? captureBefore = null,
+        PaymentProviderOperationContext? context = null) =>
         new(
-            new PaymentProviderOperationContext.Payment(),
+            context ?? new PaymentProviderOperationContext.Payment(),
             "pi_test",
             Guid.Parse("019c1234-0000-7000-8000-000000000001"),
             Guid.Parse("019c1234-0000-7000-8000-000000000002"),
