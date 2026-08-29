@@ -17,8 +17,8 @@ internal static class PaymentMappers
         new()
         {
             RequiresAction = r.RequiresAction,
-            ClientSecret = r.ClientSecret ?? "",
-            TransactionId = r.TransactionId ?? ""
+            ClientSecret = r.ClientSecret ?? string.Empty,
+            TransactionId = r.TransactionId ?? string.Empty
         };
 
     public static CheckoutSessionResponse ToProtoCheckoutSession(this Application.DTOs.CheckoutSession s) =>
