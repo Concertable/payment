@@ -33,7 +33,7 @@ internal static class PaymentMappers
         {
             RequiresAction = r.RequiresAction,
             ClientSecret = string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret,
-            TransactionId = string.IsNullOrEmpty(r.TransactionId) ? null : r.TransactionId
+            TransactionId = r.TransactionId
         };
 
     public static CheckoutSession ToCheckoutSession(this Proto.CheckoutSessionResponse r) =>

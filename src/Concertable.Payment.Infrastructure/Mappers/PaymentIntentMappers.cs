@@ -7,13 +7,21 @@ namespace Concertable.Payment.Infrastructure.Mappers;
 
 internal static class PaymentIntentMappers
 {
-    public static Result<PaymentOutcome, PaymentError> ToPaymentResult(this PaymentIntent intent) =>
-        intent.Status is not ("succeeded" or "requires_action" or "requires_confirmation")
-            ? Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.PaymentRejected())
-            : Result.Success<PaymentOutcome, PaymentError>(new PaymentOutcome
-            {
-                RequiresAction = intent.Status is "requires_action" or "requires_confirmation",
-                ClientSecret = intent.ClientSecret,
-                TransactionId = intent.Id
-            });
+    public static Result<PaymentOutcome, PaymentError> ToPaymentResult(this PaymentIntent intent)
+    {
+        if (intent.Status is not (StripePaymentIntentStatus.Succeeded
+                or StripePaymentIntentStatus.RequiresAction
+                or StripePaymentIntentStatus.RequiresConfirmation))
+            return Result.Failure<PaymentOutcome, PaymentError>(new PaymentError.PaymentRejected());
+        if (string.IsNullOrEmpty(intent.Id))
+            throw new InvalidOperationException("Stripe response missing PaymentIntent id.");
+
+        return Result.Success<PaymentOutcome, PaymentError>(new PaymentOutcome
+        {
+            RequiresAction = intent.Status
+                is StripePaymentIntentStatus.RequiresAction or StripePaymentIntentStatus.RequiresConfirmation,
+            ClientSecret = intent.ClientSecret,
+            TransactionId = intent.Id
+        });
+    }
 }

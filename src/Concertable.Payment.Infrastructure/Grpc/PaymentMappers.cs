@@ -19,7 +19,6 @@ internal static class PaymentMappers
             RequiresAction = r.RequiresAction,
             ClientSecret = r.ClientSecret ?? string.Empty,
             TransactionId = r.TransactionId
-                ?? throw new InvalidOperationException("PaymentOutcome.TransactionId must be set for a successful payment outcome.")
         };
 
     public static CheckoutSessionResponse ToProtoCheckoutSession(this Application.DTOs.CheckoutSession s) =>
