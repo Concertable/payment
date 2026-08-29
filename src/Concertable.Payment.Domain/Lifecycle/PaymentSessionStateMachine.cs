@@ -4,10 +4,10 @@ using static Concertable.Payment.Domain.Lifecycle.PaymentOperationTrigger;
 
 namespace Concertable.Payment.Domain.Lifecycle;
 
-internal sealed class PaymentSessionStateMachine : IStateMachine<PaymentOperationState, PaymentOperationTrigger>
+internal sealed class PaymentSessionStateMachine : StateMachine<PaymentOperationState, PaymentOperationTrigger>
 {
-    private readonly IStateMachine<PaymentOperationState, PaymentOperationTrigger> transitions =
-        new StateMachine<PaymentOperationState, PaymentOperationTrigger>(
+    public PaymentSessionStateMachine()
+        : base(
         [
             (PaymentOperationState.RequiresPaymentMethod, RequirePaymentMethod, PaymentOperationState.RequiresPaymentMethod),
             (PaymentOperationState.RequiresConfirmation, RequireConfirmation, PaymentOperationState.RequiresConfirmation),
@@ -60,12 +60,9 @@ internal sealed class PaymentSessionStateMachine : IStateMachine<PaymentOperatio
             (PaymentOperationState.Authorized, Process, PaymentOperationState.Processing),
             (PaymentOperationState.Authorized, Succeed, PaymentOperationState.Succeeded),
             (PaymentOperationState.Authorized, Cancel, PaymentOperationState.Canceled)
-        ]);
-
-    public Result<PaymentOperationState, TransitionError<PaymentOperationState, PaymentOperationTrigger>> Transition(
-        PaymentOperationState current,
-        PaymentOperationTrigger trigger) =>
-        this.transitions.Transition(current, trigger);
+        ])
+    {
+    }
 
     internal Result<PaymentOperationTransition, PaymentOperationTransitionRejection> Evaluate(
         PaymentOperationState currentState,
