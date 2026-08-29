@@ -108,6 +108,58 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
         Assert.Equal(1, await harness.LegacyPaymentSucceededCountAsync(providerObjectId));
     }
 
+    [Fact]
+    public async Task Webhook_SetupIntent_PublishesStateChangeOnce()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = SetupSpecification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        var eagerStateChanges = await harness.StateChangeCountAsync(specification.OperationId);
+        harness.SessionClient.SetStatus(providerObjectId, "succeeded");
+
+        await harness.ProcessWebhookAsync(SetupIntentEvent("evt_setup", providerObjectId, "succeeded"));
+
+        Assert.Equal(1, eagerStateChanges);
+        Assert.Equal(2, await harness.StateChangeCountAsync(specification.OperationId));
+        Assert.Equal(
+            PaymentOperationState.Succeeded,
+            (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
+    }
+
+    private static Event SetupIntentEvent(string eventId, string providerObjectId, string status) =>
+        new()
+        {
+            Id = eventId,
+            Type = "setup_intent.created",
+            Created = EventCreated,
+            Data = new EventData
+            {
+                Object = new SetupIntent
+                {
+                    Id = providerObjectId,
+                    Status = status,
+                    Metadata = new Dictionary<string, string>(),
+                },
+            },
+        };
+
+    private static PaymentSessionSpecification SetupSpecification(Guid operationId) =>
+        PaymentSessionSpecification.Create(
+            operationId,
+            PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OffSession,
+            "setup",
+            $"setup:{operationId:N}",
+            $"payer:{operationId:N}",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            $"cus_{operationId:N}",
+            null);
+
     private static Event PaymentIntentEvent(
         string eventId,
         string providerObjectId,
