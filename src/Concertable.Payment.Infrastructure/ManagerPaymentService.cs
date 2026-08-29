@@ -155,8 +155,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
                 new ManagerPaymentOperationError.ManagerFailure(
                     new ManagerPaymentError.PaymentFailure(error!)));
         }
-        if (string.IsNullOrEmpty(outcome.TransactionId))
-            throw new InvalidOperationException("Stripe charge response missing PaymentIntent id.");
 
         var transaction = operationId is { } transactionOperationId
             ? SettlementTransactionEntity.CreateForOperation(
@@ -283,8 +281,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             charge.TryGetError(out var error);
             return Result<PaymentOutcome, ManagerPaymentError>.Failure(new ManagerPaymentError.PaymentFailure(error!));
         }
-        if (string.IsNullOrEmpty(outcome.TransactionId))
-            throw new InvalidOperationException("Stripe charge response missing PaymentIntent id.");
 
         commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);
         var transaction = SettlementTransactionEntity.CreateBound(
