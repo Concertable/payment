@@ -5,6 +5,7 @@ using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Enums;
+using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
@@ -191,8 +192,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
             predecessorProviderObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
-                PaymentOperationTransitionDisposition.Applied,
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationState.Failed,
                 "failed",
                 DateTimeOffset.UtcNow.AddMinutes(-1),
@@ -327,8 +327,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             var attempt = await createContext.PaymentSessionAttempts
                 .SingleAsync(value => value.AttemptId == attemptId);
             providerObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
-                PaymentOperationTransitionDisposition.Applied,
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationState.Failed,
                 "failed",
                 failedAt,
@@ -382,8 +381,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
             predecessorProviderObjectId = attempt.ProviderObjectId!;
-            attempt.ApplyTransition(new(
-                PaymentOperationTransitionDisposition.Applied,
+            attempt.ApplyTransition(PaymentSessionKind.Authorization, new(
                 PaymentOperationState.Failed,
                 "failed",
                 DateTimeOffset.UtcNow.AddMinutes(-1),
@@ -417,7 +415,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task ReconcileAsync_ConcurrentObservation_ReportsOneAppliedTransitionAndOneDuplicate()
+    public async Task ReconcileAsync_ConcurrentObservation_ConvergesOnOneAppliedTransition()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
@@ -455,7 +453,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
                 new UnitOfWork(context),
                 savesMayProceed,
                 () => Interlocked.Increment(ref saveCount));
-            var service = new PaymentSessionReconciliationService(repository, unitOfWork, TimeProvider.System);
+            var service = new PaymentSessionReconciliationService(repository, unitOfWork, new PaymentSessionStateMachine(), TimeProvider.System);
             return await service.ReconcileAsync(
                 new(
                     operation,
@@ -471,16 +469,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             Assert.True(result.TryGetValue(out var reconciliation));
             return reconciliation;
         }).ToArray();
-        Assert.Equal(
-            [
-                PaymentOperationTransitionDisposition.Applied,
-                PaymentOperationTransitionDisposition.Duplicate
-            ],
-            reconciliations.Select(reconciliation =>
-            {
-                Assert.True(reconciliation.Evaluation.TryGetValue(out var transition));
-                return transition.Disposition;
-            }).Order().ToArray());
+        Assert.All(reconciliations, reconciliation =>
+            Assert.True(reconciliation.Evaluation.TryGetValue(out _)));
         await using var assertContext = CreateContext();
         var persisted = await assertContext.PaymentSessionAttempts
             .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
@@ -523,7 +513,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         return new(
             new PaymentSessionOperationRepository(context),
             new PayoutAccountRepository(context),
-            new PaymentSessionReconciliationService(attemptRepository, new UnitOfWork(context), TimeProvider.System),
+            new PaymentSessionReconciliationService(attemptRepository, new UnitOfWork(context), new PaymentSessionStateMachine(), TimeProvider.System),
             provider,
             TimeProvider.System);
     }
