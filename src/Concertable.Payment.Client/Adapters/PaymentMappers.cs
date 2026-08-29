@@ -32,7 +32,7 @@ internal static class PaymentMappers
         new()
         {
             RequiresAction = r.RequiresAction,
-            ClientSecret = string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret,
+            ClientSecret = r.HasClientSecret ? r.ClientSecret : null,
             TransactionId = r.TransactionId
         };
 

@@ -13,13 +13,18 @@ internal static class PaymentMappers
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
 
-    public static PaymentResponse ToProtoPaymentResponse(this PaymentOutcome r) =>
-        new()
+    public static PaymentResponse ToProtoPaymentResponse(this PaymentOutcome r)
+    {
+        var message = new PaymentResponse
         {
             RequiresAction = r.RequiresAction,
-            ClientSecret = r.ClientSecret ?? string.Empty,
             TransactionId = r.TransactionId
         };
+        if (r.ClientSecret is { } clientSecret)
+            message.ClientSecret = clientSecret;
+
+        return message;
+    }
 
     public static CheckoutSessionResponse ToProtoCheckoutSession(this Application.DTOs.CheckoutSession s) =>
         new() { ClientSecret = s.ClientSecret, CustomerSession = s.CustomerSession, CustomerId = s.CustomerId };

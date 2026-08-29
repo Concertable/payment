@@ -11,7 +11,7 @@ internal static class EscrowMappers
             r.EscrowId,
             r.ChargeId,
             r.Status.ToEscrowStatus(),
-            string.IsNullOrEmpty(r.ClientSecret) ? null : r.ClientSecret);
+            r.HasClientSecret ? r.ClientSecret : null);
 
     public static EscrowStatus ToEscrowStatus(this Proto.EscrowStatusType status) => status switch
     {
