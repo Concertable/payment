@@ -62,7 +62,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
                 StripeRequestOptions.Charge(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
-            if (paymentIntent.Status == "succeeded")
+            if (paymentIntent.Status == StripePaymentIntentStatus.Succeeded)
                 logger.StripePaymentIntentSucceeded(paymentIntent.Id, paymentIntent.Amount, options.TransferData.Destination);
             else
                 logger.StripePaymentIntentNonSucceeded(paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.TransferData.Destination);
@@ -110,7 +110,7 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
                 StripeRequestOptions.Deposit(opts.OperationId, opts.CommissionBindingId),
                 ct);
 
-            if (paymentIntent.Status == "succeeded")
+            if (paymentIntent.Status == StripePaymentIntentStatus.Succeeded)
                 logger.StripeEscrowHoldSucceeded(paymentIntent.Id, paymentIntent.Amount, options.OnBehalfOf);
             else
                 logger.StripeEscrowHoldNonSucceeded(paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.OnBehalfOf);
