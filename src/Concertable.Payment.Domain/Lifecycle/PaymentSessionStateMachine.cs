@@ -71,11 +71,16 @@ internal sealed class PaymentSessionStateMachine : StateMachine<PaymentOperation
         if (currentState.IsTerminal() && observation.State != currentState)
             return Reject(currentState, PaymentOperationTransitionRejectionReason.TerminalStateProtected, observation.State);
 
-        if (observation.State == PaymentOperationState.Authorized && observation.CaptureBefore is null)
-            return Reject(currentState, PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, observation.State);
-
         if (Transition(currentState, observation.State.ToTrigger()).TryGetError(out _))
             return Reject(currentState, PaymentOperationTransitionRejectionReason.IllegalTransition, observation.State);
+
+        if (observation.State == PaymentOperationState.Authorized)
+        {
+            if (observation.Context is PaymentProviderOperationContext.Payment)
+                return Reject(currentState, PaymentOperationTransitionRejectionReason.InvalidProviderObjectForSessionKind, observation.State);
+            if (observation.CaptureBefore is null)
+                return Reject(currentState, PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, observation.State);
+        }
 
         return observation.ToTransition();
     }
