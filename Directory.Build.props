@@ -34,6 +34,11 @@
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
   </PropertyGroup>
 
+  <!-- Registry lives here, not in publish-images.yml: a carve takes only the service folder. -->
+  <PropertyGroup>
+    <ContainerRegistry Condition="'$(ContainerRegistry)' == ''">ghcr.io</ContainerRegistry>
+  </PropertyGroup>
+
   <!-- Banned-API list for Microsoft.CodeAnalysis.BannedApiAnalyzers (shared across services). -->
   <ItemGroup>
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)../BannedSymbols.txt" Condition="Exists('$(MSBuildThisFileDirectory)../BannedSymbols.txt')" />

@@ -30,8 +30,14 @@
     <PackageReference Include="Concertable.Testing" />
   </ItemGroup>
 
+  <Import Project="..\..\PublishedBaseline.props" />
+
   <ItemGroup>
     <None Update="Compatibility\Baselines\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PaymentBaselineVersion</_Parameter1>
+      <_Parameter2>$(PaymentBaselineVersion)</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

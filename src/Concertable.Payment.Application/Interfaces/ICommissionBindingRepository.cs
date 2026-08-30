@@ -4,6 +4,8 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ICommissionBindingRepository : IRepository<CommissionBindingEntity, Guid>
 {
+    Task<CommissionBindingEntity?> GetWithConfigurationByIdAsync(Guid id, CancellationToken ct = default);
+
     Task<CommissionBindingEntity> GetOrCreateAsync(
         CommissionBindingEntity candidate,
         CancellationToken ct = default);

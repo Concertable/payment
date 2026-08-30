@@ -15,7 +15,7 @@ internal sealed class CommissionBindingRepository
         this.context = context;
     }
 
-    public override Task<CommissionBindingEntity?> GetByIdAsync(
+    public Task<CommissionBindingEntity?> GetWithConfigurationByIdAsync(
         Guid id,
         CancellationToken ct = default) =>
         context.CommissionBindings

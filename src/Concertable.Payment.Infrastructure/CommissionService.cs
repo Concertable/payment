@@ -88,7 +88,7 @@ internal sealed class CommissionService : ICommissionService
         Money reviewedGross,
         CancellationToken ct = default)
     {
-        var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
+        var binding = await bindingRepository.GetWithConfigurationByIdAsync(bindingId, ct);
         if (binding is null)
             return Result.Failure<Concertable.Payment.Contracts.CommissionCalculation, CommissionError>(
                 new CommissionError.BindingNotFound());
@@ -123,7 +123,7 @@ internal sealed class CommissionService : ICommissionService
         string? stripeSetupIntentId,
         CancellationToken ct = default)
     {
-        var binding = await bindingRepository.GetByIdAsync(bindingId, ct);
+        var binding = await bindingRepository.GetWithConfigurationByIdAsync(bindingId, ct);
         if (binding is null)
             return Result.Failure<BoundCommission, CommissionError>(new CommissionError.BindingNotFound());
 
