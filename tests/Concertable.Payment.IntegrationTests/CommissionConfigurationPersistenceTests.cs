@@ -53,7 +53,7 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
         }
 
         await using var verification = CreateContext();
-        var loaded = await new CommissionBindingRepository(verification).GetByIdAsync(firstBindingId);
+        var loaded = await new CommissionBindingRepository(verification).GetWithConfigurationByIdAsync(firstBindingId);
 
         Assert.NotNull(loaded);
         Assert.Equal(configurationId, loaded.CommissionConfigurationId);
