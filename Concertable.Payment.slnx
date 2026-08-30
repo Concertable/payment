@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/Concertable.Payment.Hosting/Concertable.Payment.Hosting.csproj" />
+  <Project Path="src/Concertable.Payment.TestKit/Concertable.Payment.TestKit.csproj" />
   <Project Path="src/Concertable.Payment.Api/Concertable.Payment.Api.csproj" />
   <Project Path="src/Concertable.Payment.Client/Concertable.Payment.Client.csproj" />
   <Project Path="src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj" />
@@ -16,6 +17,7 @@
   <Folder Name="/Tests/E2ETests/">
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers/Concertable.Payment.E2ETests.Helpers.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Helpers.UnitTests/Concertable.Payment.E2ETests.Helpers.UnitTests.csproj" />
+    <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Server/Concertable.Payment.E2ETests.Server.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Stripe/Concertable.Payment.E2ETests.Stripe.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj" />
     <Project Path="tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj" />
