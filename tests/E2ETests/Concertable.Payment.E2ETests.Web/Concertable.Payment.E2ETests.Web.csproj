@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
+    <ProjectReference Include="..\Concertable.Payment.E2ETests.Server\Concertable.Payment.E2ETests.Server.csproj" />
     <ProjectReference Include="..\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
   </ItemGroup>
 
