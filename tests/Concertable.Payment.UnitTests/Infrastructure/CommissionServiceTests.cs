@@ -109,7 +109,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", null, confirmed: false);
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
         authorizationRepository
             .Setup(r => r.TryConfirmReviewedGrossAsync(binding.Id, Gross(), It.IsAny<CancellationToken>()))
@@ -130,7 +130,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", null, confirmed: false);
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
         authorizationRepository
             .Setup(r => r.TryConfirmReviewedGrossAsync(binding.Id, Gross(), It.IsAny<CancellationToken>()))
@@ -149,7 +149,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", null, confirmed: false);
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
@@ -164,7 +164,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", null);
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
@@ -179,7 +179,7 @@ public sealed class CommissionServiceTests
     {
         var id = Guid.NewGuid();
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync((CommissionBindingEntity?)null);
 
         var result = await BuildService().CalculateBoundAsync(
@@ -194,7 +194,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
@@ -209,7 +209,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
 
         var result = await BuildService().CalculateBoundAsync(
@@ -224,7 +224,7 @@ public sealed class CommissionServiceTests
     {
         var binding = Binding("booking:7", "payer:1", "pi_1");
         authorizationRepository
-            .Setup(r => r.GetByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetWithConfigurationByIdAsync(binding.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(binding);
         var expected = calculator.Calculate(GrossMinor, Currency.Gbp, Terms(), Percentage.From(VatRatePercentage));
 
