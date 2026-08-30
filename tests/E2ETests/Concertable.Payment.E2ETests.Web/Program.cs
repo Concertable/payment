@@ -17,7 +17,7 @@ public static class Program
         });
 
         builder.AddWebHost();
-        builder.Services.AddPaymentE2EAdmin(builder.Configuration);
+        builder.Services.AddPaymentE2EAdmin(builder.Configuration, builder.Environment);
         builder.Services.UseStripeAdapter();
 
         var app = builder.Build();

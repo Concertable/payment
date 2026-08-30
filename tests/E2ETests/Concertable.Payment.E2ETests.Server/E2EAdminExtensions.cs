@@ -1,11 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
+using Concertable.Kernel;
 using Dapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Respawn;
 using Respawn.Graph;
 
@@ -13,16 +15,21 @@ namespace Concertable.Payment.E2ETests.Server;
 
 public static class E2EAdminExtensions
 {
-    private const string AdminKeyHeader = "X-Concertable-E2E-Key";
     private const int PlatformRevenueAccountType = 0;
 
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddPaymentE2EAdmin(IConfiguration configuration)
+        public IServiceCollection AddPaymentE2EAdmin(
+            IConfiguration configuration,
+            IHostEnvironment environment)
         {
+            E2EAdminSecurity.RequireE2EEnvironment(environment);
+            var adminKey = configuration["E2E:AdminKey"];
+            if (string.IsNullOrWhiteSpace(adminKey))
+                throw new InvalidOperationException("E2E:AdminKey is required by the Payment E2E host.");
+
             services.AddSingleton(new E2EAdminOptions(
-                configuration["E2E:AdminKey"]
-                    ?? throw new InvalidOperationException("E2E:AdminKey is required by the Payment E2E host."),
+                adminKey,
                 configuration.GetConnectionString("PaymentDb")
                     ?? throw new InvalidOperationException("Connection string 'PaymentDb' is required by the Payment E2E host.")));
             return services;
@@ -33,6 +40,7 @@ public static class E2EAdminExtensions
     {
         public WebApplication MapPaymentE2EAdmin()
         {
+            E2EAdminSecurity.RequireE2EEnvironment(app.Environment);
             var group = app.MapGroup("/_e2e")
                 .AddEndpointFilter(AuthorizeAsync);
             group.MapPost("/reset", ResetAsync);
@@ -53,11 +61,7 @@ public static class E2EAdminExtensions
         EndpointFilterDelegate next)
     {
         var options = context.HttpContext.RequestServices.GetRequiredService<E2EAdminOptions>();
-        var supplied = context.HttpContext.Request.Headers[AdminKeyHeader].ToString();
-        var expectedBytes = Encoding.UTF8.GetBytes(options.AdminKey);
-        var suppliedBytes = Encoding.UTF8.GetBytes(supplied);
-        if (expectedBytes.Length != suppliedBytes.Length
-            || !CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes))
+        if (!E2EAdminSecurity.IsAuthorized(options.AdminKey, context.HttpContext.Request.Headers))
         {
             return Results.NotFound();
         }
@@ -206,6 +210,35 @@ public static class E2EAdminExtensions
         var connection = new SqlConnection(options.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         return connection;
+    }
+}
+
+internal static class E2EAdminSecurity
+{
+    private const string AdminKeyHeader = "X-Concertable-E2E-Key";
+
+    public static void RequireE2EEnvironment(IHostEnvironment environment)
+    {
+        if (!environment.IsE2E())
+            throw new InvalidOperationException("Payment E2E admin endpoints can only be enabled in the E2E environment.");
+    }
+
+    public static bool IsAuthorized(string expected, IHeaderDictionary headers)
+    {
+        if (string.IsNullOrWhiteSpace(expected)
+            || !headers.TryGetValue(AdminKeyHeader, out var suppliedValues))
+        {
+            return false;
+        }
+
+        var supplied = suppliedValues.ToString();
+        if (string.IsNullOrWhiteSpace(supplied))
+            return false;
+
+        var expectedBytes = Encoding.UTF8.GetBytes(expected);
+        var suppliedBytes = Encoding.UTF8.GetBytes(supplied);
+        return expectedBytes.Length == suppliedBytes.Length
+            && CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
     }
 }
 
