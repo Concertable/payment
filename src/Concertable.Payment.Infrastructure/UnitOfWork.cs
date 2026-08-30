@@ -21,8 +21,21 @@ internal sealed class UnitOfWork : IUnitOfWork
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         SaveChangesWithAccountReconciliationAsync(cancellationToken);
 
-    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
-        context.TrySaveChangesAsync(cancellationToken);
+    public async Task<bool> TrySaveChangesAsync(
+        Func<DbUpdateException, bool> isExpected,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await SaveChangesWithAccountReconciliationAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException exception) when (isExpected(exception))
+        {
+            context.ChangeTracker.Clear();
+            return false;
+        }
+    }
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
         context.Database.BeginTransactionAsync(cancellationToken);
@@ -55,9 +68,9 @@ internal sealed class UnitOfWork : IUnitOfWork
                 await context.SaveChangesAsync(cancellationToken);
                 return;
             }
-            catch (DbUpdateException ex) when (
-                ex.IsDuplicateKey() &&
-                ex.InnerException?.Message.Contains(
+            catch (DbUpdateException exception) when (
+                exception.IsDuplicateKey() &&
+                exception.InnerException?.Message.Contains(
                     LedgerAccountEntityConfiguration.IdentityIndex,
                     StringComparison.Ordinal) == true)
             {

@@ -1,4 +1,5 @@
 using Concertable.Payment.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Concertable.Payment.IntegrationTests.Fixtures;
@@ -19,16 +20,24 @@ internal sealed class CoordinatedUnitOfWork : IUnitOfWork
         this.incrementSaveCount = incrementSaveCount;
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        unitOfWork.SaveChangesAsync(cancellationToken);
-
-    public async Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         if (incrementSaveCount() == 2)
             savesMayProceed.TrySetResult();
 
         await savesMayProceed.Task.WaitAsync(cancellationToken);
-        return await unitOfWork.TrySaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> TrySaveChangesAsync(
+        Func<DbUpdateException, bool> isExpected,
+        CancellationToken cancellationToken = default)
+    {
+        if (incrementSaveCount() == 2)
+            savesMayProceed.TrySetResult();
+
+        await savesMayProceed.Task.WaitAsync(cancellationToken);
+        return await unitOfWork.TrySaveChangesAsync(isExpected, cancellationToken);
     }
 
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
