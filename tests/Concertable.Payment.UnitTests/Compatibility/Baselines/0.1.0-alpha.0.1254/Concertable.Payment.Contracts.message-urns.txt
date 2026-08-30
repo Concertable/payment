@@ -5,8 +5,10 @@ Concertable.Payment.Contracts.DepositEscrowCommand|concertable.payment.deposit-e
 Concertable.Payment.Contracts.DepositEscrowRejectedEvent|concertable.payment.deposit-escrow-rejected.v1
 Concertable.Payment.Contracts.DepositEscrowSucceededEvent|concertable.payment.deposit-escrow-succeeded.v1
 Concertable.Payment.Contracts.Events.PaymentFailedEvent|concertable.payment.payment-failed.v1
+Concertable.Payment.Contracts.Events.PaymentOperationStateChanged|concertable.payment.payment-operation-state-changed.v1
 Concertable.Payment.Contracts.Events.PaymentSucceededEvent|concertable.payment.payment-succeeded.v1
 Concertable.Payment.Contracts.Events.PayoutOwnerRegisteredEvent|concertable.payment.payout-owner-registered.v1
+Concertable.Payment.Contracts.ProcessStripeWebhookCommand|concertable.payment.process-stripe-webhook.v1
 Concertable.Payment.Contracts.RefundEscrowCommand|concertable.payment.refund-escrow.v1
 Concertable.Payment.Contracts.RefundEscrowDeferredEvent|concertable.payment.refund-escrow-deferred.v1
 Concertable.Payment.Contracts.RefundEscrowRejectedEvent|concertable.payment.refund-escrow-rejected.v1
