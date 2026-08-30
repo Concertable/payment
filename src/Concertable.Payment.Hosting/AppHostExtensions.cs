@@ -15,7 +15,7 @@ public static class AppHostExtensions
         this IDistributedApplicationBuilder builder,
         string image,
         string digest,
-        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
         IResourceBuilder<SqlServerDatabaseResource> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
     {
@@ -33,7 +33,7 @@ public static class AppHostExtensions
 
     public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
         IResourceBuilder<SqlServerDatabaseResource> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
@@ -81,7 +81,10 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
     }
 
-    public static void AddStripeCli(this IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> paymentWeb)
+    public static void AddStripeCli<TPaymentWeb>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<TPaymentWeb> paymentWeb)
+        where TPaymentWeb : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
     {
         var secretKey = builder.Configuration["Stripe:SecretKey"];
         if (string.IsNullOrEmpty(secretKey))
