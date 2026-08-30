@@ -14,9 +14,6 @@ internal interface ITransactionRepository : IRepository<TransactionEntity>
     Task<SettlementTransactionEntity?> GetSettlementByOperationIdAsync(
         Guid operationId,
         CancellationToken ct = default);
-    Task<SettlementTransactionEntity?> ReloadSettlementByOperationIdAsync(
-        Guid operationId,
-        CancellationToken ct = default);
     Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default);

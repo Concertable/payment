@@ -6,7 +6,6 @@ using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Kernel.Exceptions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure;
 
@@ -403,19 +402,19 @@ internal sealed class EscrowService : IEscrowService
                 escrow.ChargeId,
                 transfer.TransferId),
             ct);
-        try
+        if (operationId is null)
         {
             await unitOfWork.SaveChangesAsync(ct);
+            return transfer;
         }
-        catch (DbUpdateException ex) when (operationId is not null && ex.IsDuplicateKey())
-        {
-            var canonical = await escrowRepository.ReloadByIdAsync(escrow.Id, ct);
-            if (canonical?.ReleaseOperationId != operationId || canonical.TransferId is null)
-                throw;
 
-            return new Transfer(canonical.TransferId);
-        }
-        return transfer;
+        if (await unitOfWork.TrySaveChangesAsync(static exception => exception.IsDuplicateKey(), ct))
+            return transfer;
+
+        var canonical = await escrowRepository.GetByIdAsync(escrow.Id, ct);
+        return canonical?.ReleaseOperationId == operationId && canonical.TransferId is not null
+            ? new Transfer(canonical.TransferId)
+            : new EscrowReleaseOperationError.OperationConflict();
     }
 
     public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(

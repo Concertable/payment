@@ -43,14 +43,6 @@ internal sealed class TransactionRepository : Repository<TransactionEntity>, ITr
             transaction => transaction.OperationId == operationId,
             ct);
 
-    public Task<SettlementTransactionEntity?> ReloadSettlementByOperationIdAsync(
-        Guid operationId,
-        CancellationToken ct = default)
-    {
-        context.ChangeTracker.Clear();
-        return GetSettlementByOperationIdAsync(operationId, ct);
-    }
-
     public Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
         int bookingId,
         CancellationToken ct = default) =>
