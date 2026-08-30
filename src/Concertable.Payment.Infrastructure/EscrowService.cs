@@ -104,8 +104,6 @@ internal sealed class EscrowService : IEscrowService
             hold.TryGetError(out var paymentError);
             return new EscrowDepositError.PaymentFailure(paymentError!);
         }
-        if (string.IsNullOrEmpty(outcome.TransactionId))
-            throw new InvalidOperationException("Stripe hold response missing PaymentIntent id.");
 
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, outcome.TransactionId);
         await escrowRepository.AddAsync(escrow);
@@ -178,8 +176,6 @@ internal sealed class EscrowService : IEscrowService
             hold.TryGetError(out var paymentError);
             return Result<EscrowDeposit, EscrowDepositError>.Failure(new EscrowDepositError.PaymentFailure(paymentError!));
         }
-        if (string.IsNullOrEmpty(outcome.TransactionId))
-            throw new InvalidOperationException("Stripe hold response missing PaymentIntent id.");
 
         commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);
         var escrow = EscrowEntity.CreateBound(

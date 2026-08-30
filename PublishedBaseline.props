@@ -1,0 +1,10 @@
+<Project>
+
+  <!-- The published release the compatibility baselines were captured from. The generator reads its
+       packages at this version; the test asserts against the committed files in the matching folder.
+       Both must name the same release, so neither states it: they import it from here. -->
+  <PropertyGroup>
+    <PaymentBaselineVersion>0.1.0-alpha.0.1254</PaymentBaselineVersion>
+  </PropertyGroup>
+
+</Project>

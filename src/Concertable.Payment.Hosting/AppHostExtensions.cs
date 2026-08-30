@@ -11,6 +11,26 @@ namespace Concertable.Payment.Hosting;
 
 public static class AppHostExtensions
 {
+    public static IResourceBuilder<ContainerResource> AddPaymentWeb(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+    {
+        return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
+                      .WithReference(paymentDb)
+                      .WaitFor(paymentDb)
+                      .WithReference(auth)
+                      .WaitFor(auth)
+                      .WithReference(asb)
+                      .WaitFor(asb)
+                      .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                      .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
+    }
+
     public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
         this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> auth,
@@ -37,6 +57,22 @@ public static class AppHostExtensions
         where TProject : IProjectMetadata, new()
     {
         return builder.AddProject<TProject>(PaymentConstants.WorkersResource)
+                      .WithReference(paymentDb)
+                      .WaitFor(paymentDb)
+                      .WithReference(asb)
+                      .WaitFor(asb)
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                      .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
+    }
+
+    public static IResourceBuilder<ContainerResource> AddPaymentWorkers(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+    {
+        return builder.AddContainerImage(PaymentConstants.WorkersResource, image, digest)
                       .WithReference(paymentDb)
                       .WaitFor(paymentDb)
                       .WithReference(asb)
