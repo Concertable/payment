@@ -11,7 +11,7 @@ namespace Concertable.Payment.UnitTests.Compatibility;
 
 public sealed class PublishedPackageCompatibilityTests
 {
-    private const string BaselineVersion = "0.1.0-alpha.0.1009";
+    private const string BaselineVersion = "0.1.0-alpha.0.1254";
 
     [Fact]
     public void ContractsPublicApi_CurrentSurfaceIsAdditive() =>
