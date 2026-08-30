@@ -2,6 +2,8 @@ CONSTRUCTOR|Concertable.Payment.Client.CheckoutSession(System.String ClientSecre
 CONSTRUCTOR|Concertable.Payment.Client.ManagerSettlement(System.Int32 Id,System.Int32 BookingId,System.Guid PayerId,System.Guid PayeeId,Concertable.Kernel.ValueObjects.Money Amount,System.DateTime At)
 CONSTRUCTOR|Concertable.Payment.Client.MonthlyPaymentPoint(System.DateOnly Month,Concertable.Kernel.ValueObjects.Money Gross,Concertable.Kernel.ValueObjects.Money Net,System.Int32 Count)
 CONSTRUCTOR|Concertable.Payment.Client.PaymentContractMismatchException(System.String code,Grpc.Core.RpcException innerException)
+CONSTRUCTOR|Concertable.Payment.Client.PaymentOperationSnapshot(Concertable.Payment.Contracts.PaymentOperationIdentity Identity,Concertable.Payment.Contracts.PaymentOperationState State,Concertable.Payment.Contracts.PaymentOperationTerminalDisposition TerminalDisposition,Concertable.Payment.Contracts.PaymentOperationRetryDisposition RetryDisposition,System.Nullable<System.DateTimeOffset> ExpiresAt,System.Nullable<System.DateTimeOffset> CaptureBefore,Concertable.Payment.Contracts.PaymentOperationFailure Failure)
+CONSTRUCTOR|Concertable.Payment.Client.PaymentSessionDescriptor(Concertable.Payment.Contracts.PaymentOperationIdentity Identity,Concertable.Payment.Contracts.PaymentSessionKind Kind,System.String ClientSecret,System.String CustomerSessionSecret,System.String CustomerToken)
 CONSTRUCTOR|Concertable.Payment.Client.SavedCard(System.String Brand,System.String Last4,System.Int32 ExpMonth,System.Int32 ExpYear)
 CONSTRUCTOR|Concertable.Payment.Grpc.AccountStatusResponse()
 CONSTRUCTOR|Concertable.Payment.Grpc.AccountStatusResponse(Concertable.Payment.Grpc.AccountStatusResponse other)
@@ -69,10 +71,26 @@ CONSTRUCTOR|Concertable.Payment.Grpc.OperationErrorDetail()
 CONSTRUCTOR|Concertable.Payment.Grpc.OperationErrorDetail(Concertable.Payment.Grpc.OperationErrorDetail other)
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentMethodResponse()
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentMethodResponse(Concertable.Payment.Grpc.PaymentMethodResponse other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationFailure()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationFailure(Concertable.Payment.Grpc.PaymentOperationFailure other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationIdentity()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationIdentity(Concertable.Payment.Grpc.PaymentOperationIdentity other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationSnapshot()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentOperationSnapshot(Concertable.Payment.Grpc.PaymentOperationSnapshot other)
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentPeriodRequest()
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentPeriodRequest(Concertable.Payment.Grpc.PaymentPeriodRequest other)
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentResponse()
 CONSTRUCTOR|Concertable.Payment.Grpc.PaymentResponse(Concertable.Payment.Grpc.PaymentResponse other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionDescriptor()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionDescriptor(Concertable.Payment.Grpc.PaymentSessionDescriptor other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionOperationRequest()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionOperationRequest(Concertable.Payment.Grpc.PaymentSessionOperationRequest other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient(Grpc.Core.CallInvoker callInvoker)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient(Grpc.Core.ChannelBase channel)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionRetryRequest()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionRetryRequest(Concertable.Payment.Grpc.PaymentSessionRetryRequest other)
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionStatusRequest()
+CONSTRUCTOR|Concertable.Payment.Grpc.PaymentSessionStatusRequest(Concertable.Payment.Grpc.PaymentSessionStatusRequest other)
 CONSTRUCTOR|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient(Grpc.Core.CallInvoker callInvoker)
 CONSTRUCTOR|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient(Grpc.Core.ChannelBase channel)
 CONSTRUCTOR|Concertable.Payment.Grpc.PayoutOwnerRequest()
@@ -212,6 +230,7 @@ FIELD|Concertable.Payment.Grpc.FindHeldIntentRequest.PayerIdFieldNumber|static|c
 FIELD|Concertable.Payment.Grpc.FindHeldIntentResponse.PaymentIntentIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.ManagerPayRequest.AmountFieldNumber|static|const=3|System.Int32
 FIELD|Concertable.Payment.Grpc.ManagerPayRequest.BookingIdFieldNumber|static|const=6|System.Int32
+FIELD|Concertable.Payment.Grpc.ManagerPayRequest.OperationIdFieldNumber|static|const=7|System.Int32
 FIELD|Concertable.Payment.Grpc.ManagerPayRequest.PayeeIdFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.ManagerPayRequest.PayerIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.ManagerPayRequest.PaymentMethodIdFieldNumber|static|const=4|System.Int32
@@ -239,12 +258,91 @@ FIELD|Concertable.Payment.Grpc.PaymentMethodResponse.ExpMonthFieldNumber|static|
 FIELD|Concertable.Payment.Grpc.PaymentMethodResponse.ExpYearFieldNumber|static|const=5|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentMethodResponse.HasCardFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentMethodResponse.Last4FieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailure.CodeFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailure.MessageFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.AuthenticationRequired|static|const=2|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.Canceled|static|const=5|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.Declined|static|const=3|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.Expired|static|const=4|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.OperationConflict|static|const=6|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.PaymentMethodRequired|static|const=1|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.ProviderUnavailable|static|const=7|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.Unknown|static|const=8|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentOperationFailureCode
+FIELD|Concertable.Payment.Grpc.PaymentOperationFailureCode.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationIdentity.AttemptIdFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationIdentity.OperationIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationIdentity.RevisionFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.ContinueCurrentAttempt|static|const=1|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.CreateNewAttempt|static|const=3|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.CreateNewOperation|static|const=4|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.NotRetryable|static|const=6|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.Reconcile|static|const=5|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.RetryCurrentAttempt|static|const=2|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentOperationRetryDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationRetryDisposition.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.CaptureBeforeFieldNumber|static|const=6|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.ExpiresAtFieldNumber|static|const=5|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.FailureFieldNumber|static|const=7|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.IdentityFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.RetryDispositionFieldNumber|static|const=4|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.StateFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationSnapshot.TerminalDispositionFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Authorized|static|const=6|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Canceled|static|const=8|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Creating|static|const=1|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Failed|static|const=9|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Processing|static|const=5|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.RequiresAction|static|const=4|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.RequiresConfirmation|static|const=3|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.RequiresPaymentMethod|static|const=2|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Succeeded|static|const=7|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentOperationState
+FIELD|Concertable.Payment.Grpc.PaymentOperationState.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition.AttemptTerminal|static|const=2|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition.NonTerminal|static|const=1|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition.OperationTerminal|static|const=3|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition
+FIELD|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition.value__|instance|mutable|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentPeriodRequest.PayeeIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentPeriodRequest.PeriodEndFieldNumber|static|const=3|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentPeriodRequest.PeriodStartFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentResponse.ClientSecretFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentResponse.RequiresActionFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentResponse.TransactionIdFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.ClientSecretFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerSessionSecretFieldNumber|static|const=4|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerTokenFieldNumber|static|const=5|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.IdentityFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.KindFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionFundsRouting.Destination|static|const=3|Concertable.Payment.Grpc.PaymentSessionFundsRouting
+FIELD|Concertable.Payment.Grpc.PaymentSessionFundsRouting.None|static|const=1|Concertable.Payment.Grpc.PaymentSessionFundsRouting
+FIELD|Concertable.Payment.Grpc.PaymentSessionFundsRouting.Platform|static|const=2|Concertable.Payment.Grpc.PaymentSessionFundsRouting
+FIELD|Concertable.Payment.Grpc.PaymentSessionFundsRouting.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentSessionFundsRouting
+FIELD|Concertable.Payment.Grpc.PaymentSessionFundsRouting.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.Authorization|static|const=2|Concertable.Payment.Grpc.PaymentSessionKind
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.PaymentMethodSetup|static|const=3|Concertable.Payment.Grpc.PaymentSessionKind
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.PaymentMethodVerification|static|const=4|Concertable.Payment.Grpc.PaymentSessionKind
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.Payment|static|const=1|Concertable.Payment.Grpc.PaymentSessionKind
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.Unspecified|static|const=0|Concertable.Payment.Grpc.PaymentSessionKind
+FIELD|Concertable.Payment.Grpc.PaymentSessionKind.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.AmountMinorFieldNumber|static|const=7|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ConsumerCorrelationFieldNumber|static|const=4|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.CurrencyFieldNumber|static|const=8|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.FundsRoutingFieldNumber|static|const=9|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.KindFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.OperationIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.OperationTypeFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PayeeOwnerIdFieldNumber|static|const=6|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PayerOwnerIdFieldNumber|static|const=5|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PaymentMethodIdFieldNumber|static|const=11|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.SessionFieldNumber|static|const=10|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.ExpectedAttemptIdFieldNumber|static|const=2|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.ExpectedRevisionFieldNumber|static|const=3|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.OperationIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.OwnerIdFieldNumber|static|const=4|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.OperationIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.OwnerIdFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentSessionType.OffSession|static|const=1|Concertable.Payment.Grpc.PaymentSessionType
 FIELD|Concertable.Payment.Grpc.PaymentSessionType.OnSession|static|const=0|Concertable.Payment.Grpc.PaymentSessionType
 FIELD|Concertable.Payment.Grpc.PaymentSessionType.value__|instance|mutable|System.Int32
@@ -260,6 +358,7 @@ FIELD|Concertable.Payment.Grpc.RefundByBookingIdRequest.BookingIdFieldNumber|sta
 FIELD|Concertable.Payment.Grpc.RefundByBookingIdResponse.RefundFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.RefundResponse.RefundIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.BookingIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.OperationIdFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.ReleaseByBookingIdResponse.TransferFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.SettlementReportItemResponse.AmountFieldNumber|static|const=5|System.Int32
 FIELD|Concertable.Payment.Grpc.SettlementReportItemResponse.AtFieldNumber|static|const=6|System.Int32
@@ -291,12 +390,14 @@ METHOD|Concertable.Payment.Client.IEscrowOperationsClient.DepositAsync(System.Gu
 METHOD|Concertable.Payment.Client.IEscrowOperationsClient.DepositBoundCommissionAsync(System.Guid payerId,System.Guid payeeId,Concertable.Kernel.ValueObjects.Money gross,System.String paymentMethodId,Concertable.Payment.Contracts.PaymentSession session,System.Int32 bookingId,System.Guid commissionBindingId,System.String externalReference,System.String stripeSetupIntentId=null,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.EscrowDeposit,Concertable.Payment.Contracts.Errors.EscrowDepositError>>|constraints=
 METHOD|Concertable.Payment.Client.IEscrowOperationsClient.RefundBoundCommissionByBookingIdAsync(System.Int32 bookingId,Concertable.Kernel.ValueObjects.Money gross,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Reunion.Option<Concertable.Payment.Contracts.Refund>,Concertable.Payment.Contracts.Errors.EscrowRefundError>>|constraints=
 METHOD|Concertable.Payment.Client.IEscrowOperationsClient.RefundByBookingIdAsync(System.Int32 bookingId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Reunion.Option<Concertable.Payment.Contracts.Refund>,Concertable.Payment.Contracts.Errors.EscrowRefundError>>|constraints=
+METHOD|Concertable.Payment.Client.IEscrowOperationsClient.ReleaseByBookingIdAsync(System.Guid operationId,System.Int32 bookingId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Reunion.Option<Concertable.Payment.Contracts.Transfer>,Concertable.Payment.Contracts.Errors.EscrowReleaseOperationError>>|constraints=
 METHOD|Concertable.Payment.Client.IEscrowOperationsClient.ReleaseByBookingIdAsync(System.Int32 bookingId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Reunion.Option<Concertable.Payment.Contracts.Transfer>,Concertable.Payment.Contracts.Errors.EscrowReleaseError>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.CreateBoundCommissionHoldSessionAsync(System.Guid payerId,Concertable.Kernel.ValueObjects.Money gross,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> metadata,System.Guid commissionBindingId,System.String externalReference,System.String stripeSetupIntentId=null,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Client.CheckoutSession,Concertable.Payment.Contracts.Errors.HoldSessionError>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.CreateHoldSessionAsync(System.Guid payerId,Concertable.Kernel.ValueObjects.Money amount,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> metadata,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Concertable.Payment.Client.CheckoutSession>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.CreateSetupSessionAsync(System.Guid payerId,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> metadata,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Concertable.Payment.Client.CheckoutSession>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.CreateVerifySessionAsync(System.Guid payerId,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> metadata,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Concertable.Payment.Client.CheckoutSession>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.FindHeldIntentAsync(System.Guid payerId,System.Int32 applicationId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<System.String>|constraints=
+METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.PayAsync(System.Guid operationId,System.Guid payerId,System.Guid payeeId,Concertable.Kernel.ValueObjects.Money amount,System.String paymentMethodId,Concertable.Payment.Contracts.PaymentSession session,System.Int32 bookingId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.PaymentOutcome,Concertable.Payment.Contracts.Errors.ManagerPaymentOperationError>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.PayAsync(System.Guid payerId,System.Guid payeeId,Concertable.Kernel.ValueObjects.Money amount,System.String paymentMethodId,Concertable.Payment.Contracts.PaymentSession session,System.Int32 bookingId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.PaymentOutcome,Concertable.Payment.Contracts.Errors.ManagerPaymentError>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentOperationsClient.PayBoundCommissionAsync(System.Guid payerId,System.Guid payeeId,Concertable.Kernel.ValueObjects.Money gross,System.String paymentMethodId,Concertable.Payment.Contracts.PaymentSession session,System.Int32 bookingId,System.Guid commissionBindingId,System.String externalReference,System.String stripeSetupIntentId=null,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.PaymentOutcome,Concertable.Payment.Contracts.Errors.ManagerPaymentError>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentReportingClient.GetRecentSettlementsAsync(System.Guid ownerId,System.Int32 take,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Concertable.Payment.Client.ManagerSettlement>>|constraints=
@@ -304,6 +405,9 @@ METHOD|Concertable.Payment.Client.IManagerPaymentReportingClient.GetSettlementPa
 METHOD|Concertable.Payment.Client.IManagerPaymentReportingClient.GetSettlementPayoutsByMonthAsync(System.Guid payeeId,Concertable.Kernel.ValueObjects.DateRange period,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Concertable.Payment.Client.MonthlyPaymentPoint>>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentReportingClient.GetTicketRevenueAsync(System.Guid payeeId,Concertable.Kernel.ValueObjects.DateRange period,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Concertable.Kernel.ValueObjects.Money>|constraints=
 METHOD|Concertable.Payment.Client.IManagerPaymentReportingClient.GetTicketRevenueByMonthAsync(System.Guid payeeId,Concertable.Kernel.ValueObjects.DateRange period,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Concertable.Payment.Client.MonthlyPaymentPoint>>|constraints=
+METHOD|Concertable.Payment.Client.IPaymentSessionOperationsClient.CreateOrReplayAsync(Concertable.Payment.Contracts.PaymentSessionOperationRequest request,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Client.PaymentSessionDescriptor,Concertable.Payment.Contracts.Errors.PaymentOperationError>>|constraints=
+METHOD|Concertable.Payment.Client.IPaymentSessionOperationsClient.GetStatusAsync(Concertable.Payment.Contracts.PaymentSessionStatusRequest request,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Client.PaymentOperationSnapshot,Concertable.Payment.Contracts.Errors.PaymentOperationError>>|constraints=
+METHOD|Concertable.Payment.Client.IPaymentSessionOperationsClient.RetryAsync(Concertable.Payment.Contracts.PaymentSessionRetryRequest request,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Client.PaymentSessionDescriptor,Concertable.Payment.Contracts.Errors.PaymentOperationError>>|constraints=
 METHOD|Concertable.Payment.Client.IPayoutAccountOperationsClient.CreateSetupIntentAsync(System.Guid ownerId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Option<System.String>>|constraints=
 METHOD|Concertable.Payment.Client.IPayoutAccountOperationsClient.GetAccountStatusAsync(System.Guid ownerId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Concertable.Payment.Client.Enums.PayoutAccountStatus>|constraints=
 METHOD|Concertable.Payment.Client.IPayoutAccountOperationsClient.GetOnboardingLinkAsync(System.Guid ownerId,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Option<System.String>>|constraints=
@@ -324,6 +428,22 @@ METHOD|Concertable.Payment.Client.MonthlyPaymentPoint.GetHashCode()|instance|ret
 METHOD|Concertable.Payment.Client.MonthlyPaymentPoint.ToString()|instance|returns=System.String|constraints=
 METHOD|Concertable.Payment.Client.MonthlyPaymentPoint.op_Equality(Concertable.Payment.Client.MonthlyPaymentPoint left,Concertable.Payment.Client.MonthlyPaymentPoint right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Client.MonthlyPaymentPoint.op_Inequality(Concertable.Payment.Client.MonthlyPaymentPoint left,Concertable.Payment.Client.MonthlyPaymentPoint right)|static|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.<Clone>$()|instance|returns=Concertable.Payment.Client.PaymentOperationSnapshot|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.Deconstruct(out Concertable.Payment.Contracts.PaymentOperationIdentity Identity,out Concertable.Payment.Contracts.PaymentOperationState State,out Concertable.Payment.Contracts.PaymentOperationTerminalDisposition TerminalDisposition,out Concertable.Payment.Contracts.PaymentOperationRetryDisposition RetryDisposition,out System.Nullable<System.DateTimeOffset> ExpiresAt,out System.Nullable<System.DateTimeOffset> CaptureBefore,out Concertable.Payment.Contracts.PaymentOperationFailure Failure)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.Equals(Concertable.Payment.Client.PaymentOperationSnapshot other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.op_Equality(Concertable.Payment.Client.PaymentOperationSnapshot left,Concertable.Payment.Client.PaymentOperationSnapshot right)|static|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentOperationSnapshot.op_Inequality(Concertable.Payment.Client.PaymentOperationSnapshot left,Concertable.Payment.Client.PaymentOperationSnapshot right)|static|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.<Clone>$()|instance|returns=Concertable.Payment.Client.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.Deconstruct(out Concertable.Payment.Contracts.PaymentOperationIdentity Identity,out Concertable.Payment.Contracts.PaymentSessionKind Kind,out System.String ClientSecret,out System.String CustomerSessionSecret,out System.String CustomerToken)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.Equals(Concertable.Payment.Client.PaymentSessionDescriptor other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.op_Equality(Concertable.Payment.Client.PaymentSessionDescriptor left,Concertable.Payment.Client.PaymentSessionDescriptor right)|static|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Client.PaymentSessionDescriptor.op_Inequality(Concertable.Payment.Client.PaymentSessionDescriptor left,Concertable.Payment.Client.PaymentSessionDescriptor right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Client.SavedCard.<Clone>$()|instance|returns=Concertable.Payment.Client.SavedCard|constraints=
 METHOD|Concertable.Payment.Client.SavedCard.Deconstruct(out System.String Brand,out System.String Last4,out System.Int32 ExpMonth,out System.Int32 ExpYear)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Client.SavedCard.Equals(Concertable.Payment.Client.SavedCard other)|instance|returns=System.Boolean|constraints=
@@ -556,6 +676,7 @@ METHOD|Concertable.Payment.Grpc.Escrow+EscrowClient.ReleaseByBookingId(Concertab
 METHOD|Concertable.Payment.Grpc.Escrow+EscrowClient.ReleaseByBookingIdAsync(Concertable.Payment.Grpc.ReleaseByBookingIdRequest request,Grpc.Core.CallOptions options)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.ReleaseByBookingIdResponse>|constraints=
 METHOD|Concertable.Payment.Grpc.Escrow+EscrowClient.ReleaseByBookingIdAsync(Concertable.Payment.Grpc.ReleaseByBookingIdRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.ReleaseByBookingIdResponse>|constraints=
 METHOD|Concertable.Payment.Grpc.EscrowResponse.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.EscrowResponse.ClearClientSecret()|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.EscrowResponse.Clone()|instance|returns=Concertable.Payment.Grpc.EscrowResponse|constraints=
 METHOD|Concertable.Payment.Grpc.EscrowResponse.Equals(Concertable.Payment.Grpc.EscrowResponse other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Grpc.EscrowResponse.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
@@ -693,6 +814,33 @@ METHOD|Concertable.Payment.Grpc.PaymentMethodResponse.MergeFrom(Concertable.Paym
 METHOD|Concertable.Payment.Grpc.PaymentMethodResponse.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentMethodResponse.ToString()|instance|returns=System.String|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentMethodResponse.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentOperationFailure|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.Equals(Concertable.Payment.Grpc.PaymentOperationFailure other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.MergeFrom(Concertable.Payment.Grpc.PaymentOperationFailure other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationFailure.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentOperationIdentity|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.Equals(Concertable.Payment.Grpc.PaymentOperationIdentity other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.MergeFrom(Concertable.Payment.Grpc.PaymentOperationIdentity other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationIdentity.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentOperationSnapshot|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.Equals(Concertable.Payment.Grpc.PaymentOperationSnapshot other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.MergeFrom(Concertable.Payment.Grpc.PaymentOperationSnapshot other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentOperationSnapshot.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.CalculateSize()|instance|returns=System.Int32|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentPeriodRequest|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.Equals(Concertable.Payment.Grpc.PaymentPeriodRequest other)|instance|returns=System.Boolean|constraints=
@@ -703,6 +851,7 @@ METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.MergeFrom(Google.Protobuf.C
 METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.ToString()|instance|returns=System.String|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentPeriodRequest.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentResponse.ClearClientSecret()|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentResponse|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.Equals(Concertable.Payment.Grpc.PaymentResponse other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
@@ -711,6 +860,58 @@ METHOD|Concertable.Payment.Grpc.PaymentResponse.MergeFrom(Concertable.Payment.Gr
 METHOD|Concertable.Payment.Grpc.PaymentResponse.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.ToString()|instance|returns=System.String|constraints=
 METHOD|Concertable.Payment.Grpc.PaymentResponse.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.Equals(Concertable.Payment.Grpc.PaymentSessionDescriptor other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.MergeFrom(Concertable.Payment.Grpc.PaymentSessionDescriptor other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionDescriptor.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ClearAmountMinor()|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ClearCurrency()|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ClearPayeeOwnerId()|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ClearPaymentMethodId()|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentSessionOperationRequest|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Equals(Concertable.Payment.Grpc.PaymentSessionOperationRequest other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.MergeFrom(Concertable.Payment.Grpc.PaymentSessionOperationRequest other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperationRequest.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.CreateOrReplay(Concertable.Payment.Grpc.PaymentSessionOperationRequest request,Grpc.Core.CallOptions options)|instance|returns=Concertable.Payment.Grpc.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.CreateOrReplay(Concertable.Payment.Grpc.PaymentSessionOperationRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Concertable.Payment.Grpc.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.CreateOrReplayAsync(Concertable.Payment.Grpc.PaymentSessionOperationRequest request,Grpc.Core.CallOptions options)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentSessionDescriptor>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.CreateOrReplayAsync(Concertable.Payment.Grpc.PaymentSessionOperationRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentSessionDescriptor>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.GetStatus(Concertable.Payment.Grpc.PaymentSessionStatusRequest request,Grpc.Core.CallOptions options)|instance|returns=Concertable.Payment.Grpc.PaymentOperationSnapshot|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.GetStatus(Concertable.Payment.Grpc.PaymentSessionStatusRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Concertable.Payment.Grpc.PaymentOperationSnapshot|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.GetStatusAsync(Concertable.Payment.Grpc.PaymentSessionStatusRequest request,Grpc.Core.CallOptions options)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentOperationSnapshot>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.GetStatusAsync(Concertable.Payment.Grpc.PaymentSessionStatusRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentOperationSnapshot>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.Retry(Concertable.Payment.Grpc.PaymentSessionRetryRequest request,Grpc.Core.CallOptions options)|instance|returns=Concertable.Payment.Grpc.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.Retry(Concertable.Payment.Grpc.PaymentSessionRetryRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Concertable.Payment.Grpc.PaymentSessionDescriptor|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.RetryAsync(Concertable.Payment.Grpc.PaymentSessionRetryRequest request,Grpc.Core.CallOptions options)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentSessionDescriptor>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient.RetryAsync(Concertable.Payment.Grpc.PaymentSessionRetryRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.PaymentSessionDescriptor>|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentSessionRetryRequest|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.Equals(Concertable.Payment.Grpc.PaymentSessionRetryRequest other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.MergeFrom(Concertable.Payment.Grpc.PaymentSessionRetryRequest other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionRetryRequest.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.CalculateSize()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.Clone()|instance|returns=Concertable.Payment.Grpc.PaymentSessionStatusRequest|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.Equals(Concertable.Payment.Grpc.PaymentSessionStatusRequest other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.Equals(System.Object other)|instance|returns=System.Boolean|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.GetHashCode()|instance|returns=System.Int32|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.MergeFrom(Concertable.Payment.Grpc.PaymentSessionStatusRequest other)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.MergeFrom(Google.Protobuf.CodedInputStream input)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.ToString()|instance|returns=System.String|constraints=
+METHOD|Concertable.Payment.Grpc.PaymentSessionStatusRequest.WriteTo(Google.Protobuf.CodedOutputStream output)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient.CreateSetupIntent(Concertable.Payment.Grpc.PayoutOwnerRequest request,Grpc.Core.CallOptions options)|instance|returns=Concertable.Payment.Grpc.SetupIntentResponse|constraints=
 METHOD|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient.CreateSetupIntent(Concertable.Payment.Grpc.PayoutOwnerRequest request,Grpc.Core.Metadata headers=null,System.Nullable<System.DateTime> deadline=null,System.Threading.CancellationToken cancellationToken=null)|instance|returns=Concertable.Payment.Grpc.SetupIntentResponse|constraints=
 METHOD|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient.CreateSetupIntentAsync(Concertable.Payment.Grpc.PayoutOwnerRequest request,Grpc.Core.CallOptions options)|instance|returns=Grpc.Core.AsyncUnaryCall<Concertable.Payment.Grpc.SetupIntentResponse>|constraints=
@@ -848,6 +1049,18 @@ PROPERTY|Concertable.Payment.Client.MonthlyPaymentPoint.Count|System.Int32|get,i
 PROPERTY|Concertable.Payment.Client.MonthlyPaymentPoint.Gross|Concertable.Kernel.ValueObjects.Money|get,init
 PROPERTY|Concertable.Payment.Client.MonthlyPaymentPoint.Month|System.DateOnly|get,init
 PROPERTY|Concertable.Payment.Client.MonthlyPaymentPoint.Net|Concertable.Kernel.ValueObjects.Money|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.CaptureBefore|System.Nullable<System.DateTimeOffset>|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.ExpiresAt|System.Nullable<System.DateTimeOffset>|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.Failure|Concertable.Payment.Contracts.PaymentOperationFailure|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.Identity|Concertable.Payment.Contracts.PaymentOperationIdentity|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.RetryDisposition|Concertable.Payment.Contracts.PaymentOperationRetryDisposition|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.State|Concertable.Payment.Contracts.PaymentOperationState|get,init
+PROPERTY|Concertable.Payment.Client.PaymentOperationSnapshot.TerminalDisposition|Concertable.Payment.Contracts.PaymentOperationTerminalDisposition|get,init
+PROPERTY|Concertable.Payment.Client.PaymentSessionDescriptor.ClientSecret|System.String|get,init
+PROPERTY|Concertable.Payment.Client.PaymentSessionDescriptor.CustomerSessionSecret|System.String|get,init
+PROPERTY|Concertable.Payment.Client.PaymentSessionDescriptor.CustomerToken|System.String|get,init
+PROPERTY|Concertable.Payment.Client.PaymentSessionDescriptor.Identity|Concertable.Payment.Contracts.PaymentOperationIdentity|get,init
+PROPERTY|Concertable.Payment.Client.PaymentSessionDescriptor.Kind|Concertable.Payment.Contracts.PaymentSessionKind|get,init
 PROPERTY|Concertable.Payment.Client.SavedCard.Brand|System.String|get,init
 PROPERTY|Concertable.Payment.Client.SavedCard.ExpMonth|System.Int32|get,init
 PROPERTY|Concertable.Payment.Client.SavedCard.ExpYear|System.Int32|get,init
@@ -987,6 +1200,7 @@ PROPERTY|Concertable.Payment.Grpc.EscrowResponse.ChargeId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.ClientSecret|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.EscrowId|System.Int32|get,set
+PROPERTY|Concertable.Payment.Grpc.EscrowResponse.HasClientSecret|System.Boolean|get
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.EscrowResponse>|get
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.Status|Concertable.Payment.Grpc.EscrowStatusType|get,set
 PROPERTY|Concertable.Payment.Grpc.FindHeldIntentRequest.ApplicationId|System.Int32|get,set
@@ -999,6 +1213,7 @@ PROPERTY|Concertable.Payment.Grpc.FindHeldIntentResponse.PaymentIntentId|System.
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.Amount|Concertable.Payment.Grpc.Money|get,set
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.BookingId|System.Int32|get,set
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.OperationId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.ManagerPayRequest>|get
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.PayeeId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ManagerPayRequest.PayerId|System.String|get,set
@@ -1033,6 +1248,24 @@ PROPERTY|Concertable.Payment.Grpc.PaymentMethodResponse.ExpYear|System.Int32|get
 PROPERTY|Concertable.Payment.Grpc.PaymentMethodResponse.HasCard|System.Boolean|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentMethodResponse.Last4|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentMethodResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentMethodResponse>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationFailure.Code|Concertable.Payment.Grpc.PaymentOperationFailureCode|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationFailure.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationFailure.Message|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationFailure.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentOperationFailure>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationIdentity.AttemptId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationIdentity.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationIdentity.OperationId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationIdentity.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentOperationIdentity>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationIdentity.Revision|System.Int64|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.CaptureBefore|Google.Protobuf.WellKnownTypes.Timestamp|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.ExpiresAt|Google.Protobuf.WellKnownTypes.Timestamp|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.Failure|Concertable.Payment.Grpc.PaymentOperationFailure|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.Identity|Concertable.Payment.Grpc.PaymentOperationIdentity|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentOperationSnapshot>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.RetryDisposition|Concertable.Payment.Grpc.PaymentOperationRetryDisposition|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.State|Concertable.Payment.Grpc.PaymentOperationState|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentOperationSnapshot.TerminalDisposition|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentPeriodRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.PaymentPeriodRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentPeriodRequest>|get
 PROPERTY|Concertable.Payment.Grpc.PaymentPeriodRequest.PayeeId|System.String|get,set
@@ -1041,9 +1274,45 @@ PROPERTY|Concertable.Payment.Grpc.PaymentPeriodRequest.PeriodStart|Google.Protob
 PROPERTY|Concertable.Payment.Grpc.PaymentReflection.Descriptor|Google.Protobuf.Reflection.FileDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.ClientSecret|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentResponse.HasClientSecret|System.Boolean|get
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentResponse>|get
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.RequiresAction|System.Boolean|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.TransactionId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.ClientSecret|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerSessionSecret|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerToken|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.Identity|Concertable.Payment.Grpc.PaymentOperationIdentity|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.Kind|Concertable.Payment.Grpc.PaymentSessionKind|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentSessionDescriptor>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.AmountMinor|System.Int64|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.ConsumerCorrelation|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Currency|Concertable.Payment.Grpc.Currency|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.FundsRouting|Concertable.Payment.Grpc.PaymentSessionFundsRouting|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.HasAmountMinor|System.Boolean|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.HasCurrency|System.Boolean|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.HasPayeeOwnerId|System.Boolean|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.HasPaymentMethodId|System.Boolean|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Kind|Concertable.Payment.Grpc.PaymentSessionKind|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.OperationId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.OperationType|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentSessionOperationRequest>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PayeeOwnerId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PayerOwnerId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.PaymentMethodId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperationRequest.Session|Concertable.Payment.Grpc.PaymentSessionType|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionOperations.Descriptor|Google.Protobuf.Reflection.ServiceDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.ExpectedAttemptId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.ExpectedRevision|System.Int64|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.OperationId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.OwnerId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionRetryRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentSessionRetryRequest>|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionStatusRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionStatusRequest.OperationId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionStatusRequest.OwnerId|System.String|get,set
+PROPERTY|Concertable.Payment.Grpc.PaymentSessionStatusRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentSessionStatusRequest>|get
 PROPERTY|Concertable.Payment.Grpc.PayoutAccount.Descriptor|Google.Protobuf.Reflection.ServiceDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.PayoutOwnerRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.PayoutOwnerRequest.OwnerId|System.String|get,set
@@ -1066,6 +1335,7 @@ PROPERTY|Concertable.Payment.Grpc.RefundResponse.Parser|Google.Protobuf.MessageP
 PROPERTY|Concertable.Payment.Grpc.RefundResponse.RefundId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.BookingId|System.Int32|get,set
 PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.OperationId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.ReleaseByBookingIdRequest>|get
 PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.ReleaseByBookingIdResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.ReleaseByBookingIdResponse>|get
@@ -1092,6 +1362,8 @@ TYPE|class|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions|bas
 TYPE|class|Concertable.Payment.Client.ManagerSettlement|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.ManagerSettlement>|constraints=
 TYPE|class|Concertable.Payment.Client.MonthlyPaymentPoint|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.MonthlyPaymentPoint>|constraints=
 TYPE|class|Concertable.Payment.Client.PaymentContractMismatchException|base=System.Exception|interfaces=System.Runtime.Serialization.ISerializable|constraints=
+TYPE|class|Concertable.Payment.Client.PaymentOperationSnapshot|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.PaymentOperationSnapshot>|constraints=
+TYPE|class|Concertable.Payment.Client.PaymentSessionDescriptor|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.PaymentSessionDescriptor>|constraints=
 TYPE|class|Concertable.Payment.Client.SavedCard|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.SavedCard>|constraints=
 TYPE|class|Concertable.Payment.Grpc.AccountStatusResponse|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.AccountStatusResponse>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.AccountStatusResponse>,System.IEquatable<Concertable.Payment.Grpc.AccountStatusResponse>|constraints=
 TYPE|class|Concertable.Payment.Grpc.BoundCommissionCaptureRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.BoundCommissionCaptureRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.BoundCommissionCaptureRequest>,System.IEquatable<Concertable.Payment.Grpc.BoundCommissionCaptureRequest>|constraints=
@@ -1130,9 +1402,18 @@ TYPE|class|Concertable.Payment.Grpc.MonthlyPaymentSeriesResponse|base=System.Obj
 TYPE|class|Concertable.Payment.Grpc.OnboardingLinkResponse|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.OnboardingLinkResponse>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.OnboardingLinkResponse>,System.IEquatable<Concertable.Payment.Grpc.OnboardingLinkResponse>|constraints=
 TYPE|class|Concertable.Payment.Grpc.OperationErrorDetail|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.OperationErrorDetail>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.OperationErrorDetail>,System.IEquatable<Concertable.Payment.Grpc.OperationErrorDetail>|constraints=
 TYPE|class|Concertable.Payment.Grpc.PaymentMethodResponse|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentMethodResponse>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentMethodResponse>,System.IEquatable<Concertable.Payment.Grpc.PaymentMethodResponse>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentOperationFailure|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentOperationFailure>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentOperationFailure>,System.IEquatable<Concertable.Payment.Grpc.PaymentOperationFailure>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentOperationIdentity|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentOperationIdentity>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentOperationIdentity>,System.IEquatable<Concertable.Payment.Grpc.PaymentOperationIdentity>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentOperationSnapshot|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentOperationSnapshot>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentOperationSnapshot>,System.IEquatable<Concertable.Payment.Grpc.PaymentOperationSnapshot>|constraints=
 TYPE|class|Concertable.Payment.Grpc.PaymentPeriodRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentPeriodRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentPeriodRequest>,System.IEquatable<Concertable.Payment.Grpc.PaymentPeriodRequest>|constraints=
 TYPE|class|Concertable.Payment.Grpc.PaymentReflection|base=System.Object|interfaces=|constraints=
 TYPE|class|Concertable.Payment.Grpc.PaymentResponse|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentResponse>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentResponse>,System.IEquatable<Concertable.Payment.Grpc.PaymentResponse>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionDescriptor|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentSessionDescriptor>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentSessionDescriptor>,System.IEquatable<Concertable.Payment.Grpc.PaymentSessionDescriptor>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionOperationRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentSessionOperationRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentSessionOperationRequest>,System.IEquatable<Concertable.Payment.Grpc.PaymentSessionOperationRequest>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient|base=Grpc.Core.ClientBase<Concertable.Payment.Grpc.PaymentSessionOperations+PaymentSessionOperationsClient>|interfaces=|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionOperations|base=System.Object|interfaces=|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionRetryRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentSessionRetryRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentSessionRetryRequest>,System.IEquatable<Concertable.Payment.Grpc.PaymentSessionRetryRequest>|constraints=
+TYPE|class|Concertable.Payment.Grpc.PaymentSessionStatusRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PaymentSessionStatusRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PaymentSessionStatusRequest>,System.IEquatable<Concertable.Payment.Grpc.PaymentSessionStatusRequest>|constraints=
 TYPE|class|Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient|base=Grpc.Core.ClientBase<Concertable.Payment.Grpc.PayoutAccount+PayoutAccountClient>|interfaces=|constraints=
 TYPE|class|Concertable.Payment.Grpc.PayoutAccount|base=System.Object|interfaces=|constraints=
 TYPE|class|Concertable.Payment.Grpc.PayoutOwnerRequest|base=System.Object|interfaces=Google.Protobuf.IBufferMessage,Google.Protobuf.IDeepCloneable<Concertable.Payment.Grpc.PayoutOwnerRequest>,Google.Protobuf.IMessage,Google.Protobuf.IMessage<Concertable.Payment.Grpc.PayoutOwnerRequest>,System.IEquatable<Concertable.Payment.Grpc.PayoutOwnerRequest>|constraints=
@@ -1151,6 +1432,12 @@ TYPE|enum|Concertable.Payment.Client.Enums.PayoutAccountStatus|base=System.Enum|
 TYPE|enum|Concertable.Payment.Grpc.Currency|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
 TYPE|enum|Concertable.Payment.Grpc.EscrowStatusType|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
 TYPE|enum|Concertable.Payment.Grpc.OperationErrorKind|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentOperationFailureCode|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentOperationRetryDisposition|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentOperationState|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentOperationTerminalDisposition|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentSessionFundsRouting|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
+TYPE|enum|Concertable.Payment.Grpc.PaymentSessionKind|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
 TYPE|enum|Concertable.Payment.Grpc.PaymentSessionType|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
 TYPE|enum|Concertable.Payment.Grpc.PayoutAccountStatusType|base=System.Enum|interfaces=System.IComparable,System.IConvertible,System.IFormattable,System.ISpanFormattable|constraints=
 TYPE|interface|Concertable.Payment.Client.ICommissionPricingClient|base=none|interfaces=|constraints=
@@ -1158,4 +1445,5 @@ TYPE|interface|Concertable.Payment.Client.ICustomerPaymentOperationsClient|base=
 TYPE|interface|Concertable.Payment.Client.IEscrowOperationsClient|base=none|interfaces=|constraints=
 TYPE|interface|Concertable.Payment.Client.IManagerPaymentOperationsClient|base=none|interfaces=|constraints=
 TYPE|interface|Concertable.Payment.Client.IManagerPaymentReportingClient|base=none|interfaces=|constraints=
+TYPE|interface|Concertable.Payment.Client.IPaymentSessionOperationsClient|base=none|interfaces=|constraints=
 TYPE|interface|Concertable.Payment.Client.IPayoutAccountOperationsClient|base=none|interfaces=|constraints=
