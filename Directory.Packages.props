@@ -35,6 +35,7 @@
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Reunion" Version="0.1.0-alpha.3" />
     <PackageVersion Include="Reunion.Errors" Version="0.1.0-alpha.3" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Stripe.net" Version="47.3.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
