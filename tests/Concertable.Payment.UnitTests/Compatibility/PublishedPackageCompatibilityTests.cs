@@ -11,7 +11,10 @@ namespace Concertable.Payment.UnitTests.Compatibility;
 
 public sealed class PublishedPackageCompatibilityTests
 {
-    private const string BaselineVersion = "0.1.0-alpha.0.1009";
+    private static readonly string BaselineVersion = typeof(PublishedPackageCompatibilityTests).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .Single(attribute => attribute.Key == "PaymentBaselineVersion")
+        .Value!;
 
     [Fact]
     public void ContractsPublicApi_CurrentSurfaceIsAdditive() =>
