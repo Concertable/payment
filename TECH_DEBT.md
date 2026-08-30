@@ -37,6 +37,20 @@ Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefund
 
 **Resolves when:** a reconcile path exists — e.g. a background sweep (or webhook handler) that, for a `Pending` `PaymentRefundEntity` older than some threshold, queries Stripe for a refund under the reservation's idempotency key and either `Complete`s it (Stripe refund exists) or `Fail`s it (none), freeing the reserved gross.
 
+### `PayoutAccountEntity.MarkVerified()` is production-dead
+
+`Payment/src/Concertable.Payment.Domain/Entities/PayoutAccountEntity.cs` — `MarkVerified()` sets
+`Status = PayoutAccountStatus.Verified`, but nothing in production ever calls it; the only caller is
+`PaymentTestSeeder`. The live "is this account verified" read path (`PayoutAccountService.cs`,
+`StripeAccountClient.cs`) queries Stripe directly instead of consulting this persisted column, so
+`Status` only ever advances `NotVerified -> Pending` (via `LinkAccount`) in production, never reaching
+`Verified`. Either the persisted status is meant to track Stripe's verification outcome (missing a
+production caller — likely a webhook/reconciliation handler that never got wired) or the column/method
+are vestigial from before verification checks moved to a live Stripe query.
+
+**Resolves when:** either a production path calls `MarkVerified()` in response to the real verification
+signal, or the method, the `Verified` status value, and any now-dead column plumbing are removed.
+
 ### gRPC mappers use the `""` literal and erase value presence
 
 `Grpc/PaymentMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`, `TransactionId = r.TransactionId ?? ""`) and `Grpc/EscrowMappers.cs` (`ClientSecret = r.ClientSecret ?? ""`). Proto3 strings can't be null, so a fallback at the wire boundary is genuinely required — but the `""` literal violates the `csharp-style` skill (`string.Empty` for semantic fallbacks), and the receiver has to interpret empty string as "absent" (e.g. no client secret when `RequiresAction` is false).
