@@ -11,7 +11,7 @@ namespace Concertable.Payment.Hosting;
 
 public static class AppHostExtensions
 {
-    public static IResourceBuilder<ContainerResource> AddPaymentWeb(
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWeb(
         this IDistributedApplicationBuilder builder,
         string image,
         string digest,
@@ -65,7 +65,7 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
     }
 
-    public static IResourceBuilder<ContainerResource> AddPaymentWorkers(
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
         this IDistributedApplicationBuilder builder,
         string image,
         string digest,
