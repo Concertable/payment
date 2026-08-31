@@ -47,8 +47,7 @@ internal sealed class LedgerService : ILedgerService
         if (resolved.TryGetValue(reference, out var cached))
             return cached;
 
-        var account = await accountRepository.FindAsync(reference.Type, reference.OwnerId, currency, ct)
-            ?? await accountRepository.AddAsync(LedgerAccountEntity.Create(reference.Type, reference.OwnerId, currency), ct);
+        var account = await accountRepository.GetOrCreateAsync(reference.Type, reference.OwnerId, currency, ct);
 
         resolved[reference] = account;
         return account;
