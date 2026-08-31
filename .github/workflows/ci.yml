@@ -40,6 +40,7 @@ jobs:
           dotnet restore src/Concertable.Payment.Web/Concertable.Payment.Web.csproj
           dotnet restore src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj
           dotnet restore tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj
+          dotnet restore tests/Concertable.Payment.ArchitectureTests/Concertable.Payment.ArchitectureTests.csproj
           dotnet restore src/Concertable.Payment.Hosting/Concertable.Payment.Hosting.csproj
       - name: Build deployable closures
         run: |
@@ -47,6 +48,8 @@ jobs:
           dotnet build src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj --configuration Release --no-restore
       - name: Run unit tests
         run: dotnet test tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj --configuration Release --no-restore
+      - name: Run architecture and composition tests
+        run: dotnet test tests/Concertable.Payment.ArchitectureTests/Concertable.Payment.ArchitectureTests.csproj --configuration Release --no-restore
       - name: Pack Payment-owned packages
         run: |
           dotnet pack src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj --configuration Release --output artifacts/packages

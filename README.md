@@ -29,6 +29,7 @@ dotnet build src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj
 Building the two host projects pulls the whole deployable closure. Repository CI supplies the same variable
 from its read-only `GITHUB_TOKEN`; standalone, you export your own PAT.
 
-The extracted AppHost, architecture tests, and E2E helpers still contain composition/test source references
-owned by the wider polyrepo migration. They are deliberately outside the initial repository CI gate until
-those dependencies are replaced by published Hosting/TestKit packages and pinned images.
+The extracted AppHost and E2E helpers still contain composition/test source references owned by the wider
+polyrepo migration. They remain outside repository CI until those dependencies are replaced by published
+Hosting/TestKit packages and pinned images. Architecture tests are repository-local and run in CI; they
+validate the Payment Web and Workers production registration graphs without starting either host.
