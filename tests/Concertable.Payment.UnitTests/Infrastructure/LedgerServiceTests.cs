@@ -23,8 +23,10 @@ public sealed class LedgerServiceTests
         this.transactionRepository = new Mock<ILedgerTransactionRepository>();
 
         accountRepository
-            .Setup(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((LedgerAccountEntity a, CancellationToken _) => a);
+            .Setup(r => r.GetOrCreateAsync(
+                It.IsAny<LedgerAccountType>(), It.IsAny<Guid?>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((LedgerAccountType type, Guid? ownerId, Currency currency, CancellationToken _) =>
+                LedgerAccountEntity.Create(type, ownerId, currency));
 
         transactionRepository
             .Setup(r => r.AddAsync(It.IsAny<LedgerTransactionEntity>(), It.IsAny<CancellationToken>()))
@@ -37,11 +39,6 @@ public sealed class LedgerServiceTests
             new FakeTimeProvider());
     }
 
-    private void AllAccountsMissing() =>
-        accountRepository
-            .Setup(r => r.FindAsync(It.IsAny<LedgerAccountType>(), It.IsAny<Guid?>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((LedgerAccountEntity?)null);
-
     private LedgerPosting Settlement(Money gross, Money fee) =>
         new(LedgerPostingType.DirectSettlement, "pi_test", BookingId: 7, PaymentIntentId: "pi_test",
         [
@@ -51,35 +48,21 @@ public sealed class LedgerServiceTests
         ]);
 
     [Fact]
-    public async Task StageAsync_WhenAccountsMissing_AddsAccountsAndTransaction()
+    public async Task StageAsync_ResolvesAnAccountPerDistinctReferenceAndAddsTransaction()
     {
-        AllAccountsMissing();
-
         await sut.StageAsync(Settlement(Money.Gbp(50), Money.Gbp(10)));
 
-        accountRepository.Verify(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        accountRepository.Verify(
+            r => r.GetOrCreateAsync(
+                It.IsAny<LedgerAccountType>(), It.IsAny<Guid?>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(3));
         Assert.NotNull(posted);
         Assert.Equal(3, posted!.Entries.Count);
     }
 
     [Fact]
-    public async Task StageAsync_WhenAccountExists_ReusesItInsteadOfCreating()
-    {
-        AllAccountsMissing();
-        accountRepository
-            .Setup(r => r.FindAsync(LedgerAccountType.PlatformRevenue, null, It.IsAny<Currency>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(LedgerAccountEntity.Create(LedgerAccountType.PlatformRevenue, null, Currency.Gbp));
-
-        await sut.StageAsync(Settlement(Money.Gbp(50), Money.Gbp(10)));
-
-        accountRepository.Verify(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
-    }
-
-    [Fact]
     public async Task StageAsync_WhenTwoLegsShareOneAccount_ResolvesItOnlyOnce()
     {
-        AllAccountsMissing();
-
         var posting = new LedgerPosting(
             LedgerPostingType.DirectSettlement, "pi_test", BookingId: 7, PaymentIntentId: "pi_test",
         [
@@ -90,7 +73,10 @@ public sealed class LedgerServiceTests
 
         await sut.StageAsync(posting);
 
-        accountRepository.Verify(r => r.AddAsync(It.IsAny<LedgerAccountEntity>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        accountRepository.Verify(
+            r => r.GetOrCreateAsync(
+                It.IsAny<LedgerAccountType>(), It.IsAny<Guid?>(), It.IsAny<Currency>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
         Assert.NotNull(posted);
         var payableEntries = posted!.Entries.Where(e => e.Account.Type == LedgerAccountType.Payable).ToList();
         Assert.Equal(2, payableEntries.Count);
@@ -100,7 +86,6 @@ public sealed class LedgerServiceTests
     [Fact]
     public async Task StageAsync_RepositoryFailure_Propagates()
     {
-        AllAccountsMissing();
         transactionRepository
             .Setup(r => r.AddAsync(It.IsAny<LedgerTransactionEntity>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Database unavailable"));

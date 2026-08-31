@@ -13,6 +13,10 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
         CancellationToken cancellationToken = default) =>
         Task.FromResult(true);
 
+    public Task<bool> TrySaveChangesAsync(
+        Func<DbUpdateException, bool> isExpected,
+        CancellationToken cancellationToken = default) => Task.FromResult(true);
+
     public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) =>
         throw new NotSupportedException();
 
