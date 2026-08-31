@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>payment-apphost-dev-secrets</UserSecretsId>
+    <CompositionValidationExclusion>Cross-repository Auth, B2B, and AppHost.Shared source references prevent standalone restore; the monorepo composition suite remains the substitute until published Hosting packages and pinned images replace them.</CompositionValidationExclusion>
   </PropertyGroup>
 
   <ItemGroup>
