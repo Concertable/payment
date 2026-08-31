@@ -6,12 +6,12 @@ agnostic adapter — it owns no seed catalog and emits payment events only for *
 never for seed data. As an adapter, data services may call it synchronously and `WaitFor` it at
 startup.
 
-## Canonical source vs. this mirror
+## Repository status
 
-Development happens in the **monorepo** ([`Concertable/concertable`](https://github.com/Concertable/concertable)),
-under `api/Concertable.Payment/`. That folder is **automatically mirrored** to the read-only repo
-[`Concertable/payment`](https://github.com/Concertable/payment) on every
-push to `main`. **Don't open PRs against the mirror** — nothing flows back from it.
+This private repository is the Payment service's polyrepo preparation target. Repository-owned CI and
+release plumbing are prepared here before the approved canonical cutover. The Concertable monorepo remains
+the production source of truth until that cutover; preparation changes belong in this repository and must
+not publish canonical packages or images, change repository visibility, or deploy production early.
 
 ## Building standalone
 
@@ -26,5 +26,9 @@ dotnet build src/Concertable.Payment.Web/Concertable.Payment.Web.csproj
 dotnet build src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj
 ```
 
-Building the two host projects pulls the whole deployable closure. (In the monorepo's CI the same
-variable is supplied by the workflow's `GITHUB_TOKEN`; standalone, you export your own PAT.)
+Building the two host projects pulls the whole deployable closure. Repository CI supplies the same variable
+from its read-only `GITHUB_TOKEN`; standalone, you export your own PAT.
+
+The extracted AppHost, architecture tests, and E2E helpers still contain composition/test source references
+owned by the wider polyrepo migration. They are deliberately outside the initial repository CI gate until
+those dependencies are replaced by published Hosting/TestKit packages and pinned images.
