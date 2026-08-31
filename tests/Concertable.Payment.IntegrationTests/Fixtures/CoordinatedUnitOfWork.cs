@@ -20,14 +20,11 @@ internal sealed class CoordinatedUnitOfWork : IUnitOfWork
         this.incrementSaveCount = incrementSaveCount;
     }
 
-    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        if (incrementSaveCount() == 2)
-            savesMayProceed.TrySetResult();
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await savesMayProceed.Task.WaitAsync(cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-    }
+    public Task<bool> TrySaveChangesAsync(CancellationToken cancellationToken = default) =>
+        TrySaveChangesAsync(static _ => true, cancellationToken);
 
     public async Task<bool> TrySaveChangesAsync(
         Func<DbUpdateException, bool> isExpected,

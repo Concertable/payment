@@ -18,6 +18,8 @@ internal sealed class LedgerService : ILedgerService
 
     public async Task StageAsync(LedgerPosting posting, CancellationToken ct = default)
     {
+        LedgerTransactionEntity.ValidatePosting(posting.ExternalId, posting.Legs.Select(leg => (leg.Direction, leg.Amount)));
+
         var resolved = new Dictionary<LedgerAccountRef, LedgerAccountEntity>();
         var legs = new List<LedgerLeg>(posting.Legs.Count);
 
@@ -47,8 +49,7 @@ internal sealed class LedgerService : ILedgerService
         if (resolved.TryGetValue(reference, out var cached))
             return cached;
 
-        var account = await accountRepository.FindAsync(reference.Type, reference.OwnerId, currency, ct)
-            ?? await accountRepository.AddAsync(LedgerAccountEntity.Create(reference.Type, reference.OwnerId, currency), ct);
+        var account = await accountRepository.GetOrCreateAsync(reference.Type, reference.OwnerId, currency, ct);
 
         resolved[reference] = account;
         return account;
