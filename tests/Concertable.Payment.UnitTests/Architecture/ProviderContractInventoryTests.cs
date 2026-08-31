@@ -10,13 +10,19 @@ public sealed partial class ProviderContractInventoryTests
 {
     private static readonly string RepositoryRoot = FindRepositoryRoot();
     private static readonly ProviderContractInventory Inventory = LoadInventory();
+    private static readonly IReadOnlyList<ResolvedScanRoot> AvailableScanRoots = Inventory.ScanRoots
+        .Select(ResolveScanRoot)
+        .OfType<ResolvedScanRoot>()
+        .ToArray();
     private static readonly IReadOnlyList<MetadataReference> CompilationReferences = CreateCompilationReferences();
     private static readonly HashSet<string> DiscoveredKeys = DiscoverEntryPoints()
         .Select(entry => entry.Key)
         .ToHashSet(StringComparer.Ordinal);
 
-    public static IEnumerable<object[]> CommittedEntryPoints =>
-        Inventory.EntryPoints.Select(entry => new object[] { entry });
+    public static IEnumerable<object[]> LocallyScannableEntryPoints =>
+        Inventory.EntryPoints
+            .Where(entry => AvailableScanRoots.Any(root => IsUnderScanRoot(entry.Path, root.InventoryPath)))
+            .Select(entry => new object[] { entry });
 
     public static TheoryData<string, string?, string> StripeReceiverSyntaxCases => new()
     {
@@ -129,7 +135,10 @@ public sealed partial class ProviderContractInventoryTests
     [Fact]
     public void SourceEntryPoints_CurrentScanMatchesCommittedInventory()
     {
-        var expected = Inventory.EntryPoints.Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
+        var expected = LocallyScannableEntryPoints
+            .Select(parameters => Assert.IsType<ProviderContractEntryPoint>(Assert.Single(parameters)))
+            .Select(entry => entry.Key)
+            .ToHashSet(StringComparer.Ordinal);
         var unclassified = DiscoveredKeys.Except(expected).Order(StringComparer.Ordinal).ToArray();
         var missing = expected.Except(DiscoveredKeys).Order(StringComparer.Ordinal).ToArray();
 
@@ -139,7 +148,7 @@ public sealed partial class ProviderContractInventoryTests
     }
 
     [Theory]
-    [MemberData(nameof(CommittedEntryPoints))]
+    [MemberData(nameof(LocallyScannableEntryPoints))]
     public void CommittedEntryPoint_StillExistsAndHasACompleteDecision(ProviderContractEntryPoint entry)
     {
         var decision = Assert.Single(Inventory.Decisions, decision => decision.Id == entry.DecisionId);
@@ -167,6 +176,9 @@ public sealed partial class ProviderContractInventoryTests
         Assert.Equal(
             expected.Order(StringComparer.Ordinal),
             Inventory.ScanRoots.Select(root => $"{root.Path}|{root.Detector}").Order(StringComparer.Ordinal));
+        Assert.Contains(
+            AvailableScanRoots,
+            root => root.InventoryPath == "api/Concertable.Payment/src");
     }
 
     [Fact]
@@ -179,6 +191,15 @@ public sealed partial class ProviderContractInventoryTests
             Inventory.Decisions
                 .Select(decision => decision.Id)
                 .Except(Inventory.EntryPoints.Select(entry => entry.DecisionId), StringComparer.Ordinal));
+        Assert.All(
+            Inventory.EntryPoints,
+            entry =>
+            {
+                var decision = Assert.Single(Inventory.Decisions, decision => decision.Id == entry.DecisionId);
+                Assert.All(
+                    new[] { decision.Owner, decision.Flow, decision.ProviderProduct, decision.Mode, decision.ConnectModel, decision.Identity, decision.Compatibility },
+                    value => Assert.False(string.IsNullOrWhiteSpace(value)));
+            });
     }
 
     [Theory]
@@ -227,7 +248,10 @@ public sealed partial class ProviderContractInventoryTests
 
     private static ProviderContractInventory LoadInventory()
     {
-        var path = Path.Combine(RepositoryRoot, "api", "Concertable.Payment", "provider-contract-inventory.json");
+        var standalonePath = Path.Combine(RepositoryRoot, "provider-contract-inventory.json");
+        var path = File.Exists(standalonePath)
+            ? standalonePath
+            : Path.Combine(RepositoryRoot, "api", "Concertable.Payment", "provider-contract-inventory.json");
         return JsonSerializer.Deserialize<ProviderContractInventory>(
             File.ReadAllText(path),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
@@ -236,7 +260,7 @@ public sealed partial class ProviderContractInventoryTests
 
     private static IReadOnlyList<DiscoveredEntryPoint> DiscoverEntryPoints()
     {
-        var discovered = Inventory.ScanRoots
+        var discovered = AvailableScanRoots
             .SelectMany(DiscoverEntryPoints)
             .OrderBy(entry => entry.Path, StringComparer.Ordinal)
             .ThenBy(entry => entry.Kind, StringComparer.Ordinal)
@@ -251,14 +275,11 @@ public sealed partial class ProviderContractInventoryTests
             .ToArray();
     }
 
-    private static IEnumerable<DiscoveredEntryPoint> DiscoverEntryPoints(ProviderContractScanRoot root)
+    private static IEnumerable<DiscoveredEntryPoint> DiscoverEntryPoints(ResolvedScanRoot root)
     {
-        var absoluteRoot = Path.Combine(RepositoryRoot, root.Path.Replace('/', Path.DirectorySeparatorChar));
-        Assert.True(Directory.Exists(absoluteRoot), $"Inventory scan root does not exist: {root.Path}");
-
         var extension = root.Detector == "frontend" ? "*.ts*" : "*.cs";
         var paths = Directory
-            .EnumerateFiles(absoluteRoot, extension, SearchOption.AllDirectories)
+            .EnumerateFiles(root.AbsolutePath, extension, SearchOption.AllDirectories)
             .Where(path => !IsGeneratedOrTestPath(path))
             .ToArray();
 
@@ -266,9 +287,9 @@ public sealed partial class ProviderContractInventoryTests
         {
             var sources = paths
                 .Select(path => new PaymentSourceFile(
-                    Path.GetRelativePath(RepositoryRoot, path).Replace('\\', '/'),
+                    GetInventoryPath(root, path),
                     File.ReadAllText(path),
-                    FindContainingProject(path, absoluteRoot)))
+                    FindContainingProject(path, root.AbsolutePath)))
                 .ToArray();
             foreach (var entry in DiscoverPaymentEntries(sources))
                 yield return entry;
@@ -278,7 +299,7 @@ public sealed partial class ProviderContractInventoryTests
         foreach (var path in paths)
         {
             var source = File.ReadAllText(path);
-            var relativePath = Path.GetRelativePath(RepositoryRoot, path).Replace('\\', '/');
+            var relativePath = GetInventoryPath(root, path);
 
             foreach (var entry in root.Detector switch
             {
@@ -421,12 +442,36 @@ public sealed partial class ProviderContractInventoryTests
             || Path.GetFileName(path).Contains(".spec.", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static ResolvedScanRoot? ResolveScanRoot(ProviderContractScanRoot root)
+    {
+        var monorepoPath = Path.Combine(RepositoryRoot, root.Path.Replace('/', Path.DirectorySeparatorChar));
+        if (Directory.Exists(monorepoPath))
+            return new ResolvedScanRoot(root.Path, monorepoPath, root.Detector);
+
+        if (string.Equals(root.Path, "api/Concertable.Payment/src", StringComparison.Ordinal))
+        {
+            var standalonePath = Path.Combine(RepositoryRoot, "src");
+            if (Directory.Exists(standalonePath))
+                return new ResolvedScanRoot(root.Path, standalonePath, root.Detector);
+        }
+
+        return null;
+    }
+
+    private static string GetInventoryPath(ResolvedScanRoot root, string path) =>
+        $"{root.InventoryPath}/{Path.GetRelativePath(root.AbsolutePath, path).Replace('\\', '/')}";
+
+    private static bool IsUnderScanRoot(string path, string scanRoot) =>
+        path.StartsWith($"{scanRoot}/", StringComparison.Ordinal);
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "api", "Concertable.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "api", "Concertable.slnx"))
+                || (File.Exists(Path.Combine(directory.FullName, "Concertable.Payment.slnx"))
+                    && File.Exists(Path.Combine(directory.FullName, "provider-contract-inventory.json"))))
                 return directory.FullName;
             directory = directory.Parent;
         }
@@ -493,3 +538,5 @@ internal sealed record DiscoveredEntryPoint(
 }
 
 internal sealed record PaymentSourceFile(string Path, string Source, string Project);
+
+internal sealed record ResolvedScanRoot(string InventoryPath, string AbsolutePath, string Detector);
