@@ -1,7 +1,7 @@
-using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
+using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -109,7 +109,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         string? providerObjectId,
         CancellationToken ct)
     {
-        var committed = await unitOfWork.TrySaveChangesAsync(static exception => exception.IsDuplicateKey(), ct);
+        var committed = await unitOfWork.TrySaveChangesAsync(static exception => exception is DbUpdateConcurrencyException, ct);
         if (committed)
             return new(attempt, true);
 

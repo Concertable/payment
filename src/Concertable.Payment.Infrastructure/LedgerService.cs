@@ -18,6 +18,8 @@ internal sealed class LedgerService : ILedgerService
 
     public async Task StageAsync(LedgerPosting posting, CancellationToken ct = default)
     {
+        LedgerTransactionEntity.ValidatePosting(posting.ExternalId, posting.Legs.Select(leg => (leg.Direction, leg.Amount)));
+
         var resolved = new Dictionary<LedgerAccountRef, LedgerAccountEntity>();
         var legs = new List<LedgerLeg>(posting.Legs.Count);
 
