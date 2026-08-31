@@ -30,6 +30,7 @@ Building the two host projects pulls the whole deployable closure. Repository CI
 from its read-only `GITHUB_TOKEN`; standalone, you export your own PAT.
 
 The extracted AppHost and E2E helpers still contain composition/test source references owned by the wider
-polyrepo migration. They remain outside repository CI until those dependencies are replaced by published
-Hosting/TestKit packages and pinned images. Architecture tests are repository-local and run in CI; they
-validate the Payment Web and Workers production registration graphs without starting either host.
+polyrepo migration. They remain outside the default solution and repository CI until those dependencies are
+replaced by published Hosting/TestKit packages and pinned images. The default solution restores and builds
+the complete repository-local closure. Architecture tests run in CI and validate the Payment Web and Workers
+production registration graphs without starting either host.
