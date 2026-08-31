@@ -1,3 +1,6 @@
+using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
+using Concertable.Auth.Hosting;
 using Concertable.Payment.Web;
 using Concertable.Payment.Workers;
 using Concertable.Testing.Architecture;
@@ -44,9 +47,24 @@ public sealed class PaymentArchitectureTests
     [Fact]
     public void AppHost_ProductionGraphAndStrictValidation_AreValid()
     {
-        using var app = PaymentAppHost.CreateBuilder([]).Build();
+        var validBuilder = PaymentAppHost.CreateBuilder([]);
+        AssertImageEndpoint(validBuilder, AuthConstants.Resource);
+        using var app = validBuilder.Build();
         var builder = PaymentAppHost.CreateBuilder([]);
         builder.Services.AddInvalidLifetimeGraph();
         Assert.ThrowsAny<Exception>(() => builder.Build());
+    }
+
+    private static void AssertImageEndpoint(
+        IDistributedApplicationBuilder builder,
+        string resourceName)
+    {
+        var resource = Assert.IsType<ServiceContainerResource>(
+            builder.Resources.Single(resource => resource.Name == resourceName));
+        var endpoint = Assert.Single(resource.Annotations.OfType<EndpointAnnotation>());
+
+        Assert.Equal("https", endpoint.Name);
+        Assert.Equal("http", endpoint.UriScheme);
+        Assert.Equal(8080, endpoint.TargetPort);
     }
 }
