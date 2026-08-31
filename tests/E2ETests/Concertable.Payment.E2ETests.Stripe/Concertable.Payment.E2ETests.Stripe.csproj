@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\Concertable.Payment.TestKit\Concertable.Payment.TestKit.csproj" />
   </ItemGroup>
 
 </Project>

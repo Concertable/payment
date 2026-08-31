@@ -1,4 +1,5 @@
 using Concertable.Kernel.Functional;
+using Concertable.Payment.TestKit;
 using Concertable.Seed.Identity;
 using Microsoft.Extensions.Configuration;
 
@@ -7,13 +8,7 @@ namespace Concertable.Payment.E2ETests.Stripe;
 public sealed class StripeAccountResolver
 {
     // Keyed by seed user id — what E2E tests reference. Connect accounts exist for managers only.
-    public static readonly Dictionary<Guid, string> AccountIds = new()
-    {
-        [new Guid("a1000000-0000-0000-0000-000000000001")] = "acct_1TJiMePysoXmht10",
-        [new Guid("a1000000-0000-0000-0000-000000000002")] = "acct_1TJiMoPupFslP2qz",
-        [new Guid("b1000000-0000-0000-0000-000000000001")] = "acct_1TJiMjLxk4aCq1Ui",
-        [new Guid("b1000000-0000-0000-0000-000000000002")] = "acct_1TJiPJLLwGSDilbV",
-    };
+    public static IReadOnlyDictionary<Guid, string> AccountIds => StripeTestAccounts.BySeedUserId;
 
     private static readonly HashSet<Guid> managerUserIds =
         SeedUsers.Managers.Select(manager => manager.Id).ToHashSet();
