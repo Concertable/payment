@@ -52,13 +52,7 @@ jobs:
           dotnet pack src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj --configuration Release --output artifacts/packages
           dotnet pack src/Concertable.Payment.Client/Concertable.Payment.Client.csproj --configuration Release --output artifacts/packages
           dotnet pack src/Concertable.Payment.Hosting/Concertable.Payment.Hosting.csproj --configuration Release --output artifacts/packages
-      - name: Upload package candidates
-        uses: actions/upload-artifact@v4
-        with:
-          name: payment-packages-${{ github.sha }}
-          path: artifacts/packages/*.nupkg
-          if-no-files-found: error
-          retention-days: 7
+          test "$(find artifacts/packages -maxdepth 1 -name '*.nupkg' | wc -l)" -eq 3
 
   integration-tests:
     name: Integration tests
