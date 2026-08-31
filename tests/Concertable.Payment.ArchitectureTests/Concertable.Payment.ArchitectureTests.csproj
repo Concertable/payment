@@ -18,7 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.AppHost\Concertable.Payment.AppHost.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
     <PackageReference Include="Concertable.Testing.Architecture" />
