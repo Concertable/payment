@@ -40,13 +40,4 @@ public sealed class PaymentArchitectureTests
         invalidBuilder.Services.AddInvalidLifetimeGraph();
         Assert.ThrowsAny<Exception>(() => invalidBuilder.Build());
     }
-
-    [Fact]
-    public void AppHost_ProductionGraphAndStrictValidation_AreValid()
-    {
-        using var app = PaymentAppHost.CreateBuilder([]).Build();
-        var builder = PaymentAppHost.CreateBuilder([]);
-        builder.Services.AddInvalidLifetimeGraph();
-        Assert.ThrowsAny<Exception>(() => builder.Build());
-    }
 }
