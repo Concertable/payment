@@ -1,0 +1,28 @@
+{
+  "scripts": {
+    "docker-health.ps1": {
+      "source": "Concertable/agent-standards",
+      "path": "scripts/docker-health.ps1",
+      "commit": "76758be8ae5973ebca29bf6c28814e697ccdd9c6",
+      "sha256": "sha256:985ce6ca8e4f82dc4e707f5d88aac100857404c56b08bf87a20fddafe224083f"
+    },
+    "provision-agent-standards.ps1": {
+      "source": "Concertable/agent-standards",
+      "path": "scripts/provision-agent-standards.ps1",
+      "commit": "fadfa0e1192c76fbcd66ab31eb46168c7d94233d",
+      "sha256": "sha256:20b8d0f593bb8a0ed2e25ec5f057a5fef3671ef778e441cf2a8de974c06ab82d"
+    },
+    "start-concertable-agent.ps1": {
+      "source": "Concertable/agent-standards",
+      "path": "scripts/start-concertable-agent.ps1",
+      "commit": "fadfa0e1192c76fbcd66ab31eb46168c7d94233d",
+      "sha256": "sha256:dd9dd8816da0596dba601983bf63556c000cdfcddef2ab0b3d1654d18bef90a9"
+    },
+    "worktrees.ps1": {
+      "source": "Concertable/agent-standards",
+      "path": "scripts/worktrees.ps1",
+      "commit": "bf713cb62451c38d8deeeee6077be5523b28c7cd",
+      "sha256": "sha256:159d82bc79e8f8e42efdd25f207367facc5fa043e497d8a77dea1c265e3d00ed"
+    }
+  }
+}
