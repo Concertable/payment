@@ -19,7 +19,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly ITransactionRepository transactionRepository;
     private readonly ICommissionService commissionService;
     private readonly CommissionCalculator commissionCalculator;
-    private readonly ILedgerService ledger;
+    private readonly ILedgerService ledgerService;
     private readonly IUnitOfWork unitOfWork;
     private readonly TimeProvider timeProvider;
     private readonly Money platformFee;
@@ -32,7 +32,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         ITransactionRepository transactionRepository,
         ICommissionService commissionService,
         CommissionCalculator commissionCalculator,
-        ILedgerService ledger,
+        ILedgerService ledgerService,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         IOptions<PlatformFeeOptions> platformFeeOptions)
@@ -44,10 +44,10 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.transactionRepository = transactionRepository;
         this.commissionService = commissionService;
         this.commissionCalculator = commissionCalculator;
-        this.ledger = ledger;
+        this.ledgerService = ledgerService;
         this.unitOfWork = unitOfWork;
         this.timeProvider = timeProvider;
-        this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
+        platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
     }
 
     public Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
@@ -178,7 +178,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await transactionRepository.AddAsync(transaction, ct);
 
         if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
-            await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
+            await ledgerService.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         if (operationId is null)
         {
@@ -292,7 +292,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await transactionRepository.AddAsync(transaction, ct);
 
         if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
-            await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
+            await ledgerService.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         await unitOfWork.SaveChangesAsync(ct);
         return Result<PaymentOutcome, ManagerPaymentError>.Success(outcome);
@@ -514,7 +514,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (settlement.CompleteRefund(reservation, completedRefund.RefundId, timeProvider.GetUtcNow()).IsFailure)
             throw new InvalidOperationException("Settlement refund reservation could not be completed.");
 
-        await ledger.StageAsync(
+        await ledgerService.StageAsync(
             LedgerPostings.DirectSettlementRefund(
                 settlement.PayerId,
                 settlement.PayeeId,
