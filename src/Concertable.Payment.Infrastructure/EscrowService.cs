@@ -14,7 +14,7 @@ internal sealed class EscrowService : IEscrowService
     private readonly IPaymentManager paymentManager;
     private readonly IEscrowRepository escrowRepository;
     private readonly IPayoutAccountRepository payoutAccountRepository;
-    private readonly ILedgerService ledger;
+    private readonly ILedgerService ledgerService;
     private readonly IUnitOfWork unitOfWork;
     private readonly ICommissionService commissionService;
     private readonly CommissionCalculator commissionCalculator;
@@ -26,7 +26,7 @@ internal sealed class EscrowService : IEscrowService
         IPaymentManager paymentManager,
         IEscrowRepository escrowRepository,
         IPayoutAccountRepository payoutAccountRepository,
-        ILedgerService ledger,
+        ILedgerService ledgerService,
         IUnitOfWork unitOfWork,
         ICommissionService commissionService,
         CommissionCalculator commissionCalculator,
@@ -37,11 +37,11 @@ internal sealed class EscrowService : IEscrowService
         this.paymentManager = paymentManager;
         this.escrowRepository = escrowRepository;
         this.payoutAccountRepository = payoutAccountRepository;
-        this.ledger = ledger;
+        this.ledgerService = ledgerService;
         this.unitOfWork = unitOfWork;
         this.commissionService = commissionService;
         this.commissionCalculator = commissionCalculator;
-        this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
+        platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
         this.timeProvider = timeProvider;
         this.logger = logger;
     }
@@ -111,7 +111,7 @@ internal sealed class EscrowService : IEscrowService
         if (!outcome.RequiresAction)
         {
             EnsureTransition(escrow.Confirm());
-            await ledger.StageAsync(
+            await ledgerService.StageAsync(
                 LedgerPostings.EscrowHold(
                     escrow.FromOwnerId,
                     escrow.PayerTotalMinor.ToMoney(escrow.Currency),
@@ -189,7 +189,7 @@ internal sealed class EscrowService : IEscrowService
         if (!outcome.RequiresAction)
         {
             EnsureTransition(escrow.Confirm());
-            await ledger.StageAsync(
+            await ledgerService.StageAsync(
                 LedgerPostings.EscrowHold(
                     escrow.FromOwnerId,
                     escrow.PayerTotalMinor.ToMoney(escrow.Currency),
@@ -251,7 +251,7 @@ internal sealed class EscrowService : IEscrowService
         var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
         EnsureTransition(escrow.Confirm());
         await escrowRepository.AddAsync(escrow);
-        await ledger.StageAsync(
+        await ledgerService.StageAsync(
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
@@ -312,7 +312,7 @@ internal sealed class EscrowService : IEscrowService
             paymentIntentId);
         EnsureTransition(escrow.Confirm());
         await escrowRepository.AddAsync(escrow, ct);
-        await ledger.StageAsync(
+        await ledgerService.StageAsync(
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
@@ -392,7 +392,7 @@ internal sealed class EscrowService : IEscrowService
         }
 
         EnsureTransition(escrow.Release(transfer.TransferId, timeProvider.GetUtcNow().DateTime));
-        await ledger.StageAsync(
+        await ledgerService.StageAsync(
             LedgerPostings.EscrowRelease(
                 escrow.ToOwnerId,
                 escrow.PayeeGrossMinor.ToMoney(escrow.Currency),
@@ -750,7 +750,7 @@ internal sealed class EscrowService : IEscrowService
                 escrow.BookingId,
                 escrow.ChargeId,
                 completedRefund.RefundId);
-        await ledger.StageAsync(refundPosting, ct);
+        await ledgerService.StageAsync(refundPosting, ct);
         await unitOfWork.SaveChangesAsync(ct);
         return completedRefund;
     }
