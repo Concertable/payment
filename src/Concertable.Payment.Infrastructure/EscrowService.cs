@@ -67,63 +67,6 @@ internal sealed class EscrowService : IEscrowService
         CancellationToken ct = default) =>
         DepositCoreAsync(payerId, payeeId, amount, paymentMethodId, session, bookingId, operationId, ct);
 
-    private async Task<Result<EscrowDeposit, EscrowDepositError>> DepositCoreAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentMethodId,
-        PaymentSession session,
-        int bookingId,
-        Guid? operationId,
-        CancellationToken ct)
-    {
-        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
-        if (existing is not null)
-            return ExistingDeposit(existing, payerId, payeeId, amount);
-
-        var payerError = await ValidatePayerAsync(payerId, session, ct);
-        if (payerError.TryGetValue(out var error))
-            return new EscrowDepositError.PaymentFailure(error);
-
-        var hold = await HoldAsync(
-            payerId,
-            payeeId,
-            amount + platformFee,
-            paymentMethodId,
-            session,
-            OperationMetadata(operationId, new Dictionary<string, string>
-            {
-                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
-                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
-            }),
-            operationId,
-            ct);
-        if (!hold.TryGetValue(out var outcome))
-        {
-            hold.TryGetError(out var paymentError);
-            return new EscrowDepositError.PaymentFailure(paymentError!);
-        }
-
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, outcome.TransactionId);
-        await escrowRepository.AddAsync(escrow);
-        await unitOfWork.SaveChangesAsync(ct);
-
-        if (!outcome.RequiresAction)
-        {
-            EnsureTransition(escrow.Confirm());
-            await ledgerService.StageAsync(
-                LedgerPostings.EscrowHold(
-                    escrow.FromOwnerId,
-                    escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                    escrow.BookingId,
-                    escrow.ChargeId),
-                ct);
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-
-        return new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, outcome.ClientSecret);
-    }
-
     public async Task<Result<EscrowDeposit, EscrowDepositError>> DepositBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
@@ -222,47 +165,6 @@ internal sealed class EscrowService : IEscrowService
         CancellationToken ct = default) =>
         CaptureCoreAsync(payerId, payeeId, amount, paymentIntentId, bookingId, operationId, ct);
 
-    private async Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureCoreAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentIntentId,
-        int bookingId,
-        Guid? operationId,
-        CancellationToken ct)
-    {
-        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
-        if (existing is not null)
-            return ExistingCapture(existing, payerId, payeeId, amount, paymentIntentId);
-
-        var capture = await paymentManager.CaptureAsync(new CaptureRequest
-        {
-            PaymentIntentId = paymentIntentId,
-            OperationId = operationId,
-            Metadata = OperationMetadata(operationId, new Dictionary<string, string>
-            {
-                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
-                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
-            })
-        }, ct);
-        if (capture.TryGetError(out var error))
-            return new EscrowCaptureError.PaymentFailure(error);
-
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
-        EnsureTransition(escrow.Confirm());
-        await escrowRepository.AddAsync(escrow);
-        await ledgerService.StageAsync(
-            LedgerPostings.EscrowHold(
-                escrow.FromOwnerId,
-                escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
-                escrow.ChargeId),
-            ct);
-        await unitOfWork.SaveChangesAsync(ct);
-
-        return new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null);
-    }
-
     public async Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
@@ -337,6 +239,225 @@ internal sealed class EscrowService : IEscrowService
         return error is EscrowReleaseOperationError.ReleaseFailure(var releaseError)
             ? Result<Transfer, EscrowReleaseError>.Failure(releaseError)
             : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
+    }
+
+    public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default)
+    {
+        var result = await ReleaseByBookingIdCoreAsync(null, bookingId, ct);
+        if (result.TryGetValue(out var transfer))
+            return Result<Option<Transfer>, EscrowReleaseError>.Success(transfer);
+
+        result.TryGetError(out var error);
+        return error is EscrowReleaseOperationError.ReleaseFailure(var releaseError)
+            ? Result<Option<Transfer>, EscrowReleaseError>.Failure(releaseError)
+            : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
+    }
+
+    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+        Guid operationId,
+        int bookingId,
+        CancellationToken ct = default) =>
+        ReleaseByBookingIdCoreAsync(operationId, bookingId, ct);
+
+    public Task<Result<Refund, EscrowRefundError>> RefundAsync(
+        int escrowId,
+        Money? amount = null,
+        string? reason = null,
+        CancellationToken ct = default) =>
+        RefundByIdCoreAsync(escrowId, amount, reason, null, ct);
+
+    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
+        int bookingId,
+        Money? amount = null,
+        string? reason = null,
+        CancellationToken ct = default) =>
+        RefundByBookingIdCoreAsync(bookingId, amount, reason, null, ct);
+
+    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
+        int bookingId,
+        Money? amount,
+        string? reason,
+        Guid operationId,
+        CancellationToken ct = default) =>
+        RefundByBookingIdCoreAsync(bookingId, amount, reason, operationId, ct);
+
+    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
+        int bookingId,
+        Money gross,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        var grossMinor = gross.ToMinorUnits();
+        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        if (escrow is null)
+        {
+            logger.NoEscrowToRefundForBooking(bookingId);
+            return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
+        }
+        if (escrow.CommissionBindingId is null)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CommissionBindingNotFound());
+        if (gross.Currency != escrow.Currency)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CurrencyMismatch());
+        if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
+            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());
+        if (grossMinor <= 0)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountMustBePositive());
+
+        var grossAlreadyRefunded = escrow.Refunds
+            .Where(refund => refund.CountsTowardCumulative)
+            .Sum(refund => refund.GrossRefundedMinor);
+        var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
+        if (cumulativeGrossRefund > escrow.PayeeGrossMinor)
+            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountExceedsRemaining());
+
+        var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
+            escrow.CommissionGrossMinor,
+            cumulativeGrossRefund,
+            escrow.PayeeGrossMinor);
+        var cumulativeVatReversal = commissionCalculator.CalculateCumulativeRefund(
+            escrow.CommissionVatMinor,
+            cumulativeGrossRefund,
+            escrow.PayeeGrossMinor);
+        var commissionRefundMinor = checked(
+            cumulativeCommissionRefund -
+            escrow.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionRefundedMinor));
+        var commissionVatReversedMinor = checked(
+            cumulativeVatReversal -
+            escrow.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionVatReversedMinor));
+
+        var refund = await ExecuteRefundAsync(
+            escrow,
+            grossMinor,
+            commissionRefundMinor,
+            commissionVatReversedMinor,
+            reason,
+            null,
+            ct);
+        if (!refund.TryGetValue(out var completedRefund))
+        {
+            refund.TryGetError(out var error);
+            return Result<Option<Refund>, EscrowRefundError>.Failure(error!);
+        }
+        return Result<Option<Refund>, EscrowRefundError>.Success(Option.Some(completedRefund));
+    }
+
+    public async Task<Option<EscrowDto>> GetByBookingIdAsync(
+        int bookingId,
+        CancellationToken ct = default)
+    {
+        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        return escrow is null
+            ? Option.None<EscrowDto>()
+            : Option.Some(new EscrowDto(
+                escrow.Id,
+                escrow.BookingId,
+                escrow.FromOwnerId,
+                escrow.ToOwnerId,
+                escrow.PayerTotalMinor.ToMoney(escrow.Currency).Amount,
+                escrow.Status,
+                escrow.ChargeId,
+                escrow.TransferId,
+                escrow.ReleasedAt));
+    }
+
+    private async Task<Result<EscrowDeposit, EscrowDepositError>> DepositCoreAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        Guid? operationId,
+        CancellationToken ct)
+    {
+        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        if (existing is not null)
+            return ExistingDeposit(existing, payerId, payeeId, amount);
+
+        var payerError = await ValidatePayerAsync(payerId, session, ct);
+        if (payerError.TryGetValue(out var error))
+            return new EscrowDepositError.PaymentFailure(error);
+
+        var hold = await HoldAsync(
+            payerId,
+            payeeId,
+            amount + platformFee,
+            paymentMethodId,
+            session,
+            OperationMetadata(operationId, new Dictionary<string, string>
+            {
+                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
+                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
+            }),
+            operationId,
+            ct);
+        if (!hold.TryGetValue(out var outcome))
+        {
+            hold.TryGetError(out var paymentError);
+            return new EscrowDepositError.PaymentFailure(paymentError!);
+        }
+
+        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, outcome.TransactionId);
+        await escrowRepository.AddAsync(escrow);
+        await unitOfWork.SaveChangesAsync(ct);
+
+        if (!outcome.RequiresAction)
+        {
+            EnsureTransition(escrow.Confirm());
+            await ledgerService.StageAsync(
+                LedgerPostings.EscrowHold(
+                    escrow.FromOwnerId,
+                    escrow.PayerTotalMinor.ToMoney(escrow.Currency),
+                    escrow.BookingId,
+                    escrow.ChargeId),
+                ct);
+            await unitOfWork.SaveChangesAsync(ct);
+        }
+
+        return new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, outcome.ClientSecret);
+    }
+
+    private async Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureCoreAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentIntentId,
+        int bookingId,
+        Guid? operationId,
+        CancellationToken ct)
+    {
+        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        if (existing is not null)
+            return ExistingCapture(existing, payerId, payeeId, amount, paymentIntentId);
+
+        var capture = await paymentManager.CaptureAsync(new CaptureRequest
+        {
+            PaymentIntentId = paymentIntentId,
+            OperationId = operationId,
+            Metadata = OperationMetadata(operationId, new Dictionary<string, string>
+            {
+                [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
+                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
+            })
+        }, ct);
+        if (capture.TryGetError(out var error))
+            return new EscrowCaptureError.PaymentFailure(error);
+
+        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
+        EnsureTransition(escrow.Confirm());
+        await escrowRepository.AddAsync(escrow);
+        await ledgerService.StageAsync(
+            LedgerPostings.EscrowHold(
+                escrow.FromOwnerId,
+                escrow.PayerTotalMinor.ToMoney(escrow.Currency),
+                escrow.BookingId,
+                escrow.ChargeId),
+            ct);
+        await unitOfWork.SaveChangesAsync(ct);
+
+        return new EscrowDeposit(escrow.Id, escrow.ChargeId, escrow.Status, null);
     }
 
     private async Task<Result<Transfer, EscrowReleaseOperationError>> ReleaseByIdCoreAsync(
@@ -417,26 +538,6 @@ internal sealed class EscrowService : IEscrowService
             : new EscrowReleaseOperationError.OperationConflict();
     }
 
-    public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
-        int bookingId,
-        CancellationToken ct = default)
-    {
-        var result = await ReleaseByBookingIdCoreAsync(null, bookingId, ct);
-        if (result.TryGetValue(out var transfer))
-            return Result<Option<Transfer>, EscrowReleaseError>.Success(transfer);
-
-        result.TryGetError(out var error);
-        return error is EscrowReleaseOperationError.ReleaseFailure(var releaseError)
-            ? Result<Option<Transfer>, EscrowReleaseError>.Failure(releaseError)
-            : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
-    }
-
-    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
-        Guid operationId,
-        int bookingId,
-        CancellationToken ct = default) =>
-        ReleaseByBookingIdCoreAsync(operationId, bookingId, ct);
-
     private async Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdCoreAsync(
         Guid? operationId,
         int bookingId,
@@ -462,13 +563,6 @@ internal sealed class EscrowService : IEscrowService
         }
         return Option.Some(transfer);
     }
-
-    public Task<Result<Refund, EscrowRefundError>> RefundAsync(
-        int escrowId,
-        Money? amount = null,
-        string? reason = null,
-        CancellationToken ct = default) =>
-        RefundByIdCoreAsync(escrowId, amount, reason, null, ct);
 
     private async Task<Result<Refund, EscrowRefundError>> RefundByIdCoreAsync(
         int escrowId,
@@ -503,21 +597,6 @@ internal sealed class EscrowService : IEscrowService
         var commissionRefundMinor = checked(refundTotal - grossRefundMinor);
         return await ExecuteRefundAsync(escrow, grossRefundMinor, commissionRefundMinor, 0, reason, operationId, ct);
     }
-
-    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
-        Money? amount = null,
-        string? reason = null,
-        CancellationToken ct = default) =>
-        RefundByBookingIdCoreAsync(bookingId, amount, reason, null, ct);
-
-    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
-        Money? amount,
-        string? reason,
-        Guid operationId,
-        CancellationToken ct = default) =>
-        RefundByBookingIdCoreAsync(bookingId, amount, reason, operationId, ct);
 
     private async Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdCoreAsync(
         int bookingId,
@@ -575,85 +654,6 @@ internal sealed class EscrowService : IEscrowService
         }
         Option<Refund> completed = completedRefund;
         return completed;
-    }
-
-    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
-        int bookingId,
-        Money gross,
-        string? reason = null,
-        CancellationToken ct = default)
-    {
-        var grossMinor = gross.ToMinorUnits();
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
-        if (escrow is null)
-        {
-            logger.NoEscrowToRefundForBooking(bookingId);
-            return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
-        }
-        if (escrow.CommissionBindingId is null)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CommissionBindingNotFound());
-        if (gross.Currency != escrow.Currency)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.CurrencyMismatch());
-        if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.EscrowNotRefundable());
-        if (grossMinor <= 0)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountMustBePositive());
-
-        var grossAlreadyRefunded = escrow.Refunds
-            .Where(refund => refund.CountsTowardCumulative)
-            .Sum(refund => refund.GrossRefundedMinor);
-        var cumulativeGrossRefund = checked(grossAlreadyRefunded + grossMinor);
-        if (cumulativeGrossRefund > escrow.PayeeGrossMinor)
-            return Result<Option<Refund>, EscrowRefundError>.Failure(new EscrowRefundError.AmountExceedsRemaining());
-
-        var cumulativeCommissionRefund = commissionCalculator.CalculateCumulativeRefund(
-            escrow.CommissionGrossMinor,
-            cumulativeGrossRefund,
-            escrow.PayeeGrossMinor);
-        var cumulativeVatReversal = commissionCalculator.CalculateCumulativeRefund(
-            escrow.CommissionVatMinor,
-            cumulativeGrossRefund,
-            escrow.PayeeGrossMinor);
-        var commissionRefundMinor = checked(
-            cumulativeCommissionRefund -
-            escrow.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionRefundedMinor));
-        var commissionVatReversedMinor = checked(
-            cumulativeVatReversal -
-            escrow.Refunds.Where(refund => refund.CountsTowardCumulative).Sum(refund => refund.CommissionVatReversedMinor));
-
-        var refund = await ExecuteRefundAsync(
-            escrow,
-            grossMinor,
-            commissionRefundMinor,
-            commissionVatReversedMinor,
-            reason,
-            null,
-            ct);
-        if (!refund.TryGetValue(out var completedRefund))
-        {
-            refund.TryGetError(out var error);
-            return Result<Option<Refund>, EscrowRefundError>.Failure(error!);
-        }
-        return Result<Option<Refund>, EscrowRefundError>.Success(Option.Some(completedRefund));
-    }
-
-    public async Task<Option<EscrowDto>> GetByBookingIdAsync(
-        int bookingId,
-        CancellationToken ct = default)
-    {
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
-        return escrow is null
-            ? Option.None<EscrowDto>()
-            : Option.Some(new EscrowDto(
-                escrow.Id,
-                escrow.BookingId,
-                escrow.FromOwnerId,
-                escrow.ToOwnerId,
-                escrow.PayerTotalMinor.ToMoney(escrow.Currency).Amount,
-                escrow.Status,
-                escrow.ChargeId,
-                escrow.TransferId,
-                escrow.ReleasedAt));
     }
 
     private async Task<Result<Refund, EscrowRefundError>> ExecuteRefundAsync(

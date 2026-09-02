@@ -73,18 +73,6 @@ internal sealed class EscrowRepository
         return (await LoadReservedByIdAsync(escrowId, ct), false);
     }
 
-    private Task<EscrowEntity?> LoadReservedByIdAsync(int escrowId, CancellationToken ct)
-    {
-        foreach (var entry in context.ChangeTracker.Entries<EscrowEntity>()
-            .Where(entry => entry.Entity.Id == escrowId)
-            .ToList())
-        {
-            entry.State = EntityState.Detached;
-        }
-
-        return context.Escrows.SingleOrDefaultAsync(escrow => escrow.Id == escrowId, ct);
-    }
-
     public async Task<bool> TryReserveRefundGrossAsync(int escrowId, long grossMinor, CancellationToken ct = default)
     {
         var affected = await context.Escrows
@@ -103,4 +91,16 @@ internal sealed class EscrowRepository
             .ExecuteUpdateAsync(
                 s => s.SetProperty(e => e.RefundedGrossMinor, e => e.RefundedGrossMinor - grossMinor),
                 ct);
+
+    private Task<EscrowEntity?> LoadReservedByIdAsync(int escrowId, CancellationToken ct)
+    {
+        foreach (var entry in context.ChangeTracker.Entries<EscrowEntity>()
+            .Where(entry => entry.Entity.Id == escrowId)
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        return context.Escrows.SingleOrDefaultAsync(escrow => escrow.Id == escrowId, ct);
+    }
 }
