@@ -80,147 +80,6 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             : throw new InvalidOperationException("A legacy manager payment cannot produce an operation conflict.");
     }
 
-    private async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayCoreAsync(
-        Guid? operationId,
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentMethodId,
-        PaymentSession session,
-        int bookingId,
-        CancellationToken ct)
-    {
-        SettlementOperationFingerprint? fingerprint = operationId is { } id
-            ? SettlementOperationFingerprint.CreateCharge(
-                id,
-                payerId,
-                payeeId,
-                amount,
-                platformFee,
-                paymentMethodId,
-                session,
-                bookingId)
-            : null;
-
-        if (operationId is { } replayOperationId)
-        {
-            var existing = await transactionRepository.GetSettlementByOperationIdAsync(replayOperationId, ct);
-            if (existing is not null)
-                return await ReplayAsync(existing, replayOperationId, fingerprint!.Value, session, ct);
-        }
-
-        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
-        if (payer is null)
-            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
-                new ManagerPaymentOperationError.ManagerFailure(
-                    new ManagerPaymentError.PaymentFailure(new PaymentError.PayerNotFound())));
-        if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
-            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
-                new ManagerPaymentOperationError.ManagerFailure(
-                    new ManagerPaymentError.PaymentFailure(new PaymentError.PayerUnavailable())));
-
-        var metadata = new Dictionary<string, string>
-        {
-            [PaymentMetadataKeys.Type] = TransactionTypes.Settlement,
-            [PaymentMetadataKeys.BookingId] = bookingId.ToString()
-        };
-        if (operationId is { } metadataOperationId)
-            metadata[PaymentMetadataKeys.OperationId] = metadataOperationId.ToString();
-
-        var charge = operationId is { } chargeOperationId
-            ? await paymentManager.SettleAsync(
-                chargeOperationId,
-                payerId,
-                payeeId,
-                amount + platformFee,
-                amount,
-                paymentMethodId,
-                session,
-                metadata,
-                ct)
-            : await paymentManager.SettleAsync(
-                payerId,
-                payeeId,
-                amount + platformFee,
-                amount,
-                paymentMethodId,
-                session,
-                metadata,
-                ct);
-        if (!charge.TryGetValue(out var outcome))
-        {
-            charge.TryGetError(out var error);
-            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
-                new ManagerPaymentOperationError.ManagerFailure(
-                    new ManagerPaymentError.PaymentFailure(error!)));
-        }
-
-        var transaction = operationId is { } transactionOperationId
-            ? SettlementTransactionEntity.CreateForOperation(
-                payerId,
-                payeeId,
-                outcome.TransactionId,
-                (amount + platformFee).ToMinorUnits(),
-                platformFee.ToMinorUnits(),
-                TransactionStatus.Pending,
-                bookingId,
-                transactionOperationId,
-                fingerprint!.Value,
-                outcome.RequiresAction)
-            : SettlementTransactionEntity.Create(
-                payerId,
-                payeeId,
-                outcome.TransactionId,
-                (amount + platformFee).ToMinorUnits(),
-                platformFee.ToMinorUnits(),
-                TransactionStatus.Pending,
-                bookingId);
-        await transactionRepository.AddAsync(transaction, ct);
-
-        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
-            await ledgerService.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
-
-        if (operationId is null)
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-            return outcome;
-        }
-
-        if (await unitOfWork.TrySaveChangesAsync(static exception => exception.IsDuplicateKey(), ct))
-            return outcome;
-
-        var canonical = await transactionRepository.GetSettlementByOperationIdAsync(operationId.Value, ct);
-        return canonical is null
-            ? new ManagerPaymentOperationError.OperationConflict()
-            : await ReplayAsync(canonical, operationId.Value, fingerprint!.Value, session, ct);
-    }
-
-    private async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> ReplayAsync(
-        SettlementTransactionEntity transaction,
-        Guid operationId,
-        SettlementOperationFingerprint fingerprint,
-        PaymentSession session,
-        CancellationToken ct)
-    {
-        if (!transaction.MatchesOperation(operationId, fingerprint))
-            return new ManagerPaymentOperationError.OperationConflict();
-        if (transaction.Status == TransactionStatus.Complete || !transaction.RequiresAction)
-        {
-            return new PaymentOutcome
-            {
-                TransactionId = transaction.PaymentIntentId
-            };
-        }
-
-        var result = await paymentManager.GetPaymentOutcomeAsync(transaction.PaymentIntentId, session, ct);
-        if (result.TryGetValue(out var outcome))
-            return outcome;
-
-        result.TryGetError(out var error);
-        return new ManagerPaymentOperationError.ManagerFailure(
-            new ManagerPaymentError.PaymentFailure(error!));
-    }
-
     public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
@@ -528,6 +387,147 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         await unitOfWork.SaveChangesAsync(ct);
 
         return Result<Option<Refund>, SettlementRefundError>.Success(Option.Some(completedRefund));
+    }
+
+    private async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayCoreAsync(
+        Guid? operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        string paymentMethodId,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct)
+    {
+        SettlementOperationFingerprint? fingerprint = operationId is { } id
+            ? SettlementOperationFingerprint.CreateCharge(
+                id,
+                payerId,
+                payeeId,
+                amount,
+                platformFee,
+                paymentMethodId,
+                session,
+                bookingId)
+            : null;
+
+        if (operationId is { } replayOperationId)
+        {
+            var existing = await transactionRepository.GetSettlementByOperationIdAsync(replayOperationId, ct);
+            if (existing is not null)
+                return await ReplayAsync(existing, replayOperationId, fingerprint!.Value, session, ct);
+        }
+
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
+        if (payer is null)
+            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
+                new ManagerPaymentOperationError.ManagerFailure(
+                    new ManagerPaymentError.PaymentFailure(new PaymentError.PayerNotFound())));
+        if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
+            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
+                new ManagerPaymentOperationError.ManagerFailure(
+                    new ManagerPaymentError.PaymentFailure(new PaymentError.PayerUnavailable())));
+
+        var metadata = new Dictionary<string, string>
+        {
+            [PaymentMetadataKeys.Type] = TransactionTypes.Settlement,
+            [PaymentMetadataKeys.BookingId] = bookingId.ToString()
+        };
+        if (operationId is { } metadataOperationId)
+            metadata[PaymentMetadataKeys.OperationId] = metadataOperationId.ToString();
+
+        var charge = operationId is { } chargeOperationId
+            ? await paymentManager.SettleAsync(
+                chargeOperationId,
+                payerId,
+                payeeId,
+                amount + platformFee,
+                amount,
+                paymentMethodId,
+                session,
+                metadata,
+                ct)
+            : await paymentManager.SettleAsync(
+                payerId,
+                payeeId,
+                amount + platformFee,
+                amount,
+                paymentMethodId,
+                session,
+                metadata,
+                ct);
+        if (!charge.TryGetValue(out var outcome))
+        {
+            charge.TryGetError(out var error);
+            return Result<PaymentOutcome, ManagerPaymentOperationError>.Failure(
+                new ManagerPaymentOperationError.ManagerFailure(
+                    new ManagerPaymentError.PaymentFailure(error!)));
+        }
+
+        var transaction = operationId is { } transactionOperationId
+            ? SettlementTransactionEntity.CreateForOperation(
+                payerId,
+                payeeId,
+                outcome.TransactionId,
+                (amount + platformFee).ToMinorUnits(),
+                platformFee.ToMinorUnits(),
+                TransactionStatus.Pending,
+                bookingId,
+                transactionOperationId,
+                fingerprint!.Value,
+                outcome.RequiresAction)
+            : SettlementTransactionEntity.Create(
+                payerId,
+                payeeId,
+                outcome.TransactionId,
+                (amount + platformFee).ToMinorUnits(),
+                platformFee.ToMinorUnits(),
+                TransactionStatus.Pending,
+                bookingId);
+        await transactionRepository.AddAsync(transaction, ct);
+
+        if (!outcome.RequiresAction && transaction.Complete(timeProvider.GetUtcNow().UtcDateTime).IsSuccess)
+            await ledgerService.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
+
+        if (operationId is null)
+        {
+            await unitOfWork.SaveChangesAsync(ct);
+            return outcome;
+        }
+
+        if (await unitOfWork.TrySaveChangesAsync(static exception => exception.IsDuplicateKey(), ct))
+            return outcome;
+
+        var canonical = await transactionRepository.GetSettlementByOperationIdAsync(operationId.Value, ct);
+        return canonical is null
+            ? new ManagerPaymentOperationError.OperationConflict()
+            : await ReplayAsync(canonical, operationId.Value, fingerprint!.Value, session, ct);
+    }
+
+    private async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> ReplayAsync(
+        SettlementTransactionEntity transaction,
+        Guid operationId,
+        SettlementOperationFingerprint fingerprint,
+        PaymentSession session,
+        CancellationToken ct)
+    {
+        if (!transaction.MatchesOperation(operationId, fingerprint))
+            return new ManagerPaymentOperationError.OperationConflict();
+        if (transaction.Status == TransactionStatus.Complete || !transaction.RequiresAction)
+        {
+            return new PaymentOutcome
+            {
+                TransactionId = transaction.PaymentIntentId
+            };
+        }
+
+        var result = await paymentManager.GetPaymentOutcomeAsync(transaction.PaymentIntentId, session, ct);
+        if (result.TryGetValue(out var outcome))
+            return outcome;
+
+        result.TryGetError(out var error);
+        return new ManagerPaymentOperationError.ManagerFailure(
+            new ManagerPaymentError.PaymentFailure(error!));
     }
 
     private async Task<Result<Option<Refund>, SettlementRefundError>> ReservationConflictAsync(
