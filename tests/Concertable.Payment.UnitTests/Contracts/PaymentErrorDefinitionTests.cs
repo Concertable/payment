@@ -46,6 +46,8 @@ public sealed class PaymentErrorDefinitionTests
         { new ManagerPaymentError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
         { new ManagerPaymentOperationError.ManagerFailure(new ManagerPaymentError.PaymentFailure(new PaymentError.PaymentRejected())), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
         { new ManagerPaymentOperationError.OperationConflict(), "payment.manager_operation_conflict", "The operation identity conflicts with an existing manager payment.", ErrorKind.Conflict },
+        { new PaymentMethodChargeError.PaymentMethodFailure(new PaymentOperationError.PaymentMethodRequired()), "payment.operation.payment_method_required", "A usable payment method is required.", ErrorKind.PaymentRequired },
+        { new PaymentMethodChargeError.ChargeFailure(new ManagerPaymentOperationError.OperationConflict()), "payment.manager_operation_conflict", "The operation identity conflicts with an existing manager payment.", ErrorKind.Conflict },
         { new EscrowDepositError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
         { new EscrowDepositError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
         { new EscrowCaptureError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
