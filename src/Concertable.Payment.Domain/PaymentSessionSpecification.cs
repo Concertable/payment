@@ -53,6 +53,23 @@ internal sealed class PaymentSessionSpecification
             PaymentSessionCaptureMode.None,
         _ => throw new DomainException("Payment session kind is invalid.")
     };
+
+    internal PaymentSessionSpecification WithOperationId(Guid operationId) =>
+        Create(
+            operationId,
+            SessionKind,
+            Session,
+            OperationType,
+            ConsumerCorrelation,
+            PayerOwnerKey,
+            PayeeOwnerKey,
+            AmountMinor,
+            Currency,
+            FundsRouting,
+            PaymentMethodId,
+            ProviderCustomerId,
+            ProviderConnectedAccountId);
+
     public static PaymentSessionSpecification Create(
         Guid operationId,
         PaymentSessionKind sessionKind,

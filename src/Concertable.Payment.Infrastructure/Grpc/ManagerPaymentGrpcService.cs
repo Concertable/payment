@@ -13,6 +13,23 @@ internal sealed class ManagerPaymentGrpcService : ManagerPayment.ManagerPaymentB
         this.managerPaymentService = managerPaymentService;
     }
 
+    public override async Task<PaymentResponse> PayUsingPaymentMethod(
+        ManagerPayUsingPaymentMethodRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var result = await managerPaymentService.PayAsync(
+            command.OperationId,
+            command.PayerId,
+            command.PayeeId,
+            command.Amount,
+            command.PaymentMethod,
+            command.Session,
+            command.BookingId,
+            context.CancellationToken);
+        return result.ValueOrRpcException().ToProtoPaymentResponse();
+    }
+
     public override async Task<PaymentResponse> Pay(ManagerPayRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();

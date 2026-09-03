@@ -2,7 +2,7 @@ using Concertable.Payment.Domain.ProviderContract;
 
 namespace Concertable.Payment.Application.PaymentSessions;
 
-internal sealed record PaymentSessionProviderResult(
+internal sealed record ProviderSession(
     PaymentSessionProviderObjectKind ProviderObjectKind,
     string ProviderObjectId,
     string Status,
@@ -12,6 +12,7 @@ internal sealed record PaymentSessionProviderResult(
     bool IsExplicitConsumerCancellation,
     bool CanCancel,
     string? ClientSecret,
+    string? PaymentMethodId,
     string? ProviderRequestId,
     string? ProviderDiagnosticCode,
     string? ProviderDiagnosticMessage);

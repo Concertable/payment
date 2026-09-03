@@ -62,6 +62,30 @@ public sealed class PaymentSessionAttemptEntityTests
         Assert.Equal(PaymentOperationFailureCode.Declined, stateChanged.Failure?.Code);
     }
 
+    [Fact]
+    public void ApplyTransition_CompletedPaymentMethodSetup_StoresPaymentMethod()
+    {
+        var attempt = BoundSetupAttempt();
+
+        attempt.ApplyTransition(
+            PaymentSessionKind.PaymentMethodSetup,
+            Transition(PaymentOperationState.Succeeded, CreatedAt.AddSeconds(1)),
+            "pm_test");
+
+        Assert.Equal("pm_test", attempt.PaymentMethodId);
+        Assert.True(attempt.HasUsablePaymentMethod);
+    }
+
+    [Fact]
+    public void ApplyTransition_CompletedPaymentMethodSetupWithoutPaymentMethod_Throws()
+    {
+        var attempt = BoundSetupAttempt();
+
+        Assert.Throws<ArgumentNullException>(() => attempt.ApplyTransition(
+            PaymentSessionKind.PaymentMethodSetup,
+            Transition(PaymentOperationState.Succeeded, CreatedAt.AddSeconds(1))));
+    }
+
     private static PaymentSessionAttemptEntity BoundAttempt()
     {
         var attempt = PaymentSessionAttemptEntity.Create(
@@ -72,6 +96,19 @@ public sealed class PaymentSessionAttemptEntityTests
             PaymentSessionProviderObjectKind.PaymentIntent,
             CreatedAt);
         attempt.BindProviderObject("pi_test_attempt");
+        return attempt;
+    }
+
+    private static PaymentSessionAttemptEntity BoundSetupAttempt()
+    {
+        var attempt = PaymentSessionAttemptEntity.Create(
+            Guid.CreateVersion7(CreatedAt),
+            Guid.CreateVersion7(CreatedAt),
+            1,
+            null,
+            PaymentSessionProviderObjectKind.SetupIntent,
+            CreatedAt);
+        attempt.BindProviderObject("seti_test_attempt");
         return attempt;
     }
 

@@ -66,6 +66,12 @@ internal static class PaymentErrorMappers
         }.Concat(managerPaymentErrors.Values.Select(error =>
             (ManagerPaymentOperationError)new ManagerPaymentOperationError.ManagerFailure(error))));
 
+    private static readonly FrozenDictionary<string, PaymentMethodChargeError> paymentMethodChargeErrors =
+        Index(paymentOperationErrors.Values.Select(error =>
+                (PaymentMethodChargeError)new PaymentMethodChargeError.PaymentMethodFailure(error))
+            .Concat(managerPaymentOperationErrors.Values.Select(error =>
+                (PaymentMethodChargeError)new PaymentMethodChargeError.ChargeFailure(error))));
+
     private static readonly FrozenDictionary<string, HoldSessionError> holdSessionErrors =
         Index(Composite<HoldSessionError>(
             error => new HoldSessionError.PaymentFailure(error),
@@ -128,6 +134,9 @@ internal static class PaymentErrorMappers
 
         internal ManagerPaymentOperationError ToManagerPaymentOperationError() =>
             exception.ToError(managerPaymentOperationErrors);
+
+        internal PaymentMethodChargeError ToPaymentMethodChargeError() =>
+            exception.ToError(paymentMethodChargeErrors);
 
         internal HoldSessionError ToHoldSessionError() =>
             exception.ToError(holdSessionErrors);

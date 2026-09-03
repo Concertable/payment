@@ -152,6 +152,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 new CommissionCalculator(),
                 Mock.Of<ILedgerService>(),
                 new UnitOfWork(context),
+                Mock.Of<IPaymentOperationResolver>(),
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
             await gate.WaitAsync();

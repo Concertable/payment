@@ -41,6 +41,7 @@ public sealed class FinancialOperationHandlerTests
             unitOfWork.Object,
             bus.Object,
             outbox.Object,
+            Mock.Of<IPaymentOperationResolver>(),
             timeProvider);
     }
 

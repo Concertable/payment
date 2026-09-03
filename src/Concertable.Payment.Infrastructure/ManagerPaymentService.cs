@@ -22,6 +22,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
     private readonly CommissionCalculator commissionCalculator;
     private readonly ILedgerService ledger;
     private readonly IUnitOfWork unitOfWork;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
     private readonly TimeProvider timeProvider;
     private readonly Money platformFee;
 
@@ -35,6 +36,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         CommissionCalculator commissionCalculator,
         ILedgerService ledger,
         IUnitOfWork unitOfWork,
+        IPaymentOperationResolver paymentOperationResolver,
         TimeProvider timeProvider,
         IOptions<PlatformFeeOptions> platformFeeOptions)
     {
@@ -47,8 +49,40 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         this.commissionCalculator = commissionCalculator;
         this.ledger = ledger;
         this.unitOfWork = unitOfWork;
+        this.paymentOperationResolver = paymentOperationResolver;
         this.timeProvider = timeProvider;
         this.platformFee = Money.Gbp(platformFeeOptions.Value.Fee);
+    }
+
+    public async Task<Result<PaymentOutcome, PaymentMethodChargeError>> PayAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        PaymentOperationReference paymentMethod,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default)
+    {
+        var resolved = await paymentOperationResolver.ResolvePaymentMethodAsync(paymentMethod, payerId, ct);
+        if (!resolved.TryGetValue(out var paymentMethodId))
+        {
+            resolved.TryGetError(out var error);
+            return new PaymentMethodChargeError.PaymentMethodFailure(error!);
+        }
+
+        var charged = await PayCoreAsync(
+            operationId,
+            payerId,
+            payeeId,
+            amount,
+            paymentMethodId,
+            session,
+            bookingId,
+            ct);
+        return charged.Match<Result<PaymentOutcome, PaymentMethodChargeError>>(
+            outcome => outcome,
+            error => new PaymentMethodChargeError.ChargeFailure(error));
     }
 
     public Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(

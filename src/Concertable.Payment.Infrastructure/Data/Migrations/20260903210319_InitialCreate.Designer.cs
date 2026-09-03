@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260826163308_InitialCreate")]
+    [Migration("20260903210319_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -521,6 +521,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("PaymentMethodId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<Guid?>("PredecessorAttemptId")
                         .HasColumnType("uniqueidentifier");
 
@@ -679,7 +683,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("PayerOwnerKey");
 
-                    b.HasIndex("OperationType", "ConsumerCorrelation");
+                    b.HasIndex("OperationType", "ConsumerCorrelation")
+                        .IsUnique();
 
                     b.ToTable("PaymentSessionOperations", "payment", t =>
                         {

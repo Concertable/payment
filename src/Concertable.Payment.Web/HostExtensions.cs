@@ -85,7 +85,9 @@ public static class HostExtensions
                 reg.Publishes<RefundEscrowDeferredEvent>();
                 reg.HandleCommand<ProcessStripeWebhookCommand>();
                 reg.HandleCommand<CaptureEscrowCommand>();
+                reg.HandleCommand<CaptureEscrowByReferenceCommand>();
                 reg.HandleCommand<DepositEscrowCommand>();
+                reg.HandleCommand<DepositEscrowByReferenceCommand>();
                 reg.HandleCommand<RefundEscrowCommand>();
             });
         services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));

@@ -66,6 +66,7 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddScoped<IPaymentOperationResolver, PaymentOperationResolver>();
         services.AddSingleton<PaymentSessionStateMachine>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();

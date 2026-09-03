@@ -2,6 +2,7 @@ using Concertable.Payment.Grpc;
 using Concertable.Kernel.ValueObjects;
 using Grpc.Core;
 using Money = Concertable.Kernel.ValueObjects.Money;
+using ContractPaymentMethodReference = Concertable.Payment.Contracts.PaymentOperationReference;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
@@ -11,6 +12,15 @@ internal sealed record ManagerPayCommand(
     Guid PayeeId,
     Money Amount,
     string PaymentMethodId,
+    PaymentSession Session,
+    int BookingId);
+
+internal sealed record ManagerPayUsingPaymentMethodCommand(
+    Guid OperationId,
+    Guid PayerId,
+    Guid PayeeId,
+    Money Amount,
+    ContractPaymentMethodReference PaymentMethod,
     PaymentSession Session,
     int BookingId);
 
@@ -52,6 +62,18 @@ internal sealed record RecentSettlementsCommand(Guid OwnerId, int Take);
 
 internal static class ManagerPaymentRequestMappers
 {
+    public static ManagerPayUsingPaymentMethodCommand ToCommand(
+        this ManagerPayUsingPaymentMethodRequest request) => new(
+        request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+        request.Amount.ToMoney(),
+        new(
+            request.PaymentMethod.OperationType,
+            request.PaymentMethod.ConsumerCorrelation),
+        request.Session.ToPaymentSession(),
+        request.BookingId);
+
     public static ManagerPayCommand ToCommand(this ManagerPayRequest request) => new(
         ParseOptionalGuid(request.OperationId, nameof(request.OperationId)),
         request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),

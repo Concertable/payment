@@ -15,6 +15,36 @@ internal sealed class PaymentSessionOperationsClient : IPaymentSessionOperations
         this.client = client;
     }
 
+    public Task<Result<PaymentMethodSetup, PaymentOperationError>> SetupPaymentMethodAsync(
+        PaymentMethodSetupRequest request,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
+            {
+                var response = await client.SetupPaymentMethodAsync(
+                    request.ToProto(),
+                    cancellationToken: ct);
+                return new PaymentMethodSetup(
+                    response.ClientSecret,
+                    string.IsNullOrEmpty(response.CustomerSessionSecret) ? null : response.CustomerSessionSecret,
+                    string.IsNullOrEmpty(response.CustomerToken) ? null : response.CustomerToken);
+            },
+            error => error.ToPaymentOperationError(),
+            ct);
+
+    public Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
+        PaymentMethodValidationRequest request,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () =>
+            {
+                await client.ValidatePaymentMethodAsync(
+                    request.ToProto(),
+                    cancellationToken: ct);
+            },
+            error => error.ToPaymentOperationError(),
+            ct);
+
     public Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateOrReplayAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default) =>

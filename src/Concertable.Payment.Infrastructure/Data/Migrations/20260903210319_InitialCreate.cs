@@ -231,6 +231,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     TerminalAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     ExpiresAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     CaptureBefore = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    PaymentMethodId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     LastProviderEventId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     LastProviderEventCreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
@@ -557,7 +558,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 name: "IX_PaymentSessionOperations_OperationType_ConsumerCorrelation",
                 schema: "payment",
                 table: "PaymentSessionOperations",
-                columns: new[] { "OperationType", "ConsumerCorrelation" });
+                columns: new[] { "OperationType", "ConsumerCorrelation" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentSessionOperations_PayeeOwnerKey",

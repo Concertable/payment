@@ -66,6 +66,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFinancialOperationRepository, FinancialOperationRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddScoped<IPaymentOperationResolver, PaymentOperationResolver>();
         services.AddSingleton<PaymentSessionStateMachine>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();
@@ -141,7 +142,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
         services.AddScoped<FinancialOperationHandler>();
         services.AddScoped<IIntegrationCommandHandler<CaptureEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
+        services.AddScoped<IIntegrationCommandHandler<CaptureEscrowByReferenceCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
         services.AddScoped<IIntegrationCommandHandler<DepositEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
+        services.AddScoped<IIntegrationCommandHandler<DepositEscrowByReferenceCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
         services.AddScoped<IIntegrationCommandHandler<RefundEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
 
         services.AddScoped<IManagerPaymentService, ManagerPaymentService>();

@@ -21,6 +21,17 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(operation => operation.OperationId == operationId, ct);
 
+    public Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
+        string operationType,
+        string consumerCorrelation,
+        CancellationToken ct = default) =>
+        context.PaymentSessionOperations
+            .Include(operation => operation.Attempts)
+            .SingleOrDefaultAsync(
+                operation => operation.OperationType == operationType
+                    && operation.ConsumerCorrelation == consumerCorrelation,
+                ct);
+
     public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
@@ -57,11 +68,17 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
         catch (DbUpdateException ex) when (ex.IsDuplicateKey())
         {
             Detach(candidate.OperationId);
-            existing = await GetByOperationIdAsync(specification.OperationId, ct);
+            existing = await GetByOperationIdAsync(specification.OperationId, ct)
+                ?? await GetByReferenceAsync(
+                    specification.OperationType,
+                    specification.ConsumerCorrelation,
+                    ct);
             if (existing is null)
                 throw;
 
-            return existing.EvaluateInitialReservation(fingerprint);
+            return existing.EvaluateInitialReservation(
+                PaymentSessionFingerprint.Create(
+                    specification.WithOperationId(existing.OperationId)));
         }
     }
 

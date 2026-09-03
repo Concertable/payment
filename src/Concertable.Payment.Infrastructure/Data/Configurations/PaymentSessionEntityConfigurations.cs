@@ -46,7 +46,8 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.Metadata.FindNavigation(nameof(PaymentSessionOperationEntity.Attempts))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.Ignore(operation => operation.CurrentAttempt);
-        builder.HasIndex(operation => new { operation.OperationType, operation.ConsumerCorrelation });
+        builder.HasIndex(operation => new { operation.OperationType, operation.ConsumerCorrelation })
+            .IsUnique();
         builder.HasIndex(operation => operation.PayerOwnerKey);
         builder.HasIndex(operation => operation.PayeeOwnerKey);
     }
@@ -82,6 +83,7 @@ internal sealed class PaymentSessionAttemptEntityConfiguration
         builder.Property(attempt => attempt.ProviderObjectId).HasMaxLength(100);
         builder.Property(attempt => attempt.State).HasConversion<string>().HasMaxLength(30);
         builder.Property(attempt => attempt.LastProviderStatus).HasMaxLength(100);
+        builder.Property(attempt => attempt.PaymentMethodId).HasMaxLength(100);
         builder.Property(attempt => attempt.FailureCode).HasConversion<string>().HasMaxLength(40);
         builder.Property(attempt => attempt.ProviderRequestId).HasMaxLength(100);
         builder.Property(attempt => attempt.ProviderDiagnosticCode).HasMaxLength(100);

@@ -66,6 +66,24 @@ public sealed class PaymentOperationContractTests
             ("capture_before", 6, FieldType.Message),
             ("failure", 7, FieldType.Message));
         AssertFields(
+            Proto.PaymentOperationReference.Descriptor,
+            ("operation_type", 1, FieldType.String),
+            ("consumer_correlation", 2, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodSetupRequest.Descriptor,
+            ("reference", 1, FieldType.Message),
+            ("kind", 2, FieldType.Enum),
+            ("payer_owner_id", 3, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodValidationRequest.Descriptor,
+            ("reference", 1, FieldType.Message),
+            ("payer_owner_id", 2, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodSetupResponse.Descriptor,
+            ("client_secret", 1, FieldType.String),
+            ("customer_session_secret", 2, FieldType.String),
+            ("customer_token", 3, FieldType.String));
+        AssertFields(
             Proto.PaymentSessionOperationRequest.Descriptor,
             ("operation_id", 1, FieldType.String),
             ("kind", 2, FieldType.Enum),
@@ -98,6 +116,8 @@ public sealed class PaymentOperationContractTests
         Assert.Equal(
             new[]
             {
+                ("SetupPaymentMethod", "payment.PaymentMethodSetupRequest", "payment.PaymentMethodSetupResponse"),
+                ("ValidatePaymentMethod", "payment.PaymentMethodValidationRequest", "google.protobuf.Empty"),
                 ("CreateOrReplay", "payment.PaymentSessionOperationRequest", "payment.PaymentSessionDescriptor"),
                 ("Retry", "payment.PaymentSessionRetryRequest", "payment.PaymentSessionDescriptor"),
                 ("GetStatus", "payment.PaymentSessionStatusRequest", "payment.PaymentOperationSnapshot")

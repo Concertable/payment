@@ -24,7 +24,9 @@ public static class PaymentTopology
             .Subscribe<PaymentSucceededEvent>(PaymentConstants.ServiceName)
             .Subscribe<PaymentFailedEvent>(PaymentConstants.ServiceName)
             .Queue<CaptureEscrowCommand>(PaymentConstants.ServiceName)
+            .Queue<CaptureEscrowByReferenceCommand>(PaymentConstants.ServiceName)
             .Queue<DepositEscrowCommand>(PaymentConstants.ServiceName)
+            .Queue<DepositEscrowByReferenceCommand>(PaymentConstants.ServiceName)
             .Queue<RefundEscrowCommand>(PaymentConstants.ServiceName)
             .Queue<ProcessStripeWebhookCommand>(PaymentConstants.ServiceName);
 }

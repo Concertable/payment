@@ -17,8 +17,8 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 {
     private readonly ConcurrentDictionary<
         PaymentSessionIdempotencyKey,
-        PaymentSessionProviderResult> byIdempotencyKey = [];
-    private readonly ConcurrentDictionary<string, PaymentSessionProviderResult> byProviderObjectId = [];
+        ProviderSession> byIdempotencyKey = [];
+    private readonly ConcurrentDictionary<string, ProviderSession> byProviderObjectId = [];
     private readonly ConcurrentDictionary<FakeStripeSessionFaultPoint, byte> oneShotFaults = [];
     private readonly TimeProvider timeProvider;
 
@@ -32,7 +32,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
     internal void FailOnce(FakeStripeSessionFaultPoint faultPoint) =>
         oneShotFaults[faultPoint] = 0;
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
@@ -40,7 +40,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         ct.ThrowIfCancellationRequested();
         if (TakeFault(FakeStripeSessionFaultPoint.BeforeProviderAcceptance))
         {
-            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+            Result<ProviderSession, PaymentOperationError.ProviderUnavailable> unavailable =
                 new PaymentOperationError.ProviderUnavailable();
             return Task.FromResult(unavailable);
         }
@@ -50,16 +50,16 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 
         if (TakeFault(FakeStripeSessionFaultPoint.AfterProviderAcceptance))
         {
-            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+            Result<ProviderSession, PaymentOperationError.ProviderUnavailable> unavailable =
                 new PaymentOperationError.ProviderUnavailable();
             return Task.FromResult(unavailable);
         }
 
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = result;
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> success = result;
         return Task.FromResult(success);
     }
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -68,16 +68,16 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         if (!byProviderObjectId.TryGetValue(providerObjectId, out var result)
             || result.ProviderObjectKind != providerObjectKind)
         {
-            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+            Result<ProviderSession, PaymentOperationError.ProviderUnavailable> unavailable =
                 new PaymentOperationError.ProviderUnavailable();
             return Task.FromResult(unavailable);
         }
 
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = result;
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> success = result;
         return Task.FromResult(success);
     }
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -87,7 +87,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             || current.ProviderObjectKind != providerObjectKind
             || !current.CanCancel)
         {
-            Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+            Result<ProviderSession, PaymentOperationError.ProviderUnavailable> unavailable =
                 new PaymentOperationError.ProviderUnavailable();
             return Task.FromResult(unavailable);
         }
@@ -103,7 +103,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
             byIdempotencyKey[entry.Key] = canceled;
 
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> success = canceled;
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> success = canceled;
         return Task.FromResult(success);
     }
 
@@ -135,7 +135,11 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             Status = status,
             ObservedAt = timeProvider.GetUtcNow(),
             CanCancel = status is not ("succeeded" or "canceled"),
-            CaptureBefore = captureBefore
+            CaptureBefore = captureBefore,
+            PaymentMethodId = status == "succeeded"
+                && current.ProviderObjectKind == PaymentSessionProviderObjectKind.SetupIntent
+                    ? $"pm_fake_{providerObjectId}"
+                    : current.PaymentMethodId
         };
         byProviderObjectId[providerObjectId] = updated;
         foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
@@ -158,7 +162,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             byIdempotencyKey[entry.Key] = updated;
     }
 
-    private PaymentSessionProviderResult Create(
+    private ProviderSession Create(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey)
     {
@@ -180,6 +184,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             false,
             true,
             $"{id}_secret_fake",
+            null,
             $"req_fake_{hash[..16]}",
             null,
             null);
