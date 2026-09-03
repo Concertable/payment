@@ -6,5 +6,6 @@
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]
 [assembly: InternalsVisibleTo("Concertable.Payment.UnitTests")]
 [assembly: InternalsVisibleTo("Concertable.Payment.IntegrationTests")]
+[assembly: InternalsVisibleTo("Concertable.Payment.IntegrationTests.Fixtures")]
 [assembly: InternalsVisibleTo("Concertable.Payment.E2ETests.Stripe")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

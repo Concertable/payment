@@ -7,4 +7,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Concertable.Testing.Integration")]
 [assembly: InternalsVisibleTo("Concertable.Payment.UnitTests")]
 [assembly: InternalsVisibleTo("Concertable.Payment.IntegrationTests")]
+[assembly: InternalsVisibleTo("Concertable.Payment.IntegrationTests.Fixtures")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
