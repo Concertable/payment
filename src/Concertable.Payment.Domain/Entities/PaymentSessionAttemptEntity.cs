@@ -116,6 +116,24 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
         if (ProviderObjectId is null)
             throw new DomainException("A payment session attempt must be provider-bound before observation.");
 
+        string? normalizedPaymentMethodId = null;
+        if (transition.State == PaymentOperationState.Succeeded
+            && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
+        {
+            normalizedPaymentMethodId = RequiredDiagnostic(
+                paymentMethodId,
+                "payment method id",
+                100);
+            if (PaymentMethodId is not null
+                && !string.Equals(
+                    PaymentMethodId,
+                    normalizedPaymentMethodId,
+                    StringComparison.Ordinal))
+            {
+                throw new DomainException("A completed payment-method attempt cannot change its payment method.");
+            }
+        }
+
         var observableChange = State != transition.State
             || FailureCode != transition.Failure?.Code
             || CaptureBefore != transition.CaptureBefore;
@@ -129,14 +147,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
         if (transition.State == PaymentOperationState.Succeeded
             && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(paymentMethodId);
-            if (PaymentMethodId is not null
-                && !string.Equals(PaymentMethodId, paymentMethodId, StringComparison.Ordinal))
-            {
-                throw new DomainException("A completed payment-method attempt cannot change its payment method.");
-            }
-
-            PaymentMethodId = paymentMethodId;
+            PaymentMethodId = normalizedPaymentMethodId;
         }
         FailureCode = transition.Failure?.Code;
         ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
@@ -215,7 +226,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
             FailureCode is { } failureCode ? PaymentOperationFailure.FromCode(failureCode) : null);
     }
 
-    private static string RequiredDiagnostic(string value, string name, int maxLength) =>
+    private static string RequiredDiagnostic(string? value, string name, int maxLength) =>
         OptionalDiagnostic(value, name, maxLength)
         ?? throw new DomainException($"Payment session {name} is required.");
 

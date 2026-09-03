@@ -1,5 +1,6 @@
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Kernel;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Domain.ProviderContract;
@@ -77,13 +78,16 @@ public sealed class PaymentSessionAttemptEntityTests
     }
 
     [Fact]
-    public void ApplyTransition_CompletedPaymentMethodSetupWithoutPaymentMethod_Throws()
+    public void ApplyTransition_CompletedPaymentMethodSetupWithoutPaymentMethod_LeavesAttemptUnchanged()
     {
         var attempt = BoundSetupAttempt();
 
-        Assert.Throws<ArgumentNullException>(() => attempt.ApplyTransition(
+        Assert.Throws<DomainException>(() => attempt.ApplyTransition(
             PaymentSessionKind.PaymentMethodSetup,
             Transition(PaymentOperationState.Succeeded, CreatedAt.AddSeconds(1))));
+        Assert.Equal(PaymentOperationState.Creating, attempt.State);
+        Assert.Null(attempt.PaymentMethodId);
+        Assert.Null(attempt.LastObservedAt);
     }
 
     private static PaymentSessionAttemptEntity BoundAttempt()
