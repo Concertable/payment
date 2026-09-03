@@ -1,60 +1,40 @@
-using Concertable.DataAccess.Infrastructure.Data;
-using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Messaging.Contracts;
-using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Enums;
-using Concertable.Payment.Contracts.Errors;
-using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
-using Concertable.Payment.Domain.Lifecycle;
-using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Handlers;
-using Concertable.Payment.Infrastructure.Repositories;
-using Concertable.Payment.Infrastructure.Services;
-using Concertable.Payment.Infrastructure.Settings;
 using Concertable.Payment.IntegrationTests.Fixtures;
-using Concertable.Testing.Integration;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Moq;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class ReferencePaymentOperationTests : IClassFixture<SqlFixture>
+public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, IAsyncLifetime
 {
-    private readonly SqlFixture sql;
+    private readonly ApiFixture fixture;
 
-    public ReferencePaymentOperationTests(SqlFixture sql)
+    public ReferencePaymentOperationTests(ApiFixture fixture)
     {
-        this.sql = sql;
+        this.fixture = fixture;
     }
+
+    public Task InitializeAsync() => fixture.ResetAsync();
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task DepositAsync_ProviderUnavailable_ReplaysPendingOperationAfterRecovery()
     {
-        await MigrateAsync();
-        var provider = new FakeStripeSessionClient(TimeProvider.System);
         var payerId = Guid.CreateVersion7();
         var payeeId = Guid.CreateVersion7();
         var reference = Reference();
-        string providerObjectId;
-        await using (var setupContext = CreateContext())
-        {
-            await SeedPayerAsync(setupContext, payerId);
-            providerObjectId = await CreatePaymentMethodAsync(
-                setupContext,
-                provider,
-                reference,
-                payerId);
-        }
-
+        await SeedAccountsAsync(payerId, payeeId);
+        var providerObjectId = await CreatePaymentMethodAsync(reference, payerId);
         var command = new DepositEscrowByReferenceCommand(
             Guid.CreateVersion7(),
             17,
@@ -64,100 +44,48 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<SqlFixture>
             Currency.Gbp,
             reference,
             PaymentSession.OffSession);
-        var escrow = new Mock<IEscrowService>();
-        var bus = new Mock<IBus>();
+        fixture.SetProviderRetrievalUnavailable(true);
 
-        await using (var unavailableContext = CreateContext())
+        await Assert.ThrowsAsync<PaymentProviderUnavailableException>(() =>
+            DispatchAsync(command));
+        Assert.Equal(
+            FinancialOperationStatus.Pending,
+            await FinancialOperationStatusAsync(command.OperationId));
+
+        fixture.SetProviderRetrievalUnavailable(false);
+        fixture.SetProviderStatus(providerObjectId, "succeeded");
+
+        await DispatchAsync(command);
+
+        var persisted = await fixture.RunAsync(async (PaymentDbContext context) =>
         {
-            var handler = Handler(
-                unavailableContext,
-                new UnavailableRetrievalStripeSessionClient(provider),
-                escrow,
-                bus);
-
-            await Assert.ThrowsAsync<PaymentProviderUnavailableException>(() =>
-                handler.HandleAsync(
-                    command,
-                    MessageEnvelope.Create<DepositEscrowByReferenceCommand>(DateTimeOffset.UtcNow)));
-
-            Assert.Equal(
-                FinancialOperationStatus.Pending,
-                (await unavailableContext.FinancialOperations.SingleAsync(
-                    operation => operation.Id == command.OperationId)).Status);
-        }
-
-        provider.SetStatus(providerObjectId, "succeeded");
-        escrow
-            .Setup(service => service.DepositAsync(
-                payerId,
-                payeeId,
-                Money.Gbp(50),
-                $"pm_fake_{providerObjectId}",
-                PaymentSession.OffSession,
-                17,
-                command.OperationId,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EscrowDeposit(1, "pi_deposit", EscrowStatus.Held));
-        bus
-            .Setup(value => value.PublishAsync(
-                It.IsAny<DepositEscrowSucceededEvent>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
-
-        await using (var replayContext = CreateContext())
-        {
-            await Handler(replayContext, provider, escrow, bus).HandleAsync(
-                command,
-                MessageEnvelope.Create<DepositEscrowByReferenceCommand>(DateTimeOffset.UtcNow));
-
-            Assert.Equal(
-                FinancialOperationStatus.Succeeded,
-                (await replayContext.FinancialOperations.SingleAsync(
-                    operation => operation.Id == command.OperationId)).Status);
-        }
-
-        escrow.VerifyAll();
-        bus.VerifyAll();
+            var operation = await context.FinancialOperations.SingleAsync(
+                value => value.Id == command.OperationId);
+            var escrow = await context.Escrows.SingleAsync(
+                value => value.BookingId == command.BookingId);
+            return (OperationStatus: operation.Status, EscrowStatus: escrow.Status);
+        });
+        Assert.Equal(FinancialOperationStatus.Succeeded, persisted.OperationStatus);
+        Assert.Equal(EscrowStatus.Held, persisted.EscrowStatus);
     }
 
     [Fact]
     public async Task CaptureAsync_AuthorizationReference_UsesResolvedProviderObject()
     {
-        await MigrateAsync();
-        var provider = new FakeStripeSessionClient(TimeProvider.System);
         var payerId = Guid.CreateVersion7();
         var payeeId = Guid.CreateVersion7();
         var operationId = Guid.CreateVersion7();
         var reference = Reference();
-        var specification = PaymentSessionSpecification.Create(
+        await SeedAccountsAsync(payerId, payeeId);
+        var providerObjectId = await CreateAuthorizationAsync(
             operationId,
-            PaymentSessionKind.Authorization,
-            PaymentSession.OffSession,
-            reference.OperationType,
-            reference.ConsumerCorrelation,
-            payerId.ToString("D"),
-            payeeId.ToString("D"),
-            5000,
-            Currency.Gbp,
-            PaymentSessionFundsRouting.Destination,
-            $"pm_{operationId:N}",
-            $"cus_{payerId:N}",
-            $"acct_{payeeId:N}");
-        string providerObjectId;
-        await using (var setupContext = CreateContext())
-        {
-            await SeedPayerAsync(setupContext, payerId);
-            var created = await SessionService(setupContext, provider)
-                .CreateOrReplayAsync(specification);
-            Assert.True(created.TryGetValue(out _));
-            providerObjectId = (await setupContext.PaymentSessionAttempts.SingleAsync(
-                attempt => attempt.OperationId == operationId)).ProviderObjectId!;
-        }
-        provider.SetStatus(
+            reference,
+            payerId,
+            payeeId);
+        fixture.SetProviderStatus(
             providerObjectId,
             "requires_capture",
             DateTimeOffset.UtcNow.AddDays(1));
-
         var command = new CaptureEscrowByReferenceCommand(
             Guid.CreateVersion7(),
             17,
@@ -166,202 +94,127 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<SqlFixture>
             5000,
             Currency.Gbp,
             reference);
-        var escrow = new Mock<IEscrowService>();
-        escrow
-            .Setup(service => service.CaptureAsync(
-                payerId,
-                payeeId,
-                Money.Gbp(50),
-                providerObjectId,
-                17,
-                command.OperationId,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new EscrowDeposit(1, providerObjectId, EscrowStatus.Held));
-        var bus = new Mock<IBus>();
-        bus
-            .Setup(value => value.PublishAsync(
-                It.IsAny<CaptureEscrowSucceededEvent>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
 
-        await using var context = CreateContext();
-        await Handler(context, provider, escrow, bus).HandleAsync(
-            command,
-            MessageEnvelope.Create<CaptureEscrowByReferenceCommand>(DateTimeOffset.UtcNow));
+        await DispatchAsync(command);
 
-        Assert.Equal(
-            FinancialOperationStatus.Succeeded,
-            (await context.FinancialOperations.SingleAsync(
-                operation => operation.Id == command.OperationId)).Status);
-        escrow.VerifyAll();
-        bus.VerifyAll();
+        var persisted = await fixture.RunAsync(async (PaymentDbContext context) =>
+        {
+            var operation = await context.FinancialOperations.SingleAsync(
+                value => value.Id == command.OperationId);
+            var escrow = await context.Escrows.SingleAsync(
+                value => value.BookingId == command.BookingId);
+            return (OperationStatus: operation.Status, EscrowStatus: escrow.Status, escrow.ChargeId);
+        });
+        Assert.Equal(FinancialOperationStatus.Succeeded, persisted.OperationStatus);
+        Assert.Equal(EscrowStatus.Held, persisted.EscrowStatus);
+        Assert.Equal(providerObjectId, persisted.ChargeId);
     }
 
     [Fact]
     public async Task PayAsync_PaymentMethodReference_UsesResolvedPaymentMethodAndPersistsSettlement()
     {
-        await MigrateAsync();
-        var provider = new FakeStripeSessionClient(TimeProvider.System);
         var payerId = Guid.CreateVersion7();
         var payeeId = Guid.CreateVersion7();
         var reference = Reference();
-        string providerObjectId;
-        await using (var setupContext = CreateContext())
-        {
-            await SeedPayerAsync(setupContext, payerId);
-            providerObjectId = await CreatePaymentMethodAsync(
-                setupContext,
-                provider,
-                reference,
-                payerId);
-        }
-        provider.SetStatus(providerObjectId, "succeeded");
-
-        var paymentManager = new Mock<IPaymentManager>();
-        var stripeAccountClient = new Mock<IStripeAccountClient>();
-        var stripeHoldClient = new Mock<IStripeHoldClient>();
-        var commissionService = new Mock<ICommissionService>();
-        var ledger = new Mock<ILedgerService>();
+        await SeedAccountsAsync(payerId, payeeId);
+        var providerObjectId = await CreatePaymentMethodAsync(reference, payerId);
+        fixture.SetProviderStatus(providerObjectId, "succeeded");
         var operationId = Guid.CreateVersion7();
-        paymentManager
-            .Setup(manager => manager.SettleAsync(
+
+        var result = await fixture.RunAsync((IManagerPaymentService service) =>
+            service.PayAsync(
                 operationId,
                 payerId,
                 payeeId,
                 Money.Gbp(50),
-                Money.Gbp(50),
-                $"pm_fake_{providerObjectId}",
+                reference,
                 PaymentSession.OffSession,
-                It.IsAny<IReadOnlyDictionary<string, string>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PaymentOutcome
-            {
-                TransactionId = "pi_reference",
-                RequiresAction = true
-            });
-
-        await using var context = CreateContext();
-        var service = new ManagerPaymentService(
-            paymentManager.Object,
-            stripeAccountClient.Object,
-            stripeHoldClient.Object,
-            new PayoutAccountRepository(context),
-            new TransactionRepository(context),
-            commissionService.Object,
-            new CommissionCalculator(),
-            ledger.Object,
-            new UnitOfWork(context),
-            Resolver(context, provider),
-            TimeProvider.System,
-            Options.Create(new PlatformFeeOptions { Fee = 0 }));
-
-        var result = await service.PayAsync(
-            operationId,
-            payerId,
-            payeeId,
-            Money.Gbp(50),
-            reference,
-            PaymentSession.OffSession,
-            17);
+                17));
 
         Assert.True(result.TryGetValue(out var payment));
-        Assert.Equal("pi_reference", payment.TransactionId);
-        Assert.Equal(
-            "pi_reference",
-            (await context.SettlementTransactions.SingleAsync(
-                transaction => transaction.OperationId == operationId)).PaymentIntentId);
-        paymentManager.VerifyAll();
+        var persistedPaymentIntentId = await fixture.RunAsync((PaymentDbContext context) =>
+            context.SettlementTransactions
+                .Where(transaction => transaction.OperationId == operationId)
+                .Select(transaction => transaction.PaymentIntentId)
+                .SingleAsync());
+        Assert.Equal(payment.TransactionId, persistedPaymentIntentId);
     }
 
-    private async Task MigrateAsync()
-    {
-        await using var context = CreateContext();
-        await context.Database.MigrateAsync();
-    }
+    private Task DispatchAsync(DepositEscrowByReferenceCommand command) =>
+        fixture.RunAsync((IIntegrationCommandHandler<DepositEscrowByReferenceCommand> handler) =>
+            handler.HandleAsync(
+                command,
+                MessageEnvelope.Create<DepositEscrowByReferenceCommand>(DateTimeOffset.UtcNow)));
 
-    private PaymentDbContext CreateContext()
-    {
-        var currentUser = new Mock<ICurrentUser>();
-        var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
-            .AddInterceptors(new AuditInterceptor(currentUser.Object, TimeProvider.System))
-            .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
-    }
+    private Task DispatchAsync(CaptureEscrowByReferenceCommand command) =>
+        fixture.RunAsync((IIntegrationCommandHandler<CaptureEscrowByReferenceCommand> handler) =>
+            handler.HandleAsync(
+                command,
+                MessageEnvelope.Create<CaptureEscrowByReferenceCommand>(DateTimeOffset.UtcNow)));
 
-    private static async Task SeedPayerAsync(PaymentDbContext context, Guid payerId)
-    {
-        var payer = PayoutAccountEntity.Create(payerId, $"{payerId:N}@example.com");
-        payer.LinkCustomer($"cus_{payerId:N}");
-        context.PayoutAccounts.Add(payer);
-        await context.SaveChangesAsync();
-    }
+    private Task<FinancialOperationStatus> FinancialOperationStatusAsync(Guid operationId) =>
+        fixture.RunAsync((PaymentDbContext context) =>
+            context.FinancialOperations
+                .Where(operation => operation.Id == operationId)
+                .Select(operation => operation.Status)
+                .SingleAsync());
 
-    private static async Task<string> CreatePaymentMethodAsync(
-        PaymentDbContext context,
-        FakeStripeSessionClient provider,
+    private Task SeedAccountsAsync(Guid payerId, Guid payeeId) =>
+        fixture.RunAsync(async (PaymentDbContext context) =>
+        {
+            var payer = PayoutAccountEntity.Create(payerId, $"{payerId:N}@example.com");
+            payer.LinkCustomer($"cus_{payerId:N}");
+            var payee = PayoutAccountEntity.Create(payeeId, $"{payeeId:N}@example.com");
+            payee.LinkAccount($"acct_{payeeId:N}");
+            context.PayoutAccounts.AddRange(payer, payee);
+            await context.SaveChangesAsync();
+        });
+
+    private async Task<string> CreatePaymentMethodAsync(
         PaymentOperationReference reference,
         Guid payerId)
     {
-        var setup = await SessionService(context, provider).SetupPaymentMethodAsync(
-            new(reference, PaymentSessionKind.PaymentMethodSetup, payerId));
+        var setup = await fixture.RunAsync((IPaymentSessionService service) =>
+            service.SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerId)));
         Assert.True(setup.TryGetValue(out _));
-        return (await context.PaymentSessionOperations
-            .Include(operation => operation.Attempts)
-            .SingleAsync(operation => operation.OperationType == reference.OperationType
-                && operation.ConsumerCorrelation == reference.ConsumerCorrelation))
-            .CurrentAttempt.ProviderObjectId!;
+        return await CurrentProviderObjectIdAsync(reference);
     }
 
-    private static PaymentSessionService SessionService(
-        PaymentDbContext context,
-        IStripeSessionClient provider)
+    private async Task<string> CreateAuthorizationAsync(
+        Guid operationId,
+        PaymentOperationReference reference,
+        Guid payerId,
+        Guid payeeId)
     {
-        var operationRepository = new PaymentSessionOperationRepository(context);
-        var reconciliationService = Reconciliation(context);
-        return new(
-            operationRepository,
-            new PayoutAccountRepository(context),
-            reconciliationService,
-            provider,
-            new PaymentOperationResolver(operationRepository, reconciliationService, provider),
-            TimeProvider.System);
+        var request = new PaymentSessionOperationRequest(
+            operationId,
+            PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
+            reference.OperationType,
+            reference.ConsumerCorrelation,
+            payerId,
+            payeeId,
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}");
+        var created = await fixture.RunAsync((IPaymentSessionService service) =>
+            service.CreateOrReplayAsync(request));
+        Assert.True(created.TryGetValue(out _));
+        return await CurrentProviderObjectIdAsync(reference);
     }
 
-    private static PaymentOperationResolver Resolver(
-        PaymentDbContext context,
-        IStripeSessionClient provider)
-    {
-        var operationRepository = new PaymentSessionOperationRepository(context);
-        return new(operationRepository, Reconciliation(context), provider);
-    }
-
-    private static PaymentSessionReconciliationService Reconciliation(PaymentDbContext context) =>
-        new(
-            new PaymentSessionAttemptRepository(context),
-            new UnitOfWork(context),
-            new PaymentSessionStateMachine(),
-            TimeProvider.System);
-
-    private static FinancialOperationHandler Handler(
-        PaymentDbContext context,
-        IStripeSessionClient provider,
-        Mock<IEscrowService> escrow,
-        Mock<IBus> bus) =>
-        new(
-            escrow.Object,
-            new FinancialOperationRepository(context),
-            new UnitOfWork(context),
-            bus.Object,
-            new OutboxUnitOfWorkBehavior(context, new TestDbContextAccessor()),
-            Resolver(context, provider),
-            TimeProvider.System);
+    private Task<string> CurrentProviderObjectIdAsync(PaymentOperationReference reference) =>
+        fixture.RunAsync((PaymentDbContext context) =>
+            context.PaymentSessionOperations
+                .Where(operation => operation.OperationType == reference.OperationType
+                    && operation.ConsumerCorrelation == reference.ConsumerCorrelation)
+                .SelectMany(operation => operation.Attempts
+                    .Where(attempt => attempt.Revision == operation.CurrentRevision)
+                    .Select(attempt => attempt.ProviderObjectId!))
+                .SingleAsync());
 
     private static PaymentOperationReference Reference() =>
         new("applicationApply", $"application:{Guid.CreateVersion7():N}");
-
-    private sealed class TestDbContextAccessor : IDbContextAccessor
-    {
-        public DbContext? Context { get; set; }
-    }
 }
