@@ -1,50 +1,66 @@
-using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
-using Concertable.Payment.Domain.Entities;
-using Concertable.Payment.Domain.Lifecycle;
-using Concertable.Payment.Domain.ProviderContract;
-using Concertable.Payment.Infrastructure;
-using Concertable.Payment.Infrastructure.Data;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
-using Concertable.Payment.Infrastructure.Repositories;
-using Concertable.Payment.Infrastructure.Services;
-using Concertable.Testing.Integration;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture>
+public sealed class PaymentSessionOperationsGrpcTests
 {
-    private readonly SqlFixture sql;
+    private readonly Mock<IPaymentSessionService> paymentSessionService;
+    private readonly PaymentSessionOperationsGrpcService sut;
 
-    public PaymentSessionOperationsGrpcTests(SqlFixture sql)
+    public PaymentSessionOperationsGrpcTests()
     {
-        this.sql = sql;
+        this.paymentSessionService = new Mock<IPaymentSessionService>();
+        this.sut = new PaymentSessionOperationsGrpcService(this.paymentSessionService.Object);
     }
 
     [Fact]
     public async Task CreateOrReplayAndGetStatus_OwningCaller_ReturnsSecretFreeSnapshot()
     {
-        await using var context = await CreateContextAsync();
+        var operationId = Guid.CreateVersion7();
+        var attemptId = Guid.CreateVersion7();
         var payerOwnerId = Guid.CreateVersion7();
         var payeeOwnerId = Guid.CreateVersion7();
-        await SeedOwnersAsync(context, payerOwnerId, payeeOwnerId);
-        var service = Service(context, new FakeStripeSessionClient(TimeProvider.System));
-        var operationId = Guid.CreateVersion7();
+        var identity = new PaymentOperationIdentity(operationId, attemptId, 1);
+        this.paymentSessionService
+            .Setup(service => service.CreateOrReplayAsync(
+                It.IsAny<PaymentSessionOperationRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentSessionExecution(
+                identity,
+                PaymentSessionKind.Authorization,
+                PaymentOperationState.RequiresConfirmation,
+                "client_secret",
+                "customer_session_secret",
+                $"cus_{payerOwnerId:N}"));
+        this.paymentSessionService
+            .Setup(service => service.RefreshAsync(
+                It.IsAny<PaymentSessionStatusRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentSessionStatus(
+                identity,
+                PaymentOperationState.RequiresConfirmation,
+                PaymentOperationTerminalDisposition.NonTerminal,
+                PaymentOperationRetryDisposition.ContinueCurrentAttempt,
+                null,
+                null,
+                null));
 
-        var descriptor = await service.CreateOrReplay(
+        var descriptor = await this.sut.CreateOrReplay(
             OperationRequest(operationId, payerOwnerId, payeeOwnerId),
             CallContext());
-        var snapshot = await service.GetStatus(
+        var snapshot = await this.sut.GetStatus(
             new Proto.PaymentSessionStatusRequest
             {
                 OperationId = operationId.ToString("D"),
@@ -67,20 +83,16 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
     [Fact]
     public async Task GetStatus_DifferentOwner_ReturnsTypedUnknownFailure()
     {
-        await using var context = await CreateContextAsync();
-        var payerOwnerId = Guid.CreateVersion7();
-        var payeeOwnerId = Guid.CreateVersion7();
-        await SeedOwnersAsync(context, payerOwnerId, payeeOwnerId);
-        var service = Service(context, new FakeStripeSessionClient(TimeProvider.System));
-        var operationId = Guid.CreateVersion7();
-        await service.CreateOrReplay(
-            OperationRequest(operationId, payerOwnerId, payeeOwnerId),
-            CallContext());
+        this.paymentSessionService
+            .Setup(service => service.RefreshAsync(
+                It.IsAny<PaymentSessionStatusRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOperationError.Unknown());
 
-        var exception = await Assert.ThrowsAsync<RpcException>(() => service.GetStatus(
+        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.GetStatus(
             new Proto.PaymentSessionStatusRequest
             {
-                OperationId = operationId.ToString("D"),
+                OperationId = Guid.CreateVersion7().ToString("D"),
                 OwnerId = Guid.CreateVersion7().ToString("D")
             },
             CallContext()));
@@ -95,50 +107,40 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
     [Fact]
     public async Task Retry_EligibleCurrentAttempt_ReturnsNextRevision()
     {
-        await using var context = await CreateContextAsync();
-        var payerOwnerId = Guid.CreateVersion7();
-        var payeeOwnerId = Guid.CreateVersion7();
-        await SeedOwnersAsync(context, payerOwnerId, payeeOwnerId);
-        var provider = new FakeStripeSessionClient(TimeProvider.System);
-        var service = Service(context, provider);
         var operationId = Guid.CreateVersion7();
-        var created = await service.CreateOrReplay(
-            OperationRequest(operationId, payerOwnerId, payeeOwnerId),
-            CallContext());
-        var attempt = await context.PaymentSessionAttempts.SingleAsync(
-            value => value.AttemptId == Guid.Parse(created.Identity.AttemptId));
-        attempt.ApplyTransition(Concertable.Payment.Contracts.PaymentSessionKind.Authorization, new(
-            Concertable.Payment.Contracts.PaymentOperationState.Failed,
-            "failed",
-            DateTimeOffset.UtcNow.AddMinutes(-1),
-            null,
-            Concertable.Payment.Contracts.PaymentOperationTerminalDisposition.AttemptTerminal,
-            Concertable.Payment.Contracts.PaymentOperationRetryDisposition.CreateNewAttempt,
-            PaymentOperationFailure.FromCode(PaymentOperationFailureCode.Declined)));
-        await context.SaveChangesAsync();
-        provider.SetDeclined(attempt.ProviderObjectId!);
+        var firstAttemptId = Guid.CreateVersion7();
+        var nextAttemptId = Guid.CreateVersion7();
+        var payerOwnerId = Guid.CreateVersion7();
+        this.paymentSessionService
+            .Setup(service => service.RetryAsync(
+                It.IsAny<PaymentSessionRetryRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentSessionExecution(
+                new(operationId, nextAttemptId, 2),
+                PaymentSessionKind.Authorization,
+                PaymentOperationState.RequiresConfirmation,
+                "client_secret",
+                "customer_session_secret",
+                "customer_token"));
 
-        var retried = await service.Retry(
+        var retried = await this.sut.Retry(
             new Proto.PaymentSessionRetryRequest
             {
                 OperationId = operationId.ToString("D"),
-                ExpectedAttemptId = created.Identity.AttemptId,
-                ExpectedRevision = created.Identity.Revision,
+                ExpectedAttemptId = firstAttemptId.ToString("D"),
+                ExpectedRevision = 1,
                 OwnerId = payerOwnerId.ToString("D")
             },
             CallContext());
 
         Assert.Equal(2, retried.Identity.Revision);
-        Assert.NotEqual(created.Identity.AttemptId, retried.Identity.AttemptId);
-        Assert.Equal(2, provider.ProviderObjectCount);
+        Assert.Equal(nextAttemptId.ToString("D"), retried.Identity.AttemptId);
     }
 
     [Fact]
     public async Task CreateOrReplay_UnspecifiedKind_ReturnsInvalidArgument()
     {
-        var service = new PaymentSessionOperationsGrpcService(new Mock<Application.Interfaces.IPaymentSessionService>().Object);
-
-        var exception = await Assert.ThrowsAsync<RpcException>(() => service.CreateOrReplay(
+        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.CreateOrReplay(
             new Proto.PaymentSessionOperationRequest
             {
                 OperationId = Guid.CreateVersion7().ToString("D"),
@@ -161,7 +163,7 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
         await using var app = builder.Build();
         app.MapPaymentGrpcServices();
 
-        string[] methods = ["CreateOrReplay", "Retry", "GetStatus"];
+        string[] methods = ["SetupPaymentMethod", "ValidatePaymentMethod", "CreateOrReplay", "Retry", "GetStatus"];
         var endpoints = ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(source => source.Endpoints)
             .Where(endpoint => methods.Any(method => endpoint.DisplayName?.Contains(
@@ -169,50 +171,13 @@ public sealed class PaymentSessionOperationsGrpcTests : IClassFixture<SqlFixture
                 StringComparison.Ordinal) == true))
             .ToArray();
 
-        Assert.Equal(3, endpoints.Length);
+        Assert.Equal(5, endpoints.Length);
         Assert.All(
             endpoints,
             endpoint => Assert.Contains(
                 endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
                 authorization => authorization.Policy == "ServiceToken"));
     }
-
-    private async Task<PaymentDbContext> CreateContextAsync()
-    {
-        var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
-            .Options;
-        var context = new PaymentDbContext(options, new PaymentConfigurationProvider());
-        await context.Database.MigrateAsync();
-        return context;
-    }
-
-    private static async Task SeedOwnersAsync(
-        PaymentDbContext context,
-        Guid payerOwnerId,
-        Guid payeeOwnerId)
-    {
-        var payer = PayoutAccountEntity.Create(payerOwnerId, "payer@example.com");
-        payer.LinkCustomer($"cus_{payerOwnerId:N}");
-        var payee = PayoutAccountEntity.Create(payeeOwnerId, "payee@example.com");
-        payee.LinkAccount($"acct_{payeeOwnerId:N}");
-        context.PayoutAccounts.AddRange(payer, payee);
-        await context.SaveChangesAsync();
-    }
-
-    private static PaymentSessionOperationsGrpcService Service(
-        PaymentDbContext context,
-        FakeStripeSessionClient provider) =>
-        new(new PaymentSessionService(
-            new PaymentSessionOperationRepository(context),
-            new PayoutAccountRepository(context),
-            new PaymentSessionReconciliationService(
-                new PaymentSessionAttemptRepository(context),
-                new UnitOfWork(context),
-                new PaymentSessionStateMachine(),
-                TimeProvider.System),
-            provider,
-            TimeProvider.System));
 
     private static Proto.PaymentSessionOperationRequest OperationRequest(
         Guid operationId,

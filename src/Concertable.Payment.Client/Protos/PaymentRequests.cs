@@ -4,8 +4,44 @@ using Google.Protobuf.WellKnownTypes;
 using DomainMoney = Concertable.Kernel.ValueObjects.Money;
 using DomainCurrency = Concertable.Kernel.ValueObjects.Currency;
 using DomainDateRange = Concertable.Kernel.ValueObjects.DateRange;
+using ContractPaymentMethodReference = Concertable.Payment.Contracts.PaymentOperationReference;
 
 namespace Concertable.Payment.Grpc;
+
+public sealed partial class ManagerPayUsingPaymentMethodRequest
+{
+    internal static ManagerPayUsingPaymentMethodRequest Create(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        DomainMoney amount,
+        ContractPaymentMethodReference paymentMethod,
+        PaymentSession session,
+        int bookingId)
+    {
+        PaymentRequestValidation.ThrowIfEmpty(operationId, nameof(operationId));
+        PaymentRequestValidation.ThrowIfEmpty(payerId, nameof(payerId));
+        PaymentRequestValidation.ThrowIfEmpty(payeeId, nameof(payeeId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(paymentMethod.OperationType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(paymentMethod.ConsumerCorrelation);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bookingId);
+
+        return new()
+        {
+            OperationId = operationId.ToString("D"),
+            PayerId = payerId.ToString("D"),
+            PayeeId = payeeId.ToString("D"),
+            Amount = amount.ToProtoMoney(),
+            PaymentMethod = new PaymentOperationReference
+            {
+                OperationType = paymentMethod.OperationType,
+                ConsumerCorrelation = paymentMethod.ConsumerCorrelation
+            },
+            Session = session.ToProtoSession(),
+            BookingId = bookingId
+        };
+    }
+}
 
 public sealed partial class ManagerPayRequest
 {

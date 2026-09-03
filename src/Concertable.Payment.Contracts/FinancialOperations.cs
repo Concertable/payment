@@ -13,6 +13,16 @@ public sealed record CaptureEscrowCommand(
     Currency Currency,
     string PaymentIntentId) : IIntegrationCommand;
 
+[MessageType("concertable.payment.capture-escrow-from-authorization.v1")]
+public sealed record CaptureEscrowByReferenceCommand(
+    Guid OperationId,
+    int BookingId,
+    Guid PayerId,
+    Guid PayeeId,
+    long AmountMinor,
+    Currency Currency,
+    PaymentOperationReference Authorization) : IIntegrationCommand;
+
 [MessageType("concertable.payment.deposit-escrow.v1")]
 public sealed record DepositEscrowCommand(
     Guid OperationId,
@@ -22,6 +32,17 @@ public sealed record DepositEscrowCommand(
     long AmountMinor,
     Currency Currency,
     string PaymentMethodId,
+    PaymentSession Session) : IIntegrationCommand;
+
+[MessageType("concertable.payment.deposit-escrow-from-payment-method.v1")]
+public sealed record DepositEscrowByReferenceCommand(
+    Guid OperationId,
+    int BookingId,
+    Guid PayerId,
+    Guid PayeeId,
+    long AmountMinor,
+    Currency Currency,
+    PaymentOperationReference PaymentMethod,
     PaymentSession Session) : IIntegrationCommand;
 
 [MessageType("concertable.payment.refund-escrow.v1")]

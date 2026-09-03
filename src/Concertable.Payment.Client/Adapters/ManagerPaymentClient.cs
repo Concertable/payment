@@ -15,6 +15,29 @@ internal sealed class ManagerPaymentClient : IManagerPaymentOperationsClient, IM
         this.client = client;
     }
 
+    public Task<Result<PaymentOutcome, PaymentMethodChargeError>> PayAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        PaymentOperationReference paymentMethod,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.PayUsingPaymentMethodAsync(
+                Proto.ManagerPayUsingPaymentMethodRequest.Create(
+                    operationId,
+                    payerId,
+                    payeeId,
+                    amount,
+                    paymentMethod,
+                    session,
+                    bookingId),
+                cancellationToken: ct)).ToPaymentOutcome(),
+            error => error.ToPaymentMethodChargeError(),
+            ct);
+
     public Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
         Guid operationId,
         Guid payerId,

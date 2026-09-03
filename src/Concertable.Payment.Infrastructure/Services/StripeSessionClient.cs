@@ -24,7 +24,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         this.timeProvider = timeProvider;
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
         PaymentSessionIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
@@ -61,7 +61,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         }
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -86,7 +86,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         }
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -187,7 +187,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             Metadata = request.Metadata.ToDictionary()
         };
 
-    private PaymentSessionProviderResult ToResult(PaymentIntent intent) =>
+    private ProviderSession ToResult(PaymentIntent intent) =>
         new(
             PaymentSessionProviderObjectKind.PaymentIntent,
             intent.Id,
@@ -199,11 +199,12 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             false,
             intent.Status is not ("succeeded" or "canceled"),
             intent.ClientSecret,
+            intent.PaymentMethodId,
             null,
             intent.LastPaymentError?.Code,
             intent.LastPaymentError?.Message);
 
-    private PaymentSessionProviderResult ToResult(SetupIntent intent) =>
+    private ProviderSession ToResult(SetupIntent intent) =>
         new(
             PaymentSessionProviderObjectKind.SetupIntent,
             intent.Id,
@@ -214,6 +215,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             false,
             intent.Status is not ("succeeded" or "canceled"),
             intent.ClientSecret,
+            intent.PaymentMethodId,
             null,
             intent.LastSetupError?.Code,
             intent.LastSetupError?.Message);

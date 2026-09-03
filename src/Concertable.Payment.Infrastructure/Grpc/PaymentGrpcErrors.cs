@@ -21,6 +21,16 @@ internal static class PaymentGrpcErrors
         throw error!.ToRpcException();
     }
 
+    public static void SuccessOrRpcException<TError>(this UnitResult<TError> result)
+        where TError : IError
+    {
+        if (result.IsSuccess)
+            return;
+
+        result.TryGetError(out var error);
+        throw error!.ToRpcException();
+    }
+
     public static RpcException ToRpcException<TError>(this TError error)
         where TError : IError
     {

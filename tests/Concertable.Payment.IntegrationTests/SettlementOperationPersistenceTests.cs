@@ -254,6 +254,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
             new CommissionCalculator(),
             Mock.Of<ILedgerService>(),
             new UnitOfWork(context),
+            Mock.Of<IPaymentOperationResolver>(),
             TimeProvider.System,
             Options.Create(new PlatformFeeOptions { Fee = 12 }));
 

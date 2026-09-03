@@ -7,6 +7,16 @@ namespace Concertable.Payment.Client;
 
 public interface IManagerPaymentOperationsClient
 {
+    Task<Result<PaymentOutcome, PaymentMethodChargeError>> PayAsync(
+        Guid operationId,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        PaymentOperationReference paymentMethod,
+        PaymentSession session,
+        int bookingId,
+        CancellationToken ct = default);
+
     Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
         Guid operationId,
         Guid payerId,

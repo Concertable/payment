@@ -5,6 +5,50 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentSessionOperationRequestMappers
 {
+    extension(PaymentMethodSetupRequest request)
+    {
+        public Proto.PaymentMethodSetupRequest ToProto()
+        {
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+
+            return new()
+            {
+                Reference = request.Reference.ToProto(),
+                Kind = request.Kind.ToProto(),
+                PayerOwnerId = request.PayerOwnerId.ToString("D")
+            };
+        }
+    }
+
+    extension(PaymentMethodValidationRequest request)
+    {
+        public Proto.PaymentMethodValidationRequest ToProto()
+        {
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+
+            return new()
+            {
+                Reference = request.Reference.ToProto(),
+                PayerOwnerId = request.PayerOwnerId.ToString("D")
+            };
+        }
+    }
+
+    extension(PaymentOperationReference reference)
+    {
+        private Proto.PaymentOperationReference ToProto()
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(reference.OperationType);
+            ArgumentException.ThrowIfNullOrWhiteSpace(reference.ConsumerCorrelation);
+
+            return new()
+            {
+                OperationType = reference.OperationType,
+                ConsumerCorrelation = reference.ConsumerCorrelation
+            };
+        }
+    }
+
     extension(PaymentSessionOperationRequest request)
     {
         public Proto.PaymentSessionOperationRequest ToProto()

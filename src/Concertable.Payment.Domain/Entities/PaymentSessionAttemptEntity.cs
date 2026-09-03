@@ -61,6 +61,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     public DateTimeOffset? TerminalAt { get; private set; }
     public DateTimeOffset? ExpiresAt { get; private set; }
     public DateTimeOffset? CaptureBefore { get; private set; }
+    public string? PaymentMethodId { get; private set; }
     public string? LastProviderEventId { get; private set; }
     public DateTimeOffset? LastProviderEventCreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = null!;
@@ -105,6 +106,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     internal void ApplyTransition(
         PaymentSessionKind sessionKind,
         PaymentOperationTransition transition,
+        string? paymentMethodId = null,
         string? providerRequestId = null,
         string? providerDiagnosticCode = null,
         string? providerDiagnosticMessage = null,
@@ -124,6 +126,18 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
         LastObservedAt = transition.ObservedAt;
         NextReconcileAt = null;
         CaptureBefore = transition.CaptureBefore;
+        if (transition.State == PaymentOperationState.Succeeded
+            && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(paymentMethodId);
+            if (PaymentMethodId is not null
+                && !string.Equals(PaymentMethodId, paymentMethodId, StringComparison.Ordinal))
+            {
+                throw new DomainException("A completed payment-method attempt cannot change its payment method.");
+            }
+
+            PaymentMethodId = paymentMethodId;
+        }
         FailureCode = transition.Failure?.Code;
         ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
         ProviderDiagnosticCode = OptionalDiagnostic(providerDiagnosticCode, "provider diagnostic code", 100);
@@ -151,6 +165,10 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
                 transition.ObservedAt));
         }
     }
+
+    internal bool HasUsablePaymentMethod =>
+        State == PaymentOperationState.Succeeded
+        && !string.IsNullOrWhiteSpace(PaymentMethodId);
 
     internal void RecordReconciliationRequired(
         DateTimeOffset attemptedAt,

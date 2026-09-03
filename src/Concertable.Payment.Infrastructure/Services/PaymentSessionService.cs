@@ -10,6 +10,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly IPaymentSessionReconciliationService reconciliationService;
     private readonly IStripeSessionClient stripeSessionClient;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionService(
@@ -17,13 +18,63 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         IPayoutAccountRepository payoutAccountRepository,
         IPaymentSessionReconciliationService reconciliationService,
         IStripeSessionClient stripeSessionClient,
+        IPaymentOperationResolver paymentOperationResolver,
         TimeProvider timeProvider)
     {
         this.operationRepository = operationRepository;
         this.payoutAccountRepository = payoutAccountRepository;
         this.reconciliationService = reconciliationService;
         this.stripeSessionClient = stripeSessionClient;
+        this.paymentOperationResolver = paymentOperationResolver;
         this.timeProvider = timeProvider;
+    }
+
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> SetupPaymentMethodAsync(
+        PaymentMethodSetupRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.Kind is not (PaymentSessionKind.PaymentMethodSetup
+            or PaymentSessionKind.PaymentMethodVerification))
+        {
+            return new PaymentOperationError.Unknown();
+        }
+
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(request.PayerOwnerId, ct);
+        if (payer?.StripeCustomerId is null)
+            return new PaymentOperationError.ProviderUnavailable();
+
+        var existing = await operationRepository.GetByReferenceAsync(
+            request.Reference.OperationType,
+            request.Reference.ConsumerCorrelation,
+            ct);
+        var specification = PaymentSessionSpecification.Create(
+            existing?.OperationId ?? Guid.CreateVersion7(timeProvider.GetUtcNow()),
+            request.Kind,
+            PaymentSession.OnSession,
+            request.Reference.OperationType,
+            request.Reference.ConsumerCorrelation,
+            request.PayerOwnerId.ToString("D"),
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            payer.StripeCustomerId,
+            null);
+        return await CreateOrReplayAsync(specification, ct);
+    }
+
+    public async Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
+        PaymentMethodValidationRequest request,
+        CancellationToken ct = default)
+    {
+        var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
+            request.Reference,
+            request.PayerOwnerId,
+            ct);
+        return paymentMethod.TryGetError(out var error)
+            ? error
+            : new Success();
     }
 
     public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
@@ -264,7 +315,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentSessionAttemptEntity attempt,
         CancellationToken ct)
     {
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> providerResult;
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> providerResult;
         if (attempt.ProviderObjectId is null)
         {
             var request = PaymentSessionProviderRequest.Create(operation, attempt);
@@ -315,7 +366,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private Task<Result<PaymentSessionReconciliation, PaymentOperationError.ProviderUnavailable>> ReconcileAsync(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult? provider,
+        ProviderSession? provider,
         CancellationToken ct = default) =>
         reconciliationService.ReconcileAsync(
             new(
@@ -328,7 +379,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private bool IsRetryCompatibleProviderTruth(
         PaymentSessionAttemptEntity current,
         PaymentOperationState providerState,
-        PaymentSessionProviderResult provider) =>
+        ProviderSession provider) =>
         (current.State, current.FailureCode, providerState, provider.FailureClassification) switch
         {
             (_, _, PaymentOperationState.Canceled, _) => true,

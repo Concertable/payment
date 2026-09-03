@@ -6,5 +6,5 @@ internal sealed record PaymentSessionReconciliationRequest(
     PaymentSessionOperationEntity Operation,
     PaymentSessionAttemptEntity Attempt,
     PaymentSessionReconciliationSource Source,
-    PaymentSessionProviderResult? Provider,
+    ProviderSession? Provider,
     PaymentSessionProviderEventEvidence? EventEvidence = null);

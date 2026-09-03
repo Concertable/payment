@@ -20,6 +20,16 @@ operation identities.
 
 ## LOW
 
+### Result extraction relies on null-forgiving assertions
+
+Payment's RPC and application adapters use `TryGetError` after proving a result is not successful,
+but Reunion exposes the extracted error as nullable. Call sites therefore use `error!` to recover an
+invariant that the result type knows at runtime but its extraction API does not express to C#'s nullable
+analysis.
+
+**Resolves when:** Reunion provides an exhaustive match or failure accessor whose return type is non-null
+on the failure branch, and Payment migrates its result projections without null-forgiving assertions.
+
 ### Internal Payment DTOs still expose monetary values as primitives
 
 `Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published

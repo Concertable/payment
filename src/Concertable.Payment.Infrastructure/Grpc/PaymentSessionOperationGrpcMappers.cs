@@ -6,12 +6,37 @@ using Grpc.Core;
 using ContractOperationRequest = Concertable.Payment.Contracts.PaymentSessionOperationRequest;
 using ContractRetryRequest = Concertable.Payment.Contracts.PaymentSessionRetryRequest;
 using ContractStatusRequest = Concertable.Payment.Contracts.PaymentSessionStatusRequest;
+using ContractPaymentMethodSetupRequest = Concertable.Payment.Contracts.PaymentMethodSetupRequest;
+using ContractPaymentMethodValidationRequest = Concertable.Payment.Contracts.PaymentMethodValidationRequest;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class PaymentSessionOperationGrpcMappers
 {
+    extension(Proto.PaymentMethodSetupRequest request)
+    {
+        public ContractPaymentMethodSetupRequest ToContract() =>
+            new(
+                request.Reference.ToContract(),
+                request.Kind.ToContract(),
+                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)));
+    }
+
+    extension(Proto.PaymentMethodValidationRequest request)
+    {
+        public ContractPaymentMethodValidationRequest ToContract() =>
+            new(
+                request.Reference.ToContract(),
+                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)));
+    }
+
+    extension(Proto.PaymentOperationReference reference)
+    {
+        private PaymentOperationReference ToContract() =>
+            new(reference.OperationType, reference.ConsumerCorrelation);
+    }
+
     extension(Proto.PaymentSessionOperationRequest request)
     {
         public ContractOperationRequest ToContract() =>
@@ -55,6 +80,16 @@ internal static class PaymentSessionOperationGrpcMappers
         {
             Identity = execution.Identity.ToProto(),
             Kind = execution.Kind.ToProto(),
+            ClientSecret = execution.ClientSecret ?? string.Empty,
+            CustomerSessionSecret = execution.CustomerSessionSecret ?? string.Empty,
+            CustomerToken = execution.CustomerToken ?? string.Empty
+        };
+    }
+
+    extension(PaymentSessionExecution execution)
+    {
+        public Proto.PaymentMethodSetupResponse ToPaymentMethodSetupProto() => new()
+        {
             ClientSecret = execution.ClientSecret ?? string.Empty,
             CustomerSessionSecret = execution.CustomerSessionSecret ?? string.Empty,
             CustomerToken = execution.CustomerToken ?? string.Empty

@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
 
 package payment;
 
@@ -123,9 +124,33 @@ message PaymentOperationSnapshot {
 }
 
 service PaymentSessionOperations {
+  rpc SetupPaymentMethod(PaymentMethodSetupRequest) returns (PaymentMethodSetupResponse);
+  rpc ValidatePaymentMethod(PaymentMethodValidationRequest) returns (google.protobuf.Empty);
   rpc CreateOrReplay(PaymentSessionOperationRequest) returns (PaymentSessionDescriptor);
   rpc Retry(PaymentSessionRetryRequest) returns (PaymentSessionDescriptor);
   rpc GetStatus(PaymentSessionStatusRequest) returns (PaymentOperationSnapshot);
+}
+
+message PaymentOperationReference {
+  string operation_type = 1;
+  string consumer_correlation = 2;
+}
+
+message PaymentMethodSetupRequest {
+  PaymentOperationReference reference = 1;
+  PaymentSessionKind kind = 2;
+  string payer_owner_id = 3;
+}
+
+message PaymentMethodValidationRequest {
+  PaymentOperationReference reference = 1;
+  string payer_owner_id = 2;
+}
+
+message PaymentMethodSetupResponse {
+  string client_secret = 1;
+  string customer_session_secret = 2;
+  string customer_token = 3;
 }
 
 message PaymentSessionOperationRequest {
@@ -253,6 +278,7 @@ message CalculateBoundCommissionRequest {
 
 service ManagerPayment {
   rpc Pay(ManagerPayRequest) returns (PaymentResponse);
+  rpc PayUsingPaymentMethod(ManagerPayUsingPaymentMethodRequest) returns (PaymentResponse);
   rpc PayBoundCommission(BoundCommissionManagerPayRequest) returns (PaymentResponse);
   rpc CreateSetupSession(CreateSetupSessionRequest) returns (CheckoutSessionResponse);
   rpc CreateVerifySession(CreateVerifySessionRequest) returns (CheckoutSessionResponse);
@@ -264,6 +290,16 @@ service ManagerPayment {
   rpc GetTicketRevenueByMonth(PaymentPeriodRequest) returns (MonthlyPaymentSeriesResponse);
   rpc GetSettlementPayoutsByMonth(PaymentPeriodRequest) returns (MonthlyPaymentSeriesResponse);
   rpc GetRecentSettlements(RecentSettlementsRequest) returns (SettlementReportResponse);
+}
+
+message ManagerPayUsingPaymentMethodRequest {
+  string operation_id = 1;
+  string payer_id = 2;
+  string payee_id = 3;
+  Money amount = 4;
+  PaymentOperationReference payment_method = 5;
+  PaymentSessionType session = 6;
+  int32 booking_id = 7;
 }
 
 message PaymentPeriodRequest {
