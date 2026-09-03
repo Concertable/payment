@@ -62,103 +62,133 @@ internal sealed record RecentSettlementsCommand(Guid OwnerId, int Take);
 
 internal static class ManagerPaymentRequestMappers
 {
-    public static ManagerPayUsingPaymentMethodCommand ToCommand(
-        this ManagerPayUsingPaymentMethodRequest request) => new(
-        request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ToMoney(),
-        new(
-            request.PaymentMethod.OperationType,
-            request.PaymentMethod.ConsumerCorrelation),
-        request.Session.ToPaymentSession(),
-        request.BookingId);
-
-    public static ManagerPayCommand ToCommand(this ManagerPayRequest request) => new(
-        ParseOptionalGuid(request.OperationId, nameof(request.OperationId)),
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ToMoney(),
-        request.PaymentMethodId,
-        request.Session.ToPaymentSession(),
-        request.BookingId);
-
-    public static BoundCommissionManagerPayCommand ToCommand(
-        this BoundCommissionManagerPayRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Gross.ToMoney(),
-        request.PaymentMethodId,
-        request.Session.ToPaymentSession(),
-        request.BookingId,
-        request.CommissionBindingId.ParseOrThrow<Guid>(
-            nameof(request.CommissionBindingId)),
-        request.ExternalReference,
-        EmptyToNull(request.StripeSetupIntentId));
-
-    public static CreateSessionCommand ToCommand(this CreateSetupSessionRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.Metadata);
-
-    public static CreateSessionCommand ToCommand(this CreateVerifySessionRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.Metadata);
-
-    public static CreateHoldSessionCommand ToCommand(this CreateHoldSessionRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.Amount.ToMoney(),
-        request.Metadata);
-
-    public static CreateBoundCommissionHoldSessionCommand ToCommand(
-        this CreateBoundCommissionHoldSessionRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.Gross.ToMoney(),
-        request.Metadata,
-        request.CommissionBindingId.ParseOrThrow<Guid>(
-            nameof(request.CommissionBindingId)),
-        request.ExternalReference,
-        EmptyToNull(request.StripeSetupIntentId));
-
-    public static FindHeldIntentCommand ToCommand(this FindHeldIntentRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.ApplicationId);
-
-    public static PaymentPeriodCommand ToCommand(this PaymentPeriodRequest request) => new(
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.ToDateRange());
-
-    public static RecentSettlementsCommand ToCommand(this RecentSettlementsRequest request)
+    extension(ManagerPayUsingPaymentMethodRequest request)
     {
-        if (request.Take is < 1 or > 50)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Take must be between 1 and 50."));
-
-        return new RecentSettlementsCommand(
-            request.OwnerId.ParseOrThrow<Guid>(nameof(request.OwnerId)),
-            request.Take);
+        public ManagerPayUsingPaymentMethodCommand ToCommand() => new(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Amount.ToMoney(),
+            new(
+                request.PaymentMethod.OperationType,
+                request.PaymentMethod.ConsumerCorrelation),
+            request.Session.ToPaymentSession(),
+            request.BookingId);
     }
 
-    private static DateRange ToDateRange(this PaymentPeriodRequest request)
+    extension(ManagerPayRequest request)
     {
-        if (request.PeriodStart is null || request.PeriodEnd is null)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
-
-        var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
-        var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
-        if (end <= start)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
-
-        return new DateRange(start, end);
+        public ManagerPayCommand ToCommand() => new(
+            ParseOptionalGuid(request.OperationId, nameof(request.OperationId)),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Amount.ToMoney(),
+            request.PaymentMethodId,
+            request.Session.ToPaymentSession(),
+            request.BookingId);
     }
 
-    private static DateTime ToDateTimeOrThrow(this Google.Protobuf.WellKnownTypes.Timestamp timestamp, string fieldName)
+    extension(BoundCommissionManagerPayRequest request)
     {
-        try
+        public BoundCommissionManagerPayCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Gross.ToMoney(),
+            request.PaymentMethodId,
+            request.Session.ToPaymentSession(),
+            request.BookingId,
+            request.CommissionBindingId.ParseOrThrow<Guid>(
+                nameof(request.CommissionBindingId)),
+            request.ExternalReference,
+            EmptyToNull(request.StripeSetupIntentId));
+    }
+
+    extension(CreateSetupSessionRequest request)
+    {
+        public CreateSessionCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.Metadata);
+    }
+
+    extension(CreateVerifySessionRequest request)
+    {
+        public CreateSessionCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.Metadata);
+    }
+
+    extension(CreateHoldSessionRequest request)
+    {
+        public CreateHoldSessionCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.Amount.ToMoney(),
+            request.Metadata);
+    }
+
+    extension(CreateBoundCommissionHoldSessionRequest request)
+    {
+        public CreateBoundCommissionHoldSessionCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.Gross.ToMoney(),
+            request.Metadata,
+            request.CommissionBindingId.ParseOrThrow<Guid>(
+                nameof(request.CommissionBindingId)),
+            request.ExternalReference,
+            EmptyToNull(request.StripeSetupIntentId));
+    }
+
+    extension(FindHeldIntentRequest request)
+    {
+        public FindHeldIntentCommand ToCommand() => new(
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.ApplicationId);
+    }
+
+    extension(PaymentPeriodRequest request)
+    {
+        public PaymentPeriodCommand ToCommand() => new(
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.ToDateRange());
+
+        private DateRange ToDateRange()
         {
-            return timestamp.ToDateTime();
+            if (request.PeriodStart is null || request.PeriodEnd is null)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
+
+            var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
+            var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
+            if (end <= start)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
+
+            return new DateRange(start, end);
         }
-        catch (InvalidOperationException)
+    }
+
+    extension(RecentSettlementsRequest request)
+    {
+        public RecentSettlementsCommand ToCommand()
         {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+            if (request.Take is < 1 or > 50)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Take must be between 1 and 50."));
+
+            return new RecentSettlementsCommand(
+                request.OwnerId.ParseOrThrow<Guid>(nameof(request.OwnerId)),
+                request.Take);
+        }
+    }
+
+    extension(Google.Protobuf.WellKnownTypes.Timestamp timestamp)
+    {
+        private DateTime ToDateTimeOrThrow(string fieldName)
+        {
+            try
+            {
+                return timestamp.ToDateTime();
+            }
+            catch (InvalidOperationException)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+            }
         }
     }
 
