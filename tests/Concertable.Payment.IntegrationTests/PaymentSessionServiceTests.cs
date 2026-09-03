@@ -89,10 +89,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
         await using var validationContext = CreateContext();
         var validationService = Service(validationContext, provider);
-        var refreshed = await validationService.RefreshAsync(operationId);
         var validated = await validationService.ValidatePaymentMethodAsync(new(reference, payerOwnerId));
 
-        Assert.True(refreshed.TryGetValue(out _));
         Assert.True(validated.IsSuccess);
         Assert.Equal(
             $"pm_fake_{providerObjectId}",
@@ -121,6 +119,38 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
 
         Assert.True(validated.TryGetError(out var error));
         Assert.IsType<PaymentOperationError.PaymentMethodRequired>(error);
+    }
+
+    [Fact]
+    public async Task ValidatePaymentMethodAsync_ProviderDeclined_ReturnsDeclined()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference(
+            "applicationApply",
+            $"application:{Guid.CreateVersion7():N}");
+        string providerObjectId;
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId));
+            Assert.True(setup.TryGetValue(out _));
+            providerObjectId = (await context.PaymentSessionOperations
+                .Include(value => value.Attempts)
+                .SingleAsync(value => value.OperationType == reference.OperationType
+                    && value.ConsumerCorrelation == reference.ConsumerCorrelation))
+                .CurrentAttempt.ProviderObjectId!;
+        }
+        provider.SetDeclined(providerObjectId);
+
+        await using var validationContext = CreateContext();
+        var validated = await Service(validationContext, provider).ValidatePaymentMethodAsync(
+            new(reference, payerOwnerId));
+
+        Assert.True(validated.TryGetError(out var error));
+        Assert.IsType<PaymentOperationError.Declined>(error);
     }
 
     [Fact]
@@ -155,13 +185,20 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         provider.SetStatus(providerObjectId, "requires_capture", DateTimeOffset.UtcNow.AddDays(1));
 
         await using var resolveContext = CreateContext();
+        var attemptRepository = new PaymentSessionAttemptRepository(resolveContext);
         var operationRepository = new PaymentSessionOperationRepository(resolveContext);
-        var refreshed = await Service(resolveContext, provider).RefreshAsync(operationId);
-        var resolved = await new PaymentOperationResolver(operationRepository).ResolveAuthorizationAsync(
+        var reconciliationService = new PaymentSessionReconciliationService(
+            attemptRepository,
+            new UnitOfWork(resolveContext),
+            new PaymentSessionStateMachine(),
+            TimeProvider.System);
+        var resolved = await new PaymentOperationResolver(
+            operationRepository,
+            reconciliationService,
+            provider).ResolveAuthorizationAsync(
             new(specification.OperationType, specification.ConsumerCorrelation),
             payerOwnerId);
 
-        Assert.True(refreshed.TryGetValue(out _));
         Assert.True(resolved.TryGetValue(out var resolvedProviderObjectId));
         Assert.Equal(providerObjectId, resolvedProviderObjectId);
     }
@@ -658,12 +695,17 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     {
         var attemptRepository = new PaymentSessionAttemptRepository(context);
         var operationRepository = new PaymentSessionOperationRepository(context);
+        var reconciliationService = new PaymentSessionReconciliationService(
+            attemptRepository,
+            new UnitOfWork(context),
+            new PaymentSessionStateMachine(),
+            TimeProvider.System);
         return new(
             operationRepository,
             new PayoutAccountRepository(context),
-            new PaymentSessionReconciliationService(attemptRepository, new UnitOfWork(context), new PaymentSessionStateMachine(), TimeProvider.System),
+            reconciliationService,
             provider,
-            new PaymentOperationResolver(operationRepository),
+            new PaymentOperationResolver(operationRepository, reconciliationService, provider),
             TimeProvider.System);
     }
 

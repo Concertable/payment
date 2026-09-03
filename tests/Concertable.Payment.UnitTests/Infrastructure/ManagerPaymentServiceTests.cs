@@ -5,6 +5,7 @@ using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Settings;
@@ -23,6 +24,7 @@ public sealed class ManagerPaymentServiceTests
     private readonly Mock<ITransactionRepository> transactionRepository;
     private readonly Mock<ICommissionService> commissionService;
     private readonly Mock<ILedgerService> ledger;
+    private readonly Mock<IPaymentOperationResolver> paymentOperationResolver;
     private readonly FakeTimeProvider timeProvider = new(
         new DateTimeOffset(2026, 8, 14, 10, 30, 0, TimeSpan.Zero));
 
@@ -40,6 +42,7 @@ public sealed class ManagerPaymentServiceTests
         this.transactionRepository = new Mock<ITransactionRepository>();
         this.commissionService = new Mock<ICommissionService>();
         this.ledger = new Mock<ILedgerService>();
+        this.paymentOperationResolver = new Mock<IPaymentOperationResolver>();
 
         ledger
             .Setup(l => l.StageAsync(It.IsAny<LedgerPosting>(), It.IsAny<CancellationToken>()))
@@ -66,7 +69,7 @@ public sealed class ManagerPaymentServiceTests
             new CommissionCalculator(),
             ledger.Object,
             new FakeUnitOfWork(),
-            Mock.Of<IPaymentOperationResolver>(),
+            paymentOperationResolver.Object,
             timeProvider,
             Options.Create(new PlatformFeeOptions { Fee = fee }));
 
@@ -146,6 +149,53 @@ public sealed class ManagerPaymentServiceTests
         var settlements = await SutWithFee(0).GetRecentSettlementsAsync(payeeId, 5);
 
         Assert.Same(expected, settlements);
+    }
+
+    [Fact]
+    public async Task PayAsync_ReferencePaymentMethod_UsesResolvedPaymentMethod()
+    {
+        var operationId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("application", "application:17");
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolvePaymentMethodAsync(
+                reference,
+                payerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("pm_resolved");
+        paymentManager
+            .Setup(manager => manager.SettleAsync(
+                operationId,
+                payerId,
+                payeeId,
+                Money.Gbp(50),
+                Money.Gbp(50),
+                "pm_resolved",
+                PaymentSession.OffSession,
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentOutcome
+            {
+                TransactionId = "pi_reference",
+                RequiresAction = true
+            });
+        transactionRepository
+            .Setup(repository => repository.AddAsync(
+                It.IsAny<TransactionEntity>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TransactionEntity entity, CancellationToken _) => entity);
+
+        var result = await SutWithFee(0).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            reference,
+            PaymentSession.OffSession,
+            17);
+
+        Assert.True(result.TryGetValue(out var payment));
+        Assert.Equal("pi_reference", payment.TransactionId);
+        paymentManager.VerifyAll();
     }
 
     [Fact]
