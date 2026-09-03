@@ -158,7 +158,7 @@ internal sealed class FinancialOperationHandler :
         if (!paymentMethod.TryGetValue(out var paymentMethodId))
         {
             paymentMethod.TryGetError(out var error);
-            await RejectAsync(
+            await HandleResolutionFailureAsync(
                 operation,
                 error!,
                 (code, message) => new DepositEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
@@ -219,7 +219,7 @@ internal sealed class FinancialOperationHandler :
         if (!authorization.TryGetValue(out var paymentIntentId))
         {
             authorization.TryGetError(out var error);
-            await RejectAsync(
+            await HandleResolutionFailureAsync(
                 operation,
                 error!,
                 (code, message) => new CaptureEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
@@ -393,6 +393,19 @@ internal sealed class FinancialOperationHandler :
             operation.Reject(error.Definition.Code, error.Definition.Message, timeProvider.GetUtcNow());
             await bus.PublishAsync(outcome(error.Definition.Code, error.Definition.Message), ct);
         }, ct);
+
+    private Task HandleResolutionFailureAsync<TEvent>(
+        FinancialOperationEntity operation,
+        PaymentOperationError error,
+        Func<string, string, TEvent> outcome,
+        CancellationToken ct)
+        where TEvent : IIntegrationEvent =>
+        error switch
+        {
+            PaymentOperationError.ProviderUnavailable =>
+                throw new PaymentProviderUnavailableException(),
+            _ => RejectAsync(operation, error, outcome, ct)
+        };
 
     private static string Fingerprint(params object?[] values)
     {

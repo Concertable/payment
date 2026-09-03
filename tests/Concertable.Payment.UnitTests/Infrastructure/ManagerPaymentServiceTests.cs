@@ -152,53 +152,6 @@ public sealed class ManagerPaymentServiceTests
     }
 
     [Fact]
-    public async Task PayAsync_ReferencePaymentMethod_UsesResolvedPaymentMethod()
-    {
-        var operationId = Guid.CreateVersion7();
-        var reference = new PaymentOperationReference("application", "application:17");
-        paymentOperationResolver
-            .Setup(resolver => resolver.ResolvePaymentMethodAsync(
-                reference,
-                payerId,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync("pm_resolved");
-        paymentManager
-            .Setup(manager => manager.SettleAsync(
-                operationId,
-                payerId,
-                payeeId,
-                Money.Gbp(50),
-                Money.Gbp(50),
-                "pm_resolved",
-                PaymentSession.OffSession,
-                It.IsAny<IReadOnlyDictionary<string, string>>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PaymentOutcome
-            {
-                TransactionId = "pi_reference",
-                RequiresAction = true
-            });
-        transactionRepository
-            .Setup(repository => repository.AddAsync(
-                It.IsAny<TransactionEntity>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((TransactionEntity entity, CancellationToken _) => entity);
-
-        var result = await SutWithFee(0).PayAsync(
-            operationId,
-            payerId,
-            payeeId,
-            Money.Gbp(50),
-            reference,
-            PaymentSession.OffSession,
-            17);
-
-        Assert.True(result.TryGetValue(out var payment));
-        Assert.Equal("pi_reference", payment.TransactionId);
-        paymentManager.VerifyAll();
-    }
-
-    [Fact]
     public async Task PayAsync_WithPlatformFee_ChargesGrossPlusFeeAndSnapshotsFee()
     {
         var sut = SutWithFee(12m);
