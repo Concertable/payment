@@ -20,6 +20,7 @@ public sealed class FinancialOperationHandlerTests
     private readonly Mock<IFinancialOperationRepository> operationRepository;
     private readonly Mock<IUnitOfWork> unitOfWork;
     private readonly Mock<IBus> bus;
+    private readonly Mock<IPaymentOperationResolver> paymentOperationResolver;
     private readonly FakeTimeProvider timeProvider;
     private readonly FinancialOperationHandler sut;
 
@@ -29,6 +30,7 @@ public sealed class FinancialOperationHandlerTests
         this.operationRepository = new Mock<IFinancialOperationRepository>();
         this.unitOfWork = new Mock<IUnitOfWork>();
         this.bus = new Mock<IBus>();
+        this.paymentOperationResolver = new Mock<IPaymentOperationResolver>();
         this.timeProvider = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var outbox = new Mock<IOutboxUnitOfWorkBehavior>();
         outbox
@@ -41,8 +43,100 @@ public sealed class FinancialOperationHandlerTests
             unitOfWork.Object,
             bus.Object,
             outbox.Object,
-            Mock.Of<IPaymentOperationResolver>(),
+            paymentOperationResolver.Object,
             timeProvider);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ReferenceDeposit_UsesResolvedPaymentMethod()
+    {
+        var reference = new PaymentOperationReference("application", "application:17");
+        var command = new DepositEscrowByReferenceCommand(
+            Guid.CreateVersion7(),
+            17,
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            5000,
+            Currency.Gbp,
+            reference,
+            PaymentSession.OffSession);
+        operationRepository
+            .Setup(repository => repository.GetAsync(command.OperationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FinancialOperationEntity?)null);
+        operationRepository
+            .Setup(repository => repository.AddAsync(
+                It.IsAny<FinancialOperationEntity>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        unitOfWork
+            .Setup(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolvePaymentMethodAsync(
+                reference,
+                command.PayerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("pm_resolved");
+        escrowService
+            .Setup(service => service.DepositAsync(
+                command.PayerId,
+                command.PayeeId,
+                Money.FromMinorUnits(command.AmountMinor, command.Currency),
+                "pm_resolved",
+                command.Session,
+                command.BookingId,
+                command.OperationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EscrowDeposit(1, "pi_deposit", EscrowStatus.Held));
+
+        await sut.HandleAsync(command, Envelope<DepositEscrowByReferenceCommand>());
+
+        escrowService.VerifyAll();
+    }
+
+    [Fact]
+    public async Task HandleAsync_ReferenceCapture_UsesResolvedAuthorization()
+    {
+        var reference = new PaymentOperationReference("application", "application:17");
+        var command = new CaptureEscrowByReferenceCommand(
+            Guid.CreateVersion7(),
+            17,
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            5000,
+            Currency.Gbp,
+            reference);
+        operationRepository
+            .Setup(repository => repository.GetAsync(command.OperationId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((FinancialOperationEntity?)null);
+        operationRepository
+            .Setup(repository => repository.AddAsync(
+                It.IsAny<FinancialOperationEntity>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        unitOfWork
+            .Setup(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolveAuthorizationAsync(
+                reference,
+                command.PayerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("pi_authorized");
+        escrowService
+            .Setup(service => service.CaptureAsync(
+                command.PayerId,
+                command.PayeeId,
+                Money.FromMinorUnits(command.AmountMinor, command.Currency),
+                "pi_authorized",
+                command.BookingId,
+                command.OperationId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EscrowDeposit(1, "pi_authorized", EscrowStatus.Held));
+
+        await sut.HandleAsync(command, Envelope<CaptureEscrowByReferenceCommand>());
+
+        escrowService.VerifyAll();
     }
 
     [Fact]
