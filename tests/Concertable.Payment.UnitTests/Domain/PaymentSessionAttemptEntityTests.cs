@@ -90,6 +90,23 @@ public sealed class PaymentSessionAttemptEntityTests
         Assert.Null(attempt.LastObservedAt);
     }
 
+    [Fact]
+    public void ApplyTransition_InvalidProviderDiagnostic_LeavesAttemptUnchanged()
+    {
+        var attempt = BoundAttempt();
+
+        Assert.Throws<DomainException>(() => attempt.ApplyTransition(
+            PaymentSessionKind.Payment,
+            Transition(PaymentOperationState.Processing, CreatedAt.AddSeconds(1)),
+            providerDiagnosticMessage: new string('x', 1001)));
+        Assert.Equal(PaymentOperationState.Creating, attempt.State);
+        Assert.Equal(CreatedAt, attempt.LastAttemptedAt);
+        Assert.Null(attempt.LastProviderStatus);
+        Assert.Null(attempt.LastObservedAt);
+        Assert.Null(attempt.ProviderDiagnosticMessage);
+        Assert.Empty(attempt.DomainEvents);
+    }
+
     private static PaymentSessionAttemptEntity BoundAttempt()
     {
         var attempt = PaymentSessionAttemptEntity.Create(

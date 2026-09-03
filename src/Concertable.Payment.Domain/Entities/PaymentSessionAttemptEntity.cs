@@ -116,6 +116,26 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
         if (ProviderObjectId is null)
             throw new DomainException("A payment session attempt must be provider-bound before observation.");
 
+        var normalizedProviderStatus = RequiredDiagnostic(
+            transition.ProviderStatus,
+            "provider status",
+            100);
+        var normalizedProviderRequestId = OptionalDiagnostic(
+            providerRequestId,
+            "provider request id",
+            100);
+        var normalizedProviderDiagnosticCode = OptionalDiagnostic(
+            providerDiagnosticCode,
+            "provider diagnostic code",
+            100);
+        var normalizedProviderDiagnosticMessage = OptionalDiagnostic(
+            providerDiagnosticMessage,
+            "provider diagnostic message",
+            1000);
+        var normalizedProviderEventId = OptionalDiagnostic(
+            providerEventId,
+            "provider event id",
+            100);
         string? normalizedPaymentMethodId = null;
         if (transition.State == PaymentOperationState.Succeeded
             && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
@@ -140,7 +160,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
 
         LastAttemptedAt = transition.ObservedAt;
         State = transition.State;
-        LastProviderStatus = RequiredDiagnostic(transition.ProviderStatus, "provider status", 100);
+        LastProviderStatus = normalizedProviderStatus;
         LastObservedAt = transition.ObservedAt;
         NextReconcileAt = null;
         CaptureBefore = transition.CaptureBefore;
@@ -150,13 +170,10 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
             PaymentMethodId = normalizedPaymentMethodId;
         }
         FailureCode = transition.Failure?.Code;
-        ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
-        ProviderDiagnosticCode = OptionalDiagnostic(providerDiagnosticCode, "provider diagnostic code", 100);
-        ProviderDiagnosticMessage = OptionalDiagnostic(
-            providerDiagnosticMessage,
-            "provider diagnostic message",
-            1000);
-        LastProviderEventId = OptionalDiagnostic(providerEventId, "provider event id", 100);
+        ProviderRequestId = normalizedProviderRequestId;
+        ProviderDiagnosticCode = normalizedProviderDiagnosticCode;
+        ProviderDiagnosticMessage = normalizedProviderDiagnosticMessage;
+        LastProviderEventId = normalizedProviderEventId;
         LastProviderEventCreatedAt = providerEventCreatedAt;
         TerminalAt = transition.TerminalDisposition == PaymentOperationTerminalDisposition.NonTerminal
             ? null
