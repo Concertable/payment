@@ -17,7 +17,7 @@ public static class AppHost
         asb.Topology().AddPaymentTopology().AddAuthTopology().RunAsEmulator();
         var auth = builder.AddAuth(AuthImage, AuthDigest, authDb, asb)
                           .WithContainerRuntimeArgs("--user", "root")
-                          .WithHttpsEndpoint(targetPort: 8080, name: "https");
+                          .WithHttpsEndpoint(targetPort: AuthConstants.ContainerPort, name: "https");
         auth.WithEnvironment("ServiceAuth__AuthClientId", "concertable-auth");
         var paymentWeb = builder.AddPaymentWeb<Projects.Concertable_Payment_Web>(auth, paymentDb, asb);
         builder.AddPaymentWorkers<Projects.Concertable_Payment_Workers>(paymentDb, asb);
