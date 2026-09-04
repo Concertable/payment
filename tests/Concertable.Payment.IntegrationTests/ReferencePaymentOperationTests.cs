@@ -176,7 +176,7 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
     {
         var setup = await fixture.RunAsync((IPaymentSessionService service) =>
             service.SetupPaymentMethodAsync(
-                new(reference, PaymentSessionKind.PaymentMethodSetup, payerId)));
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerId, "venue-hire-mandate-v1")));
         Assert.True(setup.TryGetValue(out _));
         return await CurrentProviderObjectIdAsync(reference);
     }

@@ -719,7 +719,7 @@ internal sealed class EscrowService : IEscrowService
             Reason = reason,
             OperationId = reservation.OperationId,
             CommissionBindingId = escrow.CommissionBindingId,
-            CumulativeGrossRefundMinor = cumulativeGrossRefundMinor,
+            RefundId = reservation.Id,
             Metadata = metadata
         }, ct);
         if (!refund.TryGetValue(out var completedRefund))

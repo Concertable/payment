@@ -7,7 +7,8 @@ public sealed record PaymentOperationReference(
 public sealed record PaymentMethodSetupRequest(
     PaymentOperationReference Reference,
     PaymentSessionKind Kind,
-    Guid PayerOwnerId);
+    Guid PayerOwnerId,
+    string MandateTermsVersion);
 
 public sealed record PaymentMethodValidationRequest(
     PaymentOperationReference Reference,

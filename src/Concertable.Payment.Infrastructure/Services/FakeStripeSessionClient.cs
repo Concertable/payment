@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.ProviderContract;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -16,7 +17,7 @@ internal enum FakeStripeSessionFaultPoint
 internal sealed class FakeStripeSessionClient : IStripeSessionClient
 {
     private readonly ConcurrentDictionary<
-        PaymentSessionIdempotencyKey,
+        StripeIdempotencyKey,
         ProviderSession> byIdempotencyKey = [];
     private readonly ConcurrentDictionary<string, ProviderSession> byProviderObjectId = [];
     private readonly ConcurrentDictionary<FakeStripeSessionFaultPoint, byte> oneShotFaults = [];
@@ -34,7 +35,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 
     public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
@@ -164,7 +165,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 
     private ProviderSession Create(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey)
+        StripeIdempotencyKey idempotencyKey)
     {
         var isPayment = request.SessionKind is PaymentSessionKind.Payment or PaymentSessionKind.Authorization;
         var prefix = isPayment ? "pi_fake" : "seti_fake";

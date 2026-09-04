@@ -47,8 +47,8 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         catch (StripeException ex)
         {
             logger.StripeReleaseFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return Result<Transfer, PaymentError>.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return Result<Transfer, PaymentError>.Failure(rejection.Error);
             throw;
         }
     }
@@ -71,7 +71,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                     StripeRequestOptions.RefundReversal(
                         opts.OperationId,
                         opts.CommissionBindingId,
-                        opts.CumulativeGrossRefundMinor),
+                        opts.RefundId),
                     ct);
 
                 logger.StripeTransferReversalSucceeded(
@@ -91,7 +91,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
                 StripeRequestOptions.Refund(
                     opts.OperationId,
                     opts.CommissionBindingId,
-                    opts.CumulativeGrossRefundMinor),
+                    opts.RefundId),
                 ct);
 
             logger.StripeRefundSucceeded(refund.Id, opts.PaymentIntentId, refund.Amount);
@@ -101,8 +101,8 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         catch (StripeException ex)
         {
             logger.StripeRefundFailed(opts.PaymentIntentId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return Result<Refund, PaymentError>.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return Result<Refund, PaymentError>.Failure(rejection.Error);
             throw;
         }
     }

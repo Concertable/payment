@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
 using Stripe;
@@ -14,10 +15,10 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         this.webhookQueue = webhookQueue;
     }
 
-    public Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    public async Task<Result<PaymentOutcome, PaymentRejection>> ChargeAsync(
         StripeChargeOptions options,
         CancellationToken ct = default) =>
-        CompleteAsync(options.Amount, options.Metadata, ct);
+        (await CompleteAsync(options.Amount, options.Metadata, ct)).MapError(PaymentRejection.Declined);
 
     public Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
         StripeHoldOptions options,

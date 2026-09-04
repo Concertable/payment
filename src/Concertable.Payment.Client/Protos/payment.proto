@@ -140,6 +140,7 @@ message PaymentMethodSetupRequest {
   PaymentOperationReference reference = 1;
   PaymentSessionKind kind = 2;
   string payer_owner_id = 3;
+  string mandate_terms_version = 4;
 }
 
 message PaymentMethodValidationRequest {
@@ -165,6 +166,7 @@ message PaymentSessionOperationRequest {
   PaymentSessionFundsRouting funds_routing = 9;
   PaymentSessionType session = 10;
   optional string payment_method_id = 11;
+  optional string mandate_terms_version = 12;
 }
 
 message PaymentSessionRetryRequest {

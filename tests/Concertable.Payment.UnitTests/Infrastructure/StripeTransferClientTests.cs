@@ -81,13 +81,16 @@ public sealed class StripeTransferClientTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(transfer);
-        Assert.Equal($"operation:{operationId}:release", transferRequest?.IdempotencyKey);
+        Assert.Equal(
+            $"financial-operation:{operationId:D}:{operationId:D}:1:release",
+            transferRequest?.IdempotencyKey);
     }
 
     [Fact]
     public async Task RefundAsync_UsesPayeeRefundForTransferReversalAndTotalForCustomerRefund()
     {
         var bindingId = Guid.NewGuid();
+        var refundId = Guid.CreateVersion7();
         var result = await sut.RefundAsync(new StripeRefundOptions
         {
             Amount = Money.Gbp(55),
@@ -95,7 +98,7 @@ public sealed class StripeTransferClientTests
             TransferReversal = new("tr_test", Money.Gbp(50)),
             Reason = RefundReasonCodes.RequestedByCustomer,
             CommissionBindingId = bindingId,
-            CumulativeGrossRefundMinor = 5500,
+            RefundId = refundId,
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CommissionBindingId] = bindingId.ToString(),
@@ -107,13 +110,13 @@ public sealed class StripeTransferClientTests
         Assert.NotNull(reversal);
         Assert.Equal(5000, reversal.Amount);
         Assert.Equal(
-            $"commission:{bindingId}:refund-reversal:5500",
+            $"commission-binding:{bindingId:D}:{refundId:D}:1:refund-reversal",
             reversalRequest?.IdempotencyKey);
         Assert.NotNull(refund);
         Assert.Equal(5500, refund.Amount);
         Assert.Equal(RefundReasonCodes.RequestedByCustomer, refund.Reason);
         Assert.Equal(
-            $"commission:{bindingId}:refund:5500",
+            $"commission-binding:{bindingId:D}:{refundId:D}:1:refund",
             refundRequest?.IdempotencyKey);
     }
 
@@ -125,7 +128,7 @@ public sealed class StripeTransferClientTests
             Amount = Money.Gbp(55),
             PaymentIntentId = "pi_test",
             TransferReversal = new("tr_test", Money.Gbp(50)),
-            CumulativeGrossRefundMinor = 5500,
+            RefundId = Guid.CreateVersion7(),
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "5500"
@@ -217,7 +220,7 @@ public sealed class StripeTransferClientTests
         {
             Amount = Money.Gbp(10),
             PaymentIntentId = "pi_test",
-            CumulativeGrossRefundMinor = 1000,
+            RefundId = Guid.CreateVersion7(),
             Metadata = new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.CumulativeGrossRefundMinor] = "1000"

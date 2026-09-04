@@ -20,7 +20,8 @@ internal static class PaymentSessionOperationGrpcMappers
             new(
                 request.Reference.ToContract(),
                 request.Kind.ToContract(),
-                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)));
+                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
+                request.MandateTermsVersion);
     }
 
     extension(Proto.PaymentMethodValidationRequest request)
@@ -53,7 +54,10 @@ internal static class PaymentSessionOperationGrpcMappers
                 request.HasAmountMinor ? request.AmountMinor : null,
                 request.HasCurrency ? request.Currency.ToContract() : null,
                 request.FundsRouting.ToContract(),
-                request.HasPaymentMethodId ? request.PaymentMethodId : null);
+                request.HasPaymentMethodId ? request.PaymentMethodId : null)
+            {
+                MandateTermsVersion = request.HasMandateTermsVersion ? request.MandateTermsVersion : null
+            };
     }
 
     extension(Proto.PaymentSessionRetryRequest request)

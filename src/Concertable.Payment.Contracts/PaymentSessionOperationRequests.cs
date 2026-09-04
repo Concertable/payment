@@ -13,7 +13,10 @@ public sealed record PaymentSessionOperationRequest(
     long? AmountMinor,
     Currency? Currency,
     PaymentSessionFundsRouting FundsRouting,
-    string? PaymentMethodId);
+    string? PaymentMethodId)
+{
+    public string? MandateTermsVersion { get; init; }
+}
 
 public sealed record PaymentSessionRetryRequest(
     Guid OperationId,

@@ -70,7 +70,8 @@ internal static class PaymentErrorMappers
         Index(paymentOperationErrors.Values.Select(error =>
                 (PaymentMethodChargeError)new PaymentMethodChargeError.PaymentMethodFailure(error))
             .Concat(managerPaymentOperationErrors.Values.Select(error =>
-                (PaymentMethodChargeError)new PaymentMethodChargeError.ChargeFailure(error))));
+                (PaymentMethodChargeError)new PaymentMethodChargeError.ChargeFailure(error)))
+            .Append(new PaymentMethodChargeError.AuthenticationRequired()));
 
     private static readonly FrozenDictionary<string, HoldSessionError> holdSessionErrors =
         Index(Composite<HoldSessionError>(

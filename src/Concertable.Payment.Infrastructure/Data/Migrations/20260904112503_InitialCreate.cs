@@ -102,6 +102,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     PaymentMethodId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ProviderCustomerId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ProviderConnectedAccountId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    MandateTermsVersion = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    MandateAcceptedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
                     FingerprintVersion = table.Column<int>(type: "int", nullable: false),
                     RequestFingerprint = table.Column<string>(type: "nchar(64)", fixedLength: true, maxLength: 64, nullable: false),
                     CurrentRevision = table.Column<long>(type: "bigint", nullable: false),
@@ -114,6 +116,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     table.PrimaryKey("PK_PaymentSessionOperations", x => x.OperationId);
                     table.CheckConstraint("CK_PaymentSessionOperations_CurrentRevision", "[CurrentRevision] >= 1");
                     table.CheckConstraint("CK_PaymentSessionOperations_FingerprintVersion", "[FingerprintVersion] >= 1");
+                    table.CheckConstraint("CK_PaymentSessionOperations_MandateEvidence", "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
                     table.CheckConstraint("CK_PaymentSessionOperations_RequestFingerprint", "LEN([RequestFingerprint]) = 64");
                 });
 

@@ -15,7 +15,7 @@ public sealed class PaymentSessionFingerprintTests
 
         Assert.Equal(1, fingerprint.Version);
         Assert.Equal(
-            "0713BD4621CAFA28101B75D381417C803995731C4729E42E9611C2807882F2C6",
+            "59B28F42D28AE211CBB4E1581644DA8C8A6D1B8078C5B240780D30349CD7A367",
             fingerprint.Value);
     }
 
@@ -57,6 +57,32 @@ public sealed class PaymentSessionFingerprintTests
         Assert.NotEqual(first, second);
     }
 
+    [Fact]
+    public void Create_ChangedMandateTerms_ReturnsDifferentHash()
+    {
+        var first = PaymentSessionFingerprint.Create(Setup("venue-hire-mandate-v1"));
+        var second = PaymentSessionFingerprint.Create(Setup("venue-hire-mandate-v2"));
+
+        Assert.NotEqual(first, second);
+    }
+
+    private static PaymentSessionSpecification Setup(string mandateTermsVersion) =>
+        PaymentSessionSpecification.Create(
+            Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
+            PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
+            "venueHire",
+            "booking:42",
+            "payer:7",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            "cus_test",
+            null,
+            mandateTermsVersion);
+
     private static PaymentSessionSpecification Authorization(
         long amountMinor,
         PaymentSession session = PaymentSession.OnSession,
@@ -74,5 +100,6 @@ public sealed class PaymentSessionFingerprintTests
             PaymentSessionFundsRouting.Destination,
             paymentMethodId,
             "cus_test",
-            "acct_test");
+            "acct_test",
+            null);
 }

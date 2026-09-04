@@ -3,6 +3,7 @@ using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Contracts;
@@ -160,7 +161,7 @@ public sealed class ManagerPaymentServiceTests
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, Guid, Money, Money, string, PaymentSession, IReadOnlyDictionary<string, string>, CancellationToken>((_, _, charge, payee, _, _, _, _) => { chargeAmount = charge; payeeAmount = payee; })
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(
+            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(
                 new PaymentOutcome { TransactionId = "pi_fee", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
@@ -193,7 +194,7 @@ public sealed class ManagerPaymentServiceTests
 
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(
+            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(
                 new PaymentOutcome { TransactionId = "pi_zero", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
@@ -238,7 +239,7 @@ public sealed class ManagerPaymentServiceTests
                 It.Is<IReadOnlyDictionary<string, string>>(metadata =>
                     metadata[PaymentMetadataKeys.OperationId] == operationId.ToString()),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(outcome));
+            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(outcome));
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
@@ -741,6 +742,85 @@ public sealed class ManagerPaymentServiceTests
             commissionBindingId: commissionBindingId ?? Guid.NewGuid());
         settlement.Complete(DateTime.UtcNow);
         return settlement;
+    }
+
+    [Fact]
+    public async Task PayAsync_ByReferenceAuthenticationRequiredDecline_ReturnsAuthenticationRequired()
+    {
+        var operationId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("venueHire", $"booking:{operationId:N}");
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolvePaymentMethodAsync(
+                reference,
+                payerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, PaymentOperationError>.Success("pm_committed"));
+        paymentManager
+            .Setup(manager => manager.SettleAsync(
+                operationId,
+                payerId,
+                payeeId,
+                It.IsAny<Money>(),
+                It.IsAny<Money>(),
+                "pm_committed",
+                PaymentSession.OffSession,
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Failure(new PaymentRejection
+            {
+                Error = new PaymentError.PaymentRejected(),
+                Recovery = PaymentRecovery.OnSessionAuthentication
+            }));
+
+        var result = await SutWithFee(0).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            reference,
+            PaymentSession.OffSession,
+            bookingId: 7);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.IsType<PaymentMethodChargeError.AuthenticationRequired>(error);
+    }
+
+    [Fact]
+    public async Task PayAsync_ByReferenceDeclined_ReturnsChargeFailure()
+    {
+        var operationId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("venueHire", $"booking:{operationId:N}");
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolvePaymentMethodAsync(
+                reference,
+                payerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, PaymentOperationError>.Success("pm_committed"));
+        paymentManager
+            .Setup(manager => manager.SettleAsync(
+                operationId,
+                payerId,
+                payeeId,
+                It.IsAny<Money>(),
+                It.IsAny<Money>(),
+                "pm_committed",
+                PaymentSession.OffSession,
+                It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Failure(
+                PaymentRejection.Declined(new PaymentError.PaymentRejected())));
+
+        var result = await SutWithFee(0).PayAsync(
+            operationId,
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            reference,
+            PaymentSession.OffSession,
+            bookingId: 7);
+
+        Assert.True(result.TryGetError(out var error));
+        Assert.IsType<PaymentMethodChargeError.ChargeFailure>(error);
     }
 
     private BoundCommission BoundCommissionFor(Guid bindingId, string? boundIntentId = null)

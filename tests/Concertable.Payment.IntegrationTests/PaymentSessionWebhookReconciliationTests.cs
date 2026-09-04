@@ -158,7 +158,8 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.None,
             null,
             $"cus_{operationId:N}",
-            null);
+            null,
+            "venue-hire-mandate-v1");
 
     private static Event PaymentIntentEvent(
         string eventId,
@@ -195,5 +196,6 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
 }
