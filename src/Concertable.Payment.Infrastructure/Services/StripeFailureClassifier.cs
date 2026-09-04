@@ -13,7 +13,7 @@ internal static class StripeFailureClassifier
         if (exception.HttpStatusCode != HttpStatusCode.PaymentRequired &&
             !string.Equals(exception.StripeError?.Type, "card_error", StringComparison.Ordinal) &&
             string.IsNullOrWhiteSpace(exception.StripeError?.DeclineCode))
-            return Option.None<ChargeError>();
+            return null;
 
         ChargeError rejection = string.Equals(
             exception.StripeError?.DeclineCode,
@@ -22,6 +22,6 @@ internal static class StripeFailureClassifier
             ? new ChargeError.AuthenticationRequired()
             : new ChargeError.PaymentFailure(new PaymentError.PaymentRejected());
 
-        return Option.Some(rejection);
+        return rejection;
     }
 }
