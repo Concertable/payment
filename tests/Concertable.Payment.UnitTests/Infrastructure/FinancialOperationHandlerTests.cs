@@ -16,6 +16,8 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class FinancialOperationHandlerTests
 {
+    private static readonly PaymentOperationReference Reference = new("escrow", "order:17");
+    private static readonly PaymentOperationReference Authorization = new("authorization", "authorization:17");
     private readonly Mock<IEscrowService> escrowService;
     private readonly Mock<IFinancialOperationRepository> operationRepository;
     private readonly Mock<IUnitOfWork> unitOfWork;
@@ -52,12 +54,12 @@ public sealed class FinancialOperationHandlerTests
     {
         var command = new CaptureEscrowCommand(
             Guid.NewGuid(),
-            17,
+            Reference,
             Guid.NewGuid(),
             Guid.NewGuid(),
             5000,
             Currency.Gbp,
-            "pi_test");
+            Authorization);
         FinancialOperationEntity? operation = null;
         var sequence = new List<string>();
         operationRepository
@@ -75,18 +77,24 @@ public sealed class FinancialOperationHandlerTests
             .Setup(work => work.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => sequence.Add("save"))
             .Returns(Task.CompletedTask);
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolveAuthorizationAsync(
+                command.Authorization,
+                command.PayerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, PaymentOperationError>.Success("pi_test"));
         escrowService
             .Setup(service => service.CaptureAsync(
                 command.PayerId,
                 command.PayeeId,
                 Money.FromMinorUnits(command.AmountMinor, command.Currency),
-                command.PaymentIntentId,
-                command.BookingId,
+                "pi_test",
+                command.Reference,
                 command.OperationId,
                 It.IsAny<CancellationToken>()))
             .Callback(() => sequence.Add("payment"))
             .ReturnsAsync(Result<EscrowDeposit, EscrowCaptureError>.Success(
-                new EscrowDeposit(1, command.PaymentIntentId, EscrowStatus.Held)));
+                new EscrowDeposit(1, "pi_test", EscrowStatus.Held)));
 
         await sut.HandleAsync(command, Envelope<CaptureEscrowCommand>());
 
@@ -95,7 +103,7 @@ public sealed class FinancialOperationHandlerTests
         Assert.Equal(FinancialOperationStatus.Succeeded, operation.Status);
         bus.Verify(value => value.PublishAsync(
             It.Is<CaptureEscrowSucceededEvent>(@event =>
-                @event.OperationId == command.OperationId && @event.ReferenceId == command.PaymentIntentId),
+                @event.OperationId == command.OperationId && @event.ReferenceId == "pi_test"),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -104,12 +112,12 @@ public sealed class FinancialOperationHandlerTests
     {
         var command = new CaptureEscrowCommand(
             Guid.NewGuid(),
-            17,
+            Reference,
             Guid.NewGuid(),
             Guid.NewGuid(),
             5000,
             Currency.Gbp,
-            "pi_test");
+            Authorization);
         FinancialOperationEntity? operation = null;
         operationRepository
             .Setup(repository => repository.GetAsync(command.OperationId, It.IsAny<CancellationToken>()))
@@ -118,17 +126,23 @@ public sealed class FinancialOperationHandlerTests
             .Setup(repository => repository.AddAsync(It.IsAny<FinancialOperationEntity>(), It.IsAny<CancellationToken>()))
             .Callback<FinancialOperationEntity, CancellationToken>((value, _) => operation = value)
             .Returns(Task.CompletedTask);
+        paymentOperationResolver
+            .Setup(resolver => resolver.ResolveAuthorizationAsync(
+                command.Authorization,
+                command.PayerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, PaymentOperationError>.Success("pi_test"));
         escrowService
             .Setup(service => service.CaptureAsync(
                 command.PayerId,
                 command.PayeeId,
                 Money.FromMinorUnits(command.AmountMinor, command.Currency),
-                command.PaymentIntentId,
-                command.BookingId,
+                "pi_test",
+                command.Reference,
                 command.OperationId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<EscrowDeposit, EscrowCaptureError>.Success(
-                new EscrowDeposit(1, command.PaymentIntentId, EscrowStatus.Held)));
+                new EscrowDeposit(1, "pi_test", EscrowStatus.Held)));
 
         await sut.HandleAsync(command, Envelope<CaptureEscrowCommand>());
         escrowService.Invocations.Clear();
@@ -141,7 +155,7 @@ public sealed class FinancialOperationHandlerTests
             It.IsAny<Guid>(),
             It.IsAny<Money>(),
             It.IsAny<string>(),
-            It.IsAny<int>(),
+            It.IsAny<PaymentOperationReference>(),
             It.IsAny<Guid>(),
             It.IsAny<CancellationToken>()), Times.Never);
         bus.Verify(value => value.PublishAsync(
@@ -152,7 +166,7 @@ public sealed class FinancialOperationHandlerTests
     [Fact]
     public async Task HandleAsync_RefundBeforeEscrow_PublishesDeferredAndKeepsPending()
     {
-        var command = new RefundEscrowCommand(Guid.NewGuid(), 17, RefundReasonCodes.RequestedByCustomer);
+        var command = new RefundEscrowCommand(Guid.NewGuid(), Reference, "requested");
         FinancialOperationEntity? operation = null;
         operationRepository
             .Setup(repository => repository.GetAsync(command.OperationId, It.IsAny<CancellationToken>()))
@@ -163,8 +177,8 @@ public sealed class FinancialOperationHandlerTests
             .Returns(Task.CompletedTask);
         Option<Refund> none = null;
         escrowService
-            .Setup(service => service.RefundByBookingIdAsync(
-                command.BookingId,
+            .Setup(service => service.RefundByReferenceAsync(
+                command.Reference,
                 null,
                 command.Reason,
                 command.OperationId,

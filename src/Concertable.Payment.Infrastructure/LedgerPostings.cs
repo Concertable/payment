@@ -9,18 +9,23 @@ internal static class LedgerPostings
             Money.FromMinorUnits(settlement.PayeeGrossMinor, settlement.Currency),
             Money.FromMinorUnits(settlement.CommissionNetMinor, settlement.Currency),
             Money.FromMinorUnits(settlement.CommissionVatMinor, settlement.Currency),
-            settlement.BookingId,
+            new PaymentOperationReference(settlement.OperationType, settlement.ClientReference),
             settlement.PaymentIntentId);
 
     public static LedgerPosting DirectSettlement(
-        Guid payerId, Guid payeeId, Money gross, Money fee, int bookingId, string? paymentIntentId)
+        Guid payerId,
+        Guid payeeId,
+        Money gross,
+        Money fee,
+        PaymentOperationReference reference,
+        string? paymentIntentId)
         => DirectSettlement(
             payerId,
             payeeId,
             gross,
             fee,
             Money.Zero(fee.Currency),
-            bookingId,
+            reference,
             paymentIntentId);
 
     public static LedgerPosting DirectSettlement(
@@ -29,7 +34,7 @@ internal static class LedgerPostings
         Money gross,
         Money commissionNet,
         Money commissionVat,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId)
     {
         var legs = new List<PostingLeg>
@@ -45,27 +50,35 @@ internal static class LedgerPostings
         return new LedgerPosting(
             LedgerPostingType.DirectSettlement,
             RequireExternalId(paymentIntentId),
-            bookingId,
+            reference,
             paymentIntentId,
             legs);
     }
 
     public static LedgerPosting EscrowHold(
-        Guid payerId, Money total, int bookingId, string? paymentIntentId) =>
-        new(LedgerPostingType.EscrowHold, RequireExternalId(paymentIntentId), bookingId, paymentIntentId,
+        Guid payerId,
+        Money total,
+        PaymentOperationReference reference,
+        string? paymentIntentId) =>
+        new(LedgerPostingType.EscrowHold, RequireExternalId(paymentIntentId), reference, paymentIntentId,
         [
             new(new(LedgerAccountType.Receivable, payerId), LedgerDirection.Debit, total),
             new(new(LedgerAccountType.StripeClearing, null), LedgerDirection.Credit, total)
         ]);
 
     public static LedgerPosting EscrowRelease(
-        Guid payeeId, Money gross, Money fee, int bookingId, string? paymentIntentId, string transferId)
+        Guid payeeId,
+        Money gross,
+        Money fee,
+        PaymentOperationReference reference,
+        string? paymentIntentId,
+        string transferId)
         => EscrowRelease(
             payeeId,
             gross,
             fee,
             Money.Zero(fee.Currency),
-            bookingId,
+            reference,
             paymentIntentId,
             transferId);
 
@@ -74,7 +87,7 @@ internal static class LedgerPostings
         Money gross,
         Money commissionNet,
         Money commissionVat,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         string transferId)
     {
@@ -91,14 +104,18 @@ internal static class LedgerPostings
         return new LedgerPosting(
             LedgerPostingType.EscrowRelease,
             RequireExternalId(transferId),
-            bookingId,
+            reference,
             paymentIntentId,
             legs);
     }
 
     public static LedgerPosting EscrowRefundBeforeRelease(
-        Guid payerId, Money refunded, int bookingId, string? paymentIntentId, string refundId) =>
-        new(LedgerPostingType.EscrowRefund, RequireExternalId(refundId), bookingId, paymentIntentId,
+        Guid payerId,
+        Money refunded,
+        PaymentOperationReference reference,
+        string? paymentIntentId,
+        string refundId) =>
+        new(LedgerPostingType.EscrowRefund, RequireExternalId(refundId), reference, paymentIntentId,
         [
             new(new(LedgerAccountType.StripeClearing, null), LedgerDirection.Debit, refunded),
             new(new(LedgerAccountType.Receivable, payerId), LedgerDirection.Credit, refunded)
@@ -109,7 +126,7 @@ internal static class LedgerPostings
         Guid payeeId,
         Money gross,
         Money fee,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         string refundId)
         => EscrowRefundAfterRelease(
@@ -118,7 +135,7 @@ internal static class LedgerPostings
             gross,
             fee,
             Money.Zero(fee.Currency),
-            bookingId,
+            reference,
             paymentIntentId,
             refundId);
 
@@ -128,7 +145,7 @@ internal static class LedgerPostings
         Money gross,
         Money commissionNet,
         Money commissionVat,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         string refundId)
     {
@@ -154,7 +171,7 @@ internal static class LedgerPostings
         return new LedgerPosting(
             LedgerPostingType.EscrowRefund,
             RequireExternalId(refundId),
-            bookingId,
+            reference,
             paymentIntentId,
             legs);
     }
@@ -165,7 +182,7 @@ internal static class LedgerPostings
         Money gross,
         Money commissionNet,
         Money commissionVat,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         string refundId)
     {
@@ -191,7 +208,7 @@ internal static class LedgerPostings
         return new LedgerPosting(
             LedgerPostingType.DirectSettlementRefund,
             RequireExternalId(refundId),
-            bookingId,
+            reference,
             paymentIntentId,
             legs);
     }

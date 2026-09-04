@@ -13,7 +13,9 @@ Directory.CreateDirectory(outputDirectory);
 
 WriteLines("Concertable.Payment.Contracts.public-api.txt", PublicApiSnapshot.Create(typeof(PaymentSession).Assembly));
 WriteLines("Concertable.Payment.Contracts.message-urns.txt", PublicApiSnapshot.CreateMessageUrns(typeof(PaymentSession).Assembly));
-WriteLines("Concertable.Payment.Client.public-api.txt", PublicApiSnapshot.Create(typeof(CheckoutSession).Assembly));
+WriteLines(
+    "Concertable.Payment.Client.public-api.txt",
+    PublicApiSnapshot.Create(typeof(Concertable.Payment.Client.PaymentOperationSnapshot).Assembly));
 
 var descriptorSet = new FileDescriptorSet();
 descriptorSet.File.Add(PaymentReflection.Descriptor.ToProto());

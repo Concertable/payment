@@ -144,8 +144,8 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             },
         };
 
-    private static PaymentSessionSpecification SetupSpecification(Guid operationId) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition SetupSpecification(Guid operationId) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OffSession,
@@ -182,13 +182,13 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             },
         };
 
-    private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(Guid operationId, long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             $"payer:{operationId:N}",
             $"payee:{operationId:N}",
             amountMinor,

@@ -53,20 +53,10 @@ internal sealed class EscrowService : IEscrowService
         Money amount,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId,
-        CancellationToken ct = default) =>
-        DepositCoreAsync(payerId, payeeId, amount, paymentMethodId, session, bookingId, null, ct);
-
-    public Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentMethodId,
-        PaymentSession session,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid operationId,
         CancellationToken ct = default) =>
-        DepositCoreAsync(payerId, payeeId, amount, paymentMethodId, session, bookingId, operationId, ct);
+        DepositCoreAsync(payerId, payeeId, amount, paymentMethodId, session, reference, operationId, ct);
 
     private async Task<Result<EscrowDeposit, EscrowDepositError>> DepositCoreAsync(
         Guid payerId,
@@ -74,11 +64,11 @@ internal sealed class EscrowService : IEscrowService
         Money amount,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid? operationId,
         CancellationToken ct)
     {
-        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var existing = await escrowRepository.GetByReferenceAsync(reference, ct);
         if (existing is not null)
             return ExistingDeposit(existing, payerId, payeeId, amount);
 
@@ -95,7 +85,8 @@ internal sealed class EscrowService : IEscrowService
             OperationMetadata(operationId, new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
-                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
+                [PaymentMetadataKeys.OperationType] = reference.OperationType,
+                [PaymentMetadataKeys.ClientReference] = reference.ClientReference
             }),
             operationId,
             ct);
@@ -105,7 +96,7 @@ internal sealed class EscrowService : IEscrowService
             return new EscrowDepositError.PaymentFailure(paymentError!);
         }
 
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, outcome.TransactionId);
+        var escrow = EscrowEntity.Create(reference, payerId, payeeId, amount, platformFee, outcome.TransactionId);
         await escrowRepository.AddAsync(escrow);
         await unitOfWork.SaveChangesAsync(ct);
 
@@ -116,7 +107,7 @@ internal sealed class EscrowService : IEscrowService
                 LedgerPostings.EscrowHold(
                     escrow.FromOwnerId,
                     escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                    escrow.BookingId,
+                    reference,
                     escrow.ChargeId),
                 ct);
             await unitOfWork.SaveChangesAsync(ct);
@@ -131,7 +122,7 @@ internal sealed class EscrowService : IEscrowService
         Money gross,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid commissionBindingId,
         string externalReference,
         string? stripeSetupIntentId,
@@ -168,7 +159,7 @@ internal sealed class EscrowService : IEscrowService
             Money.FromMinorUnits(calculation.PayerTotalMinor, calculation.Currency),
             paymentMethodId,
             session,
-            CommissionMetadata(bound, bookingId, TransactionTypes.Escrow),
+            CommissionMetadata(bound, reference, TransactionTypes.Escrow),
             commissionBindingId,
             ct);
         if (!hold.TryGetValue(out var outcome))
@@ -179,7 +170,7 @@ internal sealed class EscrowService : IEscrowService
 
         commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);
         var escrow = EscrowEntity.CreateBound(
-            bookingId,
+            reference,
             payerId,
             payeeId,
             commissionBindingId,
@@ -194,7 +185,7 @@ internal sealed class EscrowService : IEscrowService
                 LedgerPostings.EscrowHold(
                     escrow.FromOwnerId,
                     escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                    escrow.BookingId,
+                    reference,
                     escrow.ChargeId),
                 ct);
         }
@@ -209,30 +200,21 @@ internal sealed class EscrowService : IEscrowService
         Guid payeeId,
         Money amount,
         string paymentIntentId,
-        int bookingId,
-        CancellationToken ct = default) =>
-        CaptureCoreAsync(payerId, payeeId, amount, paymentIntentId, bookingId, null, ct);
-
-    public Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentIntentId,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid operationId,
         CancellationToken ct = default) =>
-        CaptureCoreAsync(payerId, payeeId, amount, paymentIntentId, bookingId, operationId, ct);
+        CaptureCoreAsync(payerId, payeeId, amount, paymentIntentId, reference, operationId, ct);
 
     private async Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureCoreAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
         string paymentIntentId,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid? operationId,
         CancellationToken ct)
     {
-        var existing = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var existing = await escrowRepository.GetByReferenceAsync(reference, ct);
         if (existing is not null)
             return ExistingCapture(existing, payerId, payeeId, amount, paymentIntentId);
 
@@ -243,20 +225,21 @@ internal sealed class EscrowService : IEscrowService
             Metadata = OperationMetadata(operationId, new Dictionary<string, string>
             {
                 [PaymentMetadataKeys.Type] = TransactionTypes.Escrow,
-                [PaymentMetadataKeys.BookingId] = bookingId.ToString()
+                [PaymentMetadataKeys.OperationType] = reference.OperationType,
+                [PaymentMetadataKeys.ClientReference] = reference.ClientReference
             })
         }, ct);
         if (capture.TryGetError(out var error))
             return new EscrowCaptureError.PaymentFailure(error);
 
-        var escrow = EscrowEntity.Create(bookingId, payerId, payeeId, amount, platformFee, paymentIntentId);
+        var escrow = EscrowEntity.Create(reference, payerId, payeeId, amount, platformFee, paymentIntentId);
         EnsureTransition(escrow.Confirm());
         await escrowRepository.AddAsync(escrow);
         await ledger.StageAsync(
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                reference,
                 escrow.ChargeId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -269,7 +252,7 @@ internal sealed class EscrowService : IEscrowService
         Guid payeeId,
         Money gross,
         string paymentIntentId,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid commissionBindingId,
         string externalReference,
         CancellationToken ct = default)
@@ -298,14 +281,14 @@ internal sealed class EscrowService : IEscrowService
         {
             PaymentIntentId = paymentIntentId,
             CommissionBindingId = commissionBindingId,
-            Metadata = CommissionMetadata(bound, bookingId, TransactionTypes.Escrow)
+            Metadata = CommissionMetadata(bound, reference, TransactionTypes.Escrow)
         }, ct);
         if (capture.TryGetError(out var paymentError))
             return Result<EscrowDeposit, EscrowCaptureError>.Failure(new EscrowCaptureError.PaymentFailure(paymentError));
 
         commissionService.BindPaymentIntent(bound.Binding, paymentIntentId);
         var escrow = EscrowEntity.CreateBound(
-            bookingId,
+            reference,
             payerId,
             payeeId,
             commissionBindingId,
@@ -317,7 +300,7 @@ internal sealed class EscrowService : IEscrowService
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                reference,
                 escrow.ChargeId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -399,7 +382,7 @@ internal sealed class EscrowService : IEscrowService
                 escrow.PayeeGrossMinor.ToMoney(escrow.Currency),
                 escrow.CommissionNetMinor.ToMoney(escrow.Currency),
                 escrow.CommissionVatMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                Reference(escrow),
                 escrow.ChargeId,
                 transfer.TransferId),
             ct);
@@ -418,11 +401,11 @@ internal sealed class EscrowService : IEscrowService
         return transfer;
     }
 
-    public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(
-        int bookingId,
+    public async Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByReferenceAsync(
+        PaymentOperationReference reference,
         CancellationToken ct = default)
     {
-        var result = await ReleaseByBookingIdCoreAsync(null, bookingId, ct);
+        var result = await ReleaseByReferenceCoreAsync(null, reference, ct);
         if (result.TryGetValue(out var transfer))
             return Result<Option<Transfer>, EscrowReleaseError>.Success(transfer);
 
@@ -432,26 +415,30 @@ internal sealed class EscrowService : IEscrowService
             : throw new InvalidOperationException("A legacy escrow release cannot produce an operation conflict.");
     }
 
-    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+    public Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByReferenceAsync(
         Guid operationId,
-        int bookingId,
+        PaymentOperationReference reference,
         CancellationToken ct = default) =>
-        ReleaseByBookingIdCoreAsync(operationId, bookingId, ct);
+        ReleaseByReferenceCoreAsync(operationId, reference, ct);
 
-    private async Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdCoreAsync(
+    private async Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByReferenceCoreAsync(
         Guid? operationId,
-        int bookingId,
+        PaymentOperationReference reference,
         CancellationToken ct)
     {
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var escrow = await escrowRepository.GetByReferenceAsync(reference, ct);
         if (escrow is null)
         {
-            logger.NoEscrowFoundForBooking(bookingId);
+            logger.NoEscrowFoundForReference(reference.OperationType, reference.ClientReference);
             return Result<Option<Transfer>, EscrowReleaseOperationError>.Success(Option.None<Transfer>());
         }
         if (operationId is null && escrow.Status != EscrowStatus.Held)
         {
-            logger.EscrowNotHeldSkippingRelease(escrow.Id, bookingId, escrow.Status);
+            logger.EscrowNotHeldSkippingRelease(
+                escrow.Id,
+                reference.OperationType,
+                reference.ClientReference,
+                escrow.Status);
             return Result<Option<Transfer>, EscrowReleaseOperationError>.Success(Option.None<Transfer>());
         }
 
@@ -505,32 +492,32 @@ internal sealed class EscrowService : IEscrowService
         return await ExecuteRefundAsync(escrow, grossRefundMinor, commissionRefundMinor, 0, reason, operationId, ct);
     }
 
-    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
+    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceAsync(
+        PaymentOperationReference reference,
         Money? amount = null,
         string? reason = null,
         CancellationToken ct = default) =>
-        RefundByBookingIdCoreAsync(bookingId, amount, reason, null, ct);
+        RefundByReferenceCoreAsync(reference, amount, reason, null, ct);
 
-    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
+    public Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceAsync(
+        PaymentOperationReference reference,
         Money? amount,
         string? reason,
         Guid operationId,
         CancellationToken ct = default) =>
-        RefundByBookingIdCoreAsync(bookingId, amount, reason, operationId, ct);
+        RefundByReferenceCoreAsync(reference, amount, reason, operationId, ct);
 
-    private async Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdCoreAsync(
-        int bookingId,
+    private async Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceCoreAsync(
+        PaymentOperationReference reference,
         Money? amount,
         string? reason,
         Guid? operationId,
         CancellationToken ct)
     {
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var escrow = await escrowRepository.GetByReferenceAsync(reference, ct);
         if (escrow is null)
         {
-            logger.NoEscrowToRefundForBooking(bookingId);
+            logger.NoEscrowToRefundForReference(reference.OperationType, reference.ClientReference);
             Option<Refund> none = null;
             return none;
         }
@@ -556,14 +543,18 @@ internal sealed class EscrowService : IEscrowService
 
         if (escrow.Status == EscrowStatus.Refunded)
         {
-            logger.EscrowAlreadyRefunded(escrow.Id, bookingId);
+            logger.EscrowAlreadyRefunded(escrow.Id, reference.OperationType, reference.ClientReference);
             Option<Refund> none = null;
             return none;
         }
 
         if (escrow.Status is not (EscrowStatus.Held or EscrowStatus.Released or EscrowStatus.Disputed))
         {
-            logger.EscrowNotRefundableSkippingRefund(escrow.Id, bookingId, escrow.Status);
+            logger.EscrowNotRefundableSkippingRefund(
+                escrow.Id,
+                reference.OperationType,
+                reference.ClientReference,
+                escrow.Status);
             Option<Refund> none = null;
             return none;
         }
@@ -578,17 +569,17 @@ internal sealed class EscrowService : IEscrowService
         return completed;
     }
 
-    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
-        int bookingId,
+    public async Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByReferenceAsync(
+        PaymentOperationReference reference,
         Money gross,
         string? reason = null,
         CancellationToken ct = default)
     {
         var grossMinor = gross.ToMinorUnits();
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var escrow = await escrowRepository.GetByReferenceAsync(reference, ct);
         if (escrow is null)
         {
-            logger.NoEscrowToRefundForBooking(bookingId);
+            logger.NoEscrowToRefundForReference(reference.OperationType, reference.ClientReference);
             return Result<Option<Refund>, EscrowRefundError>.Success(Option.None<Refund>());
         }
         if (escrow.CommissionBindingId is null)
@@ -638,16 +629,16 @@ internal sealed class EscrowService : IEscrowService
         return Result<Option<Refund>, EscrowRefundError>.Success(Option.Some(completedRefund));
     }
 
-    public async Task<Option<EscrowDto>> GetByBookingIdAsync(
-        int bookingId,
+    public async Task<Option<EscrowDto>> GetByReferenceAsync(
+        PaymentOperationReference reference,
         CancellationToken ct = default)
     {
-        var escrow = await escrowRepository.GetByBookingIdAsync(bookingId, ct);
+        var escrow = await escrowRepository.GetByReferenceAsync(reference, ct);
         return escrow is null
             ? Option.None<EscrowDto>()
             : Option.Some(new EscrowDto(
                 escrow.Id,
-                escrow.BookingId,
+                Reference(escrow),
                 escrow.FromOwnerId,
                 escrow.ToOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency).Amount,
@@ -739,7 +730,7 @@ internal sealed class EscrowService : IEscrowService
             ? LedgerPostings.EscrowRefundBeforeRelease(
                 escrow.FromOwnerId,
                 payerTotalRefundMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                Reference(escrow),
                 escrow.ChargeId,
                 completedRefund.RefundId)
             : LedgerPostings.EscrowRefundAfterRelease(
@@ -748,7 +739,7 @@ internal sealed class EscrowService : IEscrowService
                 grossRefundMinor.ToMoney(escrow.Currency),
                 checked(commissionRefundMinor - commissionVatReversedMinor).ToMoney(escrow.Currency),
                 commissionVatReversedMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                Reference(escrow),
                 escrow.ChargeId,
                 completedRefund.RefundId);
         await ledger.StageAsync(refundPosting, ct);
@@ -830,7 +821,8 @@ internal sealed class EscrowService : IEscrowService
             escrow.Currency != amount.Currency ||
             escrow.PayeeGrossMinor != amount.ToMinorUnits() ||
             escrow.ChargeId != paymentIntentId)
-            throw new InvalidOperationException($"Booking {escrow.BookingId} was reused for a different escrow request.");
+            throw new InvalidOperationException(
+                $"Operation {escrow.OperationType}/{escrow.ClientReference} was reused for a different escrow request.");
     }
 
     private static Dictionary<string, string> OperationMetadata(
@@ -852,14 +844,15 @@ internal sealed class EscrowService : IEscrowService
 
     private static IReadOnlyDictionary<string, string> CommissionMetadata(
         BoundCommission authorized,
-        int bookingId,
+        PaymentOperationReference reference,
         string transactionType)
     {
         var calculation = authorized.Calculation;
         return new Dictionary<string, string>
         {
             [PaymentMetadataKeys.Type] = transactionType,
-            [PaymentMetadataKeys.BookingId] = bookingId.ToString(),
+            [PaymentMetadataKeys.OperationType] = reference.OperationType,
+            [PaymentMetadataKeys.ClientReference] = reference.ClientReference,
             [PaymentMetadataKeys.CommissionBindingId] = authorized.Binding.Id.ToString(),
             [PaymentMetadataKeys.Currency] = calculation.Currency.ToString().ToLowerInvariant(),
             [PaymentMetadataKeys.PayeeGrossMinor] = calculation.PayeeGrossMinor.ToString(),
@@ -878,10 +871,14 @@ internal sealed class EscrowService : IEscrowService
         {
             [PaymentMetadataKeys.Type] = transactionType,
             [PaymentMetadataKeys.EscrowId] = escrow.Id.ToString(),
-            [PaymentMetadataKeys.BookingId] = escrow.BookingId.ToString()
+            [PaymentMetadataKeys.OperationType] = escrow.OperationType,
+            [PaymentMetadataKeys.ClientReference] = escrow.ClientReference
         };
         if (escrow.CommissionBindingId is not null)
             metadata[PaymentMetadataKeys.CommissionBindingId] = escrow.CommissionBindingId.Value.ToString();
         return metadata;
     }
+
+    private static PaymentOperationReference Reference(EscrowEntity escrow) =>
+        new(escrow.OperationType, escrow.ClientReference);
 }

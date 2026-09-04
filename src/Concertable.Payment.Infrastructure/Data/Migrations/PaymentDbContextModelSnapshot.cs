@@ -176,12 +176,14 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BookingId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ChargeId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
@@ -221,6 +223,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<long>("PayeeGrossMinor")
                         .HasColumnType("bigint");
 
@@ -255,9 +262,6 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId")
-                        .IsUnique();
-
                     b.HasIndex("ChargeId")
                         .IsUnique();
 
@@ -271,6 +275,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("OperationType", "ClientReference")
+                        .IsUnique();
+
                     b.ToTable("Escrows", "payment");
                 });
 
@@ -279,8 +286,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("BookingId")
-                        .HasColumnType("int");
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("datetimeoffset");
@@ -299,6 +308,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("LastAttemptedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("ReferenceId")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -315,9 +329,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
-
                     b.HasIndex("Status");
+
+                    b.HasIndex("OperationType", "ClientReference");
 
                     b.ToTable("FinancialOperations", "payment");
                 });
@@ -388,8 +402,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BookingId")
-                        .HasColumnType("int");
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
@@ -399,6 +415,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("PaymentIntentId")
                         .HasColumnType("nvarchar(450)");
 
@@ -407,9 +428,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BookingId");
-
                     b.HasIndex("PaymentIntentId");
+
+                    b.HasIndex("OperationType", "ClientReference");
 
                     b.HasIndex("PostingType", "ExternalId")
                         .IsUnique()
@@ -602,7 +623,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("CanceledAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("ConsumerCorrelation")
+                    b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -687,7 +708,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("PayerOwnerKey");
 
-                    b.HasIndex("OperationType", "ConsumerCorrelation")
+                    b.HasIndex("OperationType", "ClientReference")
                         .IsUnique();
 
                     b.ToTable("PaymentSessionOperations", "payment", t =>
@@ -762,6 +783,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("datetime2");
 
@@ -782,6 +808,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("LastModifiedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OperationType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid>("PayeeId")
                         .HasColumnType("uniqueidentifier");
@@ -805,6 +836,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("PaymentIntentId")
                         .IsUnique();
 
+                    b.HasIndex("OperationType", "ClientReference");
+
                     b.ToTable("Transactions", "payment");
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("TransactionEntity");
@@ -812,14 +845,16 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.UseTphMappingStrategy();
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.PaymentTransactionEntity", b =>
                 {
                     b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
-                    b.Property<int>("BookingId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("int")
-                        .HasColumnName("ContextId");
+                    b.HasDiscriminator().HasValue("PaymentTransactionEntity");
+                });
+
+            modelBuilder.Entity("Concertable.Payment.Domain.Entities.SettlementTransactionEntity", b =>
+                {
+                    b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
                     b.Property<Guid?>("CommissionBindingId")
                         .HasColumnType("uniqueidentifier");
@@ -877,26 +912,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });
 
-            modelBuilder.Entity("Concertable.Payment.Domain.Entities.TicketTransactionEntity", b =>
-                {
-                    b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
-
-                    b.Property<int>("ConcertId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("int")
-                        .HasColumnName("ContextId");
-
-                    b.HasDiscriminator().HasValue("TicketTransactionEntity");
-                });
-
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.VerifyTransactionEntity", b =>
                 {
                     b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
-
-                    b.Property<int>("ApplicationId")
-                        .ValueGeneratedOnUpdateSometimes()
-                        .HasColumnType("int")
-                        .HasColumnName("ContextId");
 
                     b.HasDiscriminator().HasValue("VerifyTransactionEntity");
                 });

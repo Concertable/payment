@@ -26,9 +26,6 @@ internal static class PaymentMappers
         return message;
     }
 
-    public static CheckoutSessionResponse ToProtoCheckoutSession(this Application.DTOs.CheckoutSession s) =>
-        new() { ClientSecret = s.ClientSecret, CustomerSession = s.CustomerSession, CustomerId = s.CustomerId };
-
     public static PaymentSession ToPaymentSession(this PaymentSessionType session) =>
         session == PaymentSessionType.OffSession ? PaymentSession.OffSession : PaymentSession.OnSession;
 }

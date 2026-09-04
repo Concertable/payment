@@ -9,13 +9,14 @@ internal sealed class LedgerTransactionEntity : IIdEntity
     private LedgerTransactionEntity(
         LedgerPostingType postingType,
         string externalId,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         DateTime occurredAt)
     {
         PostingType = postingType;
         ExternalId = externalId;
-        BookingId = bookingId;
+        OperationType = reference.OperationType;
+        ClientReference = reference.ClientReference;
         PaymentIntentId = paymentIntentId;
         OccurredAt = occurredAt;
     }
@@ -23,7 +24,8 @@ internal sealed class LedgerTransactionEntity : IIdEntity
     public int Id { get; private set; }
     public LedgerPostingType PostingType { get; private set; }
     public string ExternalId { get; private set; } = null!;
-    public int BookingId { get; private set; }
+    public string OperationType { get; private set; } = null!;
+    public string ClientReference { get; private set; } = null!;
     public string? PaymentIntentId { get; private set; }
     public DateTime OccurredAt { get; private set; }
     public IReadOnlyList<LedgerEntryEntity> Entries => entries.AsReadOnly();
@@ -31,14 +33,19 @@ internal sealed class LedgerTransactionEntity : IIdEntity
     public static LedgerTransactionEntity Post(
         LedgerPostingType postingType,
         string externalId,
-        int bookingId,
+        PaymentOperationReference reference,
         string? paymentIntentId,
         DateTime occurredAt,
         IReadOnlyCollection<LedgerLeg> legs)
     {
         ValidatePosting(externalId, legs.Select(leg => (leg.Direction, leg.Amount)));
 
-        var transaction = new LedgerTransactionEntity(postingType, externalId, bookingId, paymentIntentId, occurredAt);
+        if (string.IsNullOrWhiteSpace(reference.OperationType))
+            throw new DomainException("A ledger transaction must identify its operation type.");
+        if (string.IsNullOrWhiteSpace(reference.ClientReference))
+            throw new DomainException("A ledger transaction must identify its client reference.");
+
+        var transaction = new LedgerTransactionEntity(postingType, externalId, reference, paymentIntentId, occurredAt);
         foreach (var leg in legs)
             transaction.entries.Add(new LedgerEntryEntity(leg.Account, leg.Direction, leg.Amount));
 

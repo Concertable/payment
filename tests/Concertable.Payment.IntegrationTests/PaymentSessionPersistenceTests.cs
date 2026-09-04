@@ -190,13 +190,13 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
         return new PaymentDbContext(options, new PaymentConfigurationProvider());
     }
 
-    private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(Guid operationId, long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             $"payer:{operationId:N}",
             $"payee:{operationId:N}",
             amountMinor,

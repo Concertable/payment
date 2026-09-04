@@ -14,7 +14,7 @@ public interface IPaymentSessionOperationsClient
         PaymentMethodValidationRequest request,
         CancellationToken ct = default);
 
-    Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateOrReplayAsync(
+    Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default);
 

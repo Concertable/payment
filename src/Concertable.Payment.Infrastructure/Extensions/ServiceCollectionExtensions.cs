@@ -1,13 +1,11 @@
 using Concertable.DataAccess;
 using Concertable.Seed.Shared;
 using Concertable.Seed.Shared.Extensions;
-using Concertable.Auth.Contracts.Events;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Data;
-using Concertable.Payment.Infrastructure.Data.Seeders;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Infrastructure.Events;
@@ -142,35 +140,27 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIntegrationCommandHandler<ProcessStripeWebhookCommand>, ProcessStripeWebhookHandler>();
         services.AddScoped<FinancialOperationHandler>();
         services.AddScoped<IIntegrationCommandHandler<CaptureEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
-        services.AddScoped<IIntegrationCommandHandler<CaptureEscrowByReferenceCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
         services.AddScoped<IIntegrationCommandHandler<DepositEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
-        services.AddScoped<IIntegrationCommandHandler<DepositEscrowByReferenceCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
         services.AddScoped<IIntegrationCommandHandler<RefundEscrowCommand>>(sp => sp.GetRequiredService<FinancialOperationHandler>());
 
-        services.AddScoped<IManagerPaymentService, ManagerPaymentService>();
-        services.AddScoped<ICustomerPaymentService, CustomerPaymentService>();
+        services.AddScoped<ISettlementService, SettlementService>();
+        services.AddScoped<IPaymentReportingService, PaymentReportingService>();
         services.AddScoped<IEscrowService, EscrowService>();
         services.AddScoped<IPayoutAccountService, PayoutAccountService>();
 
-        services.AddScoped<IIntegrationEventHandler<CredentialRegisteredEvent>, CustomerRegisteredHandler>();
+        services.AddScoped<IIntegrationEventHandler<PaymentMethodOwnerRegisteredEvent>, PaymentMethodOwnerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PayoutOwnerRegisteredEvent>, PayoutOwnerRegisteredHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentSucceededEvent>, PaymentTransactionHandler>();
         services.AddScoped<IIntegrationEventHandler<PaymentFailedEvent>, PaymentFailureDispatcher>();
         services.AddScoped<ITransactionHandlerFactory, TransactionHandlerFactory>();
         services.AddScoped<IPaymentFailureHandlerFactory, PaymentFailureHandlerFactory>();
-        services.AddKeyedScoped<ITransactionHandler, TicketTransactionHandler>(TransactionTypes.Ticket);
+        services.AddKeyedScoped<ITransactionHandler, PaymentTransactionRecorder>(TransactionTypes.Payment);
         services.AddKeyedScoped<ITransactionHandler, SettlementTransactionHandler>(TransactionTypes.Settlement);
         services.AddKeyedScoped<ITransactionHandler, EscrowConfirmedHandler>(TransactionTypes.Escrow);
         services.AddKeyedScoped<ITransactionHandler, VerifyTransactionHandler>(TransactionTypes.Verify);
         services.AddKeyedScoped<IPaymentFailureHandler, EscrowFailedHandler>(TransactionTypes.Escrow);
         services.AddKeyedScoped<IPaymentFailureHandler, SettlementFailedHandler>(TransactionTypes.Settlement);
 
-        return services;
-    }
-
-    public static IServiceCollection AddPaymentTestSeeder(this IServiceCollection services)
-    {
-        services.AddScoped<ITestSeeder, PaymentTestSeeder>();
         return services;
     }
 

@@ -1,6 +1,5 @@
 using Concertable.Payment.Application.Interfaces.Webhook;
 using Concertable.Payment.E2ETests.Stripe;
-using Concertable.Seed.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -16,11 +15,11 @@ public sealed class StripeWebhookProcessorTests
 
     public StripeWebhookProcessorTests()
     {
-        var values = SeedUsers.Managers.ToDictionary(
-            manager => $"E2EStripe:Customers:{manager.Id:N}",
-            manager => (string?)$"cus_{manager.Id:N}");
-        values[$"E2EStripe:Customers:{SeedUsers.VenueManagerId(1):N}"] = OwnedCustomerId;
-        values[$"E2EStripe:Customers:{SeedCustomers.CustomerId(1):N}"] = "cus_customer_1";
+        var values = new Dictionary<string, string?>
+        {
+            [$"E2EStripe:Customers:{Guid.CreateVersion7():N}"] = OwnedCustomerId,
+            [$"E2EStripe:Customers:{Guid.CreateVersion7():N}"] = "cus_other"
+        };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();

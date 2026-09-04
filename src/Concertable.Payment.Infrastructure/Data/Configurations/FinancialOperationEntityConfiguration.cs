@@ -14,7 +14,9 @@ internal sealed class FinancialOperationEntityConfiguration : IEntityTypeConfigu
         builder.Property(operation => operation.ReferenceId).HasMaxLength(100);
         builder.Property(operation => operation.FailureCode).HasMaxLength(200);
         builder.Property(operation => operation.FailureMessage).HasMaxLength(1000);
-        builder.HasIndex(operation => operation.BookingId);
+        builder.Property(operation => operation.OperationType).HasMaxLength(200);
+        builder.Property(operation => operation.ClientReference).HasMaxLength(200);
+        builder.HasIndex(operation => new { operation.OperationType, operation.ClientReference });
         builder.HasIndex(operation => operation.Status);
     }
 }

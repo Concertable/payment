@@ -41,12 +41,12 @@ internal static class PaymentSessionOperationRequestMappers
         private Proto.PaymentOperationReference ToProto()
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(reference.OperationType);
-            ArgumentException.ThrowIfNullOrWhiteSpace(reference.ConsumerCorrelation);
+            ArgumentException.ThrowIfNullOrWhiteSpace(reference.ClientReference);
 
             return new()
             {
                 OperationType = reference.OperationType,
-                ConsumerCorrelation = reference.ConsumerCorrelation
+                ClientReference = reference.ClientReference
             };
         }
     }
@@ -58,7 +58,7 @@ internal static class PaymentSessionOperationRequestMappers
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
             ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationType);
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.ConsumerCorrelation);
+            ArgumentException.ThrowIfNullOrWhiteSpace(request.ClientReference);
 
             var message = new Proto.PaymentSessionOperationRequest
             {
@@ -66,7 +66,7 @@ internal static class PaymentSessionOperationRequestMappers
                 Kind = request.Kind.ToProto(),
                 Session = request.Session.ToProto(),
                 OperationType = request.OperationType,
-                ConsumerCorrelation = request.ConsumerCorrelation,
+                ClientReference = request.ClientReference,
                 PayerOwnerId = request.PayerOwnerId.ToString("D"),
                 FundsRouting = request.FundsRouting.ToProto()
             };
@@ -76,8 +76,6 @@ internal static class PaymentSessionOperationRequestMappers
                 message.AmountMinor = amountMinor;
             if (request.Currency is { } currency)
                 message.Currency = currency.ToProtoCurrency();
-            if (request.PaymentMethodId is { } paymentMethodId)
-                message.PaymentMethodId = paymentMethodId;
             if (request.MandateTermsVersion is { } mandateTermsVersion)
                 message.MandateTermsVersion = mandateTermsVersion;
 

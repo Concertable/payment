@@ -1,5 +1,3 @@
-using Concertable.Auth.Contracts.Events;
-using Concertable.B2B.Concert.Contracts.Events;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 
@@ -19,15 +17,12 @@ public static class PaymentTopology
             .Publish<RefundEscrowRejectedEvent>()
             .Publish<RefundEscrowDeferredEvent>()
             .WithService(PaymentConstants.ServiceName)
-            .Subscribe<ConcertChangedEvent>()
-            .Subscribe<CredentialRegisteredEvent>()
+            .Subscribe<PaymentMethodOwnerRegisteredEvent>()
             .Subscribe<PayoutOwnerRegisteredEvent>()
             .Subscribe<PaymentSucceededEvent>()
             .Subscribe<PaymentFailedEvent>()
             .Queue<CaptureEscrowCommand>()
-            .Queue<CaptureEscrowByReferenceCommand>()
             .Queue<DepositEscrowCommand>()
-            .Queue<DepositEscrowByReferenceCommand>()
             .Queue<RefundEscrowCommand>()
             .Queue<ProcessStripeWebhookCommand>();
 }

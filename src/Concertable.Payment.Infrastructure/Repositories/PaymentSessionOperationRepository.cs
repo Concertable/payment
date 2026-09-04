@@ -23,13 +23,13 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
 
     public Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
         string operationType,
-        string consumerCorrelation,
+        string clientReference,
         CancellationToken ct = default) =>
         context.PaymentSessionOperations
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(
                 operation => operation.OperationType == operationType
-                    && operation.ConsumerCorrelation == consumerCorrelation,
+                    && operation.ClientReference == clientReference,
                 ct);
 
     public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
@@ -45,7 +45,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
                 ct);
 
     public async Task<PaymentSessionReservation> ReserveInitialAsync(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         DateTimeOffset createdAt,
         CancellationToken ct = default)
     {
@@ -71,7 +71,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             existing = await GetByOperationIdAsync(specification.OperationId, ct)
                 ?? await GetByReferenceAsync(
                     specification.OperationType,
-                    specification.ConsumerCorrelation,
+                    specification.ClientReference,
                     ct);
             if (existing is null)
                 throw;

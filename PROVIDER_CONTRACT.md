@@ -42,19 +42,16 @@ human-level entry points those matches implement.
 
 | Owner | Entry point | Provider product or action | Current contract decision |
 | --- | --- | --- | --- |
-| Payment account client | Customer provisioning | Customer create | Payment owns the provider customer ID for an opaque consumer owner. |
-| Payment account client | Connected-account provisioning, onboarding, and status | Express Account and AccountLink | Payment owns provider calls; B2B owns onboarding workflow. |
+| Payment account client | Payment-method-owner provisioning | Customer create | Payment owns the provider customer ID for an opaque owner. |
+| Payment account client | Payout-owner provisioning, onboarding, and status | Express Account and AccountLink | Payment owns provider calls; the caller owns onboarding workflow. |
 | Payment payout client | Payout setup and saved-card lookup | SetupIntent and PaymentMethod list | Saves a method only; setup success is not money movement. |
-| Payment customer client | Ticket session creation | PaymentIntent and CustomerSession | Automatic capture, on-session, with later consumer-owned recovery. |
-| Payment manager client | Saved-method payment | PaymentIntent | Server-confirmed on-session or consented off-session payment. |
-| Payment manager client | Venue Hire setup | SetupIntent | Saves the artist method for declared off-session reuse. |
-| Payment manager client | Door Split or Versus verification | SetupIntent | Verifies and saves the venue method without charging it. |
-| Payment manager client | Flat Fee hold and hold recovery | Manual-capture PaymentIntent | Authorization becomes `Authorized` and carries `capture_before`. |
-| Payment escrow client | Venue Hire deposit | PaymentIntent | Off-session server charge with explicit operation idempotency. |
-| Payment escrow client | Flat Fee capture | PaymentIntent capture | Captures a known authorized attempt; new code never searches a latest-ten list. |
+| Payment session client | Payment or authorization session | PaymentIntent and CustomerSession | Caller supplies opaque operation identity, participants, amount, routing, and session presence. |
+| Payment session client | Payment-method setup or verification | SetupIntent and CustomerSession | Saves or verifies a method without representing money movement. |
+| Payment settlement client | Saved-method settlement | PaymentIntent | Server-confirmed on-session or consented off-session payment. |
+| Payment escrow client | Deposit | PaymentIntent | Server charge with explicit operation idempotency. |
+| Payment escrow client | Capture | PaymentIntent capture | Captures the authorization resolved from an opaque operation reference. |
 | Payment escrow client | Release | Transfer | Financial operation from the original source transaction, not a client session. |
-| Payment escrow and manager clients | Refund | Refund and optional TransferReversal | Refund status is independent and follows the original Connect charge model. |
-| Payment manager client | Door Split or Versus settlement | PaymentIntent | Off-session server charge following the typed deal calculation. |
+| Payment escrow and settlement clients | Refund | Refund and optional TransferReversal | Refund status is independent and follows the original Connect charge model. |
 | Payment webhook ingress | Signature validation, deduplication, and typed dispatch | Event with PaymentIntent or SetupIntent data | Current provider object truth and persisted revision govern mutation. |
 | Customer API | Ticket checkout and saved-card purchase | Payment client session or server payment | Customer owns purchase attempt, validation, fulfillment, and durable query state. |
 | Customer web | Ticket confirmation and next action | PaymentIntent | Current SignalR/client-secret bridge is a finite compatibility island. |
@@ -89,9 +86,13 @@ That requires a baseline revision covering both its completion and payment-statu
 
 ## Identity and immutable binding
 
+`PaymentOperationReference` is a small immutable value (`readonly record struct`) containing an
+opaque operation type and client reference. It is the lookup identity shared across financial
+operations and contains no consumer-domain identifier type.
+
 `OperationId` is a caller-generated UUIDv7. The consumer creates and persists it before the first
-Payment request. It identifies one logical provider operation, not a booking, order, HTTP request,
-SignalR subscription, Stripe object, or attempt.
+Payment request. It identifies one logical provider operation, not a consumer aggregate, HTTP
+request, SignalR subscription, Stripe object, or attempt.
 
 `AttemptId` is a Payment-generated UUIDv7 for one provider-object attempt. An operation has exactly
 one current attempt. A later attempt exists only after an explicit permitted retry and increments the
@@ -103,7 +104,7 @@ Before provider creation, Payment hashes a canonical versioned request containin
 - amount in integer minor units and ISO currency when money moves;
 - capture mode and customer-presence mode;
 - Payment-owned customer and connected-account bindings;
-- opaque consumer owner key and applicable Connect charge model.
+- opaque payer/payee owner keys, client reference, and applicable Connect charge model.
 
 Presentation metadata and consumer-supplied raw provider IDs are excluded. The canonical encoding
 and hash version are persisted with the operation.
@@ -256,14 +257,14 @@ Payment diagnostics. Transport mappings are exhaustive and fail closed on an unk
 
 ## Compatibility boundary
 
-Phase 1 changes no runtime API. `CheckoutSession`, `PaymentOutcome`, `PaymentSession`, every existing
-RPC, `PaymentSucceededEvent`, `PaymentFailedEvent`, and the existing capture/deposit/refund command
-surface remain unchanged. PR #552 remains the external owner of B2B typed-result adoption and its
-additive `RefundReasonCodes` contract.
+The Payment producer exposes one clean v1 contract. The former customer/manager RPC split, raw
+provider-ID inputs, and booking/application lookup fields are not part of that contract. The v1
+compatibility baseline is generated from the candidate projects; the last historical published
+package remains a fixture only and is not the surviving API.
 
-The current Customer web/mobile secret parsing, SignalR correlation, 30-second wait, shared web
-secret-prefix inference, and B2B latest-ten hold lookup are explicit finite allowlists in the
-inventory. They may be removed by their owning migrations; no new occurrence is permitted.
+The current downstream Customer and B2B calls, frontend secret parsing, SignalR correlation, and
+shared secret-prefix inference remain explicit finite allowlists in the inventory until their owning
+consumer migrations adopt v1. No new occurrence is permitted.
 
 ## Primary provider references
 

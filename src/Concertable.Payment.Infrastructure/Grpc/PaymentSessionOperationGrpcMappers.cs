@@ -35,7 +35,7 @@ internal static class PaymentSessionOperationGrpcMappers
     extension(Proto.PaymentOperationReference reference)
     {
         private PaymentOperationReference ToContract() =>
-            new(reference.OperationType, reference.ConsumerCorrelation);
+            new(reference.OperationType, reference.ClientReference);
     }
 
     extension(Proto.PaymentSessionOperationRequest request)
@@ -46,15 +46,14 @@ internal static class PaymentSessionOperationGrpcMappers
                 request.Kind.ToContract(),
                 request.Session.ToContract(),
                 request.OperationType,
-                request.ConsumerCorrelation,
+                request.ClientReference,
                 request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
                 request.HasPayeeOwnerId
                     ? request.PayeeOwnerId.ParseOrThrow<Guid>(nameof(request.PayeeOwnerId))
                     : null,
                 request.HasAmountMinor ? request.AmountMinor : null,
                 request.HasCurrency ? request.Currency.ToContract() : null,
-                request.FundsRouting.ToContract(),
-                request.HasPaymentMethodId ? request.PaymentMethodId : null)
+                request.FundsRouting.ToContract())
             {
                 MandateTermsVersion = request.HasMandateTermsVersion ? request.MandateTermsVersion : null
             };

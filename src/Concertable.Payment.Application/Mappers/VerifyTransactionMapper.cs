@@ -8,7 +8,7 @@ internal sealed class VerifyTransactionMapper : ITransactionMapper
     public TransactionEntity ToEntity(ITransaction dto)
     {
         var d = (VerifyTransactionDto)dto;
-        return VerifyTransactionEntity.Create(d.PayerId, d.PaymentIntentId, d.ApplicationId);
+        return VerifyTransactionEntity.Create(d.PayerId, d.PaymentIntentId, new(d.OperationType, d.ClientReference));
     }
 
     public ITransaction ToDto(TransactionEntity entity)
@@ -17,7 +17,8 @@ internal sealed class VerifyTransactionMapper : ITransactionMapper
         return new VerifyTransactionDto
         {
             Id = e.Id,
-            ApplicationId = e.ApplicationId,
+            OperationType = e.OperationType,
+            ClientReference = e.ClientReference,
             PayerId = e.PayerId,
             PayeeId = e.PayeeId,
             PaymentIntentId = e.PaymentIntentId,

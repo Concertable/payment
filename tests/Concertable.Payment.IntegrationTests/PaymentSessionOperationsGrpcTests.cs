@@ -26,7 +26,7 @@ public sealed class PaymentSessionOperationsGrpcTests
     }
 
     [Fact]
-    public async Task CreateOrReplayAndGetStatus_OwningCaller_ReturnsSecretFreeSnapshot()
+    public async Task CreateAndGetStatus_OwningCaller_ReturnsSecretFreeSnapshot()
     {
         var operationId = Guid.CreateVersion7();
         var attemptId = Guid.CreateVersion7();
@@ -34,7 +34,7 @@ public sealed class PaymentSessionOperationsGrpcTests
         var payeeOwnerId = Guid.CreateVersion7();
         var identity = new PaymentOperationIdentity(operationId, attemptId, 1);
         this.paymentSessionService
-            .Setup(service => service.CreateOrReplayAsync(
+            .Setup(service => service.CreateAsync(
                 It.IsAny<PaymentSessionOperationRequest>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PaymentSessionExecution(
@@ -57,7 +57,7 @@ public sealed class PaymentSessionOperationsGrpcTests
                 null,
                 null));
 
-        var descriptor = await this.sut.CreateOrReplay(
+        var descriptor = await this.sut.Create(
             OperationRequest(operationId, payerOwnerId, payeeOwnerId),
             CallContext());
         var snapshot = await this.sut.GetStatus(
@@ -138,15 +138,15 @@ public sealed class PaymentSessionOperationsGrpcTests
     }
 
     [Fact]
-    public async Task CreateOrReplay_UnspecifiedKind_ReturnsInvalidArgument()
+    public async Task Create_UnspecifiedKind_ReturnsInvalidArgument()
     {
-        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.CreateOrReplay(
+        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.Create(
             new Proto.PaymentSessionOperationRequest
             {
                 OperationId = Guid.CreateVersion7().ToString("D"),
                 Kind = Proto.PaymentSessionKind.Unspecified,
                 OperationType = "escrow",
-                ConsumerCorrelation = "booking:42",
+                ClientReference = "order:42",
                 PayerOwnerId = Guid.CreateVersion7().ToString("D"),
                 FundsRouting = Proto.PaymentSessionFundsRouting.Destination
             },
@@ -163,7 +163,7 @@ public sealed class PaymentSessionOperationsGrpcTests
         await using var app = builder.Build();
         app.MapPaymentGrpcServices();
 
-        string[] methods = ["SetupPaymentMethod", "ValidatePaymentMethod", "CreateOrReplay", "Retry", "GetStatus"];
+        string[] methods = ["SetupPaymentMethod", "ValidatePaymentMethod", "Create", "Retry", "GetStatus"];
         var endpoints = ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(source => source.Endpoints)
             .Where(endpoint => methods.Any(method => endpoint.DisplayName?.Contains(
@@ -188,7 +188,7 @@ public sealed class PaymentSessionOperationsGrpcTests
             OperationId = operationId.ToString("D"),
             Kind = Proto.PaymentSessionKind.Authorization,
             OperationType = "escrow",
-            ConsumerCorrelation = $"booking:{operationId:N}",
+            ClientReference = $"order:{operationId:N}",
             PayerOwnerId = payerOwnerId.ToString("D"),
             PayeeOwnerId = payeeOwnerId.ToString("D"),
             AmountMinor = 5000,

@@ -66,7 +66,7 @@ public sealed class PaymentSessionProviderExecutionTests
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             5000,
             Currency.Gbp,
             PaymentSessionFundsRouting.Destination,

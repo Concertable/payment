@@ -42,7 +42,7 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 Money.FromMinorUnits(escrow.PayerTotalMinor, escrow.Currency),
-                escrow.BookingId,
+                new PaymentOperationReference(escrow.OperationType, escrow.ClientReference),
                 escrow.ChargeId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
