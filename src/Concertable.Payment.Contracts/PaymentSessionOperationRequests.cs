@@ -7,13 +7,12 @@ public sealed record PaymentSessionOperationRequest(
     PaymentSessionKind Kind,
     PaymentSession Session,
     string OperationType,
-    string ConsumerCorrelation,
+    string ClientReference,
     Guid PayerOwnerId,
     Guid? PayeeOwnerId,
     long? AmountMinor,
     Currency? Currency,
-    PaymentSessionFundsRouting FundsRouting,
-    string? PaymentMethodId)
+    PaymentSessionFundsRouting FundsRouting)
 {
     public string? MandateTermsVersion { get; init; }
 }

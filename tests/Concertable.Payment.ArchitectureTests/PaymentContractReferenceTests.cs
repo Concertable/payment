@@ -10,16 +10,31 @@ namespace Concertable.Payment.ArchitectureTests;
 
 public sealed class PaymentContractReferenceTests
 {
-    [Fact]
-    public void ContractsAssembly_DoesNotReferenceConsumerRuntime() =>
-        Assert.Empty(typeof(CaptureEscrowCommand).Assembly
-            .ReferencesToAssembliesStartingWith("Concertable.B2B", "Concertable.Customer"));
+    private static readonly string[] AllowedConcertableReferences =
+    [
+        "Concertable.Grpc",
+        "Concertable.Kernel",
+        "Concertable.Messaging.Contracts",
+        "Concertable.Payment.Contracts"
+    ];
 
     [Theory]
+    [InlineData(typeof(CaptureEscrowCommand))]
     [InlineData(typeof(PaymentOperationIdentity))]
     [InlineData(typeof(PaymentOperationStateChanged))]
     [InlineData(typeof(ClientSnapshot))]
-    public void PublishedVocabulary_DoesNotReferenceProviderOrConsumerRuntime(Type type) =>
-        Assert.Empty(type.Assembly
-            .ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
+    public void PublishedAssemblies_ReferenceOnlySharedPaymentDependencies(Type type)
+    {
+        var unexpected = type.Assembly.ReferencedAssemblyNames()
+            .Where(name => name.StartsWith("Concertable.", StringComparison.Ordinal))
+            .Except(AllowedConcertableReferences, StringComparer.Ordinal);
+
+        Assert.Empty(unexpected);
+    }
+
+    [Theory]
+    [InlineData(typeof(PaymentOperationIdentity))]
+    [InlineData(typeof(ClientSnapshot))]
+    public void PublishedAssemblies_DoNotReferenceProviderRuntime(Type type) =>
+        Assert.Empty(type.Assembly.ReferencesToAssembliesStartingWith("Stripe"));
 }

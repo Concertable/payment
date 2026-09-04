@@ -13,7 +13,7 @@ internal interface IPaymentSessionService
         PaymentMethodValidationRequest request,
         CancellationToken ct = default);
 
-    Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
+    Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default);
 

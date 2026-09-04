@@ -86,11 +86,11 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         return new WebhookReconciliationHarness(provider, sessionClient);
     }
 
-    public async Task<PaymentSessionExecution> CreateSessionAsync(PaymentSessionSpecification specification)
+    public async Task<PaymentSessionExecution> CreateSessionAsync(PaymentSessionDefinition specification)
     {
         using var scope = provider.CreateScope();
         var result = await scope.ServiceProvider.GetRequiredService<PaymentSessionService>()
-            .CreateOrReplayAsync(specification);
+            .CreateAsync(specification);
         Assert.True(result.TryGetValue(out var execution));
         return execution;
     }

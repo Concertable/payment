@@ -35,12 +35,10 @@ internal sealed class SetupIntentWebhookHandler : IStripeWebhookHandler<SetupInt
         switch (stripeEvent.Type)
         {
             case EventTypes.SetupIntentSucceeded:
-                var enrichedMetadata = new Dictionary<string, string>(intent.Metadata)
-                {
-                    [PaymentMetadataKeys.PaymentMethodId] = intent.PaymentMethodId
-                };
                 logger.PublishingVerifyPaymentSucceededEvent(intent.Id, stripeEvent.Id);
-                await integrationEventBus.PublishAsync(new PaymentSucceededEvent(intent.Id, enrichedMetadata), cancellationToken);
+                await integrationEventBus.PublishAsync(
+                    new PaymentSucceededEvent(intent.Id, intent.Metadata),
+                    cancellationToken);
                 break;
 
             case EventTypes.SetupIntentSetupFailed:

@@ -20,6 +20,7 @@ public sealed class TransactionServiceTests
 
     private readonly Guid payerId = Guid.NewGuid();
     private readonly Guid payeeId = Guid.NewGuid();
+    private readonly PaymentOperationReference reference = new("settlement", "order:7");
 
     public TransactionServiceTests()
     {
@@ -48,13 +49,13 @@ public sealed class TransactionServiceTests
     public async Task LogAsync_PersistsMappedTransaction()
     {
         var dto = new Mock<ITransaction>().Object;
-        var transaction = TicketTransactionEntity.Create(
+        var transaction = PaymentTransactionEntity.Create(
             payerId,
             payeeId,
             "pi_logged",
             2000,
             TransactionStatus.Pending,
-            3);
+            new("purchase", "order:3"));
         mapper.Setup(value => value.ToEntity(dto)).Returns(transaction);
 
         await sut.LogAsync(dto);
@@ -66,7 +67,7 @@ public sealed class TransactionServiceTests
     public async Task CompleteAsync_SettlementPending_CompletesAndPostsDirectSettlement()
     {
         var settlement = SettlementTransactionEntity.Create(
-            payerId, payeeId, "pi_3ds", amount: 6200, platformFee: 1200, TransactionStatus.Pending, bookingId: 7);
+            payerId, payeeId, "pi_3ds", amount: 6200, platformFee: 1200, TransactionStatus.Pending, reference: reference);
         repository
             .Setup(r => r.GetByPaymentIntentIdAsync("pi_3ds"))
             .ReturnsAsync(settlement);
@@ -78,7 +79,7 @@ public sealed class TransactionServiceTests
         repository.Verify(r => r.SaveChangesAsync(), Times.Never);
 
         var posting = Assert.Single(postings);
-        Assert.Equal(7, posting.BookingId);
+        Assert.Equal(reference, posting.Reference);
         Assert.Equal("pi_3ds", posting.PaymentIntentId);
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(1200, posting.CreditMinorUnits(LedgerAccountType.PlatformRevenue));
@@ -88,7 +89,7 @@ public sealed class TransactionServiceTests
     public async Task CompleteAsync_SettlementAlreadyComplete_DoesNotSaveOrPost()
     {
         var settlement = SettlementTransactionEntity.Create(
-            payerId, payeeId, "pi_done", amount: 6200, platformFee: 1200, TransactionStatus.Complete, bookingId: 7);
+            payerId, payeeId, "pi_done", amount: 6200, platformFee: 1200, TransactionStatus.Complete, reference: reference);
         repository
             .Setup(r => r.GetByPaymentIntentIdAsync("pi_done"))
             .ReturnsAsync(settlement);
@@ -103,9 +104,9 @@ public sealed class TransactionServiceTests
     public async Task CompleteAsync_LedgerStagingFails_RetryCommitsStateAndPostingTogether()
     {
         var failedAttempt = SettlementTransactionEntity.Create(
-            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, bookingId: 7);
+            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, reference: reference);
         var retry = SettlementTransactionEntity.Create(
-            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, bookingId: 7);
+            payerId, payeeId, "pi_retry", amount: 6200, platformFee: 1200, TransactionStatus.Pending, reference: reference);
         repository
             .SetupSequence(r => r.GetByPaymentIntentIdAsync("pi_retry"))
             .ReturnsAsync(failedAttempt)
@@ -129,16 +130,16 @@ public sealed class TransactionServiceTests
     [Fact]
     public async Task CompleteAsync_NonSettlement_CompletesButDoesNotPost()
     {
-        var ticket = TicketTransactionEntity.Create(
-            payerId, payeeId, "pi_ticket", amount: 2000, TransactionStatus.Pending, concertId: 3);
+        var payment = PaymentTransactionEntity.Create(
+            payerId, payeeId, "pi_payment", amount: 2000, TransactionStatus.Pending, new("purchase", "order:3"));
         repository
-            .Setup(r => r.GetByPaymentIntentIdAsync("pi_ticket"))
-            .ReturnsAsync(ticket);
+            .Setup(r => r.GetByPaymentIntentIdAsync("pi_payment"))
+            .ReturnsAsync(payment);
 
-        await sut.CompleteAsync("pi_ticket");
+        await sut.CompleteAsync("pi_payment");
 
-        Assert.Equal(TransactionStatus.Complete, ticket.Status);
-        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, ticket.CompletedAt);
+        Assert.Equal(TransactionStatus.Complete, payment.Status);
+        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, payment.CompletedAt);
         repository.Verify(r => r.SaveChangesAsync(), Times.Once);
         Assert.Empty(postings);
     }

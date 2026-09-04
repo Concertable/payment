@@ -1,35 +1,28 @@
-extern alias PaymentClient;
-
 using System.Xml.Linq;
-using Concertable.Payment.Contracts.Events;
-using Concertable.Testing;
 using Xunit;
-using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
 
 namespace Concertable.Payment.ArchitectureTests;
 
 public sealed class PaymentPublishedPackageReferenceTests
 {
-    [Fact]
-    public void PublishedAssemblies_DoNotReferenceProviderOrConsumerRuntime()
-    {
-        var assemblies = new[]
-        {
-            typeof(PaymentOperationStateChanged).Assembly,
-            typeof(ClientSnapshot).Assembly
-        };
-
-        var forbidden = assemblies
-            .SelectMany(assembly => assembly.ReferencesToAssembliesStartingWith("Stripe", "Concertable.B2B", "Concertable.Customer"));
-
-        Assert.Empty(forbidden);
-    }
+    private static readonly string[] AllowedConcertableDependencyPrefixes =
+    [
+        "Concertable.Contracts",
+        "Concertable.DataAccess.",
+        "Concertable.Grpc",
+        "Concertable.Kernel",
+        "Concertable.Messaging.",
+        "Concertable.Payment.",
+        "Concertable.Seed.Shared",
+        "Concertable.ServiceDefaults",
+        "Concertable.Shared.Api"
+    ];
 
     [Fact]
-    public void PaymentDeployableProjects_DoNotReferenceConsumerAssemblies()
+    public void PaymentDeployableProjects_ReferenceOnlySharedOrPaymentAssemblies()
     {
         var sourceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src"));
-        var forbidden = Directory.EnumerateFiles(sourceRoot, "*.csproj", SearchOption.AllDirectories)
+        var unexpected = Directory.EnumerateFiles(sourceRoot, "*.csproj", SearchOption.AllDirectories)
             .Where(path => !Path.GetFileNameWithoutExtension(path).EndsWith(".AppHost", StringComparison.Ordinal)
                 && !Path.GetFileNameWithoutExtension(path).EndsWith(".Hosting", StringComparison.Ordinal))
             .SelectMany(path => XDocument.Load(path).Descendants()
@@ -39,10 +32,10 @@ public sealed class PaymentPublishedPackageReferenceTests
                     Project = Path.GetRelativePath(sourceRoot, path),
                     Reference = (string?)element.Attribute("Include")
                 }))
-            .Where(item => item.Reference is not null && (item.Reference.Contains("Concertable.B2B", StringComparison.Ordinal)
-                || item.Reference.Contains("Concertable.Customer", StringComparison.Ordinal)))
+            .Where(item => item.Reference?.StartsWith("Concertable.", StringComparison.Ordinal) == true
+                && !AllowedConcertableDependencyPrefixes.Any(prefix => item.Reference.StartsWith(prefix, StringComparison.Ordinal)))
             .ToArray();
 
-        Assert.Empty(forbidden);
+        Assert.Empty(unexpected);
     }
 }

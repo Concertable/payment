@@ -8,7 +8,7 @@ internal sealed class TransactionMapper : ITransactionMapper
     private static readonly FrozenDictionary<TransactionType, ITransactionMapper> mappers =
         new Dictionary<TransactionType, ITransactionMapper>
         {
-            [TransactionType.Ticket] = new TicketTransactionMapper(),
+            [TransactionType.Payment] = new PaymentTransactionMapper(),
             [TransactionType.Settlement] = new SettlementTransactionMapper(),
             [TransactionType.Verify] = new VerifyTransactionMapper(),
         }.ToFrozenDictionary();

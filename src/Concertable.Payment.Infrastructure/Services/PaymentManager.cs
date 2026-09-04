@@ -158,8 +158,8 @@ internal sealed class PaymentManager : IPaymentManager
 
         var metadata = new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.ToUserId] = request.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.PayeeOwnerId] = request.PayeeId.ToString(),
+            [PaymentMetadataKeys.AmountMinor] = request.Amount.ToMinorUnits().ToString()
         }.Merge(request.Metadata);
 
         logger.ReleasingPayment(request.Amount.Amount, request.PayeeId, payeeAccount.StripeAccountId, request.ChargeId);
@@ -179,7 +179,7 @@ internal sealed class PaymentManager : IPaymentManager
     {
         var metadata = new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.AmountMinor] = request.Amount.ToMinorUnits().ToString()
         }.Merge(request.Metadata);
 
         logger.RefundingPayment(
@@ -289,9 +289,9 @@ internal sealed class PaymentManager : IPaymentManager
         IReadOnlyDictionary<string, string> metadata) =>
         new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.FromUserId] = payerId.ToString(),
-            [PaymentMetadataKeys.FromUserEmail] = payerEmail,
-            [PaymentMetadataKeys.ToUserId] = payeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = settledAmount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.PayerOwnerId] = payerId.ToString(),
+            [PaymentMetadataKeys.PayerEmail] = payerEmail,
+            [PaymentMetadataKeys.PayeeOwnerId] = payeeId.ToString(),
+            [PaymentMetadataKeys.AmountMinor] = settledAmount.ToMinorUnits().ToString()
         }.Merge(metadata);
 }

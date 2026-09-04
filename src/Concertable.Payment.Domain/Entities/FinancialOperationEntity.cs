@@ -6,19 +6,22 @@ internal sealed class FinancialOperationEntity
 
     private FinancialOperationEntity(
         Guid id,
-        int bookingId,
+        PaymentOperationReference reference,
         string requestFingerprint,
         DateTimeOffset createdAt)
     {
         if (id == Guid.Empty)
             throw new DomainException("Financial operation id is required.");
-        if (bookingId <= 0)
-            throw new DomainException("Financial operation booking id must be positive.");
+        if (string.IsNullOrWhiteSpace(reference.OperationType))
+            throw new DomainException("Financial operation type is required.");
+        if (string.IsNullOrWhiteSpace(reference.ClientReference))
+            throw new DomainException("Financial operation client reference is required.");
         if (string.IsNullOrWhiteSpace(requestFingerprint))
             throw new DomainException("Financial operation request fingerprint is required.");
 
         Id = id;
-        BookingId = bookingId;
+        OperationType = reference.OperationType;
+        ClientReference = reference.ClientReference;
         RequestFingerprint = requestFingerprint;
         Status = FinancialOperationStatus.Pending;
         CreatedAt = createdAt;
@@ -26,7 +29,8 @@ internal sealed class FinancialOperationEntity
     }
 
     public Guid Id { get; private set; }
-    public int BookingId { get; private set; }
+    public string OperationType { get; private set; } = null!;
+    public string ClientReference { get; private set; } = null!;
     public string RequestFingerprint { get; private set; } = null!;
     public FinancialOperationStatus Status { get; private set; }
     public string? ReferenceId { get; private set; }
@@ -38,14 +42,16 @@ internal sealed class FinancialOperationEntity
 
     public static FinancialOperationEntity Create(
         Guid id,
-        int bookingId,
+        PaymentOperationReference reference,
         string requestFingerprint,
         DateTimeOffset createdAt) =>
-        new(id, bookingId, requestFingerprint, createdAt);
+        new(id, reference, requestFingerprint, createdAt);
 
-    public void EnsureMatches(int bookingId, string requestFingerprint)
+    public void EnsureMatches(PaymentOperationReference reference, string requestFingerprint)
     {
-        if (BookingId != bookingId || RequestFingerprint != requestFingerprint)
+        if (!string.Equals(OperationType, reference.OperationType, StringComparison.Ordinal)
+            || !string.Equals(ClientReference, reference.ClientReference, StringComparison.Ordinal)
+            || RequestFingerprint != requestFingerprint)
             throw new InvalidOperationException($"Financial operation {Id} was reused with a different request.");
     }
 

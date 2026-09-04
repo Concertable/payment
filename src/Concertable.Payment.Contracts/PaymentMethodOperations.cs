@@ -1,8 +1,8 @@
 namespace Concertable.Payment.Contracts;
 
-public sealed record PaymentOperationReference(
+public readonly record struct PaymentOperationReference(
     string OperationType,
-    string ConsumerCorrelation);
+    string ClientReference);
 
 public sealed record PaymentMethodSetupRequest(
     PaymentOperationReference Reference,

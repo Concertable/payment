@@ -96,7 +96,7 @@ public sealed class StripeTransferClientTests
             Amount = Money.Gbp(55),
             PaymentIntentId = "pi_test",
             TransferReversal = new("tr_test", Money.Gbp(50)),
-            Reason = RefundReasonCodes.RequestedByCustomer,
+            Reason = RefundReasonCodes.RequestedByPayer,
             CommissionBindingId = bindingId,
             RefundId = refundId,
             Metadata = new Dictionary<string, string>
@@ -114,7 +114,7 @@ public sealed class StripeTransferClientTests
             reversalRequest?.IdempotencyKey);
         Assert.NotNull(refund);
         Assert.Equal(5500, refund.Amount);
-        Assert.Equal(RefundReasonCodes.RequestedByCustomer, refund.Reason);
+        Assert.Equal(RefundReasonCodes.RequestedByPayer, refund.Reason);
         Assert.Equal(
             $"commission-binding:{bindingId:D}:{refundId:D}:1:refund",
             refundRequest?.IdempotencyKey);

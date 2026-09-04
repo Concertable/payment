@@ -37,8 +37,8 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.Currency.ToDomainCurrency(),
             request.ReviewedCommissionConfigurationId.ParseOrThrow<Guid>(
                 nameof(request.ReviewedCommissionConfigurationId)),
-            EmptyToNull(request.StripePaymentIntentId),
-            EmptyToNull(request.StripeSetupIntentId),
+            null,
+            null,
             context.CancellationToken);
 
         return result.ValueOrRpcException().ToProto();
@@ -67,8 +67,8 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             request.ExternalReference,
             request.PayerReference,
             request.Gross.ToMoney(),
-            EmptyToNull(request.StripePaymentIntentId),
-            EmptyToNull(request.StripeSetupIntentId),
+            null,
+            null,
             context.CancellationToken);
 
         var commission = result.ValueOrRpcException();
@@ -80,8 +80,6 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
             DomainMoney.FromMinorUnits(commission.Calculation.PayerTotalMinor, commission.Calculation.Currency)).ToProto();
     }
 
-    private static string? EmptyToNull(string value) =>
-        string.IsNullOrEmpty(value) ? null : value;
 }
 
 internal static class CommissionPricingGrpcMappers

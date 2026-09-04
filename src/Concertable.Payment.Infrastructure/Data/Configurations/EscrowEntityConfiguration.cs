@@ -14,7 +14,9 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
             .HasConversion(rate => rate.Value, value => Percentage.From(value))
             .HasColumnName("CommissionVatRatePercentage")
             .HasPrecision(7, 4);
-        builder.HasIndex(e => e.BookingId).IsUnique();
+        builder.Property(e => e.OperationType).HasMaxLength(200);
+        builder.Property(e => e.ClientReference).HasMaxLength(200);
+        builder.HasIndex(e => new { e.OperationType, e.ClientReference }).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
         builder.HasIndex(e => e.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");
         builder.Property(e => e.ReleaseOperationFingerprint).HasMaxLength(64).IsFixedLength();

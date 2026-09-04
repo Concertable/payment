@@ -9,7 +9,7 @@ internal sealed class PaymentSessionOperationEntity
     private PaymentSessionOperationEntity() { }
 
     private PaymentSessionOperationEntity(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         PaymentSessionFingerprint fingerprint,
         Guid attemptId,
         DateTimeOffset createdAt)
@@ -18,7 +18,7 @@ internal sealed class PaymentSessionOperationEntity
         SessionKind = specification.SessionKind;
         Session = specification.Session;
         OperationType = specification.OperationType;
-        ConsumerCorrelation = specification.ConsumerCorrelation;
+        ClientReference = specification.ClientReference;
         PayerOwnerKey = specification.PayerOwnerKey;
         PayeeOwnerKey = specification.PayeeOwnerKey;
         AmountMinor = specification.AmountMinor;
@@ -46,7 +46,7 @@ internal sealed class PaymentSessionOperationEntity
     public PaymentSessionKind SessionKind { get; private set; }
     public PaymentSession Session { get; private set; }
     public string OperationType { get; private set; } = null!;
-    public string ConsumerCorrelation { get; private set; } = null!;
+    public string ClientReference { get; private set; } = null!;
     public string PayerOwnerKey { get; private set; } = null!;
     public string? PayeeOwnerKey { get; private set; }
     public long? AmountMinor { get; private set; }
@@ -68,7 +68,7 @@ internal sealed class PaymentSessionOperationEntity
         attempts.Single(attempt => attempt.Revision == CurrentRevision);
 
     internal static PaymentSessionOperationEntity Create(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         Guid attemptId,
         DateTimeOffset createdAt) =>
         new(

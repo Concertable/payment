@@ -46,14 +46,14 @@ internal sealed class PaymentSessionService : IPaymentSessionService
 
         var existing = await operationRepository.GetByReferenceAsync(
             request.Reference.OperationType,
-            request.Reference.ConsumerCorrelation,
+            request.Reference.ClientReference,
             ct);
-        var specification = PaymentSessionSpecification.Create(
+        var specification = PaymentSessionDefinition.Create(
             existing?.OperationId ?? Guid.CreateVersion7(timeProvider.GetUtcNow()),
             request.Kind,
             PaymentSession.OnSession,
             request.Reference.OperationType,
-            request.Reference.ConsumerCorrelation,
+            request.Reference.ClientReference,
             request.PayerOwnerId.ToString("D"),
             null,
             null,
@@ -63,7 +63,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             payer.StripeCustomerId,
             null,
             request.MandateTermsVersion);
-        return await CreateOrReplayAsync(specification, ct);
+        return await CreateAsync(specification, ct);
     }
 
     public async Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
@@ -79,7 +79,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             : new Success();
     }
 
-    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default)
     {
@@ -102,22 +102,22 @@ internal sealed class PaymentSessionService : IPaymentSessionService
 
         try
         {
-            var specification = PaymentSessionSpecification.Create(
+            var specification = PaymentSessionDefinition.Create(
                 request.OperationId,
                 request.Kind,
                 request.Session,
                 request.OperationType,
-                request.ConsumerCorrelation,
+                request.ClientReference,
                 request.PayerOwnerId.ToString("D"),
                 request.PayeeOwnerId?.ToString("D"),
                 request.AmountMinor,
                 request.Currency,
                 request.FundsRouting,
-                request.PaymentMethodId,
+                null,
                 payer.StripeCustomerId,
                 providerConnectedAccountId,
                 request.MandateTermsVersion);
-            return await CreateOrReplayAsync(specification, ct);
+            return await CreateAsync(specification, ct);
         }
         catch (DomainException)
         {
@@ -125,8 +125,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         }
     }
 
-    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
-        PaymentSessionSpecification specification,
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
+        PaymentSessionDefinition specification,
         CancellationToken ct = default)
     {
         var reservation = await operationRepository.ReserveInitialAsync(

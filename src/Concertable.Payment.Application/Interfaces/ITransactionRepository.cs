@@ -17,12 +17,12 @@ internal interface ITransactionRepository : IRepository<TransactionEntity>
     Task<SettlementTransactionEntity?> ReloadSettlementByOperationIdAsync(
         Guid operationId,
         CancellationToken ct = default);
-    Task<SettlementTransactionEntity?> GetSettlementWithRefundsByBookingIdAsync(
-        int bookingId,
+    Task<SettlementTransactionEntity?> GetSettlementWithRefundsByReferenceAsync(
+        PaymentOperationReference reference,
         CancellationToken ct = default);
-    Task<long> GetCompletedTicketRevenueAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
+    Task<long> GetCompletedPaymentRevenueAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
     Task<long> GetCompletedSettlementPayoutsAsync(Guid payeeId, DateRange period, CancellationToken ct = default);
-    Task<IReadOnlyList<MonthlyPaymentTotal>> GetCompletedTicketRevenueByMonthAsync(
+    Task<IReadOnlyList<MonthlyPaymentTotal>> GetCompletedPaymentRevenueByMonthAsync(
         Guid payeeId,
         DateRange period,
         CancellationToken ct = default);

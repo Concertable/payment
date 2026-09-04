@@ -34,10 +34,10 @@ internal sealed class PaymentSessionOperationsGrpcService
         return new Empty();
     }
 
-    public override async Task<Proto.PaymentSessionDescriptor> CreateOrReplay(
+    public override async Task<Proto.PaymentSessionDescriptor> Create(
         Proto.PaymentSessionOperationRequest request,
         ServerCallContext context) =>
-        (await paymentSessionService.CreateOrReplayAsync(
+        (await paymentSessionService.CreateAsync(
             request.ToContract(),
             context.CancellationToken))
         .ValueOrRpcException()

@@ -97,7 +97,7 @@ internal sealed class PaymentOperationResolver : IPaymentOperationResolver
     {
         var operation = await operationRepository.GetByReferenceAsync(
             reference.OperationType,
-            reference.ConsumerCorrelation,
+            reference.ClientReference,
             ct);
         if (operation is null
             || !string.Equals(

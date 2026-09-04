@@ -22,10 +22,15 @@ internal sealed class EscrowRepository
             .Include(e => e.Refunds)
             .FirstOrDefaultAsync(e => e.Id == id, ct);
 
-    public Task<EscrowEntity?> GetByBookingIdAsync(int bookingId, CancellationToken ct = default) =>
+    public Task<EscrowEntity?> GetByReferenceAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default) =>
         context.Escrows
             .Include(e => e.Refunds)
-            .FirstOrDefaultAsync(e => e.BookingId == bookingId, ct);
+            .FirstOrDefaultAsync(
+                e => e.OperationType == reference.OperationType
+                    && e.ClientReference == reference.ClientReference,
+                ct);
 
     public Task<EscrowEntity?> GetByChargeIdAsync(string chargeId, CancellationToken ct = default) =>
         context.Escrows

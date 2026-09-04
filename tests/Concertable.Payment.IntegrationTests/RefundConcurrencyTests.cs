@@ -35,12 +35,14 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         await using (var migrate = CreateContext())
             await migrate.Database.MigrateAsync();
 
-        int bookingId = 8_100 + Random.Shared.Next(1_000);
+        var reference = new PaymentOperationReference(
+            "escrow",
+            $"order:{8_100 + Random.Shared.Next(1_000)}");
         await using (var seed = CreateContext())
         {
             var binding = await SeedAuthorizationAsync(seed);
             var escrow = EscrowEntity.CreateBound(
-                bookingId,
+                reference,
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 binding.Id,
@@ -78,8 +80,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 NullLogger<EscrowService>.Instance);
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(
-                bookingId,
+            return await service.RefundBoundCommissionByReferenceAsync(
+                reference,
                 Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
@@ -101,7 +103,9 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         Assert.Contains(committed.GrossRefundedMinor, new long[] { 3000, 2500 });
         Assert.True(committed.GrossRefundedMinor <= 5000);
 
-        var escrowRow = await verification.Escrows.SingleAsync(e => e.BookingId == bookingId);
+        var escrowRow = await verification.Escrows.SingleAsync(e =>
+            e.OperationType == reference.OperationType
+            && e.ClientReference == reference.ClientReference);
         Assert.Equal(committed.GrossRefundedMinor, escrowRow.RefundedGrossMinor);
     }
 
@@ -111,7 +115,9 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         await using (var migrate = CreateContext())
             await migrate.Database.MigrateAsync();
 
-        int bookingId = 9_100 + Random.Shared.Next(1_000);
+        var reference = new PaymentOperationReference(
+            "settlement",
+            $"order:{9_100 + Random.Shared.Next(1_000)}");
         await using (var seed = CreateContext())
         {
             var binding = await SeedAuthorizationAsync(seed);
@@ -128,7 +134,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                     Percentage.From(20m),
                     6000),
                 TransactionStatus.Complete,
-                bookingId,
+                reference,
                 binding.Id);
             settlement.CreatedBy = "integration";
             settlement.CreatedAt = DateTimeOffset.UtcNow;
@@ -142,10 +148,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         async Task<Result<Option<Refund>, SettlementRefundError>> RefundAsync(long grossMinor)
         {
             await using var context = CreateContext();
-            var service = new ManagerPaymentService(
+            var service = new SettlementService(
                 stripe.Object,
-                Mock.Of<IStripeAccountClient>(),
-                Mock.Of<IStripeHoldClient>(),
                 Mock.Of<IPayoutAccountRepository>(),
                 new TransactionRepository(context),
                 Mock.Of<ICommissionService>(),
@@ -156,8 +160,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
                 TimeProvider.System,
                 Options.Create(new PlatformFeeOptions { Fee = 0m }));
             await gate.WaitAsync();
-            return await service.RefundBoundCommissionByBookingIdAsync(
-                bookingId,
+            return await service.RefundBoundCommissionAsync(
+                reference,
                 Money.FromMinorUnits(grossMinor, Currency.Gbp));
         }
 
@@ -179,14 +183,12 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         Assert.Contains(committed.GrossRefundedMinor, new long[] { 3000, 2500 });
         Assert.True(committed.GrossRefundedMinor <= 5000);
 
-        var settlementRow = await verification.SettlementTransactions.SingleAsync(t => t.BookingId == bookingId);
+        var settlementRow = await verification.SettlementTransactions.SingleAsync(t =>
+            t.OperationType == reference.OperationType
+            && t.ClientReference == reference.ClientReference);
         Assert.Equal(committed.GrossRefundedMinor, settlementRow.RefundedGrossMinor);
     }
 
-    // The reservation guard is an atomic conditional UPDATE (RefundedGrossMinor + @gross <= PayeeGrossMinor):
-    // the DB row lock serializes the two concurrent reservations, so the loser's UPDATE matches zero rows and
-    // it returns a conflict BEFORE reaching the (guard-free) Stripe call. A plain recording mock therefore sees
-    // exactly one refund, and cumulative gross can never exceed the escrow/settlement's payee gross.
     private static Mock<IPaymentManager> RecordingRefundManager()
     {
         var mock = new Mock<IPaymentManager>();
@@ -222,7 +224,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var binding = CommissionBindingEntity.Create(
             configuration,
             Currency.Gbp,
-            $"booking:{Guid.NewGuid():N}",
+            $"order:{Guid.NewGuid():N}",
             $"payer:{Guid.NewGuid():N}",
             DateTimeOffset.UtcNow);
         context.Add(configuration);

@@ -4,7 +4,6 @@ using Concertable.Messaging.Infrastructure.Inbox;
 using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Infrastructure.Extensions;
-using Concertable.Auth.Contracts.Events;
 using Microsoft.EntityFrameworkCore;
 using Concertable.ServiceDefaults;
 using Concertable.DataAccess.Infrastructure.Data;
@@ -44,7 +43,7 @@ public static class HostExtensions
                         : throw new InvalidOperationException("Configuration 'ServiceBus:ServiceName' is required."));
             },
             reg => reg
-                .SubscribeTo<CredentialRegisteredEvent>()
+                .SubscribeTo<PaymentMethodOwnerRegisteredEvent>()
                 .SubscribeTo<PayoutOwnerRegisteredEvent>()
                 .SubscribeTo<PaymentSucceededEvent>()
                 .SubscribeTo<PaymentFailedEvent>());

@@ -85,9 +85,7 @@ public static class HostExtensions
                 reg.Publishes<RefundEscrowDeferredEvent>();
                 reg.HandleCommand<ProcessStripeWebhookCommand>();
                 reg.HandleCommand<CaptureEscrowCommand>();
-                reg.HandleCommand<CaptureEscrowByReferenceCommand>();
                 reg.HandleCommand<DepositEscrowCommand>();
-                reg.HandleCommand<DepositEscrowByReferenceCommand>();
                 reg.HandleCommand<RefundEscrowCommand>();
             });
         services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
@@ -102,7 +100,7 @@ public static class HostExtensions
                 {
                     ClockSkew = TimeSpan.Zero,
                     ValidateIssuer = !builder.Environment.IsDevelopment(),
-                    ValidAudiences = ["concertable.payment.api", "concertable.b2b.api", "concertable.customer.api"]
+                    ValidAudiences = ["concertable.payment.api"]
                 };
             });
 

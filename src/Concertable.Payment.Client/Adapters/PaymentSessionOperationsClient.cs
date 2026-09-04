@@ -45,11 +45,11 @@ internal sealed class PaymentSessionOperationsClient : IPaymentSessionOperations
             error => error.ToPaymentOperationError(),
             ct);
 
-    public Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateOrReplayAsync(
+    public Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
-            async () => (await client.CreateOrReplayAsync(
+            async () => (await client.CreateAsync(
                 request.ToProto(),
                 cancellationToken: ct)).ToPaymentSessionDescriptor(),
             error => error.ToPaymentOperationError(),

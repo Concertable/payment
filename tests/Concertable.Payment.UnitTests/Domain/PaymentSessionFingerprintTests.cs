@@ -13,9 +13,9 @@ public sealed class PaymentSessionFingerprintTests
 
         var fingerprint = PaymentSessionFingerprint.Create(specification);
 
-        Assert.Equal(1, fingerprint.Version);
+        Assert.Equal(2, fingerprint.Version);
         Assert.Equal(
-            "59B28F42D28AE211CBB4E1581644DA8C8A6D1B8078C5B240780D30349CD7A367",
+            "83DDA7499170450C37BEC169220DC7062EE179A5C43330DE44EBA4270C4336D6",
             fingerprint.Value);
     }
 
@@ -32,7 +32,7 @@ public sealed class PaymentSessionFingerprintTests
     public void Create_UnknownVersion_ThrowsDomainException()
     {
         Assert.Throws<DomainException>(() =>
-            PaymentSessionFingerprint.Create(Authorization(5000), 2));
+            PaymentSessionFingerprint.Create(Authorization(5000), 3));
     }
 
     [Fact]
@@ -66,13 +66,13 @@ public sealed class PaymentSessionFingerprintTests
         Assert.NotEqual(first, second);
     }
 
-    private static PaymentSessionSpecification Setup(string mandateTermsVersion) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Setup(string mandateTermsVersion) =>
+        PaymentSessionDefinition.Create(
             Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OnSession,
-            "venueHire",
-            "booking:42",
+            "purchase",
+            "order:42",
             "payer:7",
             null,
             null,
@@ -83,16 +83,16 @@ public sealed class PaymentSessionFingerprintTests
             null,
             mandateTermsVersion);
 
-    private static PaymentSessionSpecification Authorization(
+    private static PaymentSessionDefinition Authorization(
         long amountMinor,
         PaymentSession session = PaymentSession.OnSession,
         string? paymentMethodId = null) =>
-        PaymentSessionSpecification.Create(
+        PaymentSessionDefinition.Create(
             Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
             PaymentSessionKind.Authorization,
             session,
             "escrow",
-            "booking:42",
+            "order:42",
             "payer:7",
             "payee:9",
             amountMinor,

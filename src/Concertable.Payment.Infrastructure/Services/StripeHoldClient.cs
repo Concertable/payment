@@ -1,5 +1,4 @@
 using Concertable.Payment.Application.Interfaces;
-using Concertable.Kernel.Exceptions;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -13,22 +12,6 @@ internal sealed class StripeHoldClient : IStripeHoldClient
         this.paymentIntentService = paymentIntentService;
     }
 
-    public async Task<string> FindHeldIntentAsync(string stripeCustomerId, int applicationId, CancellationToken ct = default)
-    {
-        var intents = await paymentIntentService.ListAsync(new PaymentIntentListOptions
-        {
-            Customer = stripeCustomerId,
-            Limit = 10,
-        }, cancellationToken: ct);
-
-        var held = intents.FirstOrDefault(pi =>
-            pi.Status == "requires_capture" &&
-            pi.Metadata.TryGetValue(PaymentMetadataKeys.ApplicationId, out var id) &&
-            id == applicationId.ToString());
-
-        return held?.Id ?? throw new NotFoundException($"No held payment intent found for application {applicationId}");
-    }
-
     public Task CaptureAsync(
         string intentId,
         IReadOnlyDictionary<string, string> metadata,
@@ -39,7 +22,7 @@ internal sealed class StripeHoldClient : IStripeHoldClient
             intentId,
             new PaymentIntentCaptureOptions
             {
-                Metadata = metadata.ToDictionary(kv => kv.Key, kv => kv.Value)
+                Metadata = metadata.ToDictionary(pair => pair.Key, pair => pair.Value)
             },
             StripeRequestOptions.Capture(operationId, commissionBindingId),
             ct);

@@ -35,9 +35,9 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
         var reference = Reference();
         await SeedAccountsAsync(payerId, payeeId);
         var providerObjectId = await CreatePaymentMethodAsync(reference, payerId);
-        var command = new DepositEscrowByReferenceCommand(
+        var command = new DepositEscrowCommand(
             Guid.CreateVersion7(),
-            17,
+            reference,
             payerId,
             payeeId,
             5000,
@@ -62,7 +62,8 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
             var operation = await context.FinancialOperations.SingleAsync(
                 value => value.Id == command.OperationId);
             var escrow = await context.Escrows.SingleAsync(
-                value => value.BookingId == command.BookingId);
+                value => value.OperationType == reference.OperationType
+                    && value.ClientReference == reference.ClientReference);
             return (OperationStatus: operation.Status, EscrowStatus: escrow.Status);
         });
         Assert.Equal(FinancialOperationStatus.Succeeded, persisted.OperationStatus);
@@ -86,9 +87,9 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
             providerObjectId,
             "requires_capture",
             DateTimeOffset.UtcNow.AddDays(1));
-        var command = new CaptureEscrowByReferenceCommand(
+        var command = new CaptureEscrowCommand(
             Guid.CreateVersion7(),
-            17,
+            reference,
             payerId,
             payeeId,
             5000,
@@ -102,7 +103,8 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
             var operation = await context.FinancialOperations.SingleAsync(
                 value => value.Id == command.OperationId);
             var escrow = await context.Escrows.SingleAsync(
-                value => value.BookingId == command.BookingId);
+                value => value.OperationType == reference.OperationType
+                    && value.ClientReference == reference.ClientReference);
             return (OperationStatus: operation.Status, EscrowStatus: escrow.Status, escrow.ChargeId);
         });
         Assert.Equal(FinancialOperationStatus.Succeeded, persisted.OperationStatus);
@@ -121,15 +123,16 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
         fixture.SetProviderStatus(providerObjectId, "succeeded");
         var operationId = Guid.CreateVersion7();
 
-        var result = await fixture.RunAsync((IManagerPaymentService service) =>
+        var settlementReference = SettlementReference();
+        var result = await fixture.RunAsync((ISettlementService service) =>
             service.PayAsync(
                 operationId,
+                settlementReference,
                 payerId,
                 payeeId,
                 Money.Gbp(50),
                 reference,
-                PaymentSession.OffSession,
-                17));
+                PaymentSession.OffSession));
 
         Assert.True(result.TryGetValue(out var payment));
         var persistedPaymentIntentId = await fixture.RunAsync((PaymentDbContext context) =>
@@ -140,17 +143,17 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
         Assert.Equal(payment.TransactionId, persistedPaymentIntentId);
     }
 
-    private Task DispatchAsync(DepositEscrowByReferenceCommand command) =>
-        fixture.RunAsync((IIntegrationCommandHandler<DepositEscrowByReferenceCommand> handler) =>
+    private Task DispatchAsync(DepositEscrowCommand command) =>
+        fixture.RunAsync((IIntegrationCommandHandler<DepositEscrowCommand> handler) =>
             handler.HandleAsync(
                 command,
-                MessageEnvelope.Create<DepositEscrowByReferenceCommand>(DateTimeOffset.UtcNow)));
+                MessageEnvelope.Create<DepositEscrowCommand>(DateTimeOffset.UtcNow)));
 
-    private Task DispatchAsync(CaptureEscrowByReferenceCommand command) =>
-        fixture.RunAsync((IIntegrationCommandHandler<CaptureEscrowByReferenceCommand> handler) =>
+    private Task DispatchAsync(CaptureEscrowCommand command) =>
+        fixture.RunAsync((IIntegrationCommandHandler<CaptureEscrowCommand> handler) =>
             handler.HandleAsync(
                 command,
-                MessageEnvelope.Create<CaptureEscrowByReferenceCommand>(DateTimeOffset.UtcNow)));
+                MessageEnvelope.Create<CaptureEscrowCommand>(DateTimeOffset.UtcNow)));
 
     private Task<FinancialOperationStatus> FinancialOperationStatusAsync(Guid operationId) =>
         fixture.RunAsync((PaymentDbContext context) =>
@@ -176,7 +179,7 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
     {
         var setup = await fixture.RunAsync((IPaymentSessionService service) =>
             service.SetupPaymentMethodAsync(
-                new(reference, PaymentSessionKind.PaymentMethodSetup, payerId, "venue-hire-mandate-v1")));
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerId, "recurring-payment-v1")));
         Assert.True(setup.TryGetValue(out _));
         return await CurrentProviderObjectIdAsync(reference);
     }
@@ -190,17 +193,16 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
         var request = new PaymentSessionOperationRequest(
             operationId,
             PaymentSessionKind.Authorization,
-            PaymentSession.OffSession,
+            PaymentSession.OnSession,
             reference.OperationType,
-            reference.ConsumerCorrelation,
+            reference.ClientReference,
             payerId,
             payeeId,
             5000,
             Currency.Gbp,
-            PaymentSessionFundsRouting.Destination,
-            $"pm_{operationId:N}");
+            PaymentSessionFundsRouting.Destination);
         var created = await fixture.RunAsync((IPaymentSessionService service) =>
-            service.CreateOrReplayAsync(request));
+            service.CreateAsync(request));
         Assert.True(created.TryGetValue(out _));
         return await CurrentProviderObjectIdAsync(reference);
     }
@@ -209,12 +211,15 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
         fixture.RunAsync((PaymentDbContext context) =>
             context.PaymentSessionOperations
                 .Where(operation => operation.OperationType == reference.OperationType
-                    && operation.ConsumerCorrelation == reference.ConsumerCorrelation)
+                    && operation.ClientReference == reference.ClientReference)
                 .SelectMany(operation => operation.Attempts
                     .Where(attempt => attempt.Revision == operation.CurrentRevision)
                     .Select(attempt => attempt.ProviderObjectId!))
                 .SingleAsync());
 
     private static PaymentOperationReference Reference() =>
-        new("applicationApply", $"application:{Guid.CreateVersion7():N}");
+        new("purchase", $"order:{Guid.CreateVersion7():N}");
+
+    private static PaymentOperationReference SettlementReference() =>
+        new("settlement", $"settlement:{Guid.CreateVersion7():N}");
 }

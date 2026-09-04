@@ -36,9 +36,6 @@ internal static class PaymentMappers
             TransactionId = r.TransactionId
         };
 
-    public static CheckoutSession ToCheckoutSession(this Proto.CheckoutSessionResponse r) =>
-        new(r.ClientSecret, r.CustomerSession, r.CustomerId);
-
     public static Proto.PaymentSessionType ToProtoSession(this PaymentSession session) => session switch
     {
         PaymentSession.OnSession => Proto.PaymentSessionType.OnSession,
@@ -61,10 +58,12 @@ internal static class PaymentMappers
             point.Net.ToMoney(),
             point.Count);
 
-    public static ManagerSettlement ToManagerSettlement(this Proto.SettlementReportItemResponse settlement) =>
+    public static PaymentSettlement ToPaymentSettlement(this Proto.SettlementReportItemResponse settlement) =>
         new(
             settlement.Id,
-            settlement.BookingId,
+            new(
+                settlement.Reference.OperationType,
+                settlement.Reference.ClientReference),
             Guid.Parse(settlement.PayerId),
             Guid.Parse(settlement.PayeeId),
             settlement.Amount.ToMoney(),

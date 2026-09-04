@@ -10,7 +10,7 @@ internal interface IPaymentSessionOperationRepository
 
     Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
         string operationType,
-        string consumerCorrelation,
+        string clientReference,
         CancellationToken ct = default);
 
     Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
@@ -19,7 +19,7 @@ internal interface IPaymentSessionOperationRepository
         CancellationToken ct = default);
 
     Task<PaymentSessionReservation> ReserveInitialAsync(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         DateTimeOffset createdAt,
         CancellationToken ct = default);
 

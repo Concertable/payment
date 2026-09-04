@@ -42,12 +42,10 @@ public sealed class PaymentErrorDefinitionTests
         { new CommissionError.BindingIntentMismatch(), "payment.commission_intent_mismatch", "The commission binding does not match the payment intent.", ErrorKind.Invalid },
         { new CommissionError.GrossNotConfirmed(), "payment.commission_gross_not_confirmed", "The commission gross has not been confirmed.", ErrorKind.Conflict },
         { new CommissionError.GrossMismatch(), "payment.commission_gross_mismatch", "The commission gross does not match the confirmed amount.", ErrorKind.Conflict },
-        { new ManagerPaymentError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
-        { new ManagerPaymentError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
-        { new ManagerPaymentOperationError.ManagerFailure(new ManagerPaymentError.PaymentFailure(new PaymentError.PaymentRejected())), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
-        { new ManagerPaymentOperationError.OperationConflict(), "payment.manager_operation_conflict", "The operation identity conflicts with an existing manager payment.", ErrorKind.Conflict },
         { new PaymentMethodChargeError.PaymentMethodFailure(new PaymentOperationError.PaymentMethodRequired()), "payment.operation.payment_method_required", "A usable payment method is required.", ErrorKind.PaymentRequired },
-        { new PaymentMethodChargeError.ChargeFailure(new ManagerPaymentOperationError.OperationConflict()), "payment.manager_operation_conflict", "The operation identity conflicts with an existing manager payment.", ErrorKind.Conflict },
+        { new PaymentMethodChargeError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
+        { new PaymentMethodChargeError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
+        { new PaymentMethodChargeError.OperationConflict(), "payment.operation_conflict", "The operation identity conflicts with an existing payment.", ErrorKind.Conflict },
         { new PaymentMethodChargeError.AuthenticationRequired(), "payment.charge.authentication_required", "The committed payment method requires the payer to authenticate on-session before the charge can complete.", ErrorKind.PaymentRequired },
         { new EscrowDepositError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
         { new EscrowDepositError.CommissionFailure(new CommissionError.PricingChanged()), "payment.commission_pricing_changed", "The commission pricing has changed.", ErrorKind.Conflict },
@@ -68,8 +66,6 @@ public sealed class PaymentErrorDefinitionTests
         { new EscrowRefundError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
         { new ChargeError.AuthenticationRequired(), "charge.authentication_required", "The payment method requires the payer to authenticate on-session before the charge can complete.", ErrorKind.PaymentRequired },
         { new ChargeError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
-        { new ManagerChargeError.AuthenticationRequired(), "manager.charge_authentication_required", "The payment method requires the payer to authenticate on-session before the charge can complete.", ErrorKind.PaymentRequired },
-        { new ManagerChargeError.OperationFailure(new ManagerPaymentOperationError.OperationConflict()), "payment.manager_operation_conflict", "The operation identity conflicts with an existing manager payment.", ErrorKind.Conflict },
         { new SettlementRefundError.SettlementNotFound(), "settlement.refund_not_found", "Settlement not found.", ErrorKind.NotFound },
         { new SettlementRefundError.SettlementNotRefundable(), "settlement.refund_not_allowed", "Settlement cannot be refunded in its current state.", ErrorKind.Conflict },
         { new SettlementRefundError.CommissionBindingNotFound(), "settlement.refund_commission_binding_not_found", "Commission binding not found.", ErrorKind.NotFound },
@@ -77,9 +73,7 @@ public sealed class PaymentErrorDefinitionTests
         { new SettlementRefundError.AmountMustBePositive(), "settlement.refund_amount_invalid", "Refund amount must be positive.", ErrorKind.Invalid },
         { new SettlementRefundError.AmountExceedsRemaining(), "settlement.refund_amount_exceeds_remaining", "Refund amount exceeds the remaining refundable amount.", ErrorKind.Conflict },
         { new SettlementRefundError.Conflict(), "settlement.refund_conflict", "Another refund changed the refundable amount.", ErrorKind.Conflict },
-        { new SettlementRefundError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired },
-        { new HoldSessionError.PaymentFailure(new PaymentError.PayerNotFound()), "payment.payer_not_found", "The payer account was not found.", ErrorKind.NotFound },
-        { new HoldSessionError.CommissionFailure(new CommissionError.BindingMismatch()), "payment.commission_binding_mismatch", "The commission binding does not match this payment.", ErrorKind.Invalid }
+        { new SettlementRefundError.PaymentFailure(new PaymentError.PaymentRejected()), "payment.rejected", "The payment was rejected.", ErrorKind.PaymentRequired }
     };
 
     [Theory]

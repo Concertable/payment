@@ -14,6 +14,7 @@ public sealed class LedgerServiceTests
 
     private readonly Guid payer = Guid.NewGuid();
     private readonly Guid payee = Guid.NewGuid();
+    private readonly PaymentOperationReference reference = new("settlement", "order:7");
 
     private LedgerTransactionEntity? posted;
 
@@ -40,7 +41,7 @@ public sealed class LedgerServiceTests
     }
 
     private LedgerPosting Settlement(Money gross, Money fee) =>
-        new(LedgerPostingType.DirectSettlement, "pi_test", BookingId: 7, PaymentIntentId: "pi_test",
+        new(LedgerPostingType.DirectSettlement, "pi_test", reference, PaymentIntentId: "pi_test",
         [
             new PostingLeg(new LedgerAccountRef(LedgerAccountType.Receivable, payer), LedgerDirection.Debit, gross + fee),
             new PostingLeg(new LedgerAccountRef(LedgerAccountType.Payable, payee), LedgerDirection.Credit, gross),
@@ -64,7 +65,7 @@ public sealed class LedgerServiceTests
     public async Task StageAsync_WhenTwoLegsShareOneAccount_ResolvesItOnlyOnce()
     {
         var posting = new LedgerPosting(
-            LedgerPostingType.DirectSettlement, "pi_test", BookingId: 7, PaymentIntentId: "pi_test",
+            LedgerPostingType.DirectSettlement, "pi_test", reference, PaymentIntentId: "pi_test",
         [
             new PostingLeg(new LedgerAccountRef(LedgerAccountType.Receivable, payer), LedgerDirection.Debit, Money.Gbp(100)),
             new PostingLeg(new LedgerAccountRef(LedgerAccountType.Payable, payee), LedgerDirection.Credit, Money.Gbp(40)),
