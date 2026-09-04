@@ -279,7 +279,7 @@ internal sealed class StripeAccountClient : IStripeAccountClient
                         PaymentMethodSave = "enabled",
                         PaymentMethodRemove = "enabled",
                         PaymentMethodRedisplay = "enabled",
-                        PaymentMethodAllowRedisplayFilters = ["always", "limited", "unspecified"],
+                        PaymentMethodAllowRedisplayFilters = ["always"],
                     },
                 },
             },

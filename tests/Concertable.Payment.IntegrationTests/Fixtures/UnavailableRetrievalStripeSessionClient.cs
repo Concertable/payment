@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Enums;
 using Reunion;
@@ -17,7 +18,7 @@ internal sealed class UnavailableRetrievalStripeSessionClient : IStripeSessionCl
 
     public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default) =>
         stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
 

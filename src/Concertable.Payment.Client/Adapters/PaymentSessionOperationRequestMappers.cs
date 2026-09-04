@@ -10,12 +10,14 @@ internal static class PaymentSessionOperationRequestMappers
         public Proto.PaymentMethodSetupRequest ToProto()
         {
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+            ArgumentException.ThrowIfNullOrWhiteSpace(request.MandateTermsVersion);
 
             return new()
             {
                 Reference = request.Reference.ToProto(),
                 Kind = request.Kind.ToProto(),
-                PayerOwnerId = request.PayerOwnerId.ToString("D")
+                PayerOwnerId = request.PayerOwnerId.ToString("D"),
+                MandateTermsVersion = request.MandateTermsVersion
             };
         }
     }
@@ -76,6 +78,8 @@ internal static class PaymentSessionOperationRequestMappers
                 message.Currency = currency.ToProtoCurrency();
             if (request.PaymentMethodId is { } paymentMethodId)
                 message.PaymentMethodId = paymentMethodId;
+            if (request.MandateTermsVersion is { } mandateTermsVersion)
+                message.MandateTermsVersion = mandateTermsVersion;
 
             return message;
         }

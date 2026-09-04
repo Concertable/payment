@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Mappers;
 using Stripe;
@@ -26,7 +27,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
 
     public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         try
@@ -128,7 +129,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                                 PaymentMethodSave = "enabled",
                                 PaymentMethodRemove = "enabled",
                                 PaymentMethodRedisplay = "enabled",
-                                PaymentMethodAllowRedisplayFilters = ["always", "limited", "unspecified"]
+                                PaymentMethodAllowRedisplayFilters = ["always"]
                             }
                         }
                     }

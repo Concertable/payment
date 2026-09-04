@@ -50,7 +50,7 @@ Every money movement posts a balanced transaction — the invariant is enforced 
 `EscrowEntity` (status `Pending → Held → Released` / `Refunded` / `Disputed` / `Failed`), driven by `EscrowService`:
 
 - **Hold → release.** `DepositAsync` places a Stripe manual-capture hold, creates the escrow `Pending`, then `Confirm()` + stages `EscrowHold` when no further action is required. `CaptureAsync` captures a held intent; `ReleaseAsync`/`ReleaseByBookingIdAsync` transfers to the payee, `Release()`, stages `EscrowRelease`.
-- **Reserve-first refund.** `ExecuteRefundAsync` atomically reserves against `EscrowEntity.RefundedGrossMinor` (`TryReserveRefundGrossAsync`), creates a **`Pending`** `PaymentRefundEntity`, saves, then calls Stripe — completing (`CompleteRefund` + posting) or rolling back (`ReleaseRefund` + release the reservation) on the result. The running `RefundedGrossMinor` total is the concurrency guard; the Stripe idempotency key collapses same-amount retries. The settlement path mirrors this via `ManagerPaymentService` + `TryReserveSettlementRefundGrossAsync`; a `PaymentRefundEntity` belongs to exactly one of escrow or settlement.
+- **Reserve-first refund.** `ExecuteRefundAsync` atomically reserves against `EscrowEntity.RefundedGrossMinor` (`TryReserveRefundGrossAsync`), creates a **`Pending`** `PaymentRefundEntity`, saves, then calls Stripe — completing (`CompleteRefund` + posting) or rolling back (`ReleaseRefund` + release the reservation) on the result. The running `RefundedGrossMinor` total is the concurrency guard; the Stripe idempotency key is keyed on the reservation's own id, so each reservation is a distinct Stripe request. The settlement path mirrors this via `ManagerPaymentService` + `TryReserveSettlementRefundGrossAsync`; a `PaymentRefundEntity` belongs to exactly one of escrow or settlement.
 
 A crash between reservation and completion can strand a `Pending` refund (fail-closed but capacity-locked) — `TECH_DEBT.md` item.
 
@@ -97,7 +97,7 @@ Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeA
 1. **Stripe-event dedup** — `WebhookProcessor` skips if `StripeEventEntity` (keyed on Stripe event id, `[payment].[StripeEvents]`) already exists, else inserts it inside the same outbox transaction as the side-effects.
 2. **Messaging inbox** — subscribers dedup on `(MessageId, ConsumerName)`.
 
-Outbound Stripe calls carry idempotency keys (`Services/StripeIdempotency.cs`).
+Outbound Stripe calls carry idempotency keys built through one shape — `StripeIdempotencyKey` (`Application/Provider/`) renders `<scope>:<identity>:<attempt>:<revision>:<action>`, and `Services/StripeRequestOptions.cs` binds the legacy financial-operation and commission-binding writes to it. No key contains a payload field: the payment-session subsystem supplies a real attempt and revision, refunds supply their `PaymentRefundEntity` reservation id, and the remaining single-attempt writes pass their own identity as the attempt.
 
 ---
 

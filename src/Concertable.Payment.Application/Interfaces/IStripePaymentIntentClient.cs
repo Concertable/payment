@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Reunion;
 using Concertable.Payment.Contracts.Errors;
@@ -6,7 +7,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripePaymentIntentClient
 {
-    Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    Task<Result<PaymentOutcome, PaymentRejection>> ChargeAsync(
         StripeChargeOptions options,
         CancellationToken ct = default);
 

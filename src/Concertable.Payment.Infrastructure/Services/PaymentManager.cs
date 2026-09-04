@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -29,7 +30,7 @@ internal sealed class PaymentManager : IPaymentManager
         this.logger = logger;
     }
 
-    public Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    public async Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -37,9 +38,10 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct);
+        (await ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct))
+            .MapError(rejection => rejection.Error);
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    public Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -50,7 +52,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    public Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -62,7 +64,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, operationId, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
+    public Task<Result<PaymentOutcome, PaymentRejection>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -194,7 +196,7 @@ internal sealed class PaymentManager : IPaymentManager
             Reason = request.Reason,
             OperationId = request.OperationId,
             CommissionBindingId = request.CommissionBindingId,
-            CumulativeGrossRefundMinor = request.CumulativeGrossRefundMinor,
+            RefundId = request.RefundId,
             Metadata = metadata
         }, ct);
     }
@@ -215,13 +217,13 @@ internal sealed class PaymentManager : IPaymentManager
         catch (StripeException ex)
         {
             logger.StripeCaptureFailedForPaymentIntent(request.PaymentIntentId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return UnitResult.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return UnitResult.Failure(rejection.Error);
             throw;
         }
     }
 
-    private async Task<Result<PaymentOutcome, PaymentError>> ChargeInternalAsync(
+    private async Task<Result<PaymentOutcome, PaymentRejection>> ChargeInternalAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -237,7 +239,7 @@ internal sealed class PaymentManager : IPaymentManager
         if (!accounts.TryGetValue(out var resolved))
         {
             accounts.TryGetError(out var error);
-            return Result<PaymentOutcome, PaymentError>.Failure(error!);
+            return Result<PaymentOutcome, PaymentRejection>.Failure(PaymentRejection.Unrecoverable(error!));
         }
 
         var payeeAmount = transferAmount ?? chargeAmount;

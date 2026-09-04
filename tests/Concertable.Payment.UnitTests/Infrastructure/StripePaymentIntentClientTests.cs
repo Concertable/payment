@@ -2,6 +2,7 @@ using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Interfaces.Webhook;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Infrastructure.Services;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -40,8 +41,9 @@ public sealed class StripePaymentIntentClientTests
 
         var result = await sut.ChargeAsync(Options());
 
-        Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new PaymentError.PaymentRejected(), error);
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(new PaymentError.PaymentRejected(), rejection.Error);
+        Assert.Equal(PaymentRecovery.NewPaymentMethod, rejection.Recovery);
     }
 
     [Fact]
@@ -56,8 +58,25 @@ public sealed class StripePaymentIntentClientTests
 
         var result = await sut.ChargeAsync(Options());
 
-        Assert.True(result.TryGetError(out var error));
-        Assert.Equal(new PaymentError.PaymentRejected(), error);
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(new PaymentError.PaymentRejected(), rejection.Error);
+        Assert.Equal(PaymentRecovery.NewPaymentMethod, rejection.Recovery);
+    }
+
+    [Fact]
+    public async Task ChargeAsync_AuthenticationRequiredDecline_ReturnsOnSessionRecovery()
+    {
+        stripeClient
+            .Setup(c => c.CreatePaymentIntentAsync(It.IsAny<PaymentIntentCreateOptions>(), It.IsAny<RequestOptions?>()))
+            .ThrowsAsync(new StripeException("declined")
+            {
+                StripeError = new StripeError { DeclineCode = "authentication_required" }
+            });
+
+        var result = await sut.ChargeAsync(Options());
+
+        Assert.True(result.TryGetError(out var rejection));
+        Assert.Equal(PaymentRecovery.OnSessionAuthentication, rejection.Recovery);
     }
 
     [Fact]
@@ -111,7 +130,9 @@ public sealed class StripePaymentIntentClientTests
         var result = await sut.ChargeAsync(Options(operationId));
 
         Assert.True(result.IsSuccess);
-        Assert.Equal($"operation:{operationId}:charge", request?.IdempotencyKey);
+        Assert.Equal(
+            $"financial-operation:{operationId:D}:{operationId:D}:1:charge",
+            request?.IdempotencyKey);
     }
 
     private static StripeChargeOptions Options(Guid? operationId = null) =>

@@ -204,5 +204,6 @@ public sealed class PaymentSessionPersistenceTests : IClassFixture<SqlFixture>
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
 }

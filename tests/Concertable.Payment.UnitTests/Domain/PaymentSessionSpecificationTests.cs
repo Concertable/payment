@@ -22,7 +22,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.None,
             null,
             "cus_test",
-            null));
+            null,
+            "venue-hire-mandate-v1"));
     }
 
     [Fact]
@@ -41,7 +42,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.Destination,
             null,
             "cus_test",
-            "acct_test"));
+            "acct_test",
+            null));
     }
 
     [Fact]
@@ -60,7 +62,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.Destination,
             null,
             "cus_test",
-            "acct_test"));
+            "acct_test",
+            "venue-hire-mandate-v1"));
     }
 
     [Fact]
@@ -79,7 +82,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.None,
             null,
             " cus_test ",
-            null);
+            null,
+            " venue-hire-mandate-v1 ");
 
         Assert.Equal("setup", specification.OperationType);
         Assert.Equal("profile:42", specification.ConsumerCorrelation);
@@ -87,6 +91,47 @@ public sealed class PaymentSessionSpecificationTests
         Assert.Equal("cus_test", specification.ProviderCustomerId);
         Assert.Equal(PaymentSessionCaptureMode.None, specification.CaptureMode);
         Assert.Equal(PaymentSession.OffSession, specification.Session);
+        Assert.Equal("venue-hire-mandate-v1", specification.MandateTermsVersion);
+    }
+
+    [Fact]
+    public void Create_SetupWithoutMandateTerms_ThrowsDomainException()
+    {
+        Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
+            Guid.CreateVersion7(),
+            PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
+            "setup",
+            "profile:42",
+            "payer:7",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            "cus_test",
+            null,
+            null));
+    }
+
+    [Fact]
+    public void Create_PaymentWithMandateTerms_ThrowsDomainException()
+    {
+        Assert.Throws<DomainException>(() => PaymentSessionSpecification.Create(
+            Guid.CreateVersion7(),
+            PaymentSessionKind.Payment,
+            PaymentSession.OffSession,
+            "ticket",
+            "purchase:42",
+            "payer:7",
+            "payee:9",
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            "pm_test",
+            "cus_test",
+            "acct_test",
+            "venue-hire-mandate-v1"));
     }
 
     [Fact]
@@ -105,7 +150,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.Destination,
             null,
             "cus_test",
-            "acct_test"));
+            "acct_test",
+            null));
     }
 
     [Fact]
@@ -124,7 +170,8 @@ public sealed class PaymentSessionSpecificationTests
             PaymentSessionFundsRouting.Destination,
             " pm_test ",
             "cus_test",
-            "acct_test");
+            "acct_test",
+            null);
 
         Assert.Equal(PaymentSession.OffSession, specification.Session);
         Assert.Equal("pm_test", specification.PaymentMethodId);

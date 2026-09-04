@@ -73,7 +73,8 @@ public sealed class PaymentOperationContractTests
             Proto.PaymentMethodSetupRequest.Descriptor,
             ("reference", 1, FieldType.Message),
             ("kind", 2, FieldType.Enum),
-            ("payer_owner_id", 3, FieldType.String));
+            ("payer_owner_id", 3, FieldType.String),
+            ("mandate_terms_version", 4, FieldType.String));
         AssertFields(
             Proto.PaymentMethodValidationRequest.Descriptor,
             ("reference", 1, FieldType.Message),
@@ -95,7 +96,8 @@ public sealed class PaymentOperationContractTests
             ("currency", 8, FieldType.Enum),
             ("funds_routing", 9, FieldType.Enum),
             ("session", 10, FieldType.Enum),
-            ("payment_method_id", 11, FieldType.String));
+            ("payment_method_id", 11, FieldType.String),
+            ("mandate_terms_version", 12, FieldType.String));
         AssertFields(
             Proto.PaymentSessionRetryRequest.Descriptor,
             ("operation_id", 1, FieldType.String),

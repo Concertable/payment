@@ -27,6 +27,8 @@ internal sealed class PaymentSessionOperationEntity
         PaymentMethodId = specification.PaymentMethodId;
         ProviderCustomerId = specification.ProviderCustomerId;
         ProviderConnectedAccountId = specification.ProviderConnectedAccountId;
+        MandateTermsVersion = specification.MandateTermsVersion;
+        MandateAcceptedAt = specification.MandateTermsVersion is null ? null : createdAt;
         FingerprintVersion = fingerprint.Version;
         RequestFingerprint = fingerprint.Value;
         CurrentRevision = 1;
@@ -53,6 +55,8 @@ internal sealed class PaymentSessionOperationEntity
     public string? PaymentMethodId { get; private set; }
     public string ProviderCustomerId { get; private set; } = null!;
     public string? ProviderConnectedAccountId { get; private set; }
+    public string? MandateTermsVersion { get; private set; }
+    public DateTimeOffset? MandateAcceptedAt { get; private set; }
     public int FingerprintVersion { get; private set; }
     public string RequestFingerprint { get; private set; } = null!;
     public long CurrentRevision { get; private set; }

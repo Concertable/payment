@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.ProviderContract;
 
@@ -60,7 +61,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             PaymentSessionFundsRouting.None,
             null,
             payer.StripeCustomerId,
-            null);
+            null,
+            request.MandateTermsVersion);
         return await CreateOrReplayAsync(specification, ct);
     }
 
@@ -113,7 +115,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 request.FundsRouting,
                 request.PaymentMethodId,
                 payer.StripeCustomerId,
-                providerConnectedAccountId);
+                providerConnectedAccountId,
+                request.MandateTermsVersion);
             return await CreateOrReplayAsync(specification, ct);
         }
         catch (DomainException)
@@ -321,7 +324,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             var request = PaymentSessionProviderRequest.Create(operation, attempt);
             providerResult = await stripeSessionClient.CreateAsync(
                 request,
-                new PaymentSessionIdempotencyKey(
+                StripeIdempotencyKey.ForSessionAttempt(
                     operation.OperationId,
                     attempt.AttemptId,
                     attempt.Revision),

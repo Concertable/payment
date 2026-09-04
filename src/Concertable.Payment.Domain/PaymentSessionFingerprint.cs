@@ -55,6 +55,7 @@ internal readonly record struct PaymentSessionFingerprint
                 writer,
                 "providerConnectedAccountId",
                 specification.ProviderConnectedAccountId);
+            WriteNullable(writer, "mandateTermsVersion", specification.MandateTermsVersion);
             writer.WriteEndObject();
         }
 

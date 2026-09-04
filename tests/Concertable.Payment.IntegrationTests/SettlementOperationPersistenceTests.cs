@@ -2,6 +2,7 @@ using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain;
@@ -203,7 +204,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
                 if (Interlocked.Increment(ref providerCalls) == 2)
                     bothProviderCallsEntered.SetResult();
                 await bothProviderCallsEntered.Task;
-                return Result<PaymentOutcome, PaymentError>.Success(outcome);
+                return Result<PaymentOutcome, PaymentRejection>.Success(outcome);
             });
         paymentManager
             .Setup(value => value.GetPaymentOutcomeAsync(

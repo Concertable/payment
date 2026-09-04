@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Reunion;
 using Concertable.Payment.Contracts.Errors;
@@ -15,7 +16,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -26,7 +27,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -36,7 +37,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
+    Task<Result<PaymentOutcome, PaymentRejection>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,

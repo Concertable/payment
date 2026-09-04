@@ -625,6 +625,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTimeOffset?>("MandateAcceptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MandateTermsVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -688,6 +695,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                             t.HasCheckConstraint("CK_PaymentSessionOperations_CurrentRevision", "[CurrentRevision] >= 1");
 
                             t.HasCheckConstraint("CK_PaymentSessionOperations_FingerprintVersion", "[FingerprintVersion] >= 1");
+
+                            t.HasCheckConstraint("CK_PaymentSessionOperations_MandateEvidence", "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_PaymentSessionOperations_RequestFingerprint", "LEN([RequestFingerprint]) = 64");
                         });

@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 
 namespace Concertable.Payment.Application.Interfaces;
 
@@ -6,7 +7,7 @@ internal interface IStripeSessionClient
 {
     Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default);
 
     Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(

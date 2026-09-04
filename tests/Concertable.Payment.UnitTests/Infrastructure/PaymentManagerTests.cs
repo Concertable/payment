@@ -3,6 +3,7 @@ using Reunion;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Infrastructure.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -58,7 +59,7 @@ public sealed class PaymentManagerTests
         intentClient
             .Setup(c => c.ChargeAsync(It.IsAny<StripeChargeOptions>(), It.IsAny<CancellationToken>()))
             .Callback<StripeChargeOptions, CancellationToken>((o, _) => opts = o)
-            .ReturnsAsync(Result.Success<PaymentOutcome, PaymentError>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
+            .ReturnsAsync(Result.Success<PaymentOutcome, PaymentRejection>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
 
         await Sut().SettleAsync(payerId, payeeId, Money.Gbp(62), Money.Gbp(50), "pm_test", PaymentSession.OnSession, metadata);
 
@@ -74,7 +75,7 @@ public sealed class PaymentManagerTests
         intentClient
             .Setup(c => c.ChargeAsync(It.IsAny<StripeChargeOptions>(), It.IsAny<CancellationToken>()))
             .Callback<StripeChargeOptions, CancellationToken>((o, _) => opts = o)
-            .ReturnsAsync(Result.Success<PaymentOutcome, PaymentError>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
+            .ReturnsAsync(Result.Success<PaymentOutcome, PaymentRejection>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
 
         await Sut().ChargeAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, metadata);
 

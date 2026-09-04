@@ -23,6 +23,10 @@ internal sealed class PaymentSessionOperationEntityConfiguration
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_RequestFingerprint",
                     "LEN([RequestFingerprint]) = 64");
+                table.HasCheckConstraint(
+                    "CK_PaymentSessionOperations_MandateEvidence",
+                    "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) "
+                        + "OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
             });
         builder.HasKey(operation => operation.OperationId);
         builder.Property(operation => operation.OperationId).ValueGeneratedNever();
@@ -37,6 +41,7 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.Property(operation => operation.PaymentMethodId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderCustomerId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderConnectedAccountId).HasMaxLength(100);
+        builder.Property(operation => operation.MandateTermsVersion).HasMaxLength(100);
         builder.Property(operation => operation.RequestFingerprint).HasMaxLength(64).IsFixedLength();
         builder.Property(operation => operation.RowVersion).IsRowVersion();
         builder.HasMany(operation => operation.Attempts)

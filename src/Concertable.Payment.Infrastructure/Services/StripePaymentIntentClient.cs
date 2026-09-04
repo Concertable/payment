@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Mappers;
@@ -26,17 +27,19 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         this.logger = logger;
     }
 
-    public async Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    public async Task<Result<PaymentOutcome, PaymentRejection>> ChargeAsync(
         StripeChargeOptions opts,
         CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrEmpty(opts.DestinationStripeId))
-                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentRejection>.Failure(
+                    PaymentRejection.Unrecoverable(new PaymentError.RecipientUnavailable()));
 
             if (await stripeAccountClient.GetAccountStatusAsync(opts.DestinationStripeId) != PayoutAccountStatus.Verified)
-                return Result<PaymentOutcome, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
+                return Result<PaymentOutcome, PaymentRejection>.Failure(
+                    PaymentRejection.Unrecoverable(new PaymentError.RecipientUnavailable()));
 
             var options = new PaymentIntentCreateOptions
             {
@@ -67,13 +70,13 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
             else
                 logger.StripePaymentIntentNonSucceeded(paymentIntent.Id, paymentIntent.Status, paymentIntent.Amount, options.TransferData.Destination);
 
-            return paymentIntent.ToPaymentResult();
+            return paymentIntent.ToPaymentResult().MapError(PaymentRejection.Declined);
         }
         catch (StripeException ex)
         {
             logger.StripeChargeFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return Result<PaymentOutcome, PaymentError>.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return Result<PaymentOutcome, PaymentRejection>.Failure(rejection);
             throw;
         }
     }
@@ -120,8 +123,8 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         catch (StripeException ex)
         {
             logger.StripeHoldFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return Result<PaymentOutcome, PaymentError>.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return Result<PaymentOutcome, PaymentError>.Failure(rejection.Error);
             throw;
         }
     }
@@ -137,8 +140,8 @@ internal sealed class StripePaymentIntentClient : IStripePaymentIntentClient
         }
         catch (StripeException ex)
         {
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return Result<PaymentOutcome, PaymentError>.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return Result<PaymentOutcome, PaymentError>.Failure(rejection.Error);
             throw;
         }
     }

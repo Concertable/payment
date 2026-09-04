@@ -1,5 +1,6 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Infrastructure.Services;
@@ -13,7 +14,7 @@ public sealed class PaymentSessionProviderExecutionTests
     {
         var provider = new FakeStripeSessionClient(TimeProvider.System);
         var request = Request();
-        var key = new PaymentSessionIdempotencyKey(
+        var key = StripeIdempotencyKey.ForSessionAttempt(
             request.OperationId,
             request.AttemptId,
             request.Revision);
@@ -38,7 +39,7 @@ public sealed class PaymentSessionProviderExecutionTests
         var request = Request();
         var created = await provider.CreateAsync(
             request,
-            new PaymentSessionIdempotencyKey(
+            StripeIdempotencyKey.ForSessionAttempt(
                 request.OperationId,
                 request.AttemptId,
                 request.Revision));

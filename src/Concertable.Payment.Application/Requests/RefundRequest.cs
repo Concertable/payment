@@ -9,6 +9,6 @@ internal sealed record RefundRequest
     public string? Reason { get; init; }
     public Guid? OperationId { get; init; }
     public Guid? CommissionBindingId { get; init; }
-    public required long CumulativeGrossRefundMinor { get; init; }
+    public required Guid RefundId { get; init; }
     public required IReadOnlyDictionary<string, string> Metadata { get; init; }
 }

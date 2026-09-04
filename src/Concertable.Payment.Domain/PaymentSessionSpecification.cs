@@ -15,7 +15,8 @@ internal sealed class PaymentSessionSpecification
         PaymentSessionFundsRouting fundsRouting,
         string? paymentMethodId,
         string providerCustomerId,
-        string? providerConnectedAccountId)
+        string? providerConnectedAccountId,
+        string? mandateTermsVersion)
     {
         OperationId = operationId;
         SessionKind = sessionKind;
@@ -30,6 +31,7 @@ internal sealed class PaymentSessionSpecification
         PaymentMethodId = paymentMethodId;
         ProviderCustomerId = providerCustomerId;
         ProviderConnectedAccountId = providerConnectedAccountId;
+        MandateTermsVersion = mandateTermsVersion;
     }
 
     public Guid OperationId { get; }
@@ -45,6 +47,7 @@ internal sealed class PaymentSessionSpecification
     public string? PaymentMethodId { get; }
     public string ProviderCustomerId { get; }
     public string? ProviderConnectedAccountId { get; }
+    public string? MandateTermsVersion { get; }
     public PaymentSessionCaptureMode CaptureMode => SessionKind switch
     {
         PaymentSessionKind.Payment => PaymentSessionCaptureMode.Automatic,
@@ -68,7 +71,8 @@ internal sealed class PaymentSessionSpecification
             FundsRouting,
             PaymentMethodId,
             ProviderCustomerId,
-            ProviderConnectedAccountId);
+            ProviderConnectedAccountId,
+            MandateTermsVersion);
 
     public static PaymentSessionSpecification Create(
         Guid operationId,
@@ -83,7 +87,8 @@ internal sealed class PaymentSessionSpecification
         PaymentSessionFundsRouting fundsRouting,
         string? paymentMethodId,
         string providerCustomerId,
-        string? providerConnectedAccountId)
+        string? providerConnectedAccountId,
+        string? mandateTermsVersion)
     {
         if (operationId == Guid.Empty)
             throw new DomainException("Payment session operation id is required.");
@@ -110,6 +115,19 @@ internal sealed class PaymentSessionSpecification
                 providerConnectedAccountId,
                 "Payment session provider connected account",
                 100);
+
+        if (sessionKind is PaymentSessionKind.PaymentMethodSetup
+            or PaymentSessionKind.PaymentMethodVerification)
+        {
+            if (mandateTermsVersion is null)
+                throw new DomainException("A payment method commitment requires the mandate terms the payer accepted.");
+
+            mandateTermsVersion = Normalize(mandateTermsVersion, "Payment session mandate terms version", 100);
+        }
+        else if (mandateTermsVersion is not null)
+        {
+            throw new DomainException("A money-moving payment session cannot record mandate terms.");
+        }
 
         if (sessionKind is PaymentSessionKind.Payment or PaymentSessionKind.Authorization)
         {
@@ -151,7 +169,8 @@ internal sealed class PaymentSessionSpecification
             fundsRouting,
             paymentMethodId,
             providerCustomerId,
-            providerConnectedAccountId);
+            providerConnectedAccountId,
+            mandateTermsVersion);
     }
 
     private static string Normalize(string value, string name, int maxLength)
