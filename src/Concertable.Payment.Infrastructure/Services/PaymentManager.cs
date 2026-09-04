@@ -39,9 +39,9 @@ internal sealed class PaymentManager : IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
         (await ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct))
-            .MapError(rejection => rejection.Error);
+            .MapError(rejection => rejection.ToPaymentError());
 
-    public Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
+    public Task<Result<PaymentOutcome, ChargeError>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -52,7 +52,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
+    public Task<Result<PaymentOutcome, ChargeError>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -64,7 +64,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, operationId, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentRejection>> SettleBoundCommissionAsync(
+    public Task<Result<PaymentOutcome, ChargeError>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -218,12 +218,12 @@ internal sealed class PaymentManager : IPaymentManager
         {
             logger.StripeCaptureFailedForPaymentIntent(request.PaymentIntentId, ex.StripeError?.Code, ex);
             if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
-                return UnitResult.Failure(rejection.Error);
+                return UnitResult.Failure(rejection.ToPaymentError());
             throw;
         }
     }
 
-    private async Task<Result<PaymentOutcome, PaymentRejection>> ChargeInternalAsync(
+    private async Task<Result<PaymentOutcome, ChargeError>> ChargeInternalAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -239,7 +239,7 @@ internal sealed class PaymentManager : IPaymentManager
         if (!accounts.TryGetValue(out var resolved))
         {
             accounts.TryGetError(out var error);
-            return Result<PaymentOutcome, PaymentRejection>.Failure(PaymentRejection.Unrecoverable(error!));
+            return Result<PaymentOutcome, ChargeError>.Failure(new ChargeError.PaymentFailure(error!));
         }
 
         var payeeAmount = transferAmount ?? chargeAmount;

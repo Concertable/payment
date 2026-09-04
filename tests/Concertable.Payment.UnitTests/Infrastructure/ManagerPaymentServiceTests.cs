@@ -161,7 +161,7 @@ public sealed class ManagerPaymentServiceTests
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
             .Callback<Guid, Guid, Money, Money, string, PaymentSession, IReadOnlyDictionary<string, string>, CancellationToken>((_, _, charge, payee, _, _, _, _) => { chargeAmount = charge; payeeAmount = payee; })
-            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(
+            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Success(
                 new PaymentOutcome { TransactionId = "pi_fee", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
@@ -194,7 +194,7 @@ public sealed class ManagerPaymentServiceTests
 
         paymentManager
             .Setup(p => p.SettleAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Money>(), It.IsAny<Money>(), It.IsAny<string>(), It.IsAny<PaymentSession>(), It.IsAny<IReadOnlyDictionary<string, string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(
+            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Success(
                 new PaymentOutcome { TransactionId = "pi_zero", RequiresAction = false }));
 
         SettlementTransactionEntity? captured = null;
@@ -239,7 +239,7 @@ public sealed class ManagerPaymentServiceTests
                 It.Is<IReadOnlyDictionary<string, string>>(metadata =>
                     metadata[PaymentMetadataKeys.OperationId] == operationId.ToString()),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Success(outcome));
+            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Success(outcome));
 
         SettlementTransactionEntity? captured = null;
         transactionRepository
@@ -766,11 +766,8 @@ public sealed class ManagerPaymentServiceTests
                 PaymentSession.OffSession,
                 It.IsAny<IReadOnlyDictionary<string, string>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Failure(new PaymentRejection
-            {
-                Error = new PaymentError.PaymentRejected(),
-                Recovery = PaymentRecovery.OnSessionAuthentication
-            }));
+            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Failure(
+                new ChargeError.AuthenticationRequired()));
 
         var result = await SutWithFee(0).PayAsync(
             operationId,
@@ -807,8 +804,8 @@ public sealed class ManagerPaymentServiceTests
                 PaymentSession.OffSession,
                 It.IsAny<IReadOnlyDictionary<string, string>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentRejection>.Failure(
-                PaymentRejection.Declined(new PaymentError.PaymentRejected())));
+            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Failure(
+                new ChargeError.PaymentFailure(new PaymentError.PaymentRejected())));
 
         var result = await SutWithFee(0).PayAsync(
             operationId,

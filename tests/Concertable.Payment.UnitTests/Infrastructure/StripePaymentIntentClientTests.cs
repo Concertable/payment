@@ -42,8 +42,9 @@ public sealed class StripePaymentIntentClientTests
         var result = await sut.ChargeAsync(Options());
 
         Assert.True(result.TryGetError(out var rejection));
-        Assert.Equal(new PaymentError.PaymentRejected(), rejection.Error);
-        Assert.Equal(PaymentRecovery.NewPaymentMethod, rejection.Recovery);
+        Assert.Equal(
+            new ChargeError.PaymentFailure(new PaymentError.PaymentRejected()),
+            rejection);
     }
 
     [Fact]
@@ -59,8 +60,9 @@ public sealed class StripePaymentIntentClientTests
         var result = await sut.ChargeAsync(Options());
 
         Assert.True(result.TryGetError(out var rejection));
-        Assert.Equal(new PaymentError.PaymentRejected(), rejection.Error);
-        Assert.Equal(PaymentRecovery.NewPaymentMethod, rejection.Recovery);
+        Assert.Equal(
+            new ChargeError.PaymentFailure(new PaymentError.PaymentRejected()),
+            rejection);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public sealed class StripePaymentIntentClientTests
         var result = await sut.ChargeAsync(Options());
 
         Assert.True(result.TryGetError(out var rejection));
-        Assert.Equal(PaymentRecovery.OnSessionAuthentication, rejection.Recovery);
+        Assert.IsType<ChargeError.AuthenticationRequired>(rejection);
     }
 
     [Fact]
