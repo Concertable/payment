@@ -15,10 +15,11 @@ internal sealed class FakeStripePaymentIntentClient : IStripePaymentIntentClient
         this.webhookQueue = webhookQueue;
     }
 
-    public async Task<Result<PaymentOutcome, PaymentRejection>> ChargeAsync(
+    public async Task<Result<PaymentOutcome, ChargeError>> ChargeAsync(
         StripeChargeOptions options,
         CancellationToken ct = default) =>
-        (await CompleteAsync(options.Amount, options.Metadata, ct)).MapError(PaymentRejection.Declined);
+        (await CompleteAsync(options.Amount, options.Metadata, ct))
+            .MapError(ChargeError (error) => new ChargeError.PaymentFailure(error));
 
     public Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
         StripeHoldOptions options,

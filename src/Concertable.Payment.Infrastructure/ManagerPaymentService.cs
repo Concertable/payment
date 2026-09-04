@@ -82,9 +82,13 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             ct);
         return charged.Match<Result<PaymentOutcome, PaymentMethodChargeError>>(
             outcome => outcome,
-            rejection => rejection.Recovery == PaymentRecovery.OnSessionAuthentication
-                ? new PaymentMethodChargeError.AuthenticationRequired()
-                : new PaymentMethodChargeError.ChargeFailure(rejection.Error));
+            rejection => rejection switch
+            {
+                ManagerChargeError.AuthenticationRequired =>
+                    new PaymentMethodChargeError.AuthenticationRequired(),
+                ManagerChargeError.OperationFailure(var error) =>
+                    new PaymentMethodChargeError.ChargeFailure(error)
+            });
     }
 
     public async Task<Result<PaymentOutcome, ManagerPaymentOperationError>> PayAsync(
@@ -97,7 +101,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         int bookingId,
         CancellationToken ct = default) =>
         (await PayCoreAsync(operationId, payerId, payeeId, amount, paymentMethodId, session, bookingId, ct))
-            .MapError(rejection => rejection.Error);
+            .MapError(rejection => rejection.ToOperationError());
 
     public async Task<Result<PaymentOutcome, ManagerPaymentError>> PayAsync(
         Guid payerId,
@@ -113,12 +117,12 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             return Result<PaymentOutcome, ManagerPaymentError>.Success(outcome);
 
         result.TryGetError(out var rejection);
-        return rejection.Error is ManagerPaymentOperationError.ManagerFailure(var managerError)
+        return rejection!.ToOperationError() is ManagerPaymentOperationError.ManagerFailure(var managerError)
             ? Result<PaymentOutcome, ManagerPaymentError>.Failure(managerError)
             : throw new InvalidOperationException("A legacy manager payment cannot produce an operation conflict.");
     }
 
-    private async Task<Result<PaymentOutcome, ManagerPaymentRejection>> PayCoreAsync(
+    private async Task<Result<PaymentOutcome, ManagerChargeError>> PayCoreAsync(
         Guid? operationId,
         Guid payerId,
         Guid payeeId,
@@ -149,13 +153,13 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
 
         var payer = await payoutAccountRepository.GetByOwnerIdAsync(payerId, ct);
         if (payer is null)
-            return Result<PaymentOutcome, ManagerPaymentRejection>.Failure(
-                ManagerPaymentRejection.Unrecoverable(
+            return Result<PaymentOutcome, ManagerChargeError>.Failure(
+                new ManagerChargeError.OperationFailure(
                     new ManagerPaymentOperationError.ManagerFailure(
                         new ManagerPaymentError.PaymentFailure(new PaymentError.PayerNotFound()))));
         if (session == PaymentSession.OffSession && payer.StripeCustomerId is null)
-            return Result<PaymentOutcome, ManagerPaymentRejection>.Failure(
-                ManagerPaymentRejection.Unrecoverable(
+            return Result<PaymentOutcome, ManagerChargeError>.Failure(
+                new ManagerChargeError.OperationFailure(
                     new ManagerPaymentOperationError.ManagerFailure(
                         new ManagerPaymentError.PaymentFailure(new PaymentError.PayerUnavailable()))));
 
@@ -190,8 +194,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         if (!charge.TryGetValue(out var outcome))
         {
             charge.TryGetError(out var rejection);
-            return Result<PaymentOutcome, ManagerPaymentRejection>.Failure(
-                ManagerPaymentRejection.FromPayment(rejection));
+            return Result<PaymentOutcome, ManagerChargeError>.Failure(rejection!.ToManagerChargeError());
         }
 
         var transaction = operationId is { } transactionOperationId
@@ -235,7 +238,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         return outcome;
     }
 
-    private async Task<Result<PaymentOutcome, ManagerPaymentRejection>> ReplayAsync(
+    private async Task<Result<PaymentOutcome, ManagerChargeError>> ReplayAsync(
         SettlementTransactionEntity transaction,
         Guid operationId,
         SettlementOperationFingerprint fingerprint,
@@ -243,7 +246,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         CancellationToken ct)
     {
         if (!transaction.MatchesOperation(operationId, fingerprint))
-            return ManagerPaymentRejection.Unrecoverable(new ManagerPaymentOperationError.OperationConflict());
+            return new ManagerChargeError.OperationFailure(new ManagerPaymentOperationError.OperationConflict());
         if (transaction.Status == TransactionStatus.Complete || !transaction.RequiresAction)
         {
             return new PaymentOutcome
@@ -257,7 +260,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
             return outcome;
 
         result.TryGetError(out var error);
-        return ManagerPaymentRejection.Unrecoverable(
+        return new ManagerChargeError.OperationFailure(
             new ManagerPaymentOperationError.ManagerFailure(
                 new ManagerPaymentError.PaymentFailure(error!)));
     }
@@ -319,7 +322,7 @@ internal sealed class ManagerPaymentService : IManagerPaymentService
         {
             charge.TryGetError(out var rejection);
             return Result<PaymentOutcome, ManagerPaymentError>.Failure(
-                new ManagerPaymentError.PaymentFailure(rejection.Error));
+                new ManagerPaymentError.PaymentFailure(rejection!.ToPaymentError()));
         }
 
         commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);

@@ -16,7 +16,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
+    Task<Result<PaymentOutcome, ChargeError>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -27,7 +27,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentRejection>> SettleAsync(
+    Task<Result<PaymentOutcome, ChargeError>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -37,7 +37,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentRejection>> SettleBoundCommissionAsync(
+    Task<Result<PaymentOutcome, ChargeError>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,

@@ -204,7 +204,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
                 if (Interlocked.Increment(ref providerCalls) == 2)
                     bothProviderCallsEntered.SetResult();
                 await bothProviderCallsEntered.Task;
-                return Result<PaymentOutcome, PaymentRejection>.Success(outcome);
+                return Result<PaymentOutcome, ChargeError>.Success(outcome);
             });
         paymentManager
             .Setup(value => value.GetPaymentOutcomeAsync(

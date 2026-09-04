@@ -7,7 +7,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripePaymentIntentClient
 {
-    Task<Result<PaymentOutcome, PaymentRejection>> ChargeAsync(
+    Task<Result<PaymentOutcome, ChargeError>> ChargeAsync(
         StripeChargeOptions options,
         CancellationToken ct = default);
 

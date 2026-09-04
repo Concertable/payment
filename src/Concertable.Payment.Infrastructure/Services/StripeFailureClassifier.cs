@@ -8,24 +8,20 @@ internal static class StripeFailureClassifier
 {
     private const string AuthenticationRequiredDeclineCode = "authentication_required";
 
-    public static Option<PaymentRejection> Classify(StripeException exception)
+    public static Option<ChargeError> Classify(StripeException exception)
     {
         if (exception.HttpStatusCode != HttpStatusCode.PaymentRequired &&
             !string.Equals(exception.StripeError?.Type, "card_error", StringComparison.Ordinal) &&
             string.IsNullOrWhiteSpace(exception.StripeError?.DeclineCode))
-            return Option.None<PaymentRejection>();
+            return Option.None<ChargeError>();
 
-        var recovery = string.Equals(
+        ChargeError rejection = string.Equals(
             exception.StripeError?.DeclineCode,
             AuthenticationRequiredDeclineCode,
             StringComparison.Ordinal)
-            ? PaymentRecovery.OnSessionAuthentication
-            : PaymentRecovery.NewPaymentMethod;
+            ? new ChargeError.AuthenticationRequired()
+            : new ChargeError.PaymentFailure(new PaymentError.PaymentRejected());
 
-        return Option.Some(new PaymentRejection
-        {
-            Error = new PaymentError.PaymentRejected(),
-            Recovery = recovery
-        });
+        return Option.Some(rejection);
     }
 }

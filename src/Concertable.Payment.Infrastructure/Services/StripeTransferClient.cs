@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Concertable.Payment.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -48,7 +49,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         {
             logger.StripeReleaseFailed(opts.Amount.ToMinorUnits(), opts.DestinationStripeId, opts.ChargeId, ex.StripeError?.Code, ex);
             if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
-                return Result<Transfer, PaymentError>.Failure(rejection.Error);
+                return Result<Transfer, PaymentError>.Failure(rejection.ToPaymentError());
             throw;
         }
     }
@@ -102,7 +103,7 @@ internal sealed class StripeTransferClient : IStripeTransferClient
         {
             logger.StripeRefundFailed(opts.PaymentIntentId, ex.StripeError?.Code, ex);
             if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
-                return Result<Refund, PaymentError>.Failure(rejection.Error);
+                return Result<Refund, PaymentError>.Failure(rejection.ToPaymentError());
             throw;
         }
     }
