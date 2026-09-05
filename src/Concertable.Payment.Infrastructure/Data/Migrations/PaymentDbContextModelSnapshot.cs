@@ -225,8 +225,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("OperationType")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<long>("PayeeGrossMinor")
                         .HasColumnType("bigint");
@@ -310,8 +310,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("OperationType")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ReferenceId")
                         .HasMaxLength(100)
@@ -417,8 +417,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("OperationType")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PaymentIntentId")
                         .HasColumnType("nvarchar(450)");
@@ -811,8 +811,8 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("OperationType")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<Guid>("PayeeId")
                         .HasColumnType("uniqueidentifier");

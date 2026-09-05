@@ -12,10 +12,7 @@ internal sealed class FinancialOperationEntity
     {
         if (id == Guid.Empty)
             throw new DomainException("Financial operation id is required.");
-        if (string.IsNullOrWhiteSpace(reference.OperationType))
-            throw new DomainException("Financial operation type is required.");
-        if (string.IsNullOrWhiteSpace(reference.ClientReference))
-            throw new DomainException("Financial operation client reference is required.");
+        reference = reference.EnsureValid();
         if (string.IsNullOrWhiteSpace(requestFingerprint))
             throw new DomainException("Financial operation request fingerprint is required.");
 

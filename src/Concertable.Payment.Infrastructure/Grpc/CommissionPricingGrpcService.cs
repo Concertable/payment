@@ -84,9 +84,9 @@ internal sealed class CommissionPricingGrpcService : CommissionPricing.Commissio
 
 internal static class CommissionPricingGrpcMappers
 {
-    public static CommissionCalculationResponse ToProto(
-        this CommissionCalculation calculation) =>
-        new()
+    extension(CommissionCalculation calculation)
+    {
+        public CommissionCalculationResponse ToProto() => new()
         {
             CommissionConfigurationId = calculation.CommissionConfigurationId.ToString(),
             RatePercentage = calculation.RatePercentage.ToString(CultureInfo.InvariantCulture),
@@ -94,13 +94,16 @@ internal static class CommissionPricingGrpcMappers
             Commission = calculation.Commission.ToProtoMoney(),
             PayerTotal = calculation.PayerTotal.ToProtoMoney()
         };
+    }
 
-    public static CommissionBindingResponse ToProto(this CommissionBinding binding) =>
-        new()
+    extension(CommissionBinding binding)
+    {
+        public CommissionBindingResponse ToProto() => new()
         {
             BindingId = binding.BindingId.ToString(),
             CommissionConfigurationId = binding.CommissionConfigurationId.ToString(),
             RatePercentage = binding.RatePercentage.ToString(CultureInfo.InvariantCulture),
             Currency = binding.Currency.ToProtoCurrency()
         };
+    }
 }

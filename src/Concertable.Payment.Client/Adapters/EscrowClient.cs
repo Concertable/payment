@@ -117,9 +117,9 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 var response = await client.ReleaseAsync(
                     Proto.ReleaseEscrowRequest.Create(operationId, reference),
                     cancellationToken: ct);
-                return string.IsNullOrEmpty(response.Transfer?.TransferId)
+                return string.IsNullOrEmpty(response.Transfer?.OperationId)
                     ? null
-                    : new Transfer(response.Transfer.TransferId);
+                    : new Transfer(Guid.Parse(response.Transfer.OperationId));
             },
             error => error.ToEscrowReleaseOperationError(),
             ct);
@@ -134,9 +134,9 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 var response = await client.RefundAsync(
                     Proto.RefundEscrowRequest.Create(operationId, reference),
                     cancellationToken: ct);
-                return string.IsNullOrEmpty(response.Refund?.RefundId)
+                return string.IsNullOrEmpty(response.Refund?.Id)
                     ? null
-                    : new Refund(response.Refund.RefundId);
+                    : new Refund(Guid.Parse(response.Refund.Id));
             },
             error => error.ToEscrowRefundError(),
             ct);
@@ -151,9 +151,9 @@ internal sealed class EscrowClient : IEscrowOperationsClient
                 var response = await client.RefundBoundCommissionAsync(
                     Proto.BoundCommissionRefundRequest.Create(reference, gross),
                     cancellationToken: ct);
-                return string.IsNullOrEmpty(response.Refund?.RefundId)
+                return string.IsNullOrEmpty(response.Refund?.Id)
                     ? null
-                    : new Refund(response.Refund.RefundId);
+                    : new Refund(Guid.Parse(response.Refund.Id));
             },
             error => error.ToEscrowRefundError(),
             ct);

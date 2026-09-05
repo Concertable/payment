@@ -32,6 +32,9 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: type {EventType} not handled")]
     internal static partial void SkippingStripeEventNotHandled(this ILogger logger, string eventId, string eventType);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping Stripe event {EventId} of type {EventType}: operation reference is missing")]
+    internal static partial void SkippingStripeEventWithoutOperationReference(this ILogger logger, string eventId, string eventType);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Error processing Stripe webhook for event {EventId}")]
     internal static partial void StripeWebhookProcessingError(this ILogger logger, string eventId, Exception ex);
 

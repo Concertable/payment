@@ -1,5 +1,6 @@
 using Reunion;
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
@@ -194,8 +195,8 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
         var mock = new Mock<IPaymentManager>();
         mock
             .Setup(p => p.RefundAsync(It.IsAny<RefundRequest>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => Result<Refund, PaymentError>.Success(
-                new Refund($"re_{Guid.NewGuid():N}")));
+            .ReturnsAsync(() => Result<ProviderRefund, PaymentError>.Success(
+                new($"re_{Guid.NewGuid():N}")));
         return mock;
     }
 

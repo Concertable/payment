@@ -1,3 +1,4 @@
+using Concertable.Payment.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,8 +33,8 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.Property(operation => operation.OperationId).ValueGeneratedNever();
         builder.Property(operation => operation.SessionKind).HasConversion<string>().HasMaxLength(40);
         builder.Property(operation => operation.Session).HasConversion<string>().HasMaxLength(20);
-        builder.Property(operation => operation.OperationType).HasMaxLength(100);
-        builder.Property(operation => operation.ClientReference).HasMaxLength(200);
+        builder.Property(operation => operation.OperationType).HasMaxLength(PaymentOperationReference.MaxOperationTypeLength);
+        builder.Property(operation => operation.ClientReference).HasMaxLength(PaymentOperationReference.MaxClientReferenceLength);
         builder.Property(operation => operation.PayerOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.PayeeOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.Currency).HasConversion<string>().HasMaxLength(3);

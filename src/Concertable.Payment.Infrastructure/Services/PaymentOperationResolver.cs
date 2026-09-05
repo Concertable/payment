@@ -52,6 +52,16 @@ internal sealed class PaymentOperationResolver : IPaymentOperationResolver
             error => error);
     }
 
+    public async Task<string> ResolveProviderObjectIdAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default)
+    {
+        var operation = await operationRepository.GetByReferenceAsync(reference, ct);
+        return operation?.CurrentAttempt.ProviderObjectId
+            ?? throw new InvalidOperationException(
+                $"Payment operation {reference.OperationType}/{reference.ClientReference} has no provider transaction.");
+    }
+
     private static Result<string, PaymentOperationError> ResolvePaymentMethod(
         ResolvedOperation current)
     {
@@ -95,10 +105,7 @@ internal sealed class PaymentOperationResolver : IPaymentOperationResolver
         PaymentOperationError missing,
         CancellationToken ct)
     {
-        var operation = await operationRepository.GetByReferenceAsync(
-            reference.OperationType,
-            reference.ClientReference,
-            ct);
+        var operation = await operationRepository.GetByReferenceAsync(reference, ct);
         if (operation is null
             || !string.Equals(
                 operation.PayerOwnerKey,

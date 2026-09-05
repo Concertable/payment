@@ -59,7 +59,7 @@ public sealed class PaymentManagerTests
         intentClient
             .Setup(c => c.ChargeAsync(It.IsAny<StripeChargeOptions>(), It.IsAny<CancellationToken>()))
             .Callback<StripeChargeOptions, CancellationToken>((o, _) => opts = o)
-            .ReturnsAsync(Result.Success<PaymentOutcome, ChargeError>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
+            .ReturnsAsync(Result.Success<ProviderPaymentOutcome, ChargeError>(new("pi_test")));
 
         await Sut().SettleAsync(payerId, payeeId, Money.Gbp(62), Money.Gbp(50), "pm_test", PaymentSession.OnSession, metadata);
 
@@ -75,7 +75,7 @@ public sealed class PaymentManagerTests
         intentClient
             .Setup(c => c.ChargeAsync(It.IsAny<StripeChargeOptions>(), It.IsAny<CancellationToken>()))
             .Callback<StripeChargeOptions, CancellationToken>((o, _) => opts = o)
-            .ReturnsAsync(Result.Success<PaymentOutcome, ChargeError>(new PaymentOutcome { TransactionId = "pi_test", RequiresAction = false }));
+            .ReturnsAsync(Result.Success<ProviderPaymentOutcome, ChargeError>(new("pi_test")));
 
         await Sut().ChargeAsync(payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, metadata);
 

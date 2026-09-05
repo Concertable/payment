@@ -13,7 +13,10 @@ internal sealed class PaymentTransactionRecorder : ITransactionHandler
         this.timeProvider = timeProvider;
     }
 
-    public async Task HandleAsync(PaymentSucceededEvent @event, CancellationToken ct)
+    public async Task HandleAsync(
+        PaymentSucceededEvent @event,
+        string providerObjectId,
+        CancellationToken ct)
     {
         var meta = @event.Metadata;
 
@@ -23,7 +26,7 @@ internal sealed class PaymentTransactionRecorder : ITransactionHandler
             ClientReference = meta[PaymentMetadataKeys.ClientReference],
             PayerId = Guid.Parse(meta[PaymentMetadataKeys.PayerOwnerId]),
             PayeeId = Guid.Parse(meta[PaymentMetadataKeys.PayeeOwnerId]),
-            PaymentIntentId = @event.TransactionId,
+            PaymentIntentId = providerObjectId,
             Amount = long.TryParse(meta.GetValueOrDefault(PaymentMetadataKeys.AmountMinor), out var a) ? a : 0,
             Status = TransactionStatus.Complete,
             CreatedAt = timeProvider.GetUtcNow()

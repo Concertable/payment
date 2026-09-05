@@ -14,10 +14,7 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
         TransactionStatus status,
         PaymentOperationReference reference)
     {
-        if (string.IsNullOrWhiteSpace(reference.OperationType))
-            throw new DomainException("Transaction operation type is required.");
-        if (string.IsNullOrWhiteSpace(reference.ClientReference))
-            throw new DomainException("Transaction client reference is required.");
+        reference = reference.EnsureValid();
 
         PayerId = payerId;
         PayeeId = payeeId;

@@ -1,3 +1,4 @@
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -13,8 +14,8 @@ internal sealed class TransactionEntityConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(t => t.PaymentIntentId).IsUnique();
         builder.HasIndex(t => t.PayerId);
         builder.HasIndex(t => t.PayeeId);
-        builder.Property(t => t.OperationType).HasMaxLength(200);
-        builder.Property(t => t.ClientReference).HasMaxLength(200);
+        builder.Property(t => t.OperationType).HasMaxLength(PaymentOperationReference.MaxOperationTypeLength);
+        builder.Property(t => t.ClientReference).HasMaxLength(PaymentOperationReference.MaxClientReferenceLength);
         builder.HasIndex(t => new { t.OperationType, t.ClientReference });
     }
 }

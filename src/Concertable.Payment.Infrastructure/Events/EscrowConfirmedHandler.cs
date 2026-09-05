@@ -22,12 +22,15 @@ internal sealed class EscrowConfirmedHandler : ITransactionHandler
         this.logger = logger;
     }
 
-    public async Task HandleAsync(PaymentSucceededEvent @event, CancellationToken ct)
+    public async Task HandleAsync(
+        PaymentSucceededEvent @event,
+        string providerObjectId,
+        CancellationToken ct)
     {
-        var escrow = await escrowRepository.GetByChargeIdAsync(@event.TransactionId, ct);
+        var escrow = await escrowRepository.GetByChargeIdAsync(providerObjectId, ct);
         if (escrow is null)
         {
-            logger.NoEscrowFoundForPaymentSucceeded(@event.TransactionId);
+            logger.NoEscrowFoundForPaymentSucceeded(providerObjectId);
             return;
         }
 

@@ -32,62 +32,74 @@ internal sealed record RecentSettlementsCommand(Guid OwnerId, int Take);
 
 internal static class SettlementRequestMappers
 {
-    public static SettlementPaymentCommand ToCommand(this SettlementPaymentRequest request) => new(
-        request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
-        request.Reference.ToContractReference(),
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ToMoney(),
-        request.PaymentMethod.ToContractReference(),
-        request.Session.ToPaymentSession());
-
-    public static BoundCommissionSettlementPaymentCommand ToCommand(
-        this BoundCommissionSettlementPaymentRequest request) => new(
-        request.Reference.ToContractReference(),
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Gross.ToMoney(),
-        request.PaymentMethod.ToContractReference(),
-        request.Session.ToPaymentSession(),
-        request.CommissionBindingId.ParseOrThrow<Guid>(nameof(request.CommissionBindingId)),
-        request.ExternalReference);
-
-    public static PaymentPeriodCommand ToCommand(this PaymentPeriodRequest request)
+    extension(SettlementPaymentRequest request)
     {
-        if (request.PeriodStart is null || request.PeriodEnd is null)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
-
-        var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
-        var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
-        if (end <= start)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
-
-        return new(
+        public SettlementPaymentCommand ToCommand() => new(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
             request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-            new DateRange(start, end));
+            request.Amount.ToMoney(),
+            request.PaymentMethod.ToContractReference(),
+            request.Session.ToPaymentSession());
     }
 
-    public static RecentSettlementsCommand ToCommand(this RecentSettlementsRequest request)
+    extension(BoundCommissionSettlementPaymentRequest request)
     {
-        if (request.Take is < 1 or > 50)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Take must be between 1 and 50."));
-
-        return new(
-            request.OwnerId.ParseOrThrow<Guid>(nameof(request.OwnerId)),
-            request.Take);
+        public BoundCommissionSettlementPaymentCommand ToCommand() => new(
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Gross.ToMoney(),
+            request.PaymentMethod.ToContractReference(),
+            request.Session.ToPaymentSession(),
+            request.CommissionBindingId.ParseOrThrow<Guid>(nameof(request.CommissionBindingId)),
+            request.ExternalReference);
     }
 
-    private static DateTime ToDateTimeOrThrow(
-        this Google.Protobuf.WellKnownTypes.Timestamp timestamp,
-        string fieldName)
+    extension(PaymentPeriodRequest request)
     {
-        try
+        public PaymentPeriodCommand ToCommand()
         {
-            return timestamp.ToDateTime();
+            if (request.PeriodStart is null || request.PeriodEnd is null)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period is required."));
+
+            var start = request.PeriodStart.ToDateTimeOrThrow(nameof(request.PeriodStart));
+            var end = request.PeriodEnd.ToDateTimeOrThrow(nameof(request.PeriodEnd));
+            if (end <= start)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Payment period end must be after start."));
+
+            return new(
+                request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+                new DateRange(start, end));
         }
-        catch (InvalidOperationException)
+    }
+
+    extension(RecentSettlementsRequest request)
+    {
+        public RecentSettlementsCommand ToCommand()
         {
-            throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+            if (request.Take is < 1 or > 50)
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Take must be between 1 and 50."));
+
+            return new(
+                request.OwnerId.ParseOrThrow<Guid>(nameof(request.OwnerId)),
+                request.Take);
+        }
+    }
+
+    extension(Google.Protobuf.WellKnownTypes.Timestamp timestamp)
+    {
+        private DateTime ToDateTimeOrThrow(string fieldName)
+        {
+            try
+            {
+                return timestamp.ToDateTime();
+            }
+            catch (InvalidOperationException)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} is not a valid timestamp."));
+            }
         }
     }
 }

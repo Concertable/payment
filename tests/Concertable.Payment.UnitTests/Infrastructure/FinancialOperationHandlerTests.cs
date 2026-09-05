@@ -94,7 +94,7 @@ public sealed class FinancialOperationHandlerTests
                 It.IsAny<CancellationToken>()))
             .Callback(() => sequence.Add("payment"))
             .ReturnsAsync(Result<EscrowDeposit, EscrowCaptureError>.Success(
-                new EscrowDeposit(1, "pi_test", EscrowStatus.Held)));
+                new EscrowDeposit(1, EscrowStatus.Held)));
 
         await sut.HandleAsync(command, Envelope<CaptureEscrowCommand>());
 
@@ -103,7 +103,7 @@ public sealed class FinancialOperationHandlerTests
         Assert.Equal(FinancialOperationStatus.Succeeded, operation.Status);
         bus.Verify(value => value.PublishAsync(
             It.Is<CaptureEscrowSucceededEvent>(@event =>
-                @event.OperationId == command.OperationId && @event.ReferenceId == "pi_test"),
+                @event.OperationId == command.OperationId && @event.Reference == command.Reference),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -142,7 +142,7 @@ public sealed class FinancialOperationHandlerTests
                 command.OperationId,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result<EscrowDeposit, EscrowCaptureError>.Success(
-                new EscrowDeposit(1, "pi_test", EscrowStatus.Held)));
+                new EscrowDeposit(1, EscrowStatus.Held)));
 
         await sut.HandleAsync(command, Envelope<CaptureEscrowCommand>());
         escrowService.Invocations.Clear();

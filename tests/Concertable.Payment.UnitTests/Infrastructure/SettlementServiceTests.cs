@@ -72,10 +72,7 @@ public sealed class SettlementServiceTests
                     charged = charge;
                     paid = payee;
                 })
-            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Success(new PaymentOutcome
-            {
-                TransactionId = "pi_settlement"
-            }));
+            .ReturnsAsync(Result<ProviderPaymentOutcome, ChargeError>.Success(new("pi_settlement")));
         SettlementTransactionEntity? captured = null;
         transactionRepository
             .Setup(value => value.AddAsync(It.IsAny<TransactionEntity>(), It.IsAny<CancellationToken>()))
@@ -137,12 +134,8 @@ public sealed class SettlementServiceTests
                 "pi_existing",
                 PaymentSession.OnSession,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(new PaymentOutcome
-            {
-                TransactionId = "pi_existing",
-                RequiresAction = true,
-                ClientSecret = "secret_existing"
-            }));
+            .ReturnsAsync(Result<ProviderPaymentOutcome, PaymentError>.Success(
+                new("pi_existing", true, "secret_existing")));
 
         var result = await Sut(12).PayAsync(
             operationId,
@@ -154,7 +147,7 @@ public sealed class SettlementServiceTests
             PaymentSession.OnSession);
 
         Assert.True(result.TryGetValue(out var payment));
-        Assert.Equal("pi_existing", payment.TransactionId);
+        Assert.True(payment.RequiresAction);
         Assert.Equal("secret_existing", payment.ClientSecret);
         paymentManager.Verify(
             value => value.SettleAsync(
@@ -226,7 +219,7 @@ public sealed class SettlementServiceTests
                 PaymentSession.OffSession,
                 It.IsAny<IReadOnlyDictionary<string, string>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, ChargeError>.Failure(new ChargeError.AuthenticationRequired()));
+            .ReturnsAsync(Result<ProviderPaymentOutcome, ChargeError>.Failure(new ChargeError.AuthenticationRequired()));
 
         var result = await Sut(0).PayAsync(
             operationId,

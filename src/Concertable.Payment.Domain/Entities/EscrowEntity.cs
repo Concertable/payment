@@ -22,10 +22,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
         string chargeId,
         Guid? commissionBindingId)
     {
-        if (string.IsNullOrWhiteSpace(reference.OperationType))
-            throw new DomainException("Escrow operation type is required.");
-        if (string.IsNullOrWhiteSpace(reference.ClientReference))
-            throw new DomainException("Escrow client reference is required.");
+        reference = reference.EnsureValid();
         if (payeeGrossMinor < 0)
             throw new DomainException("Payee gross cannot be negative.");
         if (commissionGrossMinor < 0)

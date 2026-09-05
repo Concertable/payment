@@ -140,7 +140,8 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
                 .Where(transaction => transaction.OperationId == operationId)
                 .Select(transaction => transaction.PaymentIntentId)
                 .SingleAsync());
-        Assert.Equal(payment.TransactionId, persistedPaymentIntentId);
+        Assert.False(string.IsNullOrWhiteSpace(persistedPaymentIntentId));
+        Assert.False(payment.RequiresAction);
     }
 
     private Task DispatchAsync(DepositEscrowCommand command) =>
@@ -194,8 +195,7 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OnSession,
-            reference.OperationType,
-            reference.ClientReference,
+            reference,
             payerId,
             payeeId,
             5000,

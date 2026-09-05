@@ -46,21 +46,9 @@ internal interface IEscrowService
         string externalReference,
         CancellationToken ct = default);
 
-    Task<Result<Transfer, EscrowReleaseError>> ReleaseAsync(int escrowId, CancellationToken ct = default);
-
-    Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByReferenceAsync(
-        PaymentOperationReference reference,
-        CancellationToken ct = default);
-
     Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByReferenceAsync(
         Guid operationId,
         PaymentOperationReference reference,
-        CancellationToken ct = default);
-
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceAsync(
-        PaymentOperationReference reference,
-        Money? amount = null,
-        string? reason = null,
         CancellationToken ct = default);
 
     Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceAsync(
@@ -73,12 +61,6 @@ internal interface IEscrowService
     Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByReferenceAsync(
         PaymentOperationReference reference,
         Money gross,
-        string? reason = null,
-        CancellationToken ct = default);
-
-    Task<Result<Refund, EscrowRefundError>> RefundAsync(
-        int escrowId,
-        Money? amount = null,
         string? reason = null,
         CancellationToken ct = default);
 

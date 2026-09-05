@@ -35,7 +35,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OperationType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ClientReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     RequestFingerprint = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false),
@@ -76,7 +76,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PostingType = table.Column<int>(type: "int", nullable: false),
                     ExternalId = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
-                    OperationType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ClientReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     OccurredAt = table.Column<DateTime>(type: "datetime2", nullable: false)
@@ -262,7 +262,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OperationType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ClientReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     FromOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ToOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -311,7 +311,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     PaymentIntentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    OperationType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    OperationType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ClientReference = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),

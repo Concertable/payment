@@ -8,37 +8,43 @@ namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class PaymentReportingMappers
 {
-    public static MonthlyPaymentSeriesResponse ToProtoResponse(this IEnumerable<MonthlyPaymentTotal> totals)
+    extension(IEnumerable<MonthlyPaymentTotal> totals)
     {
-        var response = new MonthlyPaymentSeriesResponse();
-        response.Points.AddRange(totals.Select(total => new MonthlyPaymentPointResponse
+        public MonthlyPaymentSeriesResponse ToProtoResponse()
         {
-            Month = Timestamp.FromDateTime(DateTime.SpecifyKind(
-                total.Month.ToDateTime(TimeOnly.MinValue),
-                DateTimeKind.Utc)),
-            Gross = KernelMoney.FromMinorUnits(total.GrossMinor, KernelCurrency.Gbp).ToProtoMoney(),
-            Net = KernelMoney.FromMinorUnits(total.NetMinor, KernelCurrency.Gbp).ToProtoMoney(),
-            Count = total.Count
-        }));
-        return response;
+            var response = new MonthlyPaymentSeriesResponse();
+            response.Points.AddRange(totals.Select(total => new MonthlyPaymentPointResponse
+            {
+                Month = Timestamp.FromDateTime(DateTime.SpecifyKind(
+                    total.Month.ToDateTime(TimeOnly.MinValue),
+                    DateTimeKind.Utc)),
+                Gross = KernelMoney.FromMinorUnits(total.GrossMinor, KernelCurrency.Gbp).ToProtoMoney(),
+                Net = KernelMoney.FromMinorUnits(total.NetMinor, KernelCurrency.Gbp).ToProtoMoney(),
+                Count = total.Count
+            }));
+            return response;
+        }
     }
 
-    public static SettlementReportResponse ToProtoResponse(this IEnumerable<SettlementSummary> settlements)
+    extension(IEnumerable<SettlementSummary> settlements)
     {
-        var response = new SettlementReportResponse();
-        response.Items.AddRange(settlements.Select(settlement => new SettlementReportItemResponse
+        public SettlementReportResponse ToProtoResponse()
         {
-            Id = settlement.Id,
-            Reference = new Concertable.Payment.Grpc.PaymentOperationReference
+            var response = new SettlementReportResponse();
+            response.Items.AddRange(settlements.Select(settlement => new SettlementReportItemResponse
             {
-                OperationType = settlement.Reference.OperationType,
-                ClientReference = settlement.Reference.ClientReference
-            },
-            PayerId = settlement.PayerId.ToString(),
-            PayeeId = settlement.PayeeId.ToString(),
-            Amount = KernelMoney.FromMinorUnits(settlement.AmountMinor, KernelCurrency.Gbp).ToProtoMoney(),
-            At = Timestamp.FromDateTime(DateTime.SpecifyKind(settlement.At, DateTimeKind.Utc))
-        }));
-        return response;
+                Id = settlement.Id,
+                Reference = new Concertable.Payment.Grpc.PaymentOperationReference
+                {
+                    OperationType = settlement.Reference.OperationType,
+                    ClientReference = settlement.Reference.ClientReference
+                },
+                PayerId = settlement.PayerId.ToString(),
+                PayeeId = settlement.PayeeId.ToString(),
+                Amount = KernelMoney.FromMinorUnits(settlement.AmountMinor, KernelCurrency.Gbp).ToProtoMoney(),
+                At = Timestamp.FromDateTime(DateTime.SpecifyKind(settlement.At, DateTimeKind.Utc))
+            }));
+            return response;
+        }
     }
 }

@@ -34,6 +34,9 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentMethodSetupRequest request,
         CancellationToken ct = default)
     {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
         if (request.Kind is not (PaymentSessionKind.PaymentMethodSetup
             or PaymentSessionKind.PaymentMethodVerification))
         {
@@ -44,16 +47,13 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         if (payer?.StripeCustomerId is null)
             return new PaymentOperationError.ProviderUnavailable();
 
-        var existing = await operationRepository.GetByReferenceAsync(
-            request.Reference.OperationType,
-            request.Reference.ClientReference,
-            ct);
+        var existing = await operationRepository.GetByReferenceAsync(reference, ct);
         var specification = PaymentSessionDefinition.Create(
             existing?.OperationId ?? Guid.CreateVersion7(timeProvider.GetUtcNow()),
             request.Kind,
             PaymentSession.OnSession,
-            request.Reference.OperationType,
-            request.Reference.ClientReference,
+            reference.OperationType,
+            reference.ClientReference,
             request.PayerOwnerId.ToString("D"),
             null,
             null,
@@ -70,8 +70,11 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentMethodValidationRequest request,
         CancellationToken ct = default)
     {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
         var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
-            request.Reference,
+            reference,
             request.PayerOwnerId,
             ct);
         return paymentMethod.TryGetError(out var error)
@@ -83,6 +86,9 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentSessionOperationRequest request,
         CancellationToken ct = default)
     {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
         var payer = await payoutAccountRepository.GetByOwnerIdAsync(request.PayerOwnerId, ct);
         if (payer?.StripeCustomerId is null)
             return new PaymentOperationError.ProviderUnavailable();
@@ -106,8 +112,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
                 request.OperationId,
                 request.Kind,
                 request.Session,
-                request.OperationType,
-                request.ClientReference,
+                reference.OperationType,
+                reference.ClientReference,
                 request.PayerOwnerId.ToString("D"),
                 request.PayeeOwnerId?.ToString("D"),
                 request.AmountMinor,
@@ -424,4 +430,20 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             operation.PayerOwnerKey,
             ownerId.ToString("D"),
             StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryValidate(
+        PaymentOperationReference candidate,
+        out PaymentOperationReference reference)
+    {
+        try
+        {
+            reference = candidate.EnsureValid();
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            reference = default;
+            return false;
+        }
+    }
 }

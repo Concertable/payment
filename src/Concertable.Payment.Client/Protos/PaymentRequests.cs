@@ -348,8 +348,7 @@ internal static class PaymentRequestValidation
 
     public static PaymentOperationReference ToProto(ContractPaymentMethodReference reference)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(reference.OperationType);
-        ArgumentException.ThrowIfNullOrWhiteSpace(reference.ClientReference);
+        reference = reference.EnsureValid();
         return new()
         {
             OperationType = reference.OperationType,

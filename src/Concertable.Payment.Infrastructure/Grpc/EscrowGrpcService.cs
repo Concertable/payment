@@ -141,7 +141,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         return new ReleaseEscrowResponse
         {
             Transfer = transfer.Match<TransferResponse?>(
-                value => new TransferResponse { TransferId = value.TransferId },
+                value => new TransferResponse { OperationId = value.OperationId.ToString("D") },
                 () => null)
         };
     }
@@ -176,7 +176,7 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         new()
         {
             Refund = refund.Match<RefundResponse?>(
-                value => new RefundResponse { RefundId = value.RefundId },
+                value => new RefundResponse { Id = value.Id.ToString("D") },
                 () => null)
         };
 }

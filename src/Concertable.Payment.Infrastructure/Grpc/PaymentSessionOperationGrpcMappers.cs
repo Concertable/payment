@@ -35,7 +35,7 @@ internal static class PaymentSessionOperationGrpcMappers
     extension(Proto.PaymentOperationReference reference)
     {
         private PaymentOperationReference ToContract() =>
-            new(reference.OperationType, reference.ClientReference);
+            ToContractReference(reference.OperationType, reference.ClientReference);
     }
 
     extension(Proto.PaymentSessionOperationRequest request)
@@ -45,8 +45,7 @@ internal static class PaymentSessionOperationGrpcMappers
                 request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
                 request.Kind.ToContract(),
                 request.Session.ToContract(),
-                request.OperationType,
-                request.ClientReference,
+                ToContractReference(request.OperationType, request.ClientReference),
                 request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
                 request.HasPayeeOwnerId
                     ? request.PayeeOwnerId.ParseOrThrow<Guid>(nameof(request.PayeeOwnerId))
@@ -254,4 +253,18 @@ internal static class PaymentSessionOperationGrpcMappers
 
     private static T Invalid<T>(string fieldName, object value) =>
         throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} '{value}' is invalid."));
+
+    private static PaymentOperationReference ToContractReference(
+        string operationType,
+        string clientReference)
+    {
+        try
+        {
+            return new(operationType, clientReference);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message));
+        }
+    }
 }

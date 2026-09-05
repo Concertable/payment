@@ -33,8 +33,7 @@ public sealed record RefundEscrowCommand(
 [MessageType("concertable.payment.capture-escrow-succeeded.v1")]
 public sealed record CaptureEscrowSucceededEvent(
     Guid OperationId,
-    PaymentOperationReference Reference,
-    string ReferenceId) : IIntegrationEvent;
+    PaymentOperationReference Reference) : IIntegrationEvent;
 
 [MessageType("concertable.payment.capture-escrow-rejected.v1")]
 public sealed record CaptureEscrowRejectedEvent(
@@ -46,8 +45,7 @@ public sealed record CaptureEscrowRejectedEvent(
 [MessageType("concertable.payment.deposit-escrow-succeeded.v1")]
 public sealed record DepositEscrowSucceededEvent(
     Guid OperationId,
-    PaymentOperationReference Reference,
-    string ReferenceId) : IIntegrationEvent;
+    PaymentOperationReference Reference) : IIntegrationEvent;
 
 [MessageType("concertable.payment.deposit-escrow-rejected.v1")]
 public sealed record DepositEscrowRejectedEvent(
@@ -59,8 +57,7 @@ public sealed record DepositEscrowRejectedEvent(
 [MessageType("concertable.payment.refund-escrow-succeeded.v1")]
 public sealed record RefundEscrowSucceededEvent(
     Guid OperationId,
-    PaymentOperationReference Reference,
-    string ReferenceId) : IIntegrationEvent;
+    PaymentOperationReference Reference) : IIntegrationEvent;
 
 [MessageType("concertable.payment.refund-escrow-rejected.v1")]
 public sealed record RefundEscrowRejectedEvent(

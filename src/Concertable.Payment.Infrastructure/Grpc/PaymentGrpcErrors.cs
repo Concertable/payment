@@ -10,60 +10,70 @@ internal static class PaymentGrpcErrors
 {
     public const string TrailerKey = "concertable-payment-error-bin";
 
-    public static TValue ValueOrRpcException<TValue, TError>(this Result<TValue, TError> result)
+    extension<TValue, TError>(Result<TValue, TError> result)
         where TValue : notnull
         where TError : IError
     {
-        if (result.TryGetValue(out var value))
-            return value;
-
-        result.TryGetError(out var error);
-        throw error!.ToRpcException();
-    }
-
-    public static void SuccessOrRpcException<TError>(this UnitResult<TError> result)
-        where TError : IError
-    {
-        if (result.IsSuccess)
-            return;
-
-        result.TryGetError(out var error);
-        throw error!.ToRpcException();
-    }
-
-    public static RpcException ToRpcException<TError>(this TError error)
-        where TError : IError
-    {
-        var definition = error.Definition;
-        var detail = new OperationErrorDetail
+        public TValue ValueOrRpcException()
         {
-            Code = definition.Code,
-            Message = definition.Message,
-            Kind = definition.Kind.ToProto()
-        };
-        var trailers = new Metadata { new Metadata.Entry(TrailerKey, detail.ToByteArray()) };
-        return new RpcException(new Status(definition.Kind.ToGrpc(), definition.Message), trailers);
+            if (result.TryGetValue(out var value))
+                return value;
+
+            result.TryGetError(out var error);
+            throw error!.ToRpcException();
+        }
     }
 
-    private static OperationErrorKind ToProto(this ErrorKind kind) => kind switch
+    extension<TError>(UnitResult<TError> result) where TError : IError
     {
-        ErrorKind.Invalid => OperationErrorKind.OperationErrorInvalid,
-        ErrorKind.NotFound => OperationErrorKind.OperationErrorNotFound,
-        ErrorKind.Conflict => OperationErrorKind.OperationErrorConflict,
-        ErrorKind.Unauthenticated => OperationErrorKind.OperationErrorUnauthenticated,
-        ErrorKind.Forbidden => OperationErrorKind.OperationErrorForbidden,
-        ErrorKind.PaymentRequired => OperationErrorKind.OperationErrorPaymentRequired,
-        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
-    };
+        public void SuccessOrRpcException()
+        {
+            if (result.IsSuccess)
+                return;
 
-    private static StatusCode ToGrpc(this ErrorKind kind) => kind switch
+            result.TryGetError(out var error);
+            throw error!.ToRpcException();
+        }
+    }
+
+    extension<TError>(TError error) where TError : IError
     {
-        ErrorKind.Invalid => StatusCode.InvalidArgument,
-        ErrorKind.NotFound => StatusCode.NotFound,
-        ErrorKind.Conflict => StatusCode.Aborted,
-        ErrorKind.Unauthenticated => StatusCode.Unauthenticated,
-        ErrorKind.Forbidden => StatusCode.PermissionDenied,
-        ErrorKind.PaymentRequired => StatusCode.FailedPrecondition,
-        _ => StatusCode.Internal
-    };
+        public RpcException ToRpcException()
+        {
+            var definition = error.Definition;
+            var detail = new OperationErrorDetail
+            {
+                Code = definition.Code,
+                Message = definition.Message,
+                Kind = definition.Kind.ToProto()
+            };
+            var trailers = new Metadata { new Metadata.Entry(TrailerKey, detail.ToByteArray()) };
+            return new RpcException(new Status(definition.Kind.ToGrpc(), definition.Message), trailers);
+        }
+    }
+
+    extension(ErrorKind kind)
+    {
+        private OperationErrorKind ToProto() => kind switch
+        {
+            ErrorKind.Invalid => OperationErrorKind.OperationErrorInvalid,
+            ErrorKind.NotFound => OperationErrorKind.OperationErrorNotFound,
+            ErrorKind.Conflict => OperationErrorKind.OperationErrorConflict,
+            ErrorKind.Unauthenticated => OperationErrorKind.OperationErrorUnauthenticated,
+            ErrorKind.Forbidden => OperationErrorKind.OperationErrorForbidden,
+            ErrorKind.PaymentRequired => OperationErrorKind.OperationErrorPaymentRequired,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+        };
+
+        private StatusCode ToGrpc() => kind switch
+        {
+            ErrorKind.Invalid => StatusCode.InvalidArgument,
+            ErrorKind.NotFound => StatusCode.NotFound,
+            ErrorKind.Conflict => StatusCode.Aborted,
+            ErrorKind.Unauthenticated => StatusCode.Unauthenticated,
+            ErrorKind.Forbidden => StatusCode.PermissionDenied,
+            ErrorKind.PaymentRequired => StatusCode.FailedPrecondition,
+            _ => StatusCode.Internal
+        };
+    }
 }

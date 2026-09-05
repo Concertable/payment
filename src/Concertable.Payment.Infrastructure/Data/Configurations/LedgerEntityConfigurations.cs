@@ -1,3 +1,4 @@
+using Concertable.Payment.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -35,8 +36,8 @@ internal sealed class LedgerTransactionEntityConfiguration : IEntityTypeConfigur
         builder.HasIndex(t => new { t.PostingType, t.ExternalId })
             .IsUnique()
             .HasDatabaseName(PostingIdentityIndex);
-        builder.Property(t => t.OperationType).HasMaxLength(200);
-        builder.Property(t => t.ClientReference).HasMaxLength(200);
+        builder.Property(t => t.OperationType).HasMaxLength(PaymentOperationReference.MaxOperationTypeLength);
+        builder.Property(t => t.ClientReference).HasMaxLength(PaymentOperationReference.MaxClientReferenceLength);
         builder.HasIndex(t => new { t.OperationType, t.ClientReference });
         builder.HasIndex(t => t.PaymentIntentId);
     }

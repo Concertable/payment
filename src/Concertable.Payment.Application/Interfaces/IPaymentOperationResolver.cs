@@ -14,4 +14,8 @@ internal interface IPaymentOperationResolver
         PaymentOperationReference reference,
         Guid payerOwnerId,
         CancellationToken ct = default);
+
+    Task<string> ResolveProviderObjectIdAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default);
 }

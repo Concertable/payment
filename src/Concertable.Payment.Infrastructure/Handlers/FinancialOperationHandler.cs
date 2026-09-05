@@ -59,7 +59,7 @@ internal sealed class FinancialOperationHandler :
             ct);
         if (await ReplayTerminalAsync(
                 operation,
-                reference => new DepositEscrowSucceededEvent(operation.Id, command.Reference, reference),
+                () => new DepositEscrowSucceededEvent(operation.Id, command.Reference),
                 (code, message) => new DepositEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct))
             return;
@@ -92,8 +92,8 @@ internal sealed class FinancialOperationHandler :
         await CompleteAsync(
             operation,
             result,
-            deposit => deposit.ChargeId,
-            reference => new DepositEscrowSucceededEvent(operation.Id, command.Reference, reference),
+            deposit => deposit.EscrowId.ToString(CultureInfo.InvariantCulture),
+            () => new DepositEscrowSucceededEvent(operation.Id, command.Reference),
             (code, message) => new DepositEscrowRejectedEvent(operation.Id, command.Reference, code, message),
             ct);
     }
@@ -119,7 +119,7 @@ internal sealed class FinancialOperationHandler :
             ct);
         if (await ReplayTerminalAsync(
                 operation,
-                reference => new CaptureEscrowSucceededEvent(operation.Id, command.Reference, reference),
+                () => new CaptureEscrowSucceededEvent(operation.Id, command.Reference),
                 (code, message) => new CaptureEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct))
         {
@@ -153,8 +153,8 @@ internal sealed class FinancialOperationHandler :
         await CompleteAsync(
             operation,
             result,
-            deposit => deposit.ChargeId,
-            reference => new CaptureEscrowSucceededEvent(operation.Id, command.Reference, reference),
+            deposit => deposit.EscrowId.ToString(CultureInfo.InvariantCulture),
+            () => new CaptureEscrowSucceededEvent(operation.Id, command.Reference),
             (code, message) => new CaptureEscrowRejectedEvent(operation.Id, command.Reference, code, message),
             ct);
     }
@@ -175,7 +175,7 @@ internal sealed class FinancialOperationHandler :
             ct);
         if (await ReplayTerminalAsync(
                 operation,
-                reference => new RefundEscrowSucceededEvent(operation.Id, command.Reference, reference),
+                () => new RefundEscrowSucceededEvent(operation.Id, command.Reference),
                 (code, message) => new RefundEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct))
             return;
@@ -202,8 +202,8 @@ internal sealed class FinancialOperationHandler :
         {
             await SucceedAsync(
                 operation,
-                value.RefundId,
-                reference => new RefundEscrowSucceededEvent(operation.Id, command.Reference, reference),
+                value.Id.ToString("D"),
+                () => new RefundEscrowSucceededEvent(operation.Id, command.Reference),
                 ct);
             return;
         }
@@ -235,7 +235,7 @@ internal sealed class FinancialOperationHandler :
 
     private async Task<bool> ReplayTerminalAsync<TSucceeded, TRejected>(
         FinancialOperationEntity operation,
-        Func<string, TSucceeded> success,
+        Func<TSucceeded> success,
         Func<string, string, TRejected> rejection,
         CancellationToken ct)
         where TSucceeded : IIntegrationEvent
@@ -247,8 +247,7 @@ internal sealed class FinancialOperationHandler :
                 return false;
             case FinancialOperationStatus.Succeeded:
                 await outboxBehavior.ExecuteAsync(
-                    () => bus.PublishAsync(success(operation.ReferenceId
-                        ?? throw new InvalidOperationException("Succeeded operation has no reference.")), ct),
+                    () => bus.PublishAsync(success(), ct),
                     ct);
                 return true;
             case FinancialOperationStatus.Rejected:
@@ -269,7 +268,7 @@ internal sealed class FinancialOperationHandler :
         FinancialOperationEntity operation,
         Result<TValue, TError> result,
         Func<TValue, string> reference,
-        Func<string, TSucceeded> success,
+        Func<TSucceeded> success,
         Func<string, string, TRejected> rejection,
         CancellationToken ct)
         where TValue : notnull
@@ -290,13 +289,13 @@ internal sealed class FinancialOperationHandler :
     private Task SucceedAsync<TEvent>(
         FinancialOperationEntity operation,
         string referenceId,
-        Func<string, TEvent> outcome,
+        Func<TEvent> outcome,
         CancellationToken ct)
         where TEvent : IIntegrationEvent =>
         outboxBehavior.ExecuteAsync(async () =>
         {
             operation.Succeed(referenceId, timeProvider.GetUtcNow());
-            await bus.PublishAsync(outcome(referenceId), ct);
+            await bus.PublishAsync(outcome(), ct);
         }, ct);
 
     private Task RejectAsync<TError, TEvent>(
