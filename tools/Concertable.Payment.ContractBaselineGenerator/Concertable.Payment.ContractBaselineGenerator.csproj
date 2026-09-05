@@ -10,9 +10,17 @@
 
   <Import Project="..\..\PublishedBaseline.props" />
 
+  <ItemGroup Condition="'$(UseCandidatePaymentProjects)' != 'true'">
+    <PackageReference Include="Concertable.Payment.Client" VersionOverride="$(PaymentPublishedBaselineVersion)" />
+    <PackageReference Include="Concertable.Payment.Contracts" VersionOverride="$(PaymentPublishedBaselineVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseCandidatePaymentProjects)' == 'true'">
+    <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" />
+    <ProjectReference Include="..\..\src\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="Concertable.Payment.Client" VersionOverride="$(PaymentBaselineVersion)" />
-    <PackageReference Include="Concertable.Payment.Contracts" VersionOverride="$(PaymentBaselineVersion)" />
     <PackageReference Include="Google.Protobuf" />
   </ItemGroup>
 

@@ -1,28 +1,46 @@
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Grpc;
 using Grpc.Core;
+using Reunion;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal sealed class EscrowGrpcService : Escrow.EscrowBase
 {
     private readonly IEscrowService escrowService;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
 
-    public EscrowGrpcService(IEscrowService escrowService)
+    public EscrowGrpcService(
+        IEscrowService escrowService,
+        IPaymentOperationResolver paymentOperationResolver)
     {
         this.escrowService = escrowService;
+        this.paymentOperationResolver = paymentOperationResolver;
     }
 
     public override async Task<EscrowResponse> Deposit(DepositRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
+        var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
+            command.PaymentMethod,
+            command.PayerId,
+            context.CancellationToken);
+        if (!paymentMethod.TryGetValue(out var paymentMethodId))
+        {
+            paymentMethod.TryGetError(out var error);
+            throw new EscrowDepositError.PaymentOperationFailure(error!).ToRpcException();
+        }
+
         var result = await escrowService.DepositAsync(
             command.PayerId,
             command.PayeeId,
             command.Amount,
-            command.PaymentMethodId,
+            paymentMethodId,
             command.Session,
-            command.BookingId,
+            command.Reference,
+            command.OperationId,
             context.CancellationToken);
 
         return result.ValueOrRpcException().ToProtoEscrowResponse();
@@ -33,16 +51,26 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         ServerCallContext context)
     {
         var command = request.ToCommand();
+        var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
+            command.PaymentMethod,
+            command.PayerId,
+            context.CancellationToken);
+        if (!paymentMethod.TryGetValue(out var paymentMethodId))
+        {
+            paymentMethod.TryGetError(out var error);
+            throw new EscrowDepositError.PaymentOperationFailure(error!).ToRpcException();
+        }
+
         var result = await escrowService.DepositBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
             command.Gross,
-            command.PaymentMethodId,
+            paymentMethodId,
             command.Session,
-            command.BookingId,
+            command.Reference,
             command.CommissionBindingId,
             command.ExternalReference,
-            command.StripeSetupIntentId,
+            null,
             context.CancellationToken);
 
         return result.ValueOrRpcException().ToProtoEscrowResponse();
@@ -51,12 +79,23 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
     public override async Task<EscrowResponse> Capture(CaptureRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
+        var authorization = await paymentOperationResolver.ResolveAuthorizationAsync(
+            command.Authorization,
+            command.PayerId,
+            context.CancellationToken);
+        if (!authorization.TryGetValue(out var paymentIntentId))
+        {
+            authorization.TryGetError(out var error);
+            throw new EscrowCaptureError.PaymentOperationFailure(error!).ToRpcException();
+        }
+
         var result = await escrowService.CaptureAsync(
             command.PayerId,
             command.PayeeId,
             command.Amount,
-            command.PaymentIntentId,
-            command.BookingId,
+            paymentIntentId,
+            command.Reference,
+            command.OperationId,
             context.CancellationToken);
 
         return result.ValueOrRpcException().ToProtoEscrowResponse();
@@ -67,12 +106,22 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         ServerCallContext context)
     {
         var command = request.ToCommand();
+        var authorization = await paymentOperationResolver.ResolveAuthorizationAsync(
+            command.Authorization,
+            command.PayerId,
+            context.CancellationToken);
+        if (!authorization.TryGetValue(out var paymentIntentId))
+        {
+            authorization.TryGetError(out var error);
+            throw new EscrowCaptureError.PaymentOperationFailure(error!).ToRpcException();
+        }
+
         var result = await escrowService.CaptureBoundCommissionAsync(
             command.PayerId,
             command.PayeeId,
             command.Gross,
-            command.PaymentIntentId,
-            command.BookingId,
+            paymentIntentId,
+            command.Reference,
             command.CommissionBindingId,
             command.ExternalReference,
             context.CancellationToken);
@@ -80,72 +129,54 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         return result.ValueOrRpcException().ToProtoEscrowResponse();
     }
 
-    public override async Task<ReleaseByBookingIdResponse> ReleaseByBookingId(
-        ReleaseByBookingIdRequest request,
+    public override async Task<ReleaseEscrowResponse> Release(
+        ReleaseEscrowRequest request,
         ServerCallContext context)
     {
-        var command = request.ToCommand();
-        Option<Transfer> transfer;
-        if (command.OperationId is { } operationId)
-        {
-            transfer = (await escrowService.ReleaseByBookingIdAsync(
-                operationId,
-                command.BookingId,
-                context.CancellationToken)).ValueOrRpcException();
-        }
-        else
-        {
-            transfer = (await escrowService.ReleaseByBookingIdAsync(
-                command.BookingId,
-                context.CancellationToken)).ValueOrRpcException();
-        }
+        var transfer = (await escrowService.ReleaseByReferenceAsync(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.Reference.ToContractReference(),
+            context.CancellationToken)).ValueOrRpcException();
 
-        return new ReleaseByBookingIdResponse
+        return new ReleaseEscrowResponse
         {
             Transfer = transfer.Match<TransferResponse?>(
-                value => new TransferResponse { TransferId = value.TransferId },
+                value => new TransferResponse { OperationId = value.OperationId.ToString("D") },
                 () => null)
         };
     }
 
-    public override async Task<RefundByBookingIdResponse> RefundByBookingId(
-        RefundByBookingIdRequest request,
+    public override async Task<RefundEscrowResponse> Refund(
+        RefundEscrowRequest request,
         ServerCallContext context)
     {
-        var result = await escrowService.RefundByBookingIdAsync(request.BookingId, ct: context.CancellationToken);
+        var result = await escrowService.RefundByReferenceAsync(
+            request.Reference.ToContractReference(),
+            amount: null,
+            reason: null,
+            operationId: request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            ct: context.CancellationToken);
 
-        var refund = result.ValueOrRpcException();
-        return new RefundByBookingIdResponse
-        {
-            Refund = refund.Match<RefundResponse?>(
-                value => new RefundResponse { RefundId = value.RefundId },
-                () => null)
-        };
+        return ToResponse(result.ValueOrRpcException());
     }
 
-    public override async Task<RefundByBookingIdResponse> RefundBoundCommissionByBookingId(
-        BoundCommissionRefundByBookingIdRequest request,
+    public override async Task<RefundEscrowResponse> RefundBoundCommission(
+        BoundCommissionRefundRequest request,
         ServerCallContext context)
     {
-        var result = await escrowService.RefundBoundCommissionByBookingIdAsync(
-            request.BookingId,
+        var result = await escrowService.RefundBoundCommissionByReferenceAsync(
+            request.Reference.ToContractReference(),
             request.Gross.ToMoney(),
             ct: context.CancellationToken);
 
-        var refund = result.ValueOrRpcException();
-        return new RefundByBookingIdResponse
-        {
-            Refund = refund.Match<RefundResponse?>(
-                value => new RefundResponse { RefundId = value.RefundId },
-                () => null)
-        };
+        return ToResponse(result.ValueOrRpcException());
     }
 
-    private static RefundByBookingIdResponse ToResponse(Option<Refund> refund) =>
+    private static RefundEscrowResponse ToResponse(Option<Refund> refund) =>
         new()
         {
             Refund = refund.Match<RefundResponse?>(
-                value => new RefundResponse { RefundId = value.RefundId },
+                value => new RefundResponse { Id = value.Id.ToString("D") },
                 () => null)
         };
 }

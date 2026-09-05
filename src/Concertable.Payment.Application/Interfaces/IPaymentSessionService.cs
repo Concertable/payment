@@ -5,7 +5,15 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IPaymentSessionService
 {
-    Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
+    Task<Result<PaymentSessionExecution, PaymentOperationError>> SetupPaymentMethodAsync(
+        PaymentMethodSetupRequest request,
+        CancellationToken ct = default);
+
+    Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
+        PaymentMethodValidationRequest request,
+        CancellationToken ct = default);
+
+    Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default);
 

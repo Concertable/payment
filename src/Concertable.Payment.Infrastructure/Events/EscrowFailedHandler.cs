@@ -14,12 +14,15 @@ internal sealed class EscrowFailedHandler : IPaymentFailureHandler
         this.logger = logger;
     }
 
-    public async Task HandleAsync(PaymentFailedEvent @event, CancellationToken ct)
+    public async Task HandleAsync(
+        PaymentFailedEvent @event,
+        string providerObjectId,
+        CancellationToken ct)
     {
-        var escrow = await escrowRepository.GetByChargeIdAsync(@event.TransactionId, ct);
+        var escrow = await escrowRepository.GetByChargeIdAsync(providerObjectId, ct);
         if (escrow is null)
         {
-            logger.NoEscrowFoundForPaymentFailed(@event.TransactionId);
+            logger.NoEscrowFoundForPaymentFailed(providerObjectId);
             return;
         }
 

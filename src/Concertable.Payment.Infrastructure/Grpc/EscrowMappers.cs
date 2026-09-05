@@ -4,27 +4,32 @@ namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class EscrowMappers
 {
-    public static EscrowResponse ToProtoEscrowResponse(this EscrowDeposit r)
+    extension(EscrowDeposit deposit)
     {
-        var message = new EscrowResponse
+        public EscrowResponse ToProtoEscrowResponse()
         {
-            EscrowId = r.EscrowId,
-            ChargeId = r.ChargeId,
-            Status = r.Status.ToProtoStatus()
-        };
-        if (r.ClientSecret is { } clientSecret)
-            message.ClientSecret = clientSecret;
+            var message = new EscrowResponse
+            {
+                EscrowId = deposit.EscrowId,
+                Status = deposit.Status.ToProtoStatus()
+            };
+            if (deposit.ClientSecret is { } clientSecret)
+                message.ClientSecret = clientSecret;
 
-        return message;
+            return message;
+        }
     }
 
-    public static EscrowStatusType ToProtoStatus(this EscrowStatus s) => s switch
+    extension(EscrowStatus status)
     {
-        EscrowStatus.Held => EscrowStatusType.EscrowHeld,
-        EscrowStatus.Released => EscrowStatusType.EscrowReleased,
-        EscrowStatus.Refunded => EscrowStatusType.EscrowRefunded,
-        EscrowStatus.Disputed => EscrowStatusType.EscrowDisputed,
-        EscrowStatus.Failed => EscrowStatusType.EscrowFailed,
-        _ => EscrowStatusType.EscrowPending
-    };
+        public EscrowStatusType ToProtoStatus() => status switch
+        {
+            EscrowStatus.Held => EscrowStatusType.EscrowHeld,
+            EscrowStatus.Released => EscrowStatusType.EscrowReleased,
+            EscrowStatus.Refunded => EscrowStatusType.EscrowRefunded,
+            EscrowStatus.Disputed => EscrowStatusType.EscrowDisputed,
+            EscrowStatus.Failed => EscrowStatusType.EscrowFailed,
+            _ => EscrowStatusType.EscrowPending
+        };
+    }
 }

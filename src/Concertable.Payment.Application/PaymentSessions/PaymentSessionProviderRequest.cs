@@ -9,7 +9,7 @@ internal sealed record PaymentSessionProviderRequest(
     PaymentSessionKind SessionKind,
     PaymentSession Session,
     string OperationType,
-    string ConsumerCorrelation,
+    string ClientReference,
     long? AmountMinor,
     Currency? Currency,
     PaymentSessionFundsRouting FundsRouting,
@@ -28,7 +28,7 @@ internal sealed record PaymentSessionProviderRequest(
             operation.SessionKind,
             operation.Session,
             operation.OperationType,
-            operation.ConsumerCorrelation,
+            operation.ClientReference,
             operation.AmountMinor,
             operation.Currency,
             operation.FundsRouting,
@@ -42,6 +42,6 @@ internal sealed record PaymentSessionProviderRequest(
                 ["revision"] = attempt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["session_kind"] = operation.SessionKind.ToString(),
                 ["type"] = operation.OperationType,
-                ["correlation"] = operation.ConsumerCorrelation
+                ["correlation"] = operation.ClientReference
             });
 }

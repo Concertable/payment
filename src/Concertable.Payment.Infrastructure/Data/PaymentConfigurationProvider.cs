@@ -9,7 +9,7 @@ internal sealed class PaymentConfigurationProvider : IEntityTypeConfigurationPro
     public void Configure(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TransactionEntityConfiguration());
-        modelBuilder.ApplyConfiguration(new TicketTransactionEntityConfiguration());
+        modelBuilder.ApplyConfiguration(new PaymentTransactionEntityConfiguration());
         modelBuilder.ApplyConfiguration(new SettlementTransactionEntityConfiguration());
         modelBuilder.ApplyConfiguration(new VerifyTransactionEntityConfiguration());
         modelBuilder.ApplyConfiguration(new StripeEventEntityConfiguration());

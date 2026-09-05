@@ -137,13 +137,13 @@ public sealed class PaymentSessionOperationEntityTests
         return operation;
     }
 
-    private static PaymentSessionSpecification Specification(long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
             PaymentSessionKind.Authorization,
             PaymentSession.OnSession,
             "escrow",
-            "booking:42",
+            "order:42",
             "payer:7",
             "payee:9",
             amountMinor,
@@ -151,5 +151,6 @@ public sealed class PaymentSessionOperationEntityTests
             PaymentSessionFundsRouting.Destination,
             null,
             "cus_test",
-            "acct_test");
+            "acct_test",
+            null);
 }

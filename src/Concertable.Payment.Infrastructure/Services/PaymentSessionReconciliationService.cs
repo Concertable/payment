@@ -65,6 +65,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
             attempt.ApplyTransition(
                 request.Operation.SessionKind,
                 applied,
+                provider.PaymentMethodId,
                 provider.ProviderRequestId,
                 provider.ProviderDiagnosticCode,
                 provider.ProviderDiagnosticMessage,
@@ -93,7 +94,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
     private async Task<PaymentSessionAttemptEntity?> RecordReconciliationRequiredAsync(
         PaymentSessionAttemptEntity attempt,
         DateTimeOffset attemptedAt,
-        PaymentSessionProviderResult? provider,
+        ProviderSession? provider,
         CancellationToken ct)
     {
         attempt.RecordReconciliationRequired(
@@ -124,7 +125,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
     private Result<PaymentOperationTransition, PaymentOperationTransitionRejection> EvaluateTransition(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult provider)
+        ProviderSession provider)
     {
         var stripeObservation = new StripeProviderObservation(
             StripeProviderContractBaseline.ApiVersion,

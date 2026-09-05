@@ -32,7 +32,7 @@ internal sealed class LedgerService : ILedgerService
         var transaction = LedgerTransactionEntity.Post(
             posting.PostingType,
             posting.ExternalId,
-            posting.BookingId,
+            posting.Reference,
             posting.PaymentIntentId,
             timeProvider.GetUtcNow().DateTime,
             legs);
