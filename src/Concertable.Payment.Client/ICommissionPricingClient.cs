@@ -16,8 +16,6 @@ public interface ICommissionPricingClient
         string payerReference,
         Currency currency,
         Guid reviewedCommissionConfigurationId,
-        string? stripePaymentIntentId = null,
-        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 
     Task<Result<CommissionCalculation, CommissionError>> ConfirmReviewedGrossAsync(
@@ -32,7 +30,5 @@ public interface ICommissionPricingClient
         string externalReference,
         string payerReference,
         Money gross,
-        string? stripePaymentIntentId = null,
-        string? stripeSetupIntentId = null,
         CancellationToken ct = default);
 }

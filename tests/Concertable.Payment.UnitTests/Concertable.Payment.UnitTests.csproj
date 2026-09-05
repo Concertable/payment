@@ -36,7 +36,7 @@
     <None Update="Compatibility\Baselines\**\*" CopyToOutputDirectory="PreserveNewest" />
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>PaymentBaselineVersion</_Parameter1>
-      <_Parameter2>$(PaymentBaselineVersion)</_Parameter2>
+      <_Parameter2>$(PaymentBaselineName)</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
 

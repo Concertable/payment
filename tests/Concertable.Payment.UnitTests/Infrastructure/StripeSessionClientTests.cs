@@ -1,6 +1,7 @@
 using System.Net;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Services;
@@ -19,7 +20,7 @@ public sealed class StripeSessionClientTests
 
         var result = await sut.CreateAsync(
             Request(PaymentSession.OffSession),
-            new PaymentSessionIdempotencyKey(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
+            StripeIdempotencyKey.ForSessionAttempt(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
 
         Assert.True(result.TryGetValue(out var observation));
         Assert.Equal(PaymentSessionProviderObjectKind.PaymentIntent, observation.ProviderObjectKind);
@@ -37,11 +38,29 @@ public sealed class StripeSessionClientTests
 
         var result = await sut.CreateAsync(
             Request(PaymentSession.OnSession),
-            new PaymentSessionIdempotencyKey(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
+            StripeIdempotencyKey.ForSessionAttempt(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
 
         Assert.True(result.TryGetValue(out _));
         var content = await httpClient.Requests.Single().Content!.ReadAsStringAsync();
         Assert.Contains("setup_future_usage=off_session", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateCustomerSessionAsync_OffersOnlyMethodsTheCustomerConsentedToRedisplay()
+    {
+        var httpClient = new StubStripeHttpClient();
+        httpClient.Enqueue(HttpStatusCode.OK, CustomerSessionResponse());
+        var sut = CreateClient(httpClient);
+
+        var result = await sut.CreateCustomerSessionAsync("cus_test");
+
+        Assert.True(result.TryGetValue(out _));
+        var content = await httpClient.Requests.Single().Content!.ReadAsStringAsync();
+        Assert.Contains(
+            "components[payment_element][features][payment_method_allow_redisplay_filters][0]=always",
+            content,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("payment_method_allow_redisplay_filters][1]", content, StringComparison.Ordinal);
     }
 
     private static StripeSessionClient CreateClient(StubStripeHttpClient httpClient)
@@ -93,6 +112,15 @@ public sealed class StripeSessionClientTests
               }
             }
           }
+        }
+        """;
+
+    private static string CustomerSessionResponse() =>
+        """
+        {
+          "object": "customer_session",
+          "client_secret": "cuss_test",
+          "customer": "cus_test"
         }
         """;
 

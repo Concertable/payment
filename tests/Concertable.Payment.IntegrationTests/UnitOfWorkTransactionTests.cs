@@ -1,6 +1,7 @@
 using Concertable.Kernel;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Enums;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
@@ -14,7 +15,7 @@ namespace Concertable.Payment.IntegrationTests;
 
 public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
 {
-    private static int bookingId = 10_000;
+    private static int referenceId = 10_000;
     private readonly SqlFixture sql;
 
     public UnitOfWorkTransactionTests(SqlFixture sql)
@@ -35,7 +36,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                new(escrow.OperationType, escrow.ClientReference),
                 escrow.ChargeId));
         await unitOfWork.SaveChangesAsync();
 
@@ -62,7 +63,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         var unbalancedPosting = new LedgerPosting(
             LedgerPostingType.EscrowHold,
             escrow.ChargeId,
-            escrow.BookingId,
+            new(escrow.OperationType, escrow.ClientReference),
             escrow.ChargeId,
             [
                 new(
@@ -103,7 +104,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
             LedgerPostings.EscrowHold(
                 payerId,
                 Money.Gbp(50),
-                NextBookingId(),
+                NextReference(),
                 duplicateExternalId));
         await unitOfWork.SaveChangesAsync();
 
@@ -117,7 +118,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
             LedgerPostings.EscrowHold(
                 escrow.FromOwnerId,
                 escrow.PayerTotalMinor.ToMoney(escrow.Currency),
-                escrow.BookingId,
+                new(escrow.OperationType, escrow.ClientReference),
                 duplicateExternalId));
 
         await Assert.ThrowsAsync<DbUpdateException>(() => unitOfWork.SaveChangesAsync());
@@ -161,7 +162,7 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         Guid? payerId = null)
     {
         var escrow = EscrowEntity.Create(
-            NextBookingId(),
+            NextReference(),
             payerId ?? Guid.NewGuid(),
             Guid.NewGuid(),
             Money.Gbp(50),
@@ -175,5 +176,6 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
         return escrow;
     }
 
-    private static int NextBookingId() => Interlocked.Increment(ref bookingId);
+    private static PaymentOperationReference NextReference() =>
+        new("escrow", $"order:{Interlocked.Increment(ref referenceId)}");
 }

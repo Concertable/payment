@@ -21,7 +21,7 @@ public sealed class PaymentIntentMappersTests
 
         Assert.True(result.TryGetValue(out var outcome));
         Assert.False(outcome.RequiresAction);
-        Assert.Equal("pi_test", outcome.TransactionId);
+        Assert.Equal("pi_test", outcome.ProviderTransactionId);
         Assert.Equal("secret", outcome.ClientSecret);
     }
 

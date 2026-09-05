@@ -28,7 +28,7 @@ public sealed class PaymentReportingMapperTests
     }
 
     [Fact]
-    public void ToManagerSettlement_MapsIdentifiersMoneyAndTimestamp()
+    public void ToPaymentSettlement_MapsIdentifiersReferenceMoneyAndTimestamp()
     {
         var payerId = Guid.NewGuid();
         var payeeId = Guid.NewGuid();
@@ -36,17 +36,21 @@ public sealed class PaymentReportingMapperTests
         var settlement = new Proto.SettlementReportItemResponse
         {
             Id = 4,
-            BookingId = 7,
+            Reference = new Proto.PaymentOperationReference
+            {
+                OperationType = "settlement",
+                ClientReference = "order:7"
+            },
             PayerId = payerId.ToString(),
             PayeeId = payeeId.ToString(),
             Amount = new Proto.Money { AmountMinor = 2500, Currency = Proto.Currency.Gbp },
             At = Timestamp.FromDateTime(at)
         };
 
-        var result = PaymentMappers.ToManagerSettlement(settlement);
+        var result = PaymentMappers.ToPaymentSettlement(settlement);
 
         Assert.Equal(4, result.Id);
-        Assert.Equal(7, result.BookingId);
+        Assert.Equal(new PaymentOperationReference("settlement", "order:7"), result.Reference);
         Assert.Equal(payerId, result.PayerId);
         Assert.Equal(payeeId, result.PayeeId);
         Assert.Equal(2500, result.Amount.ToMinorUnits());

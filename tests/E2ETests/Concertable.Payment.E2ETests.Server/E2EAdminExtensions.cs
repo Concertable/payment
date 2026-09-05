@@ -44,14 +44,14 @@ public static class E2EAdminExtensions
             var group = app.MapGroup("/_e2e")
                 .AddEndpointFilter(AuthorizeAsync);
             group.MapPost("/reset", ResetAsync);
-            group.MapGet("/bookings/{bookingId:int}/settlement-payment-intent-id", GetLatestSettlementPaymentIntentIdAsync);
-            group.MapGet("/bookings/{bookingId:int}/escrow-payee-id", GetEscrowPayeeIdAsync);
-            group.MapGet("/bookings/{bookingId:int}/escrow-payment-intent-id", GetEscrowPaymentIntentIdAsync);
-            group.MapGet("/bookings/{bookingId:int}/escrow-status", GetEscrowStatusAsync);
-            group.MapGet("/bookings/{bookingId:int}/escrow-refund-id", GetEscrowRefundIdAsync);
-            group.MapGet("/bookings/{bookingId:int}/ledger-transaction-count", GetLedgerTransactionCountAsync);
-            group.MapGet("/bookings/{bookingId:int}/ledger-signed-sum", GetLedgerSignedSumAsync);
-            group.MapGet("/bookings/{bookingId:int}/ledger-platform-revenue", GetLedgerPlatformRevenueAsync);
+            group.MapGet("/operations/settlement-payment-intent-id", GetLatestSettlementPaymentIntentIdAsync);
+            group.MapGet("/operations/escrow-payee-id", GetEscrowPayeeIdAsync);
+            group.MapGet("/operations/escrow-payment-intent-id", GetEscrowPaymentIntentIdAsync);
+            group.MapGet("/operations/escrow-status", GetEscrowStatusAsync);
+            group.MapGet("/operations/escrow-refund-id", GetEscrowRefundIdAsync);
+            group.MapGet("/operations/ledger-transaction-count", GetLedgerTransactionCountAsync);
+            group.MapGet("/operations/ledger-signed-sum", GetLedgerSignedSumAsync);
+            group.MapGet("/operations/ledger-platform-revenue", GetLedgerPlatformRevenueAsync);
             return app;
         }
     }
@@ -62,9 +62,7 @@ public static class E2EAdminExtensions
     {
         var options = context.HttpContext.RequestServices.GetRequiredService<E2EAdminOptions>();
         if (!E2EAdminSecurity.IsAuthorized(options.AdminKey, context.HttpContext.Request.Headers))
-        {
             return Results.NotFound();
-        }
 
         return await next(context);
     }
@@ -85,7 +83,8 @@ public static class E2EAdminExtensions
     }
 
     private static async Task<IResult> GetLatestSettlementPaymentIntentIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
@@ -95,51 +94,56 @@ public static class E2EAdminExtensions
             SELECT TOP 1 PaymentIntentId
             FROM payment.Transactions
             WHERE Discriminator = 'SettlementTransactionEntity'
-              AND ContextId = @bookingId
+              AND OperationType = @operationType
+              AND ClientReference = @clientReference
               AND PaymentIntentId LIKE 'pi[_]%'
             ORDER BY CreatedAt DESC
             """,
-            new { bookingId });
+            new { operationType, clientReference });
         return Optional(value);
     }
 
     private static async Task<IResult> GetEscrowPayeeIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<Guid?>(
-            "SELECT ToOwnerId FROM payment.Escrows WHERE BookingId = @bookingId",
-            new { bookingId });
+            "SELECT ToOwnerId FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            new { operationType, clientReference });
         return Optional(value);
     }
 
     private static async Task<IResult> GetEscrowPaymentIntentIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<string>(
-            "SELECT ChargeId FROM payment.Escrows WHERE BookingId = @bookingId",
-            new { bookingId }));
+            "SELECT ChargeId FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            new { operationType, clientReference }));
     }
 
     private static async Task<IResult> GetEscrowStatusAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<int?>(
-            "SELECT Status FROM payment.Escrows WHERE BookingId = @bookingId",
-            new { bookingId });
+            "SELECT Status FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            new { operationType, clientReference });
         return Optional(value);
     }
 
     private static async Task<IResult> GetEscrowRefundIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
@@ -149,27 +153,30 @@ public static class E2EAdminExtensions
             SELECT TOP 1 r.StripeRefundId
             FROM payment.PaymentRefunds r
             JOIN payment.Escrows e ON e.Id = r.EscrowId
-            WHERE e.BookingId = @bookingId
+            WHERE e.OperationType = @operationType
+              AND e.ClientReference = @clientReference
               AND r.StripeRefundId IS NOT NULL
             ORDER BY r.CompletedAt DESC
             """,
-            new { bookingId });
+            new { operationType, clientReference });
         return Optional(value);
     }
 
     private static async Task<IResult> GetLedgerTransactionCountAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<int>(
-            "SELECT COUNT(*) FROM payment.LedgerTransactions WHERE BookingId = @bookingId",
-            new { bookingId }));
+            "SELECT COUNT(*) FROM payment.LedgerTransactions WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            new { operationType, clientReference }));
     }
 
     private static async Task<IResult> GetLedgerSignedSumAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
@@ -179,13 +186,14 @@ public static class E2EAdminExtensions
             SELECT COALESCE(SUM(e.Amount), 0)
             FROM payment.LedgerEntries e
             JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
-            WHERE t.BookingId = @bookingId
+            WHERE t.OperationType = @operationType AND t.ClientReference = @clientReference
             """,
-            new { bookingId }));
+            new { operationType, clientReference }));
     }
 
     private static async Task<IResult> GetLedgerPlatformRevenueAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
@@ -196,9 +204,11 @@ public static class E2EAdminExtensions
             FROM payment.LedgerEntries e
             JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
             JOIN payment.LedgerAccounts a ON a.Id = e.LedgerAccountId
-            WHERE t.BookingId = @bookingId AND a.Type = @platformRevenue
+            WHERE t.OperationType = @operationType
+              AND t.ClientReference = @clientReference
+              AND a.Type = @platformRevenue
             """,
-            new { bookingId, platformRevenue = PlatformRevenueAccountType }));
+            new { operationType, clientReference, platformRevenue = PlatformRevenueAccountType }));
     }
 
     private static IResult Optional(object? value) => value is null ? Results.NoContent() : Results.Ok(value);

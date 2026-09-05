@@ -1,5 +1,6 @@
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain.Enums;
 using Reunion;
@@ -15,23 +16,23 @@ internal sealed class UnavailableRetrievalStripeSessionClient : IStripeSessionCl
         this.stripeSessionClient = stripeSessionClient;
     }
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default) =>
         stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
     {
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> unavailable =
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> unavailable =
             new PaymentOperationError.ProviderUnavailable();
         return Task.FromResult(unavailable);
     }
 
-    public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+    public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default) =>

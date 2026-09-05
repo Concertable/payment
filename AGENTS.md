@@ -8,7 +8,7 @@ A new payment purpose is a new `type` string (`Contracts/TransactionTypes.cs`) +
 
 ## Never seed ledger, escrow, or payout rows
 
-Payout accounts are provisioned **only** by handlers reacting to integration events — `PayoutOwnerRegisteredHandler` on `PayoutOwnerRegisteredEvent` (operator), `CustomerRegisteredHandler` on `CredentialRegisteredEvent` (buyer). There is no `PaymentDevSeeder` and never must be. Ledger/escrow rows are written only by the money flow. Missing rows in E2E/dev → fix the event flow, not a seeder.
+Payout accounts are provisioned **only** by handlers reacting to Payment-owned integration events: `PayoutOwnerRegisteredHandler` on `PayoutOwnerRegisteredEvent` provisions a connected account and provider customer; `PaymentMethodOwnerRegisteredHandler` on `PaymentMethodOwnerRegisteredEvent` provisions only the provider customer. Both events carry opaque owner identity. There is no `PaymentDevSeeder` and never must be. Ledger/escrow rows are written only by the money flow. Missing rows in E2E/dev → fix the event flow, not a seeder.
 
 ## E2E/dev never touch real Stripe
 

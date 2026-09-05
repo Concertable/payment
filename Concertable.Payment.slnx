@@ -12,6 +12,7 @@
   <Folder Name="/Tests/">
     <Project Path="tests/Concertable.Payment.ArchitectureTests/Concertable.Payment.ArchitectureTests.csproj" />
     <Project Path="tests/Concertable.Payment.E2EAdmin.IntegrationTests/Concertable.Payment.E2EAdmin.IntegrationTests.csproj" />
+    <Project Path="tests/Concertable.Payment.IntegrationTests.Fixtures/Concertable.Payment.IntegrationTests.Fixtures.csproj" />
     <Project Path="tests/Concertable.Payment.IntegrationTests/Concertable.Payment.IntegrationTests.csproj" />
     <Project Path="tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj" />
   </Folder>

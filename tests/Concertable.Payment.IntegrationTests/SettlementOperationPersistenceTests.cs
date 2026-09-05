@@ -1,7 +1,9 @@
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain;
@@ -38,6 +40,8 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
         var releaseOperationId = Guid.CreateVersion7();
         var payerId = Guid.NewGuid();
         var payeeId = Guid.NewGuid();
+        var settlementReference = new PaymentOperationReference("settlement", "order:42");
+        var escrowReference = new PaymentOperationReference("escrow", "order:43");
         var chargeFingerprint = SettlementOperationFingerprint.CreateCharge(
             chargeOperationId,
             payerId,
@@ -46,7 +50,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
             Money.Gbp(12),
             "pm_test",
             PaymentSession.OnSession,
-            42);
+            settlementReference);
         var settlement = SettlementTransactionEntity.CreateForOperation(
             payerId,
             payeeId,
@@ -54,12 +58,12 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
             6200,
             1200,
             TransactionStatus.Pending,
-            42,
+            settlementReference,
             chargeOperationId,
             chargeFingerprint,
             true);
         var escrow = EscrowEntity.Create(
-            43,
+            escrowReference,
             payerId,
             payeeId,
             Money.Gbp(50),
@@ -99,7 +103,13 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
 
         var payerId = Guid.NewGuid();
         var payeeId = Guid.NewGuid();
-        var escrow = EscrowEntity.Create(44, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_release_race");
+        var escrow = EscrowEntity.Create(
+            new("escrow", "order:44"),
+            payerId,
+            payeeId,
+            Money.Gbp(50),
+            Money.Gbp(0),
+            "pi_release_race");
         escrow.Confirm();
         await using (var seed = CreateContext())
         {
@@ -135,8 +145,10 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
 
         var payerId = Guid.NewGuid();
         var payeeId = Guid.NewGuid();
-        var firstEscrow = EscrowEntity.Create(46, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_first_release");
-        var secondEscrow = EscrowEntity.Create(47, payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_second_release");
+        var firstEscrow = EscrowEntity.Create(
+            new("escrow", "order:46"), payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_first_release");
+        var secondEscrow = EscrowEntity.Create(
+            new("escrow", "order:47"), payerId, payeeId, Money.Gbp(50), Money.Gbp(0), "pi_second_release");
         firstEscrow.Confirm();
         secondEscrow.Confirm();
         await using (var seed = CreateContext())
@@ -178,12 +190,12 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
         var operationId = Guid.CreateVersion7();
         var payerId = Guid.NewGuid();
         var payeeId = Guid.NewGuid();
-        var outcome = new PaymentOutcome
-        {
-            TransactionId = "pi_concurrent_operation",
-            RequiresAction = true,
-            ClientSecret = "pi_concurrent_secret"
-        };
+        var reference = new PaymentOperationReference("settlement", "order:45");
+        var paymentMethod = new PaymentOperationReference("paymentMethod", "wallet:45");
+        var outcome = new ProviderPaymentOutcome(
+            "pi_concurrent_operation",
+            true,
+            "pi_concurrent_secret");
         var bothProviderCallsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var providerCalls = 0;
         var paymentManager = new Mock<IPaymentManager>();
@@ -203,14 +215,14 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
                 if (Interlocked.Increment(ref providerCalls) == 2)
                     bothProviderCallsEntered.SetResult();
                 await bothProviderCallsEntered.Task;
-                return Result<PaymentOutcome, PaymentError>.Success(outcome);
+                return Result<ProviderPaymentOutcome, ChargeError>.Success(outcome);
             });
         paymentManager
             .Setup(value => value.GetPaymentOutcomeAsync(
-                outcome.TransactionId,
+                outcome.ProviderTransactionId,
                 PaymentSession.OnSession,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(outcome));
+            .ReturnsAsync(Result<ProviderPaymentOutcome, PaymentError>.Success(outcome));
         var payoutAccount = PayoutAccountEntity.Create(payerId, "payer@test.com");
         payoutAccount.LinkCustomer("cus_test");
         var payoutAccounts = new Mock<IPayoutAccountRepository>();
@@ -220,17 +232,17 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
 
         await using var firstContext = CreateContext();
         await using var secondContext = CreateContext();
-        var first = CreateManagerPaymentService(firstContext, paymentManager.Object, payoutAccounts.Object);
-        var second = CreateManagerPaymentService(secondContext, paymentManager.Object, payoutAccounts.Object);
+        var first = CreateSettlementService(firstContext, paymentManager.Object, payoutAccounts.Object, paymentMethod, payerId);
+        var second = CreateSettlementService(secondContext, paymentManager.Object, payoutAccounts.Object, paymentMethod, payerId);
 
         var results = await Task.WhenAll(
-            first.PayAsync(operationId, payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, 45),
-            second.PayAsync(operationId, payerId, payeeId, Money.Gbp(50), "pm_test", PaymentSession.OnSession, 45));
+            first.PayAsync(operationId, reference, payerId, payeeId, Money.Gbp(50), paymentMethod, PaymentSession.OnSession),
+            second.PayAsync(operationId, reference, payerId, payeeId, Money.Gbp(50), paymentMethod, PaymentSession.OnSession));
 
         Assert.All(results, result =>
         {
             Assert.True(result.TryGetValue(out var value));
-            Assert.Equal(outcome.TransactionId, value.TransactionId);
+            Assert.True(value.RequiresAction);
             Assert.Equal(outcome.ClientSecret, value.ClientSecret);
         });
         Assert.Equal(2, providerCalls);
@@ -240,22 +252,32 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
             .ToListAsync());
     }
 
-    private static ManagerPaymentService CreateManagerPaymentService(
+    private static SettlementService CreateSettlementService(
         PaymentDbContext context,
         IPaymentManager paymentManager,
-        IPayoutAccountRepository payoutAccounts) =>
-        new(
+        IPayoutAccountRepository payoutAccounts,
+        PaymentOperationReference paymentMethod,
+        Guid payerId)
+    {
+        var resolver = new Mock<IPaymentOperationResolver>();
+        resolver
+            .Setup(value => value.ResolvePaymentMethodAsync(
+                paymentMethod,
+                payerId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, PaymentOperationError>.Success("pm_test"));
+        return new(
             paymentManager,
-            Mock.Of<IStripeAccountClient>(),
-            Mock.Of<IStripeHoldClient>(),
             payoutAccounts,
             new TransactionRepository(context),
             Mock.Of<ICommissionService>(),
             new CommissionCalculator(),
             Mock.Of<ILedgerService>(),
             new UnitOfWork(context),
+            resolver.Object,
             TimeProvider.System,
             Options.Create(new PlatformFeeOptions { Fee = 12 }));
+    }
 
     private PaymentDbContext CreateContext()
     {

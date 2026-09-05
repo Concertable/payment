@@ -22,6 +22,7 @@
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.67.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.67.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3" />
@@ -49,8 +50,6 @@
     <PackageVersion Include="Concertable.AppHost.Shared" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Auth.Hosting" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.B2B.Concert.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.B2B.Tenant.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Contracts" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Grpc" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Kernel" Version="$(ConcertablePlatformVersion)" />
@@ -62,7 +61,6 @@
     <PackageVersion Include="Concertable.ServiceDefaults" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Shared.Api" Version="$(ConcertablePlatformVersion)" />
     <PackageVersion Include="Concertable.Seed.Shared" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Seed.Identity" Version="$(ConcertablePlatformVersion)" />
   </ItemGroup>
 
   <ItemGroup>

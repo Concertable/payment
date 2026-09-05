@@ -38,13 +38,13 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             var first = CommissionBindingEntity.Create(
                 configuration,
                 Currency.Gbp,
-                $"booking:{Guid.NewGuid():N}",
+                $"order:{Guid.NewGuid():N}",
                 $"payer:{Guid.NewGuid():N}",
                 DateTimeOffset.UtcNow);
             var second = CommissionBindingEntity.Create(
                 configuration,
                 Currency.Gbp,
-                $"booking:{Guid.NewGuid():N}",
+                $"order:{Guid.NewGuid():N}",
                 $"payer:{Guid.NewGuid():N}",
                 DateTimeOffset.UtcNow);
             context.CommissionBindings.AddRange(first, second);
@@ -84,7 +84,7 @@ public sealed class CommissionConfigurationPersistenceTests : IClassFixture<SqlF
             var binding = CommissionBindingEntity.Create(
                 configuration,
                 Currency.Gbp,
-                $"booking:{Guid.NewGuid():N}",
+                $"order:{Guid.NewGuid():N}",
                 $"payer:{Guid.NewGuid():N}",
                 DateTimeOffset.UtcNow);
             seed.AddRange(configuration, binding);

@@ -1,92 +1,109 @@
+using Concertable.Payment.Contracts;
 using Concertable.Payment.Grpc;
+using Grpc.Core;
 using Money = Concertable.Kernel.ValueObjects.Money;
+using ContractReference = Concertable.Payment.Contracts.PaymentOperationReference;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal sealed record DepositCommand(
+    Guid OperationId,
+    ContractReference Reference,
     Guid PayerId,
     Guid PayeeId,
     Money Amount,
-    string PaymentMethodId,
-    PaymentSession Session,
-    int BookingId);
+    ContractReference PaymentMethod,
+    PaymentSession Session);
 
 internal sealed record BoundCommissionDepositCommand(
+    ContractReference Reference,
     Guid PayerId,
     Guid PayeeId,
     Money Gross,
-    string PaymentMethodId,
+    ContractReference PaymentMethod,
     PaymentSession Session,
-    int BookingId,
-    Guid CommissionBindingId,
-    string ExternalReference,
-    string? StripeSetupIntentId);
-
-internal sealed record CaptureCommand(
-    Guid PayerId,
-    Guid PayeeId,
-    Money Amount,
-    string PaymentIntentId,
-    int BookingId);
-
-internal sealed record BoundCommissionCaptureCommand(
-    Guid PayerId,
-    Guid PayeeId,
-    Money Gross,
-    string PaymentIntentId,
-    int BookingId,
     Guid CommissionBindingId,
     string ExternalReference);
 
-internal sealed record ReleaseByBookingIdCommand(Guid? OperationId, int BookingId);
+internal sealed record CaptureCommand(
+    Guid OperationId,
+    ContractReference Reference,
+    Guid PayerId,
+    Guid PayeeId,
+    Money Amount,
+    ContractReference Authorization);
+
+internal sealed record BoundCommissionCaptureCommand(
+    ContractReference Reference,
+    Guid PayerId,
+    Guid PayeeId,
+    Money Gross,
+    ContractReference Authorization,
+    Guid CommissionBindingId,
+    string ExternalReference);
 
 internal static class EscrowRequestMappers
 {
-    public static DepositCommand ToCommand(this DepositRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ToMoney(),
-        request.PaymentMethodId,
-        request.Session.ToPaymentSession(),
-        request.BookingId);
+    extension(DepositRequest request)
+    {
+        public DepositCommand ToCommand() => new(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Amount.ToMoney(),
+            request.PaymentMethod.ToContractReference(),
+            request.Session.ToPaymentSession());
+    }
 
-    public static BoundCommissionDepositCommand ToCommand(
-        this BoundCommissionDepositRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Gross.ToMoney(),
-        request.PaymentMethodId,
-        request.Session.ToPaymentSession(),
-        request.BookingId,
-        request.CommissionBindingId.ParseOrThrow<Guid>(
-            nameof(request.CommissionBindingId)),
-        request.ExternalReference,
-        EmptyToNull(request.StripeSetupIntentId));
+    extension(BoundCommissionDepositRequest request)
+    {
+        public BoundCommissionDepositCommand ToCommand() => new(
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Gross.ToMoney(),
+            request.PaymentMethod.ToContractReference(),
+            request.Session.ToPaymentSession(),
+            request.CommissionBindingId.ParseOrThrow<Guid>(nameof(request.CommissionBindingId)),
+            request.ExternalReference);
+    }
 
-    public static CaptureCommand ToCommand(this CaptureRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Amount.ToMoney(),
-        request.PaymentIntentId,
-        request.BookingId);
+    extension(CaptureRequest request)
+    {
+        public CaptureCommand ToCommand() => new(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Amount.ToMoney(),
+            request.Authorization.ToContractReference());
+    }
 
-    public static BoundCommissionCaptureCommand ToCommand(
-        this BoundCommissionCaptureRequest request) => new(
-        request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
-        request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
-        request.Gross.ToMoney(),
-        request.PaymentIntentId,
-        request.BookingId,
-        request.CommissionBindingId.ParseOrThrow<Guid>(
-            nameof(request.CommissionBindingId)),
-        request.ExternalReference);
+    extension(BoundCommissionCaptureRequest request)
+    {
+        public BoundCommissionCaptureCommand ToCommand() => new(
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Gross.ToMoney(),
+            request.Authorization.ToContractReference(),
+            request.CommissionBindingId.ParseOrThrow<Guid>(nameof(request.CommissionBindingId)),
+            request.ExternalReference);
+    }
 
-    public static ReleaseByBookingIdCommand ToCommand(this ReleaseByBookingIdRequest request) => new(
-        string.IsNullOrEmpty(request.OperationId)
-            ? null
-            : request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
-        request.BookingId);
-
-    private static string? EmptyToNull(string value) =>
-        string.IsNullOrEmpty(value) ? null : value;
+    extension(Concertable.Payment.Grpc.PaymentOperationReference reference)
+    {
+        public ContractReference ToContractReference()
+        {
+            try
+            {
+                return new(reference.OperationType, reference.ClientReference);
+            }
+            catch (ArgumentException exception)
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message));
+            }
+        }
+    }
 }
