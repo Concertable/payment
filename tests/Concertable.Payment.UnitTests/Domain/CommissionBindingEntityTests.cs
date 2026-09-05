@@ -18,7 +18,7 @@ public sealed class CommissionBindingEntityTests
         var binding = CommissionBindingEntity.Create(
             Configuration(),
             Currency.Gbp,
-            "booking:42",
+            "order:42",
             "payer:7",
             DateTimeOffset.UtcNow,
             stripeSetupIntentId: "seti_123");
@@ -35,7 +35,7 @@ public sealed class CommissionBindingEntityTests
         var binding = CommissionBindingEntity.Create(
             Configuration(),
             Currency.Gbp,
-            "booking:42",
+            "order:42",
             "payer:7",
             DateTimeOffset.UtcNow,
             stripePaymentIntentId: "pi_123");
@@ -51,7 +51,7 @@ public sealed class CommissionBindingEntityTests
         var binding = CommissionBindingEntity.Create(
             configuration,
             Currency.Gbp,
-            "booking:42",
+            "order:42",
             "payer:7",
             DateTimeOffset.UtcNow);
 
@@ -65,7 +65,7 @@ public sealed class CommissionBindingEntityTests
     public void ConfirmReviewedGross_PersistsMoneyAndAllowsSameValue()
     {
         var binding = CommissionBindingEntity.Create(
-            Configuration(), Currency.Gbp, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            Configuration(), Currency.Gbp, "order:42", "payer:7", DateTimeOffset.UtcNow);
         var reviewedGross = Money.Gbp(50);
 
         binding.ConfirmReviewedGross(reviewedGross);
@@ -78,7 +78,7 @@ public sealed class CommissionBindingEntityTests
     public void ConfirmReviewedGross_RejectsDifferentAmount()
     {
         var binding = CommissionBindingEntity.Create(
-            Configuration(), Currency.Gbp, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            Configuration(), Currency.Gbp, "order:42", "payer:7", DateTimeOffset.UtcNow);
         binding.ConfirmReviewedGross(Money.Gbp(50));
 
         Assert.Throws<DomainException>(() => binding.ConfirmReviewedGross(Money.Gbp(51)));
@@ -88,7 +88,7 @@ public sealed class CommissionBindingEntityTests
     public void ConfirmReviewedGross_RejectsDifferentCurrency()
     {
         var binding = CommissionBindingEntity.Create(
-            Configuration(), Currency.Gbp, "booking:42", "payer:7", DateTimeOffset.UtcNow);
+            Configuration(), Currency.Gbp, "order:42", "payer:7", DateTimeOffset.UtcNow);
 
         Assert.Throws<DomainException>(() =>
             binding.ConfirmReviewedGross(new Money(50, (Currency)840)));

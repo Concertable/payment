@@ -21,6 +21,16 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(operation => operation.OperationId == operationId, ct);
 
+    public Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default) =>
+        context.PaymentSessionOperations
+            .Include(operation => operation.Attempts)
+            .SingleOrDefaultAsync(
+                operation => operation.OperationType == reference.OperationType
+                    && operation.ClientReference == reference.ClientReference,
+                ct);
+
     public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
@@ -34,7 +44,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
                 ct);
 
     public async Task<PaymentSessionReservation> ReserveInitialAsync(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         DateTimeOffset createdAt,
         CancellationToken ct = default)
     {
@@ -49,14 +59,25 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             createdAt);
         context.PaymentSessionOperations.Add(candidate);
 
-        if (await context.TrySaveChangesAsync(static exception => exception.IsDuplicateKey(), ct))
+        try
+        {
+            await context.SaveChangesAsync(ct);
             return new(PaymentSessionReservationDisposition.Created, candidate, candidate.CurrentAttempt);
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
+        {
+            Detach(candidate.OperationId);
+            existing = await GetByOperationIdAsync(specification.OperationId, ct)
+                ?? await GetByReferenceAsync(
+                    new(specification.OperationType, specification.ClientReference),
+                    ct);
+            if (existing is null)
+                throw;
 
-        existing = await GetByOperationIdAsync(specification.OperationId, ct);
-        if (existing is null)
-            throw new InvalidOperationException($"Payment session operation {specification.OperationId} was not found after its reservation conflicted.");
-
-        return existing.EvaluateInitialReservation(fingerprint);
+            return existing.EvaluateInitialReservation(
+                PaymentSessionFingerprint.Create(
+                    specification.WithOperationId(existing.OperationId)));
+        }
     }
 
     public async Task<PaymentSessionReservation> ReserveNextAttemptAsync(
@@ -78,17 +99,29 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
         if (reservation.Disposition != PaymentSessionReservationDisposition.Created)
             return reservation;
 
-        if (await context.TrySaveChangesAsync(
-                static exception => exception is DbUpdateConcurrencyException || exception.IsDuplicateKey(),
-                ct))
+        try
+        {
+            await context.SaveChangesAsync(ct);
             return reservation;
-
-        return await ReconcileNextAttemptAsync(
-            operationId,
-            expectedAttemptId,
-            expectedRevision,
-            createdAt,
-            ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return await ReconcileNextAttemptAsync(
+                operationId,
+                expectedAttemptId,
+                expectedRevision,
+                createdAt,
+                ct);
+        }
+        catch (DbUpdateException ex) when (ex.IsDuplicateKey())
+        {
+            return await ReconcileNextAttemptAsync(
+                operationId,
+                expectedAttemptId,
+                expectedRevision,
+                createdAt,
+                ct);
+        }
     }
 
     private async Task<PaymentSessionReservation> ReconcileNextAttemptAsync(
@@ -98,6 +131,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
         DateTimeOffset createdAt,
         CancellationToken ct)
     {
+        Detach(operationId);
         var canonical = await GetByOperationIdAsync(operationId, ct);
         if (canonical is null)
             throw new InvalidOperationException($"Payment session operation {operationId} disappeared during reservation.");
@@ -107,5 +141,20 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             expectedRevision,
             Guid.CreateVersion7(createdAt),
             createdAt);
+    }
+
+    private void Detach(Guid operationId)
+    {
+        foreach (var entry in context.ChangeTracker.Entries()
+            .Where(entry => entry.Entity switch
+            {
+                PaymentSessionOperationEntity operation => operation.OperationId == operationId,
+                PaymentSessionAttemptEntity attempt => attempt.OperationId == operationId,
+                _ => false
+            })
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 }

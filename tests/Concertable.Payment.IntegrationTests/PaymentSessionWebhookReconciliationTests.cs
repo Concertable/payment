@@ -94,7 +94,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     }
 
     [Fact]
-    public async Task Webhook_UntrackedProviderObject_IsNoOpAndPreservesLegacyPublish()
+    public async Task Webhook_UntrackedProviderObjectWithoutReference_IsNoOp()
     {
         await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
         var providerObjectId = $"pi_untracked_{Guid.NewGuid():N}";
@@ -105,7 +105,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             "succeeded",
             EventTypes.PaymentIntentSucceeded));
 
-        Assert.Equal(1, await harness.LegacyPaymentSucceededCountAsync(providerObjectId));
+        Assert.Equal(0, await harness.PaymentSucceededCountAsync());
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             },
         };
 
-    private static PaymentSessionSpecification SetupSpecification(Guid operationId) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition SetupSpecification(Guid operationId) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OffSession,
@@ -158,7 +158,8 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.None,
             null,
             $"cus_{operationId:N}",
-            null);
+            null,
+            "venue-hire-mandate-v1");
 
     private static Event PaymentIntentEvent(
         string eventId,
@@ -181,13 +182,13 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             },
         };
 
-    private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(Guid operationId, long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             $"payer:{operationId:N}",
             $"payee:{operationId:N}",
             amountMinor,
@@ -195,5 +196,6 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
 }

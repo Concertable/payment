@@ -1,9 +1,11 @@
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
 using Concertable.Payment.Domain;
+using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
@@ -28,7 +30,230 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task CreateOrReplayAsync_FailureAfterProviderAcceptance_ReplayConvergesOnOneObject()
+    public async Task SetupPaymentMethodAsync_ReplayedReference_ReusesProviderObject()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("paymentAuthorization", $"request:{Guid.CreateVersion7():N}");
+        await using (var seedContext = CreateContext())
+            await SeedPayerAsync(seedContext, payerOwnerId);
+
+        await using (var firstContext = CreateContext())
+        {
+            var first = await Service(firstContext, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+
+            Assert.True(first.TryGetValue(out _));
+        }
+
+        await using (var replayContext = CreateContext())
+        {
+            var replay = await Service(replayContext, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+
+            Assert.True(replay.TryGetValue(out _));
+        }
+
+        Assert.Equal(1, provider.ProviderObjectCount);
+        await using var assertContext = CreateContext();
+        Assert.Single(await assertContext.PaymentSessionOperations
+            .Where(operation => operation.OperationType == reference.OperationType
+                && operation.ClientReference == reference.ClientReference)
+            .ToListAsync());
+    }
+
+    [Fact]
+    public async Task SetupPaymentMethodAsync_NewCommitment_RecordsMandateConsentEvidence()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("purchase", $"order:{Guid.CreateVersion7():N}");
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v3"));
+            Assert.True(setup.TryGetValue(out _));
+        }
+
+        await using var assertContext = CreateContext();
+        var operation = await assertContext.PaymentSessionOperations
+            .SingleAsync(value => value.OperationType == reference.OperationType
+                && value.ClientReference == reference.ClientReference);
+
+        Assert.Equal("venue-hire-mandate-v3", operation.MandateTermsVersion);
+        Assert.Equal(operation.CreatedAt, operation.MandateAcceptedAt);
+    }
+
+    [Fact]
+    public async Task SetupPaymentMethodAsync_ChangedMandateTerms_ReturnsOperationConflict()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("purchase", $"order:{Guid.CreateVersion7():N}");
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v3"));
+            Assert.True(setup.TryGetValue(out _));
+        }
+
+        await using var conflictContext = CreateContext();
+        var reconsented = await Service(conflictContext, provider).SetupPaymentMethodAsync(
+            new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v4"));
+
+        Assert.True(reconsented.TryGetError(out var error));
+        Assert.IsType<PaymentOperationError.OperationConflict>(error);
+    }
+
+    [Fact]
+    public async Task ValidatePaymentMethodAsync_CompletedSetupForPayer_ReturnsSuccess()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("paymentAuthorization", $"request:{Guid.CreateVersion7():N}");
+        Guid operationId;
+        string providerObjectId;
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var service = Service(context, provider);
+            var setup = await service.SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+            Assert.True(setup.TryGetValue(out _));
+            var operation = await context.PaymentSessionOperations
+                .Include(value => value.Attempts)
+                .SingleAsync(value => value.OperationType == reference.OperationType
+                    && value.ClientReference == reference.ClientReference);
+            operationId = operation.OperationId;
+            providerObjectId = operation.CurrentAttempt.ProviderObjectId!;
+        }
+        provider.SetStatus(providerObjectId, "succeeded");
+
+        await using var validationContext = CreateContext();
+        var validationService = Service(validationContext, provider);
+        var validated = await validationService.ValidatePaymentMethodAsync(new(reference, payerOwnerId));
+
+        Assert.True(validated.IsSuccess);
+        Assert.Equal(
+            $"pm_fake_{providerObjectId}",
+            (await validationContext.PaymentSessionAttempts
+                .SingleAsync(attempt => attempt.OperationId == operationId)).PaymentMethodId);
+    }
+
+    [Fact]
+    public async Task ValidatePaymentMethodAsync_DifferentPayer_ReturnsPaymentMethodRequired()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("paymentAuthorization", $"request:{Guid.CreateVersion7():N}");
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+            Assert.True(setup.TryGetValue(out _));
+        }
+
+        await using var validationContext = CreateContext();
+        var validated = await Service(validationContext, provider).ValidatePaymentMethodAsync(
+            new(reference, Guid.CreateVersion7()));
+
+        Assert.True(validated.TryGetError(out var error));
+        Assert.IsType<PaymentOperationError.PaymentMethodRequired>(error);
+    }
+
+    [Fact]
+    public async Task ValidatePaymentMethodAsync_ProviderDeclined_ReturnsDeclined()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference(
+            "paymentAuthorization",
+            $"request:{Guid.CreateVersion7():N}");
+        string providerObjectId;
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+            Assert.True(setup.TryGetValue(out _));
+            providerObjectId = (await context.PaymentSessionOperations
+                .Include(value => value.Attempts)
+                .SingleAsync(value => value.OperationType == reference.OperationType
+                    && value.ClientReference == reference.ClientReference))
+                .CurrentAttempt.ProviderObjectId!;
+        }
+        provider.SetDeclined(providerObjectId);
+
+        await using var validationContext = CreateContext();
+        var validated = await Service(validationContext, provider).ValidatePaymentMethodAsync(
+            new(reference, payerOwnerId));
+
+        Assert.True(validated.TryGetError(out var error));
+        Assert.IsType<PaymentOperationError.Declined>(error);
+    }
+
+    [Fact]
+    public async Task ResolveAuthorizationAsync_AuthorizedOperation_ReturnsProviderObjectInsidePayment()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var operationId = Guid.CreateVersion7();
+        var payerOwnerId = Guid.CreateVersion7();
+        var specification = PaymentSessionDefinition.Create(
+            operationId,
+            PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
+            "escrow",
+            $"order:{operationId:N}",
+            payerOwnerId.ToString("D"),
+            Guid.CreateVersion7().ToString("D"),
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
+            $"cus_{operationId:N}",
+            $"acct_{operationId:N}",
+            null);
+        string providerObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, provider).CreateAsync(specification);
+            Assert.True(created.TryGetValue(out _));
+            providerObjectId = (await createContext.PaymentSessionAttempts
+                .SingleAsync(attempt => attempt.OperationId == operationId)).ProviderObjectId!;
+        }
+        provider.SetStatus(providerObjectId, "requires_capture", DateTimeOffset.UtcNow.AddDays(1));
+
+        await using var resolveContext = CreateContext();
+        var attemptRepository = new PaymentSessionAttemptRepository(resolveContext);
+        var operationRepository = new PaymentSessionOperationRepository(resolveContext);
+        var reconciliationService = new PaymentSessionReconciliationService(
+            attemptRepository,
+            new UnitOfWork(resolveContext),
+            new PaymentSessionStateMachine(),
+            TimeProvider.System);
+        var resolved = await new PaymentOperationResolver(
+            operationRepository,
+            reconciliationService,
+            provider).ResolveAuthorizationAsync(
+            new(specification.OperationType, specification.ClientReference),
+            payerOwnerId);
+
+        Assert.True(resolved.TryGetValue(out var resolvedProviderObjectId));
+        Assert.Equal(providerObjectId, resolvedProviderObjectId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FailureAfterProviderAcceptance_ReplayConvergesOnOneObject()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
@@ -36,14 +261,14 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var specification = Specification(Guid.CreateVersion7());
         await using (var firstContext = CreateContext())
         {
-            var first = await Service(firstContext, provider).CreateOrReplayAsync(specification);
+            var first = await Service(firstContext, provider).CreateAsync(specification);
 
             Assert.True(first.TryGetError(out PaymentOperationError? firstError));
             Assert.IsType<PaymentOperationError.ProviderUnavailable>(firstError);
         }
 
         await using var replayContext = CreateContext();
-        var replay = await Service(replayContext, provider).CreateOrReplayAsync(specification);
+        var replay = await Service(replayContext, provider).CreateAsync(specification);
 
         Assert.True(replay.TryGetValue(out PaymentSessionExecution? execution));
         Assert.Equal(PaymentOperationState.RequiresConfirmation, execution.State);
@@ -55,7 +280,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task CreateOrReplayAsync_FailureAfterBinding_ReplayReturnsFreshResponseSecrets()
+    public async Task CreateAsync_FailureAfterBinding_ReplayReturnsFreshResponseSecrets()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
@@ -63,12 +288,12 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var specification = Specification(Guid.CreateVersion7());
         await using (var firstContext = CreateContext())
         {
-            var first = await Service(firstContext, provider).CreateOrReplayAsync(specification);
+            var first = await Service(firstContext, provider).CreateAsync(specification);
             Assert.True(first.TryGetError(out _));
         }
 
         await using var replayContext = CreateContext();
-        var replay = await Service(replayContext, provider).CreateOrReplayAsync(specification);
+        var replay = await Service(replayContext, provider).CreateAsync(specification);
 
         Assert.True(replay.TryGetValue(out PaymentSessionExecution? execution));
         Assert.NotNull(execution.ClientSecret);
@@ -77,7 +302,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task CreateOrReplayAsync_ConcurrentSameRequest_ConvergesOnOneObject()
+    public async Task CreateAsync_ConcurrentSameRequest_ConvergesOnOneObject()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
@@ -86,7 +311,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync()
         {
             await using var context = CreateContext();
-            return await Service(context, provider).CreateOrReplayAsync(specification);
+            return await Service(context, provider).CreateAsync(specification);
         }
 
         var results = await Task.WhenAll(CreateAsync(), CreateAsync());
@@ -99,16 +324,16 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task CreateOrReplayAsync_ConflictingRequest_DoesNotCallProvider()
+    public async Task CreateAsync_ConflictingRequest_DoesNotCallProvider()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
         var operationId = Guid.CreateVersion7();
         await using var context = CreateContext();
         var service = Service(context, provider);
-        var created = await service.CreateOrReplayAsync(Specification(operationId));
+        var created = await service.CreateAsync(Specification(operationId));
 
-        var conflict = await service.CreateOrReplayAsync(Specification(operationId, 6000));
+        var conflict = await service.CreateAsync(Specification(operationId, 6000));
 
         Assert.True(created.TryGetValue(out _));
         Assert.True(conflict.TryGetError(out PaymentOperationError? error));
@@ -125,7 +350,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string providerObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, provider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out _));
             providerObjectId = (await createContext.PaymentSessionAttempts
                 .SingleAsync(attempt => attempt.OperationId == specification.OperationId)).ProviderObjectId!;
@@ -153,7 +378,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         DateTimeOffset? initialObservedAt;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, provider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out _));
             var attempt = await createContext.PaymentSessionAttempts
                 .SingleAsync(value => value.OperationId == specification.OperationId);
@@ -187,7 +412,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string predecessorProviderObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, provider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
@@ -227,12 +452,12 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var operationId = Guid.CreateVersion7();
         var payerOwnerId = Guid.CreateVersion7();
         var payeeOwnerId = Guid.CreateVersion7();
-        var specification = PaymentSessionSpecification.Create(
+        var specification = PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             payerOwnerId.ToString("D"),
             payeeOwnerId.ToString("D"),
             5000,
@@ -240,11 +465,12 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
         Guid predecessorId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, provider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
             predecessorId = createdExecution.Identity.AttemptId;
         }
@@ -278,7 +504,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string providerObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, innerProvider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
             attemptId = execution.Identity.AttemptId;
             providerObjectId = (await createContext.PaymentSessionAttempts
@@ -321,7 +547,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string providerObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, innerProvider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
             attemptId = execution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts
@@ -376,7 +602,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string predecessorProviderObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, innerProvider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, innerProvider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? createdExecution));
             predecessorId = createdExecution.Identity.AttemptId;
             var attempt = await createContext.PaymentSessionAttempts.SingleAsync(value => value.AttemptId == predecessorId);
@@ -423,7 +649,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         string providerObjectId;
         await using (var createContext = CreateContext())
         {
-            var created = await Service(createContext, provider).CreateOrReplayAsync(specification);
+            var created = await Service(createContext, provider).CreateAsync(specification);
             Assert.True(created.TryGetValue(out PaymentSessionExecution? execution));
             providerObjectId = (await createContext.PaymentSessionAttempts
                 .SingleAsync(attempt => attempt.AttemptId == execution.Identity.AttemptId)).ProviderObjectId!;
@@ -505,26 +731,41 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         return new PaymentDbContext(options, new PaymentConfigurationProvider());
     }
 
+    private static async Task SeedPayerAsync(PaymentDbContext context, Guid payerOwnerId)
+    {
+        var payer = PayoutAccountEntity.Create(payerOwnerId, $"{payerOwnerId:N}@example.com");
+        payer.LinkCustomer($"cus_{payerOwnerId:N}");
+        context.PayoutAccounts.Add(payer);
+        await context.SaveChangesAsync();
+    }
+
     private static PaymentSessionService Service(
         PaymentDbContext context,
         IStripeSessionClient provider)
     {
         var attemptRepository = new PaymentSessionAttemptRepository(context);
+        var operationRepository = new PaymentSessionOperationRepository(context);
+        var reconciliationService = new PaymentSessionReconciliationService(
+            attemptRepository,
+            new UnitOfWork(context),
+            new PaymentSessionStateMachine(),
+            TimeProvider.System);
         return new(
-            new PaymentSessionOperationRepository(context),
+            operationRepository,
             new PayoutAccountRepository(context),
-            new PaymentSessionReconciliationService(attemptRepository, new UnitOfWork(context), new PaymentSessionStateMachine(), TimeProvider.System),
+            reconciliationService,
             provider,
+            new PaymentOperationResolver(operationRepository, reconciliationService, provider),
             TimeProvider.System);
     }
 
-    private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(Guid operationId, long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             $"payer:{operationId:N}",
             $"payee:{operationId:N}",
             amountMinor,
@@ -532,7 +773,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
 
     private sealed class CountingStripeSessionClient : IStripeSessionClient
     {
@@ -546,16 +788,16 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         public int CallCount { get; private set; }
         public int CancellationCount { get; private set; }
 
-        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
             PaymentSessionProviderRequest request,
-            PaymentSessionIdempotencyKey idempotencyKey,
+            StripeIdempotencyKey idempotencyKey,
             CancellationToken ct = default)
         {
             CallCount++;
             return stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
         }
 
-        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -564,7 +806,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return stripeSessionClient.RetrieveAsync(providerObjectKind, providerObjectId, ct);
         }
 
-        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -598,13 +840,13 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             this.predecessorProviderObjectId = predecessorProviderObjectId;
         }
 
-        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
             PaymentSessionProviderRequest request,
-            PaymentSessionIdempotencyKey idempotencyKey,
+            StripeIdempotencyKey idempotencyKey,
             CancellationToken ct = default) =>
             stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
 
-        public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+        public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default)
@@ -620,7 +862,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             return result;
         }
 
-        public Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
             PaymentSessionProviderObjectKind providerObjectKind,
             string providerObjectId,
             CancellationToken ct = default) =>

@@ -3,19 +3,14 @@ namespace Concertable.Payment.Contracts;
 public static class PaymentMetadataKeys
 {
     public const string Type = "type";
-    public const string ConcertId = "concertId";
-    public const string FromUserId = "fromUserId";
-    public const string FromUserEmail = "fromUserEmail";
-    public const string ToUserId = "toUserId";
-    public const string Amount = "amount";
+    public const string PayerOwnerId = "payerOwnerId";
+    public const string PayerEmail = "payerEmail";
+    public const string PayeeOwnerId = "payeeOwnerId";
+    public const string AmountMinor = "amountMinor";
     public const string Currency = "currency";
-    public const string Quantity = "quantity";
-    public const string PaymentMethodId = "paymentMethodId";
-    public const string BookingId = "bookingId";
     public const string EscrowId = "escrowId";
-    public const string ApplicationId = "applicationId";
-    public const string VenueManagerId = "venueManagerId";
-    public const string OpportunityId = "opportunityId";
+    public const string OperationType = "operationType";
+    public const string ClientReference = "clientReference";
     public const string CommissionBindingId = "commissionBindingId";
     public const string PayeeGrossMinor = "payeeGrossMinor";
     public const string CommissionGrossMinor = "commissionGrossMinor";

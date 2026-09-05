@@ -8,32 +8,32 @@ namespace Concertable.Payment.Client.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddPaymentClient(this IServiceCollection services, IConfiguration configuration)
+    extension(IServiceCollection services)
     {
-        var address = configuration["services:payment-web:https:0"]
+        public IServiceCollection AddPaymentClient(IConfiguration configuration)
+        {
+            var address = configuration["services:payment-web:https:0"]
             ?? throw new InvalidOperationException("Payment service address (services:payment-web:https:0) is not configured.");
 
-        AddPaymentGrpcClient<Proto.ManagerPayment.ManagerPaymentClient>(services, address);
-        AddPaymentGrpcClient<Proto.CustomerPayment.CustomerPaymentClient>(services, address);
-        AddPaymentGrpcClient<Proto.Escrow.EscrowClient>(services, address);
-        AddPaymentGrpcClient<Proto.PayoutAccount.PayoutAccountClient>(services, address);
-        AddPaymentGrpcClient<Proto.CommissionPricing.CommissionPricingClient>(services, address);
-        AddPaymentGrpcClient<Proto.PaymentSessionOperations.PaymentSessionOperationsClient>(services, address);
+            AddPaymentGrpcClient<Proto.SettlementOperations.SettlementOperationsClient>(services, address);
+            AddPaymentGrpcClient<Proto.PaymentReporting.PaymentReportingClient>(services, address);
+            AddPaymentGrpcClient<Proto.Escrow.EscrowClient>(services, address);
+            AddPaymentGrpcClient<Proto.PayoutAccount.PayoutAccountClient>(services, address);
+            AddPaymentGrpcClient<Proto.CommissionPricing.CommissionPricingClient>(services, address);
+            AddPaymentGrpcClient<Proto.PaymentSessionOperations.PaymentSessionOperationsClient>(services, address);
 
-        services.AddScoped<ManagerPaymentClient>();
-        services.AddScoped<IManagerPaymentOperationsClient>(sp => sp.GetRequiredService<ManagerPaymentClient>());
-        services.AddScoped<IManagerPaymentReportingClient>(sp => sp.GetRequiredService<ManagerPaymentClient>());
-        services.AddScoped<CustomerPaymentClient>();
-        services.AddScoped<ICustomerPaymentOperationsClient>(sp => sp.GetRequiredService<CustomerPaymentClient>());
-        services.AddScoped<EscrowClient>();
-        services.AddScoped<IEscrowOperationsClient>(sp => sp.GetRequiredService<EscrowClient>());
-        services.AddScoped<PayoutAccountClient>();
-        services.AddScoped<IPayoutAccountOperationsClient>(sp => sp.GetRequiredService<PayoutAccountClient>());
-        services.AddScoped<CommissionClient>();
-        services.AddScoped<ICommissionPricingClient>(sp => sp.GetRequiredService<CommissionClient>());
-        services.AddScoped<IPaymentSessionOperationsClient, PaymentSessionOperationsClient>();
+            services.AddScoped<ISettlementOperationsClient, SettlementOperationsClient>();
+            services.AddScoped<IPaymentReportingClient, PaymentReportingClient>();
+            services.AddScoped<EscrowClient>();
+            services.AddScoped<IEscrowOperationsClient>(sp => sp.GetRequiredService<EscrowClient>());
+            services.AddScoped<PayoutAccountClient>();
+            services.AddScoped<IPayoutAccountOperationsClient>(sp => sp.GetRequiredService<PayoutAccountClient>());
+            services.AddScoped<CommissionClient>();
+            services.AddScoped<ICommissionPricingClient>(sp => sp.GetRequiredService<CommissionClient>());
+            services.AddScoped<IPaymentSessionOperationsClient, PaymentSessionOperationsClient>();
 
-        return services;
+            return services;
+        }
     }
 
     private static void AddPaymentGrpcClient<TClient>(IServiceCollection services, string address)

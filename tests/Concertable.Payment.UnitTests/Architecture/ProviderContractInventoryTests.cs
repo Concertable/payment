@@ -113,8 +113,8 @@ public sealed partial class ProviderContractInventoryTests
     public static TheoryData<string, string> ConsumerClientCases => new()
     {
         {
-            "paymentSessionOperationsClient.CreateOrReplayAsync(request)",
-            "paymentSessionOperationsClient.CreateOrReplayAsync"
+            "paymentSessionOperationsClient.CreateAsync(request)",
+            "paymentSessionOperationsClient.CreateAsync"
         },
         {
             "paymentSessionOperationsClient.RetryAsync(request)",
