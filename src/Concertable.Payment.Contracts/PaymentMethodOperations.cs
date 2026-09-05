@@ -7,8 +7,8 @@ public readonly record struct PaymentOperationReference
 
     public PaymentOperationReference(string operationType, string clientReference)
     {
-        OperationType = Normalize(operationType, nameof(operationType), MaxOperationTypeLength);
-        ClientReference = Normalize(clientReference, nameof(clientReference), MaxClientReferenceLength);
+        this.OperationType = Normalize(operationType, nameof(operationType), MaxOperationTypeLength);
+        this.ClientReference = Normalize(clientReference, nameof(clientReference), MaxClientReferenceLength);
     }
 
     public string OperationType { get; }
