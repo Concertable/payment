@@ -68,14 +68,26 @@ internal sealed class EscrowRepository
         }
         catch (DbUpdateException ex) when (ex.IsDuplicateKey())
         {
-            return (await LoadReservedByIdAsync(escrowId, ct), true);
+            return (await ReloadByIdAsync(escrowId, ct), true);
         }
         catch (SqlException ex) when (ex.IsDuplicateKey())
         {
-            return (await LoadReservedByIdAsync(escrowId, ct), true);
+            return (await ReloadByIdAsync(escrowId, ct), true);
         }
 
-        return (await LoadReservedByIdAsync(escrowId, ct), false);
+        return (await ReloadByIdAsync(escrowId, ct), false);
+    }
+
+    public Task<EscrowEntity?> ReloadByIdAsync(int escrowId, CancellationToken ct = default)
+    {
+        foreach (var entry in context.ChangeTracker.Entries<EscrowEntity>()
+            .Where(entry => entry.Entity.Id == escrowId)
+            .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        return context.Escrows.SingleOrDefaultAsync(escrow => escrow.Id == escrowId, ct);
     }
 
     public async Task<bool> TryReserveRefundGrossAsync(int escrowId, long grossMinor, CancellationToken ct = default)
@@ -96,16 +108,4 @@ internal sealed class EscrowRepository
             .ExecuteUpdateAsync(
                 s => s.SetProperty(e => e.RefundedGrossMinor, e => e.RefundedGrossMinor - grossMinor),
                 ct);
-
-    private Task<EscrowEntity?> LoadReservedByIdAsync(int escrowId, CancellationToken ct)
-    {
-        foreach (var entry in context.ChangeTracker.Entries<EscrowEntity>()
-            .Where(entry => entry.Entity.Id == escrowId)
-            .ToList())
-        {
-            entry.State = EntityState.Detached;
-        }
-
-        return context.Escrows.SingleOrDefaultAsync(escrow => escrow.Id == escrowId, ct);
-    }
 }
