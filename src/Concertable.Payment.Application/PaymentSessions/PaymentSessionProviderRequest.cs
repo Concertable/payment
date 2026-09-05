@@ -43,7 +43,7 @@ internal sealed record PaymentSessionProviderRequest(
     {
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["operation_id"] = operation.OperationId.ToString("D"),
+            [PaymentMetadataKeys.OperationId] = operation.OperationId.ToString("D"),
             ["attempt_id"] = attempt.AttemptId.ToString("D"),
             ["revision"] = attempt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["session_kind"] = operation.SessionKind.ToString(),

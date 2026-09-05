@@ -144,6 +144,9 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             EventTypes.SetupIntentSucceeded,
             harness.SessionClient.MetadataOf(providerObjectId)));
 
+        Assert.Equal(
+            specification.OperationId.ToString("D"),
+            harness.SessionClient.MetadataOf(providerObjectId)[PaymentMetadataKeys.OperationId]);
         Assert.Equal(1, await harness.PaymentSucceededCountAsync(specification.ClientReference));
         Assert.Equal(
             PaymentOperationState.Succeeded,
