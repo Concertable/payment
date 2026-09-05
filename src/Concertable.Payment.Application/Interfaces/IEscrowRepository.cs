@@ -18,6 +18,7 @@ internal interface IEscrowRepository : IRepository<EscrowEntity>
         Guid operationId,
         SettlementOperationFingerprint fingerprint,
         CancellationToken ct = default);
+    Task<EscrowEntity?> ReloadByIdAsync(int escrowId, CancellationToken ct = default);
 
     /// <summary>
     /// Atomically reserves <paramref name="grossMinor"/> against the escrow's cumulative gross-refund
