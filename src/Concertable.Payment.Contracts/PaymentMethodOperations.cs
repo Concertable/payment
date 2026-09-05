@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Concertable.Payment.Contracts;
 
 public readonly record struct PaymentOperationReference
@@ -5,6 +7,7 @@ public readonly record struct PaymentOperationReference
     public const int MaxOperationTypeLength = 100;
     public const int MaxClientReferenceLength = 200;
 
+    [JsonConstructor]
     public PaymentOperationReference(string operationType, string clientReference)
     {
         this.OperationType = Normalize(operationType, nameof(operationType), MaxOperationTypeLength);
