@@ -3,6 +3,7 @@ extern alias PaymentClient;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Events;
 using Concertable.Testing;
+using System.Reflection;
 using Xunit;
 using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperationSnapshot;
 
@@ -16,6 +17,19 @@ public sealed class PaymentContractReferenceTests
         "Concertable.Kernel",
         "Concertable.Messaging.Contracts",
         "Concertable.Payment.Contracts"
+    ];
+
+    private static readonly string[] ProviderIdentifierTerms =
+    [
+        "ChargeId",
+        "PaymentIntentId",
+        "PaymentMethodId",
+        "ProviderObjectId",
+        "ProviderTransactionId",
+        "RefundId",
+        "SetupIntentId",
+        "TransactionId",
+        "TransferId"
     ];
 
     [Theory]
@@ -37,4 +51,35 @@ public sealed class PaymentContractReferenceTests
     [InlineData(typeof(ClientSnapshot))]
     public void PublishedAssemblies_DoNotReferenceProviderRuntime(Type type) =>
         Assert.Empty(type.Assembly.ReferencesToAssembliesStartingWith("Stripe"));
+
+    [Theory]
+    [InlineData(typeof(PaymentOperationIdentity))]
+    [InlineData(typeof(ClientSnapshot))]
+    public void PublishedAssemblies_DoNotExposeProviderIdentifiers(Type type)
+    {
+        var exposedNames = type.Assembly.GetExportedTypes()
+            .SelectMany(ExposedNames)
+            .Where(name => ProviderIdentifierTerms.Any(term =>
+                name.Contains(term, StringComparison.OrdinalIgnoreCase)))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Empty(exposedNames);
+    }
+
+    private static IEnumerable<string> ExposedNames(Type type)
+    {
+        yield return type.FullName ?? type.Name;
+
+        foreach (var member in type.GetMembers(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        {
+            yield return $"{type.FullName}.{member.Name}";
+
+            if (member is not MethodBase method)
+                continue;
+
+            foreach (var parameter in method.GetParameters())
+                yield return $"{type.FullName}.{member.Name}({parameter.Name})";
+        }
+    }
 }

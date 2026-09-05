@@ -22,14 +22,13 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             .SingleOrDefaultAsync(operation => operation.OperationId == operationId, ct);
 
     public Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
-        string operationType,
-        string clientReference,
+        PaymentOperationReference reference,
         CancellationToken ct = default) =>
         context.PaymentSessionOperations
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(
-                operation => operation.OperationType == operationType
-                    && operation.ClientReference == clientReference,
+                operation => operation.OperationType == reference.OperationType
+                    && operation.ClientReference == reference.ClientReference,
                 ct);
 
     public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
@@ -70,8 +69,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             Detach(candidate.OperationId);
             existing = await GetByOperationIdAsync(specification.OperationId, ct)
                 ?? await GetByReferenceAsync(
-                    specification.OperationType,
-                    specification.ClientReference,
+                    new(specification.OperationType, specification.ClientReference),
                     ct);
             if (existing is null)
                 throw;

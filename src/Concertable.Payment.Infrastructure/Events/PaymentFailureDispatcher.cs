@@ -7,13 +7,16 @@ namespace Concertable.Payment.Infrastructure.Events;
 internal sealed class PaymentFailureDispatcher : IIntegrationEventHandler<PaymentFailedEvent>
 {
     private readonly IPaymentFailureHandlerFactory handlerFactory;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
     private readonly ILogger<PaymentFailureDispatcher> logger;
 
     public PaymentFailureDispatcher(
         IPaymentFailureHandlerFactory handlerFactory,
+        IPaymentOperationResolver paymentOperationResolver,
         ILogger<PaymentFailureDispatcher> logger)
     {
         this.handlerFactory = handlerFactory;
+        this.paymentOperationResolver = paymentOperationResolver;
         this.logger = logger;
     }
 
@@ -24,12 +27,15 @@ internal sealed class PaymentFailureDispatcher : IIntegrationEventHandler<Paymen
 
         if (handler is null)
         {
-            logger.NoPaymentFailureHandlerRegistered(type, @event.TransactionId);
+            logger.NoPaymentFailureHandlerRegistered(type, @event.Reference.ClientReference);
             return;
         }
 
-        logger.DispatchingPaymentFailedEvent(@event.TransactionId, @event.FailureCode, type);
+        var providerObjectId = await paymentOperationResolver.ResolveProviderObjectIdAsync(
+            @event.Reference,
+            ct);
+        logger.DispatchingPaymentFailedEvent(@event.Reference.ClientReference, @event.FailureCode, type);
 
-        await handler.HandleAsync(@event, ct);
+        await handler.HandleAsync(@event, providerObjectId, ct);
     }
 }

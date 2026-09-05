@@ -6,11 +6,11 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IStripeTransferClient
 {
-    Task<Result<Transfer, PaymentError>> ReleaseAsync(
+    Task<Result<ProviderTransfer, PaymentError>> ReleaseAsync(
         StripeReleaseOptions options,
         CancellationToken ct = default);
 
-    Task<Result<Refund, PaymentError>> RefundAsync(
+    Task<Result<ProviderRefund, PaymentError>> RefundAsync(
         StripeRefundOptions options,
         CancellationToken ct = default);
 }

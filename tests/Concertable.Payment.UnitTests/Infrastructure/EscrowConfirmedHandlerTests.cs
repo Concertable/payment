@@ -32,8 +32,8 @@ public sealed class EscrowConfirmedHandlerTests
         this.sut = new EscrowConfirmedHandler(escrowRepository.Object, ledger.Object, new FakeUnitOfWork(), NullLogger<EscrowConfirmedHandler>.Instance);
     }
 
-    private static PaymentSucceededEvent EventFor(string chargeId) =>
-        new(chargeId, new Dictionary<string, string>());
+    private static PaymentSucceededEvent EventFor() =>
+        new(Reference, new Dictionary<string, string>());
 
     [Fact]
     public async Task HandleAsync_PendingEscrow_ConfirmsSavesAndPostsHold()
@@ -43,7 +43,7 @@ public sealed class EscrowConfirmedHandlerTests
             .Setup(r => r.GetByChargeIdAsync("pi_3ds", It.IsAny<CancellationToken>()))
             .ReturnsAsync(escrow);
 
-        await sut.HandleAsync(EventFor("pi_3ds"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_3ds", CancellationToken.None);
 
         Assert.Equal(EscrowStatus.Held, escrow.Status);
         escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -64,7 +64,7 @@ public sealed class EscrowConfirmedHandlerTests
             .Setup(r => r.GetByChargeIdAsync("pi_dup", It.IsAny<CancellationToken>()))
             .ReturnsAsync(escrow);
 
-        await sut.HandleAsync(EventFor("pi_dup"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_dup", CancellationToken.None);
 
         escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         Assert.Empty(postings);
@@ -77,7 +77,7 @@ public sealed class EscrowConfirmedHandlerTests
             .Setup(r => r.GetByChargeIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((EscrowEntity?)null);
 
-        await sut.HandleAsync(EventFor("pi_missing"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_missing", CancellationToken.None);
 
         Assert.Empty(postings);
     }

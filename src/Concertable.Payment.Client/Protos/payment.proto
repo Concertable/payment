@@ -194,18 +194,20 @@ enum EscrowStatusType {
 message PaymentResponse {
   bool requires_action = 1;
   optional string client_secret = 2;
-  string transaction_id = 3;
+  reserved 3;
+  reserved "transaction_id";
 }
 
 message EscrowResponse {
   int32 escrow_id = 1;
-  string charge_id = 2;
+  reserved 2;
+  reserved "charge_id";
   EscrowStatusType status = 3;
   optional string client_secret = 4;
 }
 
 message TransferResponse {
-  string transfer_id = 1;
+  string operation_id = 1;
 }
 
 message CommissionCalculationResponse {
@@ -442,7 +444,7 @@ message ReleaseEscrowResponse {
 }
 
 message RefundResponse {
-  string refund_id = 1;
+  string id = 1;
 }
 
 message RefundEscrowRequest {

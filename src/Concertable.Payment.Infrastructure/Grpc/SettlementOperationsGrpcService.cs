@@ -59,7 +59,7 @@ internal sealed class SettlementOperationsGrpcService : SettlementOperations.Set
             ct: context.CancellationToken);
         var refund = result.ValueOrRpcException();
         return refund.TryGetValue(out var value)
-            ? new RefundResponse { RefundId = value.RefundId }
+            ? new RefundResponse { Id = value.Id.ToString("D") }
             : new RefundResponse();
     }
 }

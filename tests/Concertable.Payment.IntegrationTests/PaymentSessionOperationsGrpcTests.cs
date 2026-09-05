@@ -155,6 +155,54 @@ public sealed class PaymentSessionOperationsGrpcTests
         Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
     }
 
+    [Theory]
+    [InlineData("", "order:42")]
+    [InlineData("escrow", "")]
+    public async Task Create_EmptyReference_ReturnsInvalidArgumentBeforeService(
+        string operationType,
+        string clientReference)
+    {
+        var request = OperationRequest(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7());
+        request.OperationType = operationType;
+        request.ClientReference = clientReference;
+
+        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.Create(request, CallContext()));
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+        this.paymentSessionService.Verify(
+            service => service.CreateAsync(
+                It.IsAny<PaymentSessionOperationRequest>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Create_OverlongReference_ReturnsInvalidArgumentBeforeService(bool operationType)
+    {
+        var request = OperationRequest(
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7());
+        if (operationType)
+            request.OperationType = new string('a', PaymentOperationReference.MaxOperationTypeLength + 1);
+        else
+            request.ClientReference = new string('a', PaymentOperationReference.MaxClientReferenceLength + 1);
+
+        var exception = await Assert.ThrowsAsync<RpcException>(() => this.sut.Create(request, CallContext()));
+
+        Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
+        this.paymentSessionService.Verify(
+            service => service.CreateAsync(
+                It.IsAny<PaymentSessionOperationRequest>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task Routing_PaymentSessionOperationsRequiresServiceToken()
     {

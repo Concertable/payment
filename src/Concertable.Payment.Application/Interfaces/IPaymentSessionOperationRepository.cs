@@ -9,8 +9,7 @@ internal interface IPaymentSessionOperationRepository
         CancellationToken ct = default);
 
     Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
-        string operationType,
-        string clientReference,
+        PaymentOperationReference reference,
         CancellationToken ct = default);
 
     Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(

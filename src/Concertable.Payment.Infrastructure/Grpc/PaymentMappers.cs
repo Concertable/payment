@@ -5,27 +5,32 @@ namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class PaymentMappers
 {
-    public static PayoutAccountStatusType ToProtoStatus(this PayoutAccountStatus status) => status switch
+    extension(PayoutAccountStatus status)
     {
-        PayoutAccountStatus.NotVerified => PayoutAccountStatusType.PayoutNotVerified,
-        PayoutAccountStatus.Pending => PayoutAccountStatusType.PayoutPending,
-        PayoutAccountStatus.Verified => PayoutAccountStatusType.PayoutVerified,
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
-    };
-
-    public static PaymentResponse ToProtoPaymentResponse(this PaymentOutcome r)
-    {
-        var message = new PaymentResponse
+        public PayoutAccountStatusType ToProtoStatus() => status switch
         {
-            RequiresAction = r.RequiresAction,
-            TransactionId = r.TransactionId
+            PayoutAccountStatus.NotVerified => PayoutAccountStatusType.PayoutNotVerified,
+            PayoutAccountStatus.Pending => PayoutAccountStatusType.PayoutPending,
+            PayoutAccountStatus.Verified => PayoutAccountStatusType.PayoutVerified,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
-        if (r.ClientSecret is { } clientSecret)
-            message.ClientSecret = clientSecret;
-
-        return message;
     }
 
-    public static PaymentSession ToPaymentSession(this PaymentSessionType session) =>
-        session == PaymentSessionType.OffSession ? PaymentSession.OffSession : PaymentSession.OnSession;
+    extension(PaymentOutcome outcome)
+    {
+        public PaymentResponse ToProtoPaymentResponse()
+        {
+            var message = new PaymentResponse { RequiresAction = outcome.RequiresAction };
+            if (outcome.ClientSecret is { } clientSecret)
+                message.ClientSecret = clientSecret;
+
+            return message;
+        }
+    }
+
+    extension(PaymentSessionType session)
+    {
+        public PaymentSession ToPaymentSession() =>
+            session == PaymentSessionType.OffSession ? PaymentSession.OffSession : PaymentSession.OnSession;
+    }
 }

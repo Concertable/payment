@@ -125,8 +125,8 @@ The opaque `owner` is resolved two different ways by design:
 
 | Direction | Event | Notes |
 |---|---|---|
-| Published | `PaymentSucceededEvent` `(TransactionId, Metadata)` | emitted by `PaymentIntentWebhookHandler`; the only carrier of "what this payment was for" (opaque metadata) |
-| Published | `PaymentFailedEvent` `(TransactionId, FailureCode, FailureMessage, Metadata)` | |
+| Published | `PaymentSucceededEvent` `(Reference, Metadata)` | emitted by `PaymentIntentWebhookHandler`; the opaque operation reference identifies the consumer-owned purpose while provider identifiers remain private to Payment |
+| Published | `PaymentFailedEvent` `(Reference, FailureCode, FailureMessage, Metadata)` | |
 | Consumed | `PaymentMethodOwnerRegisteredEvent` (Payment-owned) | provisions Stripe customer |
 | Consumed | `PayoutOwnerRegisteredEvent` (Payment-owned) | provisions Express account |
 | Consumed | `PaymentSucceededEvent` / `PaymentFailedEvent` (self) | Workers-side transaction/failure dispatch |

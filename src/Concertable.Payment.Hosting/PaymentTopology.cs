@@ -5,8 +5,9 @@ namespace Concertable.Payment.Hosting;
 
 public static class PaymentTopology
 {
-    public static AsbTopology AddPaymentTopology(this AsbTopology topology) =>
-        topology
+    extension(AsbTopology topology)
+    {
+        public AsbTopology AddPaymentTopology() => topology
             .Publish<PaymentSucceededEvent>()
             .Publish<PaymentFailedEvent>()
             .Publish<CaptureEscrowSucceededEvent>()
@@ -25,4 +26,5 @@ public static class PaymentTopology
             .Queue<DepositEscrowCommand>()
             .Queue<RefundEscrowCommand>()
             .Queue<ProcessStripeWebhookCommand>();
+    }
 }

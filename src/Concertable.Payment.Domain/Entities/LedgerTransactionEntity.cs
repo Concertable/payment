@@ -39,11 +39,7 @@ internal sealed class LedgerTransactionEntity : IIdEntity
         IReadOnlyCollection<LedgerLeg> legs)
     {
         ValidatePosting(externalId, legs.Select(leg => (leg.Direction, leg.Amount)));
-
-        if (string.IsNullOrWhiteSpace(reference.OperationType))
-            throw new DomainException("A ledger transaction must identify its operation type.");
-        if (string.IsNullOrWhiteSpace(reference.ClientReference))
-            throw new DomainException("A ledger transaction must identify its client reference.");
+        reference = reference.EnsureValid();
 
         var transaction = new LedgerTransactionEntity(postingType, externalId, reference, paymentIntentId, occurredAt);
         foreach (var leg in legs)

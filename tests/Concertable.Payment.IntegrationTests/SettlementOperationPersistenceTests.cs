@@ -1,6 +1,7 @@
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
+using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Contracts.Errors;
@@ -191,12 +192,10 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
         var payeeId = Guid.NewGuid();
         var reference = new PaymentOperationReference("settlement", "order:45");
         var paymentMethod = new PaymentOperationReference("paymentMethod", "wallet:45");
-        var outcome = new PaymentOutcome
-        {
-            TransactionId = "pi_concurrent_operation",
-            RequiresAction = true,
-            ClientSecret = "pi_concurrent_secret"
-        };
+        var outcome = new ProviderPaymentOutcome(
+            "pi_concurrent_operation",
+            true,
+            "pi_concurrent_secret");
         var bothProviderCallsEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var providerCalls = 0;
         var paymentManager = new Mock<IPaymentManager>();
@@ -216,14 +215,14 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
                 if (Interlocked.Increment(ref providerCalls) == 2)
                     bothProviderCallsEntered.SetResult();
                 await bothProviderCallsEntered.Task;
-                return Result<PaymentOutcome, ChargeError>.Success(outcome);
+                return Result<ProviderPaymentOutcome, ChargeError>.Success(outcome);
             });
         paymentManager
             .Setup(value => value.GetPaymentOutcomeAsync(
-                outcome.TransactionId,
+                outcome.ProviderTransactionId,
                 PaymentSession.OnSession,
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<PaymentOutcome, PaymentError>.Success(outcome));
+            .ReturnsAsync(Result<ProviderPaymentOutcome, PaymentError>.Success(outcome));
         var payoutAccount = PayoutAccountEntity.Create(payerId, "payer@test.com");
         payoutAccount.LinkCustomer("cus_test");
         var payoutAccounts = new Mock<IPayoutAccountRepository>();
@@ -243,7 +242,7 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
         Assert.All(results, result =>
         {
             Assert.True(result.TryGetValue(out var value));
-            Assert.Equal(outcome.TransactionId, value.TransactionId);
+            Assert.True(value.RequiresAction);
             Assert.Equal(outcome.ClientSecret, value.ClientSecret);
         });
         Assert.Equal(2, providerCalls);

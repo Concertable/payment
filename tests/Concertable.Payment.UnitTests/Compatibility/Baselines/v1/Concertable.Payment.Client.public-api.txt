@@ -175,7 +175,6 @@ FIELD|Concertable.Payment.Grpc.DepositRequest.PayerIdFieldNumber|static|const=3|
 FIELD|Concertable.Payment.Grpc.DepositRequest.PaymentMethodFieldNumber|static|const=6|System.Int32
 FIELD|Concertable.Payment.Grpc.DepositRequest.ReferenceFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.DepositRequest.SessionFieldNumber|static|const=7|System.Int32
-FIELD|Concertable.Payment.Grpc.EscrowResponse.ChargeIdFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.EscrowResponse.ClientSecretFieldNumber|static|const=4|System.Int32
 FIELD|Concertable.Payment.Grpc.EscrowResponse.EscrowIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.EscrowResponse.StatusFieldNumber|static|const=3|System.Int32
@@ -271,7 +270,6 @@ FIELD|Concertable.Payment.Grpc.PaymentPeriodRequest.PeriodEndFieldNumber|static|
 FIELD|Concertable.Payment.Grpc.PaymentPeriodRequest.PeriodStartFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentResponse.ClientSecretFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentResponse.RequiresActionFieldNumber|static|const=1|System.Int32
-FIELD|Concertable.Payment.Grpc.PaymentResponse.TransactionIdFieldNumber|static|const=3|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.ClientSecretFieldNumber|static|const=3|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerSessionSecretFieldNumber|static|const=4|System.Int32
 FIELD|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerTokenFieldNumber|static|const=5|System.Int32
@@ -319,7 +317,7 @@ FIELD|Concertable.Payment.Grpc.RecentSettlementsRequest.TakeFieldNumber|static|c
 FIELD|Concertable.Payment.Grpc.RefundEscrowRequest.OperationIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.RefundEscrowRequest.ReferenceFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.RefundEscrowResponse.RefundFieldNumber|static|const=1|System.Int32
-FIELD|Concertable.Payment.Grpc.RefundResponse.RefundIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.RefundResponse.IdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.ReleaseEscrowRequest.OperationIdFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.ReleaseEscrowRequest.ReferenceFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.ReleaseEscrowResponse.TransferFieldNumber|static|const=1|System.Int32
@@ -338,7 +336,9 @@ FIELD|Concertable.Payment.Grpc.SettlementReportItemResponse.PayerIdFieldNumber|s
 FIELD|Concertable.Payment.Grpc.SettlementReportItemResponse.ReferenceFieldNumber|static|const=2|System.Int32
 FIELD|Concertable.Payment.Grpc.SettlementReportResponse.ItemsFieldNumber|static|const=1|System.Int32
 FIELD|Concertable.Payment.Grpc.SetupIntentResponse.ClientSecretFieldNumber|static|const=1|System.Int32
-FIELD|Concertable.Payment.Grpc.TransferResponse.TransferIdFieldNumber|static|const=1|System.Int32
+FIELD|Concertable.Payment.Grpc.TransferResponse.OperationIdFieldNumber|static|const=1|System.Int32
+METHOD|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions+<G>$7B30185E57B8298C6754F16C0BCF4773+<M>$6BEA73177691D2862842D66CC9F1DED9.<Extension>$(Microsoft.Extensions.DependencyInjection.IServiceCollection services)|static|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions+<G>$7B30185E57B8298C6754F16C0BCF4773.AddPaymentClient(Microsoft.Extensions.Configuration.IConfiguration configuration)|instance|returns=Microsoft.Extensions.DependencyInjection.IServiceCollection|constraints=
 METHOD|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions.AddPaymentClient(Microsoft.Extensions.DependencyInjection.IServiceCollection services,Microsoft.Extensions.Configuration.IConfiguration configuration)|static|returns=Microsoft.Extensions.DependencyInjection.IServiceCollection|constraints=
 METHOD|Concertable.Payment.Client.ICommissionPricingClient.CalculateBoundAsync(System.Guid bindingId,System.String externalReference,System.String payerReference,Concertable.Kernel.ValueObjects.Money gross,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.CommissionCalculation,Concertable.Payment.Contracts.Errors.CommissionError>>|constraints=
 METHOD|Concertable.Payment.Client.ICommissionPricingClient.ConfirmReviewedGrossAsync(System.Guid bindingId,System.String externalReference,System.String payerReference,Concertable.Kernel.ValueObjects.Money reviewedGross,System.Threading.CancellationToken ct=null)|instance|returns=System.Threading.Tasks.Task<Reunion.Result<Concertable.Payment.Contracts.CommissionCalculation,Concertable.Payment.Contracts.Errors.CommissionError>>|constraints=
@@ -1057,7 +1057,6 @@ PROPERTY|Concertable.Payment.Grpc.DepositRequest.PaymentMethod|Concertable.Payme
 PROPERTY|Concertable.Payment.Grpc.DepositRequest.Reference|Concertable.Payment.Grpc.PaymentOperationReference|get,set
 PROPERTY|Concertable.Payment.Grpc.DepositRequest.Session|Concertable.Payment.Grpc.PaymentSessionType|get,set
 PROPERTY|Concertable.Payment.Grpc.Escrow.Descriptor|Google.Protobuf.Reflection.ServiceDescriptor|get
-PROPERTY|Concertable.Payment.Grpc.EscrowResponse.ChargeId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.ClientSecret|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.EscrowResponse.EscrowId|System.Int32|get,set
@@ -1141,7 +1140,6 @@ PROPERTY|Concertable.Payment.Grpc.PaymentResponse.Descriptor|Google.Protobuf.Ref
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.HasClientSecret|System.Boolean|get
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.PaymentResponse>|get
 PROPERTY|Concertable.Payment.Grpc.PaymentResponse.RequiresAction|System.Boolean|get,set
-PROPERTY|Concertable.Payment.Grpc.PaymentResponse.TransactionId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.ClientSecret|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerSessionSecret|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.PaymentSessionDescriptor.CustomerToken|System.String|get,set
@@ -1196,8 +1194,8 @@ PROPERTY|Concertable.Payment.Grpc.RefundEscrowResponse.Descriptor|Google.Protobu
 PROPERTY|Concertable.Payment.Grpc.RefundEscrowResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.RefundEscrowResponse>|get
 PROPERTY|Concertable.Payment.Grpc.RefundEscrowResponse.Refund|Concertable.Payment.Grpc.RefundResponse|get,set
 PROPERTY|Concertable.Payment.Grpc.RefundResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.RefundResponse.Id|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.RefundResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.RefundResponse>|get
-PROPERTY|Concertable.Payment.Grpc.RefundResponse.RefundId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ReleaseEscrowRequest.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.ReleaseEscrowRequest.OperationId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.ReleaseEscrowRequest.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.ReleaseEscrowRequest>|get
@@ -1230,8 +1228,10 @@ PROPERTY|Concertable.Payment.Grpc.SetupIntentResponse.ClientSecret|System.String
 PROPERTY|Concertable.Payment.Grpc.SetupIntentResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
 PROPERTY|Concertable.Payment.Grpc.SetupIntentResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.SetupIntentResponse>|get
 PROPERTY|Concertable.Payment.Grpc.TransferResponse.Descriptor|Google.Protobuf.Reflection.MessageDescriptor|get
+PROPERTY|Concertable.Payment.Grpc.TransferResponse.OperationId|System.String|get,set
 PROPERTY|Concertable.Payment.Grpc.TransferResponse.Parser|Google.Protobuf.MessageParser<Concertable.Payment.Grpc.TransferResponse>|get
-PROPERTY|Concertable.Payment.Grpc.TransferResponse.TransferId|System.String|get,set
+TYPE|class|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions+<G>$7B30185E57B8298C6754F16C0BCF4773+<M>$6BEA73177691D2862842D66CC9F1DED9|base=System.Object|interfaces=|constraints=
+TYPE|class|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions+<G>$7B30185E57B8298C6754F16C0BCF4773|base=System.Object|interfaces=|constraints=
 TYPE|class|Concertable.Payment.Client.Extensions.ServiceCollectionExtensions|base=System.Object|interfaces=|constraints=
 TYPE|class|Concertable.Payment.Client.MonthlyPaymentPoint|base=System.Object|interfaces=System.IEquatable<Concertable.Payment.Client.MonthlyPaymentPoint>|constraints=
 TYPE|class|Concertable.Payment.Client.PaymentContractMismatchException|base=System.Exception|interfaces=System.Runtime.Serialization.ISerializable|constraints=

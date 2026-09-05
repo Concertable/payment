@@ -40,8 +40,7 @@ internal static class PaymentSessionOperationRequestMappers
     {
         private Proto.PaymentOperationReference ToProto()
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(reference.OperationType);
-            ArgumentException.ThrowIfNullOrWhiteSpace(reference.ClientReference);
+            reference = reference.EnsureValid();
 
             return new()
             {
@@ -57,16 +56,15 @@ internal static class PaymentSessionOperationRequestMappers
         {
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationType);
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.ClientReference);
+            var reference = request.Reference.EnsureValid();
 
             var message = new Proto.PaymentSessionOperationRequest
             {
                 OperationId = request.OperationId.ToString("D"),
                 Kind = request.Kind.ToProto(),
                 Session = request.Session.ToProto(),
-                OperationType = request.OperationType,
-                ClientReference = request.ClientReference,
+                OperationType = reference.OperationType,
+                ClientReference = reference.ClientReference,
                 PayerOwnerId = request.PayerOwnerId.ToString("D"),
                 FundsRouting = request.FundsRouting.ToProto()
             };

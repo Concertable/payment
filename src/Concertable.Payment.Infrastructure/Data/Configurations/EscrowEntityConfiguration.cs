@@ -1,4 +1,5 @@
 using Concertable.Payment.Domain;
+using Concertable.Payment.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -14,8 +15,8 @@ internal sealed class EscrowEntityConfiguration : IEntityTypeConfiguration<Escro
             .HasConversion(rate => rate.Value, value => Percentage.From(value))
             .HasColumnName("CommissionVatRatePercentage")
             .HasPrecision(7, 4);
-        builder.Property(e => e.OperationType).HasMaxLength(200);
-        builder.Property(e => e.ClientReference).HasMaxLength(200);
+        builder.Property(e => e.OperationType).HasMaxLength(PaymentOperationReference.MaxOperationTypeLength);
+        builder.Property(e => e.ClientReference).HasMaxLength(PaymentOperationReference.MaxClientReferenceLength);
         builder.HasIndex(e => new { e.OperationType, e.ClientReference }).IsUnique();
         builder.HasIndex(e => e.ChargeId).IsUnique();
         builder.HasIndex(e => e.CommissionBindingId).IsUnique().HasFilter("[CommissionBindingId] IS NOT NULL");

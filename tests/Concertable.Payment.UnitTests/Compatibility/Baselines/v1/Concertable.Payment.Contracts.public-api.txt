@@ -1,11 +1,11 @@
 CONSTRUCTOR|Concertable.Payment.Contracts.CaptureEscrowCommand(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.Guid PayerId,System.Guid PayeeId,System.Int64 AmountMinor,Concertable.Kernel.ValueObjects.Currency Currency,Concertable.Payment.Contracts.PaymentOperationReference Authorization)
 CONSTRUCTOR|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String Code,System.String Message)
-CONSTRUCTOR|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String ReferenceId)
+CONSTRUCTOR|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference)
 CONSTRUCTOR|Concertable.Payment.Contracts.CommissionBinding(System.Guid BindingId,System.Guid CommissionConfigurationId,System.Decimal RatePercentage,Concertable.Kernel.ValueObjects.Currency Currency)
 CONSTRUCTOR|Concertable.Payment.Contracts.CommissionCalculation(System.Guid CommissionConfigurationId,System.Decimal RatePercentage,Concertable.Kernel.ValueObjects.Money Gross,Concertable.Kernel.ValueObjects.Money Commission,Concertable.Kernel.ValueObjects.Money PayerTotal)
 CONSTRUCTOR|Concertable.Payment.Contracts.DepositEscrowCommand(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.Guid PayerId,System.Guid PayeeId,System.Int64 AmountMinor,Concertable.Kernel.ValueObjects.Currency Currency,Concertable.Payment.Contracts.PaymentOperationReference PaymentMethod,Concertable.Payment.Contracts.PaymentSession Session)
 CONSTRUCTOR|Concertable.Payment.Contracts.DepositEscrowRejectedEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String Code,System.String Message)
-CONSTRUCTOR|Concertable.Payment.Contracts.DepositEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String ReferenceId)
+CONSTRUCTOR|Concertable.Payment.Contracts.DepositEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference)
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.CommissionError+BindingIntentMismatch()
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.CommissionError+BindingMismatch()
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.CommissionError+BindingNotFound()
@@ -59,28 +59,28 @@ CONSTRUCTOR|Concertable.Payment.Contracts.Errors.SettlementRefundError+CurrencyM
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.SettlementRefundError+PaymentFailure(Concertable.Payment.Contracts.Errors.PaymentError Error)
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.SettlementRefundError+SettlementNotFound()
 CONSTRUCTOR|Concertable.Payment.Contracts.Errors.SettlementRefundError+SettlementNotRefundable()
-CONSTRUCTOR|Concertable.Payment.Contracts.EscrowDeposit(System.Int32 EscrowId,System.String ChargeId,Concertable.Payment.Contracts.Enums.EscrowStatus Status,System.String ClientSecret=null)
-CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentFailedEvent(System.String TransactionId,System.String FailureCode,System.String FailureMessage,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)
+CONSTRUCTOR|Concertable.Payment.Contracts.EscrowDeposit(System.Int32 EscrowId,Concertable.Payment.Contracts.Enums.EscrowStatus Status,System.String ClientSecret=null)
+CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentFailedEvent(Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String FailureCode,System.String FailureMessage,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)
 CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentMethodOwnerRegisteredEvent(System.Guid OwnerId,System.String Email)
 CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged(Concertable.Payment.Contracts.PaymentOperationIdentity Identity,Concertable.Payment.Contracts.PaymentSessionKind SessionKind,Concertable.Payment.Contracts.PaymentOperationState State,Concertable.Payment.Contracts.PaymentOperationTerminalDisposition TerminalDisposition,Concertable.Payment.Contracts.PaymentOperationRetryDisposition RetryDisposition,Concertable.Payment.Contracts.PaymentOperationFailure Failure,System.Nullable<System.DateTimeOffset> ExpiresAt,System.Nullable<System.DateTimeOffset> CaptureBefore,System.DateTimeOffset ObservedAt)
-CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentSucceededEvent(System.String TransactionId,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)
+CONSTRUCTOR|Concertable.Payment.Contracts.Events.PaymentSucceededEvent(Concertable.Payment.Contracts.PaymentOperationReference Reference,System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)
 CONSTRUCTOR|Concertable.Payment.Contracts.Events.PayoutOwnerRegisteredEvent(System.Guid OwnerId,System.String Email)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentMethodSetupRequest(Concertable.Payment.Contracts.PaymentOperationReference Reference,Concertable.Payment.Contracts.PaymentSessionKind Kind,System.Guid PayerOwnerId,System.String MandateTermsVersion)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentMethodValidationRequest(Concertable.Payment.Contracts.PaymentOperationReference Reference,System.Guid PayerOwnerId)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentOperationFailure(Concertable.Payment.Contracts.PaymentOperationFailureCode Code,System.String Message)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentOperationIdentity(System.Guid OperationId,System.Guid AttemptId,System.Int64 Revision)
-CONSTRUCTOR|Concertable.Payment.Contracts.PaymentOperationReference(System.String OperationType,System.String ClientReference)
+CONSTRUCTOR|Concertable.Payment.Contracts.PaymentOperationReference(System.String operationType,System.String clientReference)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentOutcome()
-CONSTRUCTOR|Concertable.Payment.Contracts.PaymentSessionOperationRequest(System.Guid OperationId,Concertable.Payment.Contracts.PaymentSessionKind Kind,Concertable.Payment.Contracts.PaymentSession Session,System.String OperationType,System.String ClientReference,System.Guid PayerOwnerId,System.Nullable<System.Guid> PayeeOwnerId,System.Nullable<System.Int64> AmountMinor,System.Nullable<Concertable.Kernel.ValueObjects.Currency> Currency,Concertable.Payment.Contracts.PaymentSessionFundsRouting FundsRouting)
+CONSTRUCTOR|Concertable.Payment.Contracts.PaymentSessionOperationRequest(System.Guid OperationId,Concertable.Payment.Contracts.PaymentSessionKind Kind,Concertable.Payment.Contracts.PaymentSession Session,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.Guid PayerOwnerId,System.Nullable<System.Guid> PayeeOwnerId,System.Nullable<System.Int64> AmountMinor,System.Nullable<Concertable.Kernel.ValueObjects.Currency> Currency,Concertable.Payment.Contracts.PaymentSessionFundsRouting FundsRouting)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentSessionRetryRequest(System.Guid OperationId,System.Guid ExpectedAttemptId,System.Int64 ExpectedRevision,System.Guid OwnerId)
 CONSTRUCTOR|Concertable.Payment.Contracts.PaymentSessionStatusRequest(System.Guid OperationId,System.Guid OwnerId)
 CONSTRUCTOR|Concertable.Payment.Contracts.ProcessStripeWebhookCommand(System.String EventJson)
-CONSTRUCTOR|Concertable.Payment.Contracts.Refund(System.String RefundId)
+CONSTRUCTOR|Concertable.Payment.Contracts.Refund(System.Guid Id)
 CONSTRUCTOR|Concertable.Payment.Contracts.RefundEscrowCommand(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String Reason=null)
 CONSTRUCTOR|Concertable.Payment.Contracts.RefundEscrowDeferredEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference)
 CONSTRUCTOR|Concertable.Payment.Contracts.RefundEscrowRejectedEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String Code,System.String Message)
-CONSTRUCTOR|Concertable.Payment.Contracts.RefundEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference,System.String ReferenceId)
-CONSTRUCTOR|Concertable.Payment.Contracts.Transfer(System.String TransferId)
+CONSTRUCTOR|Concertable.Payment.Contracts.RefundEscrowSucceededEvent(System.Guid OperationId,Concertable.Payment.Contracts.PaymentOperationReference Reference)
+CONSTRUCTOR|Concertable.Payment.Contracts.Transfer(System.Guid OperationId)
 FIELD|Concertable.Payment.Contracts.Enums.EscrowStatus.Disputed|static|const=4|Concertable.Payment.Contracts.Enums.EscrowStatus
 FIELD|Concertable.Payment.Contracts.Enums.EscrowStatus.Failed|static|const=5|Concertable.Payment.Contracts.Enums.EscrowStatus
 FIELD|Concertable.Payment.Contracts.Enums.EscrowStatus.Held|static|const=1|Concertable.Payment.Contracts.Enums.EscrowStatus
@@ -114,6 +114,8 @@ FIELD|Concertable.Payment.Contracts.PaymentOperationFailureCode.PaymentMethodReq
 FIELD|Concertable.Payment.Contracts.PaymentOperationFailureCode.ProviderUnavailable|static|const=7|Concertable.Payment.Contracts.PaymentOperationFailureCode
 FIELD|Concertable.Payment.Contracts.PaymentOperationFailureCode.Unknown|static|const=8|Concertable.Payment.Contracts.PaymentOperationFailureCode
 FIELD|Concertable.Payment.Contracts.PaymentOperationFailureCode.value__|instance|mutable|System.Int32
+FIELD|Concertable.Payment.Contracts.PaymentOperationReference.MaxClientReferenceLength|static|const=200|System.Int32
+FIELD|Concertable.Payment.Contracts.PaymentOperationReference.MaxOperationTypeLength|static|const=100|System.Int32
 FIELD|Concertable.Payment.Contracts.PaymentOperationRetryDisposition.ContinueCurrentAttempt|static|const=1|Concertable.Payment.Contracts.PaymentOperationRetryDisposition
 FIELD|Concertable.Payment.Contracts.PaymentOperationRetryDisposition.CreateNewAttempt|static|const=3|Concertable.Payment.Contracts.PaymentOperationRetryDisposition
 FIELD|Concertable.Payment.Contracts.PaymentOperationRetryDisposition.CreateNewOperation|static|const=4|Concertable.Payment.Contracts.PaymentOperationRetryDisposition
@@ -175,7 +177,7 @@ METHOD|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.ToString()|insta
 METHOD|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.op_Equality(Concertable.Payment.Contracts.CaptureEscrowRejectedEvent left,Concertable.Payment.Contracts.CaptureEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.op_Inequality(Concertable.Payment.Contracts.CaptureEscrowRejectedEvent left,Concertable.Payment.Contracts.CaptureEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.<Clone>$()|instance|returns=Concertable.Payment.Contracts.CaptureEscrowSucceededEvent|constraints=
-METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.String ReferenceId)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.Equals(Concertable.Payment.Contracts.CaptureEscrowSucceededEvent other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -215,7 +217,7 @@ METHOD|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.ToString()|insta
 METHOD|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.op_Equality(Concertable.Payment.Contracts.DepositEscrowRejectedEvent left,Concertable.Payment.Contracts.DepositEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.op_Inequality(Concertable.Payment.Contracts.DepositEscrowRejectedEvent left,Concertable.Payment.Contracts.DepositEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.<Clone>$()|instance|returns=Concertable.Payment.Contracts.DepositEscrowSucceededEvent|constraints=
-METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.String ReferenceId)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.Equals(Concertable.Payment.Contracts.DepositEscrowSucceededEvent other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3166,7 +3168,7 @@ METHOD|Concertable.Payment.Contracts.Errors.SettlementRefundError0MatchExtension
 METHOD|Concertable.Payment.Contracts.Errors.SettlementRefundError0MatchExtensions.MatchSettlementNotRefundableAsync<TMatchOutput>(System.Threading.Tasks.Task<Concertable.Payment.Contracts.Errors.SettlementRefundError> unionTask,System.Func<Concertable.Payment.Contracts.Errors.SettlementRefundError+SettlementNotRefundable,TMatchOutput> settlementNotRefundable,System.Func<TMatchOutput> else)|static|returns=System.Threading.Tasks.Task<TMatchOutput>|constraints=TMatchOutput:
 METHOD|Concertable.Payment.Contracts.Errors.SettlementRefundError0MatchExtensions.MatchSettlementNotRefundableAsync<TMatchOutput>(System.Threading.Tasks.ValueTask<Concertable.Payment.Contracts.Errors.SettlementRefundError> unionTask,System.Func<Concertable.Payment.Contracts.Errors.SettlementRefundError+SettlementNotRefundable,TMatchOutput> settlementNotRefundable,System.Func<TMatchOutput> else)|static|returns=System.Threading.Tasks.ValueTask<TMatchOutput>|constraints=TMatchOutput:
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.<Clone>$()|instance|returns=Concertable.Payment.Contracts.EscrowDeposit|constraints=
-METHOD|Concertable.Payment.Contracts.EscrowDeposit.Deconstruct(out System.Int32 EscrowId,out System.String ChargeId,out Concertable.Payment.Contracts.Enums.EscrowStatus Status,out System.String ClientSecret)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.EscrowDeposit.Deconstruct(out System.Int32 EscrowId,out Concertable.Payment.Contracts.Enums.EscrowStatus Status,out System.String ClientSecret)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.Equals(Concertable.Payment.Contracts.EscrowDeposit other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3174,7 +3176,7 @@ METHOD|Concertable.Payment.Contracts.EscrowDeposit.ToString()|instance|returns=S
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.op_Equality(Concertable.Payment.Contracts.EscrowDeposit left,Concertable.Payment.Contracts.EscrowDeposit right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.EscrowDeposit.op_Inequality(Concertable.Payment.Contracts.EscrowDeposit left,Concertable.Payment.Contracts.EscrowDeposit right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.<Clone>$()|instance|returns=Concertable.Payment.Contracts.Events.PaymentFailedEvent|constraints=
-METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Deconstruct(out System.String TransactionId,out System.String FailureCode,out System.String FailureMessage,out System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Deconstruct(out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.String FailureCode,out System.String FailureMessage,out System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Equals(Concertable.Payment.Contracts.Events.PaymentFailedEvent other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentFailedEvent.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3198,7 +3200,7 @@ METHOD|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.ToStrin
 METHOD|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.op_Equality(Concertable.Payment.Contracts.Events.PaymentOperationStateChanged left,Concertable.Payment.Contracts.Events.PaymentOperationStateChanged right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.op_Inequality(Concertable.Payment.Contracts.Events.PaymentOperationStateChanged left,Concertable.Payment.Contracts.Events.PaymentOperationStateChanged right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.<Clone>$()|instance|returns=Concertable.Payment.Contracts.Events.PaymentSucceededEvent|constraints=
-METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Deconstruct(out System.String TransactionId,out System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Deconstruct(out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.Collections.Generic.IReadOnlyDictionary<System.String,System.String> Metadata)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Equals(Concertable.Payment.Contracts.Events.PaymentSucceededEvent other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3246,7 +3248,7 @@ METHOD|Concertable.Payment.Contracts.PaymentOperationIdentity.GetHashCode()|inst
 METHOD|Concertable.Payment.Contracts.PaymentOperationIdentity.ToString()|instance|returns=System.String|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOperationIdentity.op_Equality(Concertable.Payment.Contracts.PaymentOperationIdentity left,Concertable.Payment.Contracts.PaymentOperationIdentity right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOperationIdentity.op_Inequality(Concertable.Payment.Contracts.PaymentOperationIdentity left,Concertable.Payment.Contracts.PaymentOperationIdentity right)|static|returns=System.Boolean|constraints=
-METHOD|Concertable.Payment.Contracts.PaymentOperationReference.Deconstruct(out System.String OperationType,out System.String ClientReference)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.PaymentOperationReference.EnsureValid()|instance|returns=Concertable.Payment.Contracts.PaymentOperationReference|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOperationReference.Equals(Concertable.Payment.Contracts.PaymentOperationReference other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOperationReference.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOperationReference.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3261,7 +3263,7 @@ METHOD|Concertable.Payment.Contracts.PaymentOutcome.ToString()|instance|returns=
 METHOD|Concertable.Payment.Contracts.PaymentOutcome.op_Equality(Concertable.Payment.Contracts.PaymentOutcome left,Concertable.Payment.Contracts.PaymentOutcome right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentOutcome.op_Inequality(Concertable.Payment.Contracts.PaymentOutcome left,Concertable.Payment.Contracts.PaymentOutcome right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.<Clone>$()|instance|returns=Concertable.Payment.Contracts.PaymentSessionOperationRequest|constraints=
-METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentSessionKind Kind,out Concertable.Payment.Contracts.PaymentSession Session,out System.String OperationType,out System.String ClientReference,out System.Guid PayerOwnerId,out System.Nullable<System.Guid> PayeeOwnerId,out System.Nullable<System.Int64> AmountMinor,out System.Nullable<Concertable.Kernel.ValueObjects.Currency> Currency,out Concertable.Payment.Contracts.PaymentSessionFundsRouting FundsRouting)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentSessionKind Kind,out Concertable.Payment.Contracts.PaymentSession Session,out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.Guid PayerOwnerId,out System.Nullable<System.Guid> PayeeOwnerId,out System.Nullable<System.Int64> AmountMinor,out System.Nullable<Concertable.Kernel.ValueObjects.Currency> Currency,out Concertable.Payment.Contracts.PaymentSessionFundsRouting FundsRouting)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Equals(Concertable.Payment.Contracts.PaymentSessionOperationRequest other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.PaymentSessionOperationRequest.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3293,7 +3295,7 @@ METHOD|Concertable.Payment.Contracts.ProcessStripeWebhookCommand.ToString()|inst
 METHOD|Concertable.Payment.Contracts.ProcessStripeWebhookCommand.op_Equality(Concertable.Payment.Contracts.ProcessStripeWebhookCommand left,Concertable.Payment.Contracts.ProcessStripeWebhookCommand right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.ProcessStripeWebhookCommand.op_Inequality(Concertable.Payment.Contracts.ProcessStripeWebhookCommand left,Concertable.Payment.Contracts.ProcessStripeWebhookCommand right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Refund.<Clone>$()|instance|returns=Concertable.Payment.Contracts.Refund|constraints=
-METHOD|Concertable.Payment.Contracts.Refund.Deconstruct(out System.String RefundId)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.Refund.Deconstruct(out System.Guid Id)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.Refund.Equals(Concertable.Payment.Contracts.Refund other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Refund.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Refund.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3325,7 +3327,7 @@ METHOD|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.ToString()|instan
 METHOD|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.op_Equality(Concertable.Payment.Contracts.RefundEscrowRejectedEvent left,Concertable.Payment.Contracts.RefundEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.op_Inequality(Concertable.Payment.Contracts.RefundEscrowRejectedEvent left,Concertable.Payment.Contracts.RefundEscrowRejectedEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.<Clone>$()|instance|returns=Concertable.Payment.Contracts.RefundEscrowSucceededEvent|constraints=
-METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference,out System.String ReferenceId)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.Deconstruct(out System.Guid OperationId,out Concertable.Payment.Contracts.PaymentOperationReference Reference)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.Equals(Concertable.Payment.Contracts.RefundEscrowSucceededEvent other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3333,7 +3335,7 @@ METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.ToString()|insta
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.op_Equality(Concertable.Payment.Contracts.RefundEscrowSucceededEvent left,Concertable.Payment.Contracts.RefundEscrowSucceededEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.op_Inequality(Concertable.Payment.Contracts.RefundEscrowSucceededEvent left,Concertable.Payment.Contracts.RefundEscrowSucceededEvent right)|static|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Transfer.<Clone>$()|instance|returns=Concertable.Payment.Contracts.Transfer|constraints=
-METHOD|Concertable.Payment.Contracts.Transfer.Deconstruct(out System.String TransferId)|instance|returns=System.Void|constraints=
+METHOD|Concertable.Payment.Contracts.Transfer.Deconstruct(out System.Guid OperationId)|instance|returns=System.Void|constraints=
 METHOD|Concertable.Payment.Contracts.Transfer.Equals(Concertable.Payment.Contracts.Transfer other)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Transfer.Equals(System.Object obj)|instance|returns=System.Boolean|constraints=
 METHOD|Concertable.Payment.Contracts.Transfer.GetHashCode()|instance|returns=System.Int32|constraints=
@@ -3352,7 +3354,6 @@ PROPERTY|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.Message|System
 PROPERTY|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.OperationId|System.Guid|get,init
-PROPERTY|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.ReferenceId|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.CommissionBinding.BindingId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.CommissionBinding.CommissionConfigurationId|System.Guid|get,init
@@ -3376,7 +3377,6 @@ PROPERTY|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.Message|System
 PROPERTY|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.DepositEscrowRejectedEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.OperationId|System.Guid|get,init
-PROPERTY|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.ReferenceId|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.DepositEscrowSucceededEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.Errors.CommissionError.Definition|Reunion.Errors.ErrorDefinition|get
 PROPERTY|Concertable.Payment.Contracts.Errors.EscrowCaptureError+CommissionFailure.Error|Concertable.Payment.Contracts.Errors.CommissionError|get,init
@@ -3402,14 +3402,13 @@ PROPERTY|Concertable.Payment.Contracts.Errors.PaymentMethodChargeError.Definitio
 PROPERTY|Concertable.Payment.Contracts.Errors.PaymentOperationError.Definition|Reunion.Errors.ErrorDefinition|get
 PROPERTY|Concertable.Payment.Contracts.Errors.SettlementRefundError+PaymentFailure.Error|Concertable.Payment.Contracts.Errors.PaymentError|get,init
 PROPERTY|Concertable.Payment.Contracts.Errors.SettlementRefundError.Definition|Reunion.Errors.ErrorDefinition|get
-PROPERTY|Concertable.Payment.Contracts.EscrowDeposit.ChargeId|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.EscrowDeposit.ClientSecret|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.EscrowDeposit.EscrowId|System.Int32|get,init
 PROPERTY|Concertable.Payment.Contracts.EscrowDeposit.Status|Concertable.Payment.Contracts.Enums.EscrowStatus|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentFailedEvent.FailureCode|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentFailedEvent.FailureMessage|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Metadata|System.Collections.Generic.IReadOnlyDictionary<System.String,System.String>|get,init
-PROPERTY|Concertable.Payment.Contracts.Events.PaymentFailedEvent.TransactionId|System.String|get,init
+PROPERTY|Concertable.Payment.Contracts.Events.PaymentFailedEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentMethodOwnerRegisteredEvent.Email|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentMethodOwnerRegisteredEvent.OwnerId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.CaptureBefore|System.Nullable<System.DateTimeOffset>|get,init
@@ -3422,7 +3421,7 @@ PROPERTY|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.Sessi
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.State|Concertable.Payment.Contracts.PaymentOperationState|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentOperationStateChanged.TerminalDisposition|Concertable.Payment.Contracts.PaymentOperationTerminalDisposition|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Metadata|System.Collections.Generic.IReadOnlyDictionary<System.String,System.String>|get,init
-PROPERTY|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.TransactionId|System.String|get,init
+PROPERTY|Concertable.Payment.Contracts.Events.PaymentSucceededEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PayoutOwnerRegisteredEvent.Email|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.Events.PayoutOwnerRegisteredEvent.OwnerId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentMethodSetupRequest.Kind|Concertable.Payment.Contracts.PaymentSessionKind|get,init
@@ -3436,21 +3435,19 @@ PROPERTY|Concertable.Payment.Contracts.PaymentOperationFailure.Message|System.St
 PROPERTY|Concertable.Payment.Contracts.PaymentOperationIdentity.AttemptId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentOperationIdentity.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentOperationIdentity.Revision|System.Int64|get,init
-PROPERTY|Concertable.Payment.Contracts.PaymentOperationReference.ClientReference|System.String|get,init
-PROPERTY|Concertable.Payment.Contracts.PaymentOperationReference.OperationType|System.String|get,init
+PROPERTY|Concertable.Payment.Contracts.PaymentOperationReference.ClientReference|System.String|get
+PROPERTY|Concertable.Payment.Contracts.PaymentOperationReference.OperationType|System.String|get
 PROPERTY|Concertable.Payment.Contracts.PaymentOutcome.ClientSecret|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentOutcome.RequiresAction|System.Boolean|get,init
-PROPERTY|Concertable.Payment.Contracts.PaymentOutcome.TransactionId|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.AmountMinor|System.Nullable<System.Int64>|get,init
-PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.ClientReference|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Currency|System.Nullable<Concertable.Kernel.ValueObjects.Currency>|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.FundsRouting|Concertable.Payment.Contracts.PaymentSessionFundsRouting|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Kind|Concertable.Payment.Contracts.PaymentSessionKind|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.MandateTermsVersion|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.OperationId|System.Guid|get,init
-PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.OperationType|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.PayeeOwnerId|System.Nullable<System.Guid>|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.PayerOwnerId|System.Guid|get,init
+PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionOperationRequest.Session|Concertable.Payment.Contracts.PaymentSession|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionRetryRequest.ExpectedAttemptId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionRetryRequest.ExpectedRevision|System.Int64|get,init
@@ -3459,7 +3456,7 @@ PROPERTY|Concertable.Payment.Contracts.PaymentSessionRetryRequest.OwnerId|System
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionStatusRequest.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.PaymentSessionStatusRequest.OwnerId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.ProcessStripeWebhookCommand.EventJson|System.String|get,init
-PROPERTY|Concertable.Payment.Contracts.Refund.RefundId|System.String|get,init
+PROPERTY|Concertable.Payment.Contracts.Refund.Id|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowCommand.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowCommand.Reason|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowCommand.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
@@ -3470,9 +3467,8 @@ PROPERTY|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.Message|System.
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.OperationId|System.Guid|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowRejectedEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.OperationId|System.Guid|get,init
-PROPERTY|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.ReferenceId|System.String|get,init
 PROPERTY|Concertable.Payment.Contracts.RefundEscrowSucceededEvent.Reference|Concertable.Payment.Contracts.PaymentOperationReference|get,init
-PROPERTY|Concertable.Payment.Contracts.Transfer.TransferId|System.String|get,init
+PROPERTY|Concertable.Payment.Contracts.Transfer.OperationId|System.Guid|get,init
 TYPE|class|Concertable.Payment.Contracts.CaptureEscrowCommand|base=System.Object|interfaces=Concertable.Messaging.Contracts.IIntegrationCommand,System.IEquatable<Concertable.Payment.Contracts.CaptureEscrowCommand>|constraints=
 TYPE|class|Concertable.Payment.Contracts.CaptureEscrowRejectedEvent|base=System.Object|interfaces=Concertable.Messaging.Contracts.IIntegrationEvent,System.IEquatable<Concertable.Payment.Contracts.CaptureEscrowRejectedEvent>|constraints=
 TYPE|class|Concertable.Payment.Contracts.CaptureEscrowSucceededEvent|base=System.Object|interfaces=Concertable.Messaging.Contracts.IIntegrationEvent,System.IEquatable<Concertable.Payment.Contracts.CaptureEscrowSucceededEvent>|constraints=

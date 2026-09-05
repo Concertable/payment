@@ -94,7 +94,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     }
 
     [Fact]
-    public async Task Webhook_UntrackedProviderObject_IsNoOpAndPreservesLegacyPublish()
+    public async Task Webhook_UntrackedProviderObjectWithoutReference_IsNoOp()
     {
         await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
         var providerObjectId = $"pi_untracked_{Guid.NewGuid():N}";
@@ -105,7 +105,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             "succeeded",
             EventTypes.PaymentIntentSucceeded));
 
-        Assert.Equal(1, await harness.LegacyPaymentSucceededCountAsync(providerObjectId));
+        Assert.Equal(0, await harness.PaymentSucceededCountAsync());
     }
 
     [Fact]

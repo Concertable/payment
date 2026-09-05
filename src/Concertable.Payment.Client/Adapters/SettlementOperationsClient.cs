@@ -74,9 +74,9 @@ internal sealed class SettlementOperationsClient : ISettlementOperationsClient
                 var response = await client.RefundBoundCommissionAsync(
                     Proto.BoundCommissionRefundRequest.Create(reference, gross, reason),
                     cancellationToken: ct);
-                return string.IsNullOrEmpty(response.RefundId)
+                return string.IsNullOrEmpty(response.Id)
                     ? Option.None<Refund>()
-                    : new Refund(response.RefundId);
+                    : new Refund(Guid.Parse(response.Id));
             },
             error => error.ToSettlementRefundError(),
             ct);

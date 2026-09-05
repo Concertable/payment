@@ -100,7 +100,7 @@ internal sealed class SettlementService : ISettlementService
         var transaction = SettlementTransactionEntity.CreateForOperation(
             payerId,
             payeeId,
-            outcome.TransactionId,
+            outcome.ProviderTransactionId,
             (amount + platformFee).ToMinorUnits(),
             platformFee.ToMinorUnits(),
             TransactionStatus.Pending,
@@ -126,7 +126,7 @@ internal sealed class SettlementService : ISettlementService
             return await ReplayAsync(canonical, operationId, fingerprint, session, ct);
         }
 
-        return outcome;
+        return ToPublicOutcome(outcome);
     }
 
     public async Task<Result<PaymentOutcome, PaymentMethodChargeError>> PayBoundCommissionAsync(
@@ -164,11 +164,7 @@ internal sealed class SettlementService : ISettlementService
         var existing = await transactionRepository.GetSettlementByCommissionBindingIdAsync(commissionBindingId, ct);
         if (existing is not null)
         {
-            return new PaymentOutcome
-            {
-                TransactionId = existing.PaymentIntentId,
-                RequiresAction = existing.Status == TransactionStatus.Pending
-            };
+            return new PaymentOutcome { RequiresAction = existing.Status == TransactionStatus.Pending };
         }
 
         var payerError = await ValidatePayerAsync(payerId, session, ct);
@@ -192,11 +188,11 @@ internal sealed class SettlementService : ISettlementService
             return error!.ToPaymentMethodChargeError();
         }
 
-        commissionService.BindPaymentIntent(bound.Binding, outcome.TransactionId);
+        commissionService.BindPaymentIntent(bound.Binding, outcome.ProviderTransactionId);
         var transaction = SettlementTransactionEntity.CreateBound(
             payerId,
             payeeId,
-            outcome.TransactionId,
+            outcome.ProviderTransactionId,
             calculation,
             TransactionStatus.Pending,
             reference,
@@ -207,7 +203,7 @@ internal sealed class SettlementService : ISettlementService
             await ledger.StageAsync(LedgerPostings.DirectSettlement(transaction), ct);
 
         await unitOfWork.SaveChangesAsync(ct);
-        return outcome;
+        return ToPublicOutcome(outcome);
     }
 
     public async Task<Result<Option<Refund>, SettlementRefundError>> RefundBoundCommissionAsync(
@@ -295,7 +291,7 @@ internal sealed class SettlementService : ISettlementService
             return new SettlementRefundError.PaymentFailure(error!);
         }
 
-        if (settlement.CompleteRefund(reservation, completedRefund.RefundId, timeProvider.GetUtcNow()).IsFailure)
+        if (settlement.CompleteRefund(reservation, completedRefund.ProviderRefundId, timeProvider.GetUtcNow()).IsFailure)
             throw new InvalidOperationException("Settlement refund reservation could not be completed.");
 
         await ledger.StageAsync(
@@ -307,11 +303,11 @@ internal sealed class SettlementService : ISettlementService
                 commissionVatReversedMinor.ToMoney(settlement.Currency),
                 reference,
                 settlement.PaymentIntentId,
-                completedRefund.RefundId),
+                completedRefund.ProviderRefundId),
             ct);
         await unitOfWork.SaveChangesAsync(ct);
 
-        return Option.Some(completedRefund);
+        return Option.Some(new Refund(reservation.Id));
     }
 
     private async Task<Result<Option<Refund>, SettlementRefundError>> ReservationConflictAsync(
@@ -340,15 +336,12 @@ internal sealed class SettlementService : ISettlementService
             return new PaymentMethodChargeError.OperationConflict();
         if (transaction.Status == TransactionStatus.Complete || !transaction.RequiresAction)
         {
-            return new PaymentOutcome
-            {
-                TransactionId = transaction.PaymentIntentId
-            };
+            return new PaymentOutcome();
         }
 
         var result = await paymentManager.GetPaymentOutcomeAsync(transaction.PaymentIntentId, session, ct);
         if (result.TryGetValue(out var outcome))
-            return outcome;
+            return ToPublicOutcome(outcome);
 
         result.TryGetError(out var error);
         return new PaymentMethodChargeError.PaymentFailure(error!);
@@ -366,6 +359,12 @@ internal sealed class SettlementService : ISettlementService
             ? new PaymentError.PayerUnavailable()
             : null;
     }
+
+    private static PaymentOutcome ToPublicOutcome(ProviderPaymentOutcome outcome) => new()
+    {
+        RequiresAction = outcome.RequiresAction,
+        ClientSecret = outcome.ClientSecret
+    };
 
     private static Dictionary<string, string> ReferenceMetadata(PaymentOperationReference reference) =>
         new()
