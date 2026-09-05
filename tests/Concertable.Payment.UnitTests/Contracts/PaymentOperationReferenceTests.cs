@@ -38,7 +38,7 @@ public sealed class PaymentOperationReferenceTests
         Assert.ThrowsAny<ArgumentException>(() => default(PaymentOperationReference).EnsureValid());
 
     [Fact]
-    public void JsonRoundTrip_PreservesValues()
+    public void Deserialize_SerializedReference_PreservesValues()
     {
         var reference = new PaymentOperationReference("escrow", "booking:48");
 
