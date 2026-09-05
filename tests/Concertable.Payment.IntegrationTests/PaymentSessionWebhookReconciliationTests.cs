@@ -98,6 +98,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     {
         await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
         var providerObjectId = $"pi_untracked_{Guid.NewGuid():N}";
+        var before = await harness.PaymentSucceededCountAsync();
 
         await harness.ProcessWebhookAsync(PaymentIntentEvent(
             "evt_untracked",
@@ -105,7 +106,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             "succeeded",
             EventTypes.PaymentIntentSucceeded));
 
-        Assert.Equal(0, await harness.PaymentSucceededCountAsync());
+        Assert.Equal(before, await harness.PaymentSucceededCountAsync());
     }
 
     [Fact]
@@ -127,11 +128,60 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
     }
 
+    [Fact]
+    public async Task Webhook_SetupIntentSucceeded_ForAVerification_PublishesPaymentSucceededOnce()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = VerificationSpecification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        harness.SessionClient.SetStatus(providerObjectId, "succeeded");
+
+        await harness.ProcessWebhookAsync(SetupIntentEvent(
+            "evt_verified",
+            providerObjectId,
+            "succeeded",
+            EventTypes.SetupIntentSucceeded,
+            harness.SessionClient.MetadataOf(providerObjectId)));
+
+        Assert.Equal(1, await harness.PaymentSucceededCountAsync(specification.ClientReference));
+        Assert.Equal(
+            PaymentOperationState.Succeeded,
+            (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
+    }
+
+    [Fact]
+    public async Task Webhook_SetupIntentSucceeded_ForAMethodSetup_PublishesNothing()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = SetupSpecification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        harness.SessionClient.SetStatus(providerObjectId, "succeeded");
+
+        await harness.ProcessWebhookAsync(SetupIntentEvent(
+            "evt_setup_done",
+            providerObjectId,
+            "succeeded",
+            EventTypes.SetupIntentSucceeded,
+            harness.SessionClient.MetadataOf(providerObjectId)));
+
+        Assert.Equal(0, await harness.PaymentSucceededCountAsync(specification.ClientReference));
+    }
+
     private static Event SetupIntentEvent(string eventId, string providerObjectId, string status) =>
+        SetupIntentEvent(eventId, providerObjectId, status, "setup_intent.created", new Dictionary<string, string>());
+
+    private static Event SetupIntentEvent(
+        string eventId,
+        string providerObjectId,
+        string status,
+        string type,
+        IReadOnlyDictionary<string, string> metadata) =>
         new()
         {
             Id = eventId,
-            Type = "setup_intent.created",
+            Type = type,
             Created = EventCreated,
             Data = new EventData
             {
@@ -139,10 +189,27 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
                 {
                     Id = providerObjectId,
                     Status = status,
-                    Metadata = new Dictionary<string, string>(),
+                    Metadata = metadata.ToDictionary(pair => pair.Key, pair => pair.Value),
                 },
             },
         };
+
+    private static PaymentSessionDefinition VerificationSpecification(Guid operationId) =>
+        PaymentSessionDefinition.Create(
+            operationId,
+            PaymentSessionKind.PaymentMethodVerification,
+            PaymentSession.OnSession,
+            TransactionTypes.Verify,
+            $"app:{operationId:N}",
+            $"payer:{operationId:N}",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            $"cus_{operationId:N}",
+            null,
+            "door-split-mandate-v1");
 
     private static PaymentSessionDefinition SetupSpecification(Guid operationId) =>
         PaymentSessionDefinition.Create(

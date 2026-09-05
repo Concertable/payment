@@ -1,13 +1,34 @@
 {
   "schemaVersion": 1,
   "scanRoots": [
-    { "path": "api/Concertable.Payment/src", "detector": "payment" },
-    { "path": "api/Concertable.Customer/src", "detector": "consumer" },
-    { "path": "api/Concertable.B2B/src", "detector": "consumer" },
-    { "path": "app/web/customer/src", "detector": "frontend" },
-    { "path": "app/web/b2b", "detector": "frontend" },
-    { "path": "app/web/shared/src", "detector": "frontend" },
-    { "path": "app/mobile/customer/src", "detector": "frontend" }
+    {
+      "path": "api/Concertable.Payment/src",
+      "detector": "payment"
+    },
+    {
+      "path": "api/Concertable.Customer/src",
+      "detector": "consumer"
+    },
+    {
+      "path": "api/Concertable.B2B/src",
+      "detector": "consumer"
+    },
+    {
+      "path": "app/web/customer/src",
+      "detector": "frontend"
+    },
+    {
+      "path": "app/web/b2b",
+      "detector": "frontend"
+    },
+    {
+      "path": "app/web/shared/src",
+      "detector": "frontend"
+    },
+    {
+      "path": "app/mobile/customer/src",
+      "detector": "frontend"
+    }
   ],
   "decisions": [
     {
@@ -219,57 +240,442 @@
       "connectModel": "Opaque to the frontend.",
       "identity": "Current result carries only the client secret; durable operation identity is added later.",
       "compatibility": "Existing handle3ds compatibility island remains until the shared orchestration migration."
+    },
+    {
+      "id": "b2b-payment-reporting",
+      "owner": "B2B",
+      "flow": "Read the active tenant's completed payment revenue, settlement payouts and recent settlements for the dashboards.",
+      "providerProduct": "None; Payment's own transaction ledger.",
+      "mode": "Read-only reporting query over gRPC; no provider call and no client session.",
+      "connectModel": "Not applicable.",
+      "identity": "Opaque tenant ID as payee or owner; only B2B-minted operation references and amounts come back.",
+      "compatibility": "The v1 reporting contract carries opaque owner identity and operation references only."
     }
   ],
   "entryPoints": [
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "ProvisionCustomerAsync", "operation": "customerService.CreateAsync", "occurrence": 1, "decisionId": "customer-provisioning" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "ProvisionConnectAccountAsync", "operation": "accountService.CreateAsync", "occurrence": 1, "decisionId": "connect-account-management" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetOnboardingLinkAsync", "operation": "accountLinkService.CreateAsync", "occurrence": 1, "decisionId": "connect-account-management" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetAccountStatusAsync", "operation": "accountService.GetAsync", "occurrence": 1, "decisionId": "connect-account-management" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "CreateSetupIntentAsync", "operation": "setupIntentService.CreateAsync", "occurrence": 1, "decisionId": "payout-card-setup" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs", "kind": "provider-api", "member": "GetPaymentMethodDetailsAsync", "operation": "paymentMethodService.ListAsync", "occurrence": 1, "decisionId": "payout-card-setup" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreatePaymentIntentAsync", "operation": "paymentIntentService.CreateAsync", "occurrence": 1, "decisionId": "generic-payment-intent-mutation" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "GetPaymentIntentAsync", "operation": "paymentIntentService.GetAsync", "occurrence": 1, "decisionId": "generic-payment-intent-mutation" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateTransferAsync", "operation": "transferService.CreateAsync", "occurrence": 1, "decisionId": "transfer-mutation" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateRefundAsync", "operation": "refundService.CreateAsync", "occurrence": 1, "decisionId": "refund-mutation" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs", "kind": "provider-api", "member": "CreateTransferReversalAsync", "operation": "transferReversalService.CreateAsync", "occurrence": 1, "decisionId": "refund-mutation" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "CreateAsync", "operation": "paymentIntentService.CreateAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "CreateAsync", "operation": "setupIntentService.CreateAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "RetrieveAsync", "operation": "paymentIntentService.GetAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "RetrieveAsync", "operation": "setupIntentService.GetAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "CancelAsync", "operation": "paymentIntentService.CancelAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "CancelAsync", "operation": "setupIntentService.CancelAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs", "kind": "provider-api", "member": "CreateCustomerSessionAsync", "operation": "customerSessionService.CreateAsync", "occurrence": 1, "decisionId": "durable-session-execution" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeHoldClient.cs", "kind": "provider-api", "member": "CaptureAsync", "operation": "paymentIntentService.CaptureAsync", "occurrence": 1, "decisionId": "manual-authorization-session" },
-    { "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/Webhook/WebhookService.cs", "kind": "webhook-ingress", "member": "HandleAsync", "operation": "EventUtility.ValidateSignature", "occurrence": 1, "decisionId": "webhook-ingress" },
-
-    { "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs", "kind": "consumer-call", "member": "PayForTicketsAsync", "operation": "customerPaymentClient.PayAsync", "occurrence": 1, "decisionId": "customer-ticket-payment" },
-    { "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs", "kind": "consumer-call", "member": "CreateCheckoutAsync", "operation": "customerPaymentClient.CreatePaymentSessionAsync", "occurrence": 1, "decisionId": "customer-ticket-payment" },
-
-    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetOnboardingLink", "operation": "payoutAccountClient.GetOnboardingLinkAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetAccountStatus", "operation": "payoutAccountClient.GetAccountStatusAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Artist/Concertable.B2B.Artist.Infrastructure/Services/ArtistDashboardService.cs", "kind": "consumer-call", "member": "GetOverviewAsync", "operation": "payoutAccountClient.GetAccountStatusAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Venue/Concertable.B2B.Venue.Infrastructure/Services/VenueDashboardService.cs", "kind": "consumer-call", "member": "GetOverviewAsync", "operation": "payoutAccountClient.GetAccountStatusAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "GetPaymentMethod", "operation": "payoutAccountClient.GetPaymentMethodAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs", "kind": "consumer-call", "member": "CreateSetupIntent", "operation": "payoutAccountClient.CreateSetupIntentAsync", "occurrence": 1, "decisionId": "b2b-payout-account" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/HoldCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateHoldSessionAsync", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/DepositEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "bus.SendAsync<DepositEscrowCommand>", "occurrence": 1, "decisionId": "b2b-venue-hire-deposit" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/VerifyCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateVerifySessionAsync", "occurrence": 1, "decisionId": "b2b-save-or-verify-method" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/CaptureEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "managerPaymentClient.FindHeldIntentAsync", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/CaptureEscrowAcceptStep.cs", "kind": "consumer-call", "member": "StageAsync", "operation": "bus.SendAsync<CaptureEscrowCommand>", "occurrence": 1, "decisionId": "b2b-flat-fee-authorization" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/SetupCheckoutStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.CreateSetupSessionAsync", "occurrence": 1, "decisionId": "b2b-save-or-verify-method" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/ReleaseEscrowFinishStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "escrowClient.ReleaseByBookingIdAsync", "occurrence": 1, "decisionId": "b2b-escrow-release" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/RefundEscrowStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "bus.SendAsync<RefundEscrowCommand>", "occurrence": 1, "decisionId": "b2b-refund" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/RefundEscrowByApplicationStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "bus.SendAsync<RefundEscrowCommand>", "occurrence": 1, "decisionId": "b2b-refund" },
-    { "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Services/Workflow/Steps/PayoutFinishStep.cs", "kind": "consumer-call", "member": "ExecuteAsync", "operation": "managerPaymentClient.PayAsync", "occurrence": 1, "decisionId": "b2b-settlement-payment" },
-
-    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "client-secret-parser", "member": null, "operation": "client-secret-id-split", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
-    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "frontend-confirmation", "member": null, "operation": "initPaymentSheet", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
-    { "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx", "kind": "frontend-confirmation", "member": null, "operation": "presentPaymentSheet", "occurrence": 1, "decisionId": "frontend-ticket-mobile" },
-    { "path": "app/web/customer/src/features/concerts/hooks/useTicketPaymentFlow.ts", "kind": "client-secret-parser", "member": null, "operation": "client-secret-id-split", "occurrence": 1, "decisionId": "frontend-ticket-web-correlation" },
-    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "client-secret-parser", "member": null, "operation": "client-secret-kind-prefix", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
-    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "frontend-confirmation", "member": null, "operation": "confirmSetup", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
-    { "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx", "kind": "frontend-confirmation", "member": null, "operation": "confirmPayment", "occurrence": 1, "decisionId": "frontend-shared-confirmation" },
-    { "path": "app/web/shared/src/features/concerts/utils/handle3ds.ts", "kind": "frontend-confirmation", "member": null, "operation": "handleNextAction", "occurrence": 1, "decisionId": "frontend-next-action" }
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/ApplicationCheckoutService.cs",
+      "kind": "consumer-call",
+      "member": "CreateAcceptCheckoutAsync",
+      "operation": "paymentSessions.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-flat-fee-authorization"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/ApplicationCheckoutService.cs",
+      "kind": "consumer-call",
+      "member": "CreateAcceptCheckoutAsync",
+      "operation": "paymentSessions.SetupPaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-save-or-verify-method"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/ApplicationCheckoutService.cs",
+      "kind": "consumer-call",
+      "member": "CreateApplyCheckoutAsync",
+      "operation": "paymentSessions.SetupPaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-save-or-verify-method"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/Payment/VerifyPaymentProcessor.cs",
+      "kind": "consumer-call",
+      "member": "HandleAsync",
+      "operation": "paymentSessions.ValidatePaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-save-or-verify-method"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Strategies/Steps/Apply/VenueHireApplyStep.cs",
+      "kind": "consumer-call",
+      "member": "ApplyAsync",
+      "operation": "paymentSessions.ValidatePaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-save-or-verify-method"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Booking/Concertable.B2B.Booking.Infrastructure/Services/BookingWorkflow.cs",
+      "kind": "consumer-call",
+      "member": "RecordSucceededCoreAsync",
+      "operation": "bus.SendAsync<RefundEscrowCommand>",
+      "occurrence": 1,
+      "decisionId": "b2b-refund"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Booking/Concertable.B2B.Booking.Infrastructure/Strategies/Steps/Cancel/EscrowCancelStep.cs",
+      "kind": "consumer-call",
+      "member": "CancelAsync",
+      "operation": "bus.SendAsync<RefundEscrowCommand>",
+      "occurrence": 1,
+      "decisionId": "b2b-refund"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Booking/Concertable.B2B.Booking.Infrastructure/Strategies/Steps/Confirm/FlatFeeConfirmStep.cs",
+      "kind": "consumer-call",
+      "member": "ConfirmAsync",
+      "operation": "bus.SendAsync<CaptureEscrowCommand>",
+      "occurrence": 1,
+      "decisionId": "b2b-flat-fee-authorization"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Booking/Concertable.B2B.Booking.Infrastructure/Strategies/Steps/Confirm/VenueHireConfirmStep.cs",
+      "kind": "consumer-call",
+      "member": "ConfirmAsync",
+      "operation": "bus.SendAsync<DepositEscrowCommand>",
+      "occurrence": 1,
+      "decisionId": "b2b-venue-hire-deposit"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Strategies/Steps/Cancel/RefundEscrowCancelStep.cs",
+      "kind": "consumer-call",
+      "member": "CancelAsync",
+      "operation": "bus.SendAsync<RefundEscrowCommand>",
+      "occurrence": 1,
+      "decisionId": "b2b-refund"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Strategies/Steps/Complete/PayoutCompleteStep.cs",
+      "kind": "consumer-call",
+      "member": "CompleteAsync",
+      "operation": "settlementOperationsClient.PayAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-settlement-payment"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Concert/Concertable.B2B.Concert.Infrastructure/Strategies/Steps/Complete/ReleaseEscrowCompleteStep.cs",
+      "kind": "consumer-call",
+      "member": "CompleteAsync",
+      "operation": "escrowOperationsClient.ReleaseAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-escrow-release"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Artist/Concertable.B2B.Dashboard.Artist.Infrastructure/ArtistDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetAsync",
+      "operation": "paymentReportingClient.GetSettlementPayoutsAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payment-reporting"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Artist/Concertable.B2B.Dashboard.Artist.Infrastructure/ArtistDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetOverviewAsync",
+      "operation": "payoutAccountClient.GetAccountStatusAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Artist/Concertable.B2B.Dashboard.Artist.Infrastructure/ArtistDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetPayoutsAsync",
+      "operation": "paymentReportingClient.GetSettlementPayoutsByMonthAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payment-reporting"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Venue/Concertable.B2B.Dashboard.Venue.Infrastructure/VenueDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetAsync",
+      "operation": "paymentReportingClient.GetPaymentRevenueAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payment-reporting"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Venue/Concertable.B2B.Dashboard.Venue.Infrastructure/VenueDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetOverviewAsync",
+      "operation": "payoutAccountClient.GetAccountStatusAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Venue/Concertable.B2B.Dashboard.Venue.Infrastructure/VenueDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetPaymentRevenueAsync",
+      "operation": "paymentReportingClient.GetPaymentRevenueByMonthAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payment-reporting"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Dashboard/Venue/Concertable.B2B.Dashboard.Venue.Infrastructure/VenueDashboardService.cs",
+      "kind": "consumer-call",
+      "member": "GetSettlementsAsync",
+      "operation": "paymentReportingClient.GetRecentSettlementsAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payment-reporting"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs",
+      "kind": "consumer-call",
+      "member": "CreateSetupIntent",
+      "operation": "payoutAccountClient.CreateSetupIntentAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs",
+      "kind": "consumer-call",
+      "member": "GetAccountStatus",
+      "operation": "payoutAccountClient.GetAccountStatusAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs",
+      "kind": "consumer-call",
+      "member": "GetOnboardingLink",
+      "operation": "payoutAccountClient.GetOnboardingLinkAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Tenant/Concertable.B2B.Tenant.Api/Controllers/StripeAccountController.cs",
+      "kind": "consumer-call",
+      "member": "GetPaymentMethod",
+      "operation": "payoutAccountClient.GetPaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-payout-account"
+    },
+    {
+      "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs",
+      "kind": "consumer-call",
+      "member": "CreateCheckoutAsync",
+      "operation": "customerPaymentClient.CreatePaymentSessionAsync",
+      "occurrence": 1,
+      "decisionId": "customer-ticket-payment"
+    },
+    {
+      "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs",
+      "kind": "consumer-call",
+      "member": "PayForTicketsAsync",
+      "operation": "customerPaymentClient.PayAsync",
+      "occurrence": 1,
+      "decisionId": "customer-ticket-payment"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "CreateSetupIntentAsync",
+      "operation": "setupIntentService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "payout-card-setup"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "GetAccountStatusAsync",
+      "operation": "accountService.GetAsync",
+      "occurrence": 1,
+      "decisionId": "connect-account-management"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "GetOnboardingLinkAsync",
+      "operation": "accountLinkService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "connect-account-management"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "GetPaymentMethodDetailsAsync",
+      "operation": "paymentMethodService.ListAsync",
+      "occurrence": 1,
+      "decisionId": "payout-card-setup"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "ProvisionConnectAccountAsync",
+      "operation": "accountService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "connect-account-management"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
+      "kind": "provider-api",
+      "member": "ProvisionCustomerAsync",
+      "operation": "customerService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "customer-provisioning"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs",
+      "kind": "provider-api",
+      "member": "CreatePaymentIntentAsync",
+      "operation": "paymentIntentService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "generic-payment-intent-mutation"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs",
+      "kind": "provider-api",
+      "member": "CreateRefundAsync",
+      "operation": "refundService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "refund-mutation"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs",
+      "kind": "provider-api",
+      "member": "CreateTransferAsync",
+      "operation": "transferService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "transfer-mutation"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs",
+      "kind": "provider-api",
+      "member": "CreateTransferReversalAsync",
+      "operation": "transferReversalService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "refund-mutation"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeApiClient.cs",
+      "kind": "provider-api",
+      "member": "GetPaymentIntentAsync",
+      "operation": "paymentIntentService.GetAsync",
+      "occurrence": 1,
+      "decisionId": "generic-payment-intent-mutation"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeHoldClient.cs",
+      "kind": "provider-api",
+      "member": "CaptureAsync",
+      "operation": "paymentIntentService.CaptureAsync",
+      "occurrence": 1,
+      "decisionId": "manual-authorization-session"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "CancelAsync",
+      "operation": "paymentIntentService.CancelAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "CancelAsync",
+      "operation": "setupIntentService.CancelAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "CreateAsync",
+      "operation": "paymentIntentService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "CreateAsync",
+      "operation": "setupIntentService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "CreateCustomerSessionAsync",
+      "operation": "customerSessionService.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "RetrieveAsync",
+      "operation": "paymentIntentService.GetAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeSessionClient.cs",
+      "kind": "provider-api",
+      "member": "RetrieveAsync",
+      "operation": "setupIntentService.GetAsync",
+      "occurrence": 1,
+      "decisionId": "durable-session-execution"
+    },
+    {
+      "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/Webhook/WebhookService.cs",
+      "kind": "webhook-ingress",
+      "member": "HandleAsync",
+      "operation": "EventUtility.ValidateSignature",
+      "occurrence": 1,
+      "decisionId": "webhook-ingress"
+    },
+    {
+      "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx",
+      "kind": "client-secret-parser",
+      "member": null,
+      "operation": "client-secret-id-split",
+      "occurrence": 1,
+      "decisionId": "frontend-ticket-mobile"
+    },
+    {
+      "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx",
+      "kind": "frontend-confirmation",
+      "member": null,
+      "operation": "initPaymentSheet",
+      "occurrence": 1,
+      "decisionId": "frontend-ticket-mobile"
+    },
+    {
+      "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx",
+      "kind": "frontend-confirmation",
+      "member": null,
+      "operation": "presentPaymentSheet",
+      "occurrence": 1,
+      "decisionId": "frontend-ticket-mobile"
+    },
+    {
+      "path": "app/web/customer/src/features/concerts/hooks/useTicketPaymentFlow.ts",
+      "kind": "client-secret-parser",
+      "member": null,
+      "operation": "client-secret-id-split",
+      "occurrence": 1,
+      "decisionId": "frontend-ticket-web-correlation"
+    },
+    {
+      "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx",
+      "kind": "client-secret-parser",
+      "member": null,
+      "operation": "client-secret-kind-prefix",
+      "occurrence": 1,
+      "decisionId": "frontend-shared-confirmation"
+    },
+    {
+      "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx",
+      "kind": "frontend-confirmation",
+      "member": null,
+      "operation": "confirmPayment",
+      "occurrence": 1,
+      "decisionId": "frontend-shared-confirmation"
+    },
+    {
+      "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx",
+      "kind": "frontend-confirmation",
+      "member": null,
+      "operation": "confirmSetup",
+      "occurrence": 1,
+      "decisionId": "frontend-shared-confirmation"
+    },
+    {
+      "path": "app/web/shared/src/features/concerts/utils/handle3ds.ts",
+      "kind": "frontend-confirmation",
+      "member": null,
+      "operation": "handleNextAction",
+      "occurrence": 1,
+      "decisionId": "frontend-next-action"
+    }
   ]
 }

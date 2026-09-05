@@ -131,5 +131,16 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
             .CountAsync(message => message.MessageType == succeededMessageType);
     }
 
+    public async Task<int> PaymentSucceededCountAsync(string clientReference)
+    {
+        var succeededMessageType = MessageTypeAttribute.Resolve(typeof(PaymentSucceededEvent));
+        using var scope = provider.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<OutboxDbContext>()
+            .Set<OutboxMessageEntity>()
+            .CountAsync(message =>
+                message.MessageType == succeededMessageType
+                && message.Payload.Contains(clientReference));
+    }
+
     public ValueTask DisposeAsync() => provider.DisposeAsync();
 }

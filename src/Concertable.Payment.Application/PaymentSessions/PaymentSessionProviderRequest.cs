@@ -35,13 +35,27 @@ internal sealed record PaymentSessionProviderRequest(
             operation.PaymentMethodId,
             operation.ProviderCustomerId,
             operation.ProviderConnectedAccountId,
-            new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["operation_id"] = operation.OperationId.ToString("D"),
-                ["attempt_id"] = attempt.AttemptId.ToString("D"),
-                ["revision"] = attempt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                ["session_kind"] = operation.SessionKind.ToString(),
-                ["type"] = operation.OperationType,
-                ["correlation"] = operation.ClientReference
-            });
+            MetadataOf(operation, attempt));
+
+    private static Dictionary<string, string> MetadataOf(
+        PaymentSessionOperationEntity operation,
+        PaymentSessionAttemptEntity attempt)
+    {
+        var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["operation_id"] = operation.OperationId.ToString("D"),
+            ["attempt_id"] = attempt.AttemptId.ToString("D"),
+            ["revision"] = attempt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["session_kind"] = operation.SessionKind.ToString(),
+            [PaymentMetadataKeys.Type] = operation.OperationType,
+            ["correlation"] = operation.ClientReference,
+            [PaymentMetadataKeys.OperationType] = operation.OperationType,
+            [PaymentMetadataKeys.ClientReference] = operation.ClientReference,
+            [PaymentMetadataKeys.PayerOwnerId] = operation.PayerOwnerKey
+        };
+        if (operation.PayeeOwnerKey is { } payeeOwnerKey)
+            metadata[PaymentMetadataKeys.PayeeOwnerId] = payeeOwnerKey;
+
+        return metadata;
+    }
 }
