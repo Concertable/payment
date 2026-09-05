@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Concertable.Payment.UnitTests.Contracts;
 
 public sealed class PaymentOperationReferenceTests
@@ -34,4 +36,15 @@ public sealed class PaymentOperationReferenceTests
     [Fact]
     public void DefaultValue_EnsureValid_Throws() =>
         Assert.ThrowsAny<ArgumentException>(() => default(PaymentOperationReference).EnsureValid());
+
+    [Fact]
+    public void Deserialize_SerializedReference_PreservesValues()
+    {
+        var reference = new PaymentOperationReference("escrow", "booking:48");
+
+        var json = JsonSerializer.Serialize(reference);
+        var deserialized = JsonSerializer.Deserialize<PaymentOperationReference>(json);
+
+        Assert.Equal(reference, deserialized);
+    }
 }
