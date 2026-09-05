@@ -2,7 +2,7 @@ namespace Concertable.Payment.Domain.Enums;
 
 internal enum TransactionType
 {
-    Ticket,
+    Payment,
     Settlement,
     Verify
 }

@@ -9,6 +9,7 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 
 public sealed class EscrowConfirmedHandlerTests
 {
+    private static readonly PaymentOperationReference Reference = new("escrow", "order:7");
     private readonly Mock<IEscrowRepository> escrowRepository;
     private readonly Mock<ILedgerService> ledger;
     private readonly EscrowConfirmedHandler sut;
@@ -31,24 +32,24 @@ public sealed class EscrowConfirmedHandlerTests
         this.sut = new EscrowConfirmedHandler(escrowRepository.Object, ledger.Object, new FakeUnitOfWork(), NullLogger<EscrowConfirmedHandler>.Instance);
     }
 
-    private static PaymentSucceededEvent EventFor(string chargeId) =>
-        new(chargeId, new Dictionary<string, string>());
+    private static PaymentSucceededEvent EventFor() =>
+        new(Reference, new Dictionary<string, string>());
 
     [Fact]
     public async Task HandleAsync_PendingEscrow_ConfirmsSavesAndPostsHold()
     {
-        var escrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_3ds");
+        var escrow = EscrowEntity.Create(Reference, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_3ds");
         escrowRepository
             .Setup(r => r.GetByChargeIdAsync("pi_3ds", It.IsAny<CancellationToken>()))
             .ReturnsAsync(escrow);
 
-        await sut.HandleAsync(EventFor("pi_3ds"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_3ds", CancellationToken.None);
 
         Assert.Equal(EscrowStatus.Held, escrow.Status);
         escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
 
         var posting = Assert.Single(postings);
-        Assert.Equal(7, posting.BookingId);
+        Assert.Equal(Reference, posting.Reference);
         Assert.Equal(0, posting.SignedMinorUnitSum());
         Assert.Equal(6200, posting.DebitMinorUnits(LedgerAccountType.Receivable));
         Assert.Equal(6200, posting.CreditMinorUnits(LedgerAccountType.StripeClearing));
@@ -57,13 +58,13 @@ public sealed class EscrowConfirmedHandlerTests
     [Fact]
     public async Task HandleAsync_AlreadyHeldEscrow_DoesNotSaveOrPost()
     {
-        var escrow = EscrowEntity.Create(7, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_dup");
+        var escrow = EscrowEntity.Create(Reference, payerId, payeeId, Money.Gbp(50), Money.Gbp(12), "pi_dup");
         escrow.Confirm();
         escrowRepository
             .Setup(r => r.GetByChargeIdAsync("pi_dup", It.IsAny<CancellationToken>()))
             .ReturnsAsync(escrow);
 
-        await sut.HandleAsync(EventFor("pi_dup"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_dup", CancellationToken.None);
 
         escrowRepository.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         Assert.Empty(postings);
@@ -76,7 +77,7 @@ public sealed class EscrowConfirmedHandlerTests
             .Setup(r => r.GetByChargeIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((EscrowEntity?)null);
 
-        await sut.HandleAsync(EventFor("pi_missing"), CancellationToken.None);
+        await sut.HandleAsync(EventFor(), "pi_missing", CancellationToken.None);
 
         Assert.Empty(postings);
     }

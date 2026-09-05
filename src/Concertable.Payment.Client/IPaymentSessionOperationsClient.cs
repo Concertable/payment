@@ -6,7 +6,15 @@ namespace Concertable.Payment.Client;
 
 public interface IPaymentSessionOperationsClient
 {
-    Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateOrReplayAsync(
+    Task<Result<PaymentMethodSetup, PaymentOperationError>> SetupPaymentMethodAsync(
+        PaymentMethodSetupRequest request,
+        CancellationToken ct = default);
+
+    Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
+        PaymentMethodValidationRequest request,
+        CancellationToken ct = default);
+
+    Task<Result<PaymentSessionDescriptor, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default);
 

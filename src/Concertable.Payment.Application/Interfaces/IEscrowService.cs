@@ -11,16 +11,7 @@ internal interface IEscrowService
         Money amount,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId,
-        CancellationToken ct = default);
-
-    Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentMethodId,
-        PaymentSession session,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid operationId,
         CancellationToken ct = default);
 
@@ -30,7 +21,7 @@ internal interface IEscrowService
         Money gross,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid commissionBindingId,
         string externalReference,
         string? stripeSetupIntentId,
@@ -41,15 +32,7 @@ internal interface IEscrowService
         Guid payeeId,
         Money amount,
         string paymentIntentId,
-        int bookingId,
-        CancellationToken ct = default);
-
-    Task<Result<EscrowDeposit, EscrowCaptureError>> CaptureAsync(
-        Guid payerId,
-        Guid payeeId,
-        Money amount,
-        string paymentIntentId,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid operationId,
         CancellationToken ct = default);
 
@@ -58,44 +41,30 @@ internal interface IEscrowService
         Guid payeeId,
         Money gross,
         string paymentIntentId,
-        int bookingId,
+        PaymentOperationReference reference,
         Guid commissionBindingId,
         string externalReference,
         CancellationToken ct = default);
 
-    Task<Result<Transfer, EscrowReleaseError>> ReleaseAsync(int escrowId, CancellationToken ct = default);
-
-    Task<Result<Option<Transfer>, EscrowReleaseError>> ReleaseByBookingIdAsync(int bookingId, CancellationToken ct = default);
-
-    Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByBookingIdAsync(
+    Task<Result<Option<Transfer>, EscrowReleaseOperationError>> ReleaseByReferenceAsync(
         Guid operationId,
-        int bookingId,
+        PaymentOperationReference reference,
         CancellationToken ct = default);
 
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
-        Money? amount = null,
-        string? reason = null,
-        CancellationToken ct = default);
-
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundByBookingIdAsync(
-        int bookingId,
+    Task<Result<Option<Refund>, EscrowRefundError>> RefundByReferenceAsync(
+        PaymentOperationReference reference,
         Money? amount,
         string? reason,
         Guid operationId,
         CancellationToken ct = default);
 
-    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByBookingIdAsync(
-        int bookingId,
+    Task<Result<Option<Refund>, EscrowRefundError>> RefundBoundCommissionByReferenceAsync(
+        PaymentOperationReference reference,
         Money gross,
         string? reason = null,
         CancellationToken ct = default);
 
-    Task<Result<Refund, EscrowRefundError>> RefundAsync(
-        int escrowId,
-        Money? amount = null,
-        string? reason = null,
+    Task<Option<EscrowDto>> GetByReferenceAsync(
+        PaymentOperationReference reference,
         CancellationToken ct = default);
-
-    Task<Option<EscrowDto>> GetByBookingIdAsync(int bookingId, CancellationToken ct = default);
 }

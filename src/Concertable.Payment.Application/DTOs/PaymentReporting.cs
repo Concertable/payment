@@ -8,7 +8,7 @@ internal sealed record MonthlyPaymentTotal(
 
 internal sealed record SettlementSummary(
     int Id,
-    int BookingId,
+    PaymentOperationReference Reference,
     Guid PayerId,
     Guid PayeeId,
     long AmountMinor,

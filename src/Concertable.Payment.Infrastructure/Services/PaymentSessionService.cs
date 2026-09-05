@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.ProviderContract;
 
@@ -10,6 +11,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly IPaymentSessionReconciliationService reconciliationService;
     private readonly IStripeSessionClient stripeSessionClient;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
     private readonly TimeProvider timeProvider;
 
     public PaymentSessionService(
@@ -17,19 +19,76 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         IPayoutAccountRepository payoutAccountRepository,
         IPaymentSessionReconciliationService reconciliationService,
         IStripeSessionClient stripeSessionClient,
+        IPaymentOperationResolver paymentOperationResolver,
         TimeProvider timeProvider)
     {
         this.operationRepository = operationRepository;
         this.payoutAccountRepository = payoutAccountRepository;
         this.reconciliationService = reconciliationService;
         this.stripeSessionClient = stripeSessionClient;
+        this.paymentOperationResolver = paymentOperationResolver;
         this.timeProvider = timeProvider;
     }
 
-    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> SetupPaymentMethodAsync(
+        PaymentMethodSetupRequest request,
+        CancellationToken ct = default)
+    {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
+        if (request.Kind is not (PaymentSessionKind.PaymentMethodSetup
+            or PaymentSessionKind.PaymentMethodVerification))
+        {
+            return new PaymentOperationError.Unknown();
+        }
+
+        var payer = await payoutAccountRepository.GetByOwnerIdAsync(request.PayerOwnerId, ct);
+        if (payer?.StripeCustomerId is null)
+            return new PaymentOperationError.ProviderUnavailable();
+
+        var existing = await operationRepository.GetByReferenceAsync(reference, ct);
+        var specification = PaymentSessionDefinition.Create(
+            existing?.OperationId ?? Guid.CreateVersion7(timeProvider.GetUtcNow()),
+            request.Kind,
+            PaymentSession.OnSession,
+            reference.OperationType,
+            reference.ClientReference,
+            request.PayerOwnerId.ToString("D"),
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            payer.StripeCustomerId,
+            null,
+            request.MandateTermsVersion);
+        return await CreateAsync(specification, ct);
+    }
+
+    public async Task<UnitResult<PaymentOperationError>> ValidatePaymentMethodAsync(
+        PaymentMethodValidationRequest request,
+        CancellationToken ct = default)
+    {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
+        var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
+            reference,
+            request.PayerOwnerId,
+            ct);
+        return paymentMethod.TryGetError(out var error)
+            ? error
+            : new Success();
+    }
+
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
         PaymentSessionOperationRequest request,
         CancellationToken ct = default)
     {
+        if (!TryValidate(request.Reference, out var reference))
+            return new PaymentOperationError.Unknown();
+
         var payer = await payoutAccountRepository.GetByOwnerIdAsync(request.PayerOwnerId, ct);
         if (payer?.StripeCustomerId is null)
             return new PaymentOperationError.ProviderUnavailable();
@@ -49,21 +108,22 @@ internal sealed class PaymentSessionService : IPaymentSessionService
 
         try
         {
-            var specification = PaymentSessionSpecification.Create(
+            var specification = PaymentSessionDefinition.Create(
                 request.OperationId,
                 request.Kind,
                 request.Session,
-                request.OperationType,
-                request.ConsumerCorrelation,
+                reference.OperationType,
+                reference.ClientReference,
                 request.PayerOwnerId.ToString("D"),
                 request.PayeeOwnerId?.ToString("D"),
                 request.AmountMinor,
                 request.Currency,
                 request.FundsRouting,
-                request.PaymentMethodId,
+                null,
                 payer.StripeCustomerId,
-                providerConnectedAccountId);
-            return await CreateOrReplayAsync(specification, ct);
+                providerConnectedAccountId,
+                request.MandateTermsVersion);
+            return await CreateAsync(specification, ct);
         }
         catch (DomainException)
         {
@@ -71,8 +131,8 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         }
     }
 
-    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateOrReplayAsync(
-        PaymentSessionSpecification specification,
+    public async Task<Result<PaymentSessionExecution, PaymentOperationError>> CreateAsync(
+        PaymentSessionDefinition specification,
         CancellationToken ct = default)
     {
         var reservation = await operationRepository.ReserveInitialAsync(
@@ -264,13 +324,13 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         PaymentSessionAttemptEntity attempt,
         CancellationToken ct)
     {
-        Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable> providerResult;
+        Result<ProviderSession, PaymentOperationError.ProviderUnavailable> providerResult;
         if (attempt.ProviderObjectId is null)
         {
             var request = PaymentSessionProviderRequest.Create(operation, attempt);
             providerResult = await stripeSessionClient.CreateAsync(
                 request,
-                new PaymentSessionIdempotencyKey(
+                StripeIdempotencyKey.ForSessionAttempt(
                     operation.OperationId,
                     attempt.AttemptId,
                     attempt.Revision),
@@ -315,7 +375,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private Task<Result<PaymentSessionReconciliation, PaymentOperationError.ProviderUnavailable>> ReconcileAsync(
         PaymentSessionOperationEntity operation,
         PaymentSessionAttemptEntity attempt,
-        PaymentSessionProviderResult? provider,
+        ProviderSession? provider,
         CancellationToken ct = default) =>
         reconciliationService.ReconcileAsync(
             new(
@@ -328,7 +388,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
     private bool IsRetryCompatibleProviderTruth(
         PaymentSessionAttemptEntity current,
         PaymentOperationState providerState,
-        PaymentSessionProviderResult provider) =>
+        ProviderSession provider) =>
         (current.State, current.FailureCode, providerState, provider.FailureClassification) switch
         {
             (_, _, PaymentOperationState.Canceled, _) => true,
@@ -370,4 +430,20 @@ internal sealed class PaymentSessionService : IPaymentSessionService
             operation.PayerOwnerKey,
             ownerId.ToString("D"),
             StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryValidate(
+        PaymentOperationReference candidate,
+        out PaymentOperationReference reference)
+    {
+        try
+        {
+            reference = candidate.EnsureValid();
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            reference = default;
+            return false;
+        }
+    }
 }

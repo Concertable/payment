@@ -4,21 +4,12 @@ namespace Concertable.Payment.Application.DTOs;
 
 internal sealed record PaymentMethodDto(string Brand, string Last4, int ExpMonth, int ExpYear);
 
-internal sealed record PaymentDto
-{
-    public decimal Amount { get; init; }
-    public string Currency { get; init; } = "GBP";
-    public required string PaymentMethodId { get; init; }
-    public required string Description { get; init; }
-    public int ConcertId { get; init; }
-    public Guid UserId { get; init; }
-}
-
-internal sealed record TicketTransactionDto : ITransaction
+internal sealed record PaymentTransactionDto : ITransaction
 {
     public int Id { get; init; }
-    public TransactionType TransactionType => TransactionType.Ticket;
-    public int ConcertId { get; init; }
+    public TransactionType TransactionType => TransactionType.Payment;
+    public required string OperationType { get; init; }
+    public required string ClientReference { get; init; }
     public Guid PayerId { get; init; }
     public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
@@ -31,7 +22,8 @@ internal sealed record SettlementTransactionDto : ITransaction
 {
     public int Id { get; init; }
     public TransactionType TransactionType => TransactionType.Settlement;
-    public int BookingId { get; init; }
+    public required string OperationType { get; init; }
+    public required string ClientReference { get; init; }
     public Guid PayerId { get; init; }
     public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
@@ -45,7 +37,8 @@ internal sealed record VerifyTransactionDto : ITransaction
 {
     public int Id { get; init; }
     public TransactionType TransactionType => TransactionType.Verify;
-    public int ApplicationId { get; init; }
+    public required string OperationType { get; init; }
+    public required string ClientReference { get; init; }
     public Guid PayerId { get; init; }
     public Guid PayeeId { get; init; }
     public required string PaymentIntentId { get; init; }
@@ -54,15 +47,9 @@ internal sealed record VerifyTransactionDto : ITransaction
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 }
 
-internal sealed record CheckoutSession(
-    string ClientSecret,
-    string CustomerSession,
-    string CustomerId,
-    string? StripeIntentId = null);
-
 internal sealed record EscrowDto(
     int Id,
-    int BookingId,
+    PaymentOperationReference Reference,
     Guid FromOwnerId,
     Guid ToOwnerId,
     decimal Amount,

@@ -12,16 +12,16 @@ internal readonly record struct PaymentSessionFingerprint
         Value = value;
     }
 
-    internal const int CurrentVersion = 1;
+    internal const int CurrentVersion = 2;
 
     public int Version { get; }
     public string Value { get; }
 
-    internal static PaymentSessionFingerprint Create(PaymentSessionSpecification specification) =>
+    internal static PaymentSessionFingerprint Create(PaymentSessionDefinition specification) =>
         Create(specification, CurrentVersion);
 
     internal static PaymentSessionFingerprint Create(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         int version)
     {
         if (version != CurrentVersion)
@@ -36,7 +36,7 @@ internal readonly record struct PaymentSessionFingerprint
             writer.WriteString("sessionKind", specification.SessionKind.ToString());
             writer.WriteString("session", specification.Session.ToString());
             writer.WriteString("operationType", specification.OperationType);
-            writer.WriteString("consumerCorrelation", specification.ConsumerCorrelation);
+            writer.WriteString("clientReference", specification.ClientReference);
             writer.WriteString("payerOwnerKey", specification.PayerOwnerKey);
             WriteNullable(writer, "payeeOwnerKey", specification.PayeeOwnerKey);
             if (specification.AmountMinor is { } amountMinor)
@@ -55,6 +55,7 @@ internal readonly record struct PaymentSessionFingerprint
                 writer,
                 "providerConnectedAccountId",
                 specification.ProviderConnectedAccountId);
+            WriteNullable(writer, "mandateTermsVersion", specification.MandateTermsVersion);
             writer.WriteEndObject();
         }
 

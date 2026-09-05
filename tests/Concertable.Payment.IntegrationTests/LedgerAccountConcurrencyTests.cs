@@ -26,7 +26,7 @@ public sealed class LedgerAccountConcurrencyTests : IClassFixture<SqlFixture>
         var bothReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var readyCount = 0;
 
-        async Task PostAsync(string paymentIntentId, int bookingId)
+        async Task PostAsync(string paymentIntentId, string clientReference)
         {
             await using var context = CreateContext();
             var unitOfWork = new UnitOfWork(context);
@@ -39,7 +39,7 @@ public sealed class LedgerAccountConcurrencyTests : IClassFixture<SqlFixture>
                 LedgerPostings.EscrowHold(
                     payerId,
                     Money.Gbp(50),
-                    bookingId,
+                    new("escrow", clientReference),
                     paymentIntentId));
 
             if (Interlocked.Increment(ref readyCount) == 2)
@@ -50,8 +50,8 @@ public sealed class LedgerAccountConcurrencyTests : IClassFixture<SqlFixture>
         }
 
         await Task.WhenAll(
-            PostAsync("pi_concurrent_1", 1),
-            PostAsync("pi_concurrent_2", 2));
+            PostAsync("pi_concurrent_1", "order:1"),
+            PostAsync("pi_concurrent_2", "order:2"));
 
         await using var verificationContext = CreateContext();
         Assert.Equal(2, await verificationContext.LedgerAccounts.CountAsync());

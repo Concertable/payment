@@ -7,6 +7,6 @@ internal readonly record struct PostingLeg(LedgerAccountRef Account, LedgerDirec
 internal sealed record LedgerPosting(
     LedgerPostingType PostingType,
     string ExternalId,
-    int BookingId,
+    PaymentOperationReference Reference,
     string? PaymentIntentId,
     IReadOnlyList<PostingLeg> Legs);
