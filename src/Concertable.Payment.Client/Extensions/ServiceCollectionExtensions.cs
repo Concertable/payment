@@ -12,8 +12,10 @@ public static class ServiceCollectionExtensions
     {
         public IServiceCollection AddPaymentClient(IConfiguration configuration)
         {
-            var address = configuration["services:payment-web:https:0"]
-            ?? throw new InvalidOperationException("Payment service address (services:payment-web:https:0) is not configured.");
+            var address = configuration["services:payment-web:grpc:0"]
+                ?? configuration["services:payment-web:https:0"]
+                ?? throw new InvalidOperationException(
+                    "Payment service address (services:payment-web:grpc:0 or services:payment-web:https:0) is not configured.");
 
             AddPaymentGrpcClient<Proto.SettlementOperations.SettlementOperationsClient>(services, address);
             AddPaymentGrpcClient<Proto.PaymentReporting.PaymentReportingClient>(services, address);
@@ -37,11 +39,18 @@ public static class ServiceCollectionExtensions
     }
 
     private static void AddPaymentGrpcClient<TClient>(IServiceCollection services, string address)
-        where TClient : class =>
-        services.AddGrpcClient<TClient>(o => o.Address = new Uri(address))
-            .AddCallCredentials(async (_, metadata, sp) =>
-            {
-                var token = await sp.GetRequiredService<ITokenService>().GetTokenAsync("payment:write");
-                metadata.Add("Authorization", $"Bearer {token}");
-            });
+        where TClient : class
+    {
+        var uri = new Uri(address);
+        var client = services.AddGrpcClient<TClient>(options => options.Address = uri);
+
+        if (uri.Scheme == Uri.UriSchemeHttp)
+            client.ConfigureChannel(options => options.UnsafeUseInsecureChannelCallCredentials = true);
+
+        client.AddCallCredentials(async (_, metadata, serviceProvider) =>
+        {
+            var token = await serviceProvider.GetRequiredService<ITokenService>().GetTokenAsync("payment:write");
+            metadata.Add("Authorization", $"Bearer {token}");
+        });
+    }
 }
