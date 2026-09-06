@@ -31,6 +31,13 @@ It knows **nothing** of tickets, concerts, deals, bookings, applications, buyers
 
 **Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
 
+The Payment Web container keeps HTTP/1.1 REST, webhook, and mobile traffic on cleartext port `8080`. Its
+separate cleartext port `8081` is HTTP/2-only for gRPC; `Payment.Hosting` publishes that listener as the `grpc`
+service-discovery endpoint while retaining the HTTP-schemed `https` compatibility alias on `8080` for callers
+that still select that endpoint name. `Payment.Client` prefers `services:payment-web:grpc:0` and carries its
+service-token call credentials over h2c only when discovery resolves an `http` address. Local project hosting
+may continue to use a TLS endpoint and HTTP/2 negotiation instead of the container's split-port transport.
+
 ---
 
 ## Double-entry ledger

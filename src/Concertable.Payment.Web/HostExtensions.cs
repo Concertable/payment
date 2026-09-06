@@ -29,11 +29,7 @@ public static class HostExtensions
         {
             builder.AddServiceDefaults();
             builder.Configuration.AddEnvironmentVariables();
-
-            builder.WebHost.ConfigureKestrel(opts =>
-            {
-                opts.ConfigureEndpointDefaults(e => e.Protocols = HttpProtocols.Http1AndHttp2);
-            });
+            builder.ConfigurePaymentTransport();
 
             var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
             builder.Services.AddCors(options =>
@@ -119,6 +115,23 @@ public static class HostExtensions
 
             builder.AddDefaultRateLimiting();
             builder.AddRateLimitPolicy(RateLimitPolicies.SetupIntent, new RateLimitWindow { PermitLimit = 10, WindowSeconds = 60 }, perUser: true);
+
+            return builder;
+        }
+
+        public WebApplicationBuilder ConfigurePaymentTransport()
+        {
+            var grpcPort = builder.Configuration.GetValue<int?>("PaymentTransport:GrpcPort") ?? 8081;
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.ConfigureEndpointDefaults(endpoint =>
+                {
+                    endpoint.Protocols = endpoint.IPEndPoint?.Port == grpcPort
+                        ? HttpProtocols.Http2
+                        : HttpProtocols.Http1AndHttp2;
+                });
+            });
 
             return builder;
         }

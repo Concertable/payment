@@ -26,6 +26,13 @@
     <ProjectReference Include="..\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ContainerPort Include="8080" Type="tcp" />
+    <ContainerPort Include="8081" Type="tcp" />
+    <ContainerEnvironmentVariable Include="ASPNETCORE_HTTP_PORTS" Value="8080;8081" />
+    <ContainerEnvironmentVariable Include="PaymentTransport__GrpcPort" Value="8081" />
+  </ItemGroup>
+
   <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.ServiceDefaults" />
