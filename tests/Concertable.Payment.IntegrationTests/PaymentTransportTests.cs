@@ -55,7 +55,8 @@ public sealed class PaymentTransportTests
                 .AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["services:payment-web:grpc:0"] = $"http://127.0.0.1:{grpcPort}",
-                    ["services:payment-web:https:0"] = $"http://127.0.0.1:{httpPort}"
+                    ["services:payment-web:https:0"] = $"http://127.0.0.1:{httpPort}",
+                    ["PaymentClient:AllowInsecureHttp"] = bool.TrueString
                 })
                 .Build();
             await using var serviceProvider = ClientExtensions.AddPaymentClient(
@@ -76,6 +77,23 @@ public sealed class PaymentTransportTests
         {
             await app.StopAsync();
         }
+    }
+
+    [Fact]
+    public void PaymentClient_RejectsCleartextWithoutExplicitCompositionOptIn()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["services:payment-web:grpc:0"] = "http://payment-web:8081",
+            })
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => ClientExtensions.AddPaymentClient(
+            new ServiceCollection(),
+            configuration));
+
+        Assert.Contains("PaymentClient:AllowInsecureHttp=true", exception.Message, StringComparison.Ordinal);
     }
 
     private static int GetAvailablePort()

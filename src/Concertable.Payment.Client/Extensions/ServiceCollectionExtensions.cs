@@ -8,6 +8,8 @@ namespace Concertable.Payment.Client.Extensions;
 
 public static class ServiceCollectionExtensions
 {
+    private const string AllowInsecureHttpConfigurationKey = "PaymentClient:AllowInsecureHttp";
+
     extension(IServiceCollection services)
     {
         public IServiceCollection AddPaymentClient(IConfiguration configuration)
@@ -16,13 +18,25 @@ public static class ServiceCollectionExtensions
                 ?? configuration["services:payment-web:https:0"]
                 ?? throw new InvalidOperationException(
                     "Payment service address (services:payment-web:grpc:0 or services:payment-web:https:0) is not configured.");
+            var uri = new Uri(address);
 
-            AddPaymentGrpcClient<Proto.SettlementOperations.SettlementOperationsClient>(services, address);
-            AddPaymentGrpcClient<Proto.PaymentReporting.PaymentReportingClient>(services, address);
-            AddPaymentGrpcClient<Proto.Escrow.EscrowClient>(services, address);
-            AddPaymentGrpcClient<Proto.PayoutAccount.PayoutAccountClient>(services, address);
-            AddPaymentGrpcClient<Proto.CommissionPricing.CommissionPricingClient>(services, address);
-            AddPaymentGrpcClient<Proto.PaymentSessionOperations.PaymentSessionOperationsClient>(services, address);
+            if (uri.Scheme == Uri.UriSchemeHttp
+                && !string.Equals(
+                    configuration[AllowInsecureHttpConfigurationKey],
+                    bool.TrueString,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Cleartext Payment transport requires {AllowInsecureHttpConfigurationKey}=true "
+                    + "in an explicitly trusted composition.");
+            }
+
+            AddPaymentGrpcClient<Proto.SettlementOperations.SettlementOperationsClient>(services, uri);
+            AddPaymentGrpcClient<Proto.PaymentReporting.PaymentReportingClient>(services, uri);
+            AddPaymentGrpcClient<Proto.Escrow.EscrowClient>(services, uri);
+            AddPaymentGrpcClient<Proto.PayoutAccount.PayoutAccountClient>(services, uri);
+            AddPaymentGrpcClient<Proto.CommissionPricing.CommissionPricingClient>(services, uri);
+            AddPaymentGrpcClient<Proto.PaymentSessionOperations.PaymentSessionOperationsClient>(services, uri);
 
             services.AddScoped<ISettlementOperationsClient, SettlementOperationsClient>();
             services.AddScoped<IPaymentReportingClient, PaymentReportingClient>();
@@ -38,13 +52,12 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    private static void AddPaymentGrpcClient<TClient>(IServiceCollection services, string address)
+    private static void AddPaymentGrpcClient<TClient>(IServiceCollection services, Uri address)
         where TClient : class
     {
-        var uri = new Uri(address);
-        var client = services.AddGrpcClient<TClient>(options => options.Address = uri);
+        var client = services.AddGrpcClient<TClient>(options => options.Address = address);
 
-        if (uri.Scheme == Uri.UriSchemeHttp)
+        if (address.Scheme == Uri.UriSchemeHttp)
             client.ConfigureChannel(options => options.UnsafeUseInsecureChannelCallCredentials = true);
 
         client.AddCallCredentials(async (_, metadata, serviceProvider) =>
