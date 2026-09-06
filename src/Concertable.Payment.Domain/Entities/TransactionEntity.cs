@@ -6,13 +6,23 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
 {
     protected TransactionEntity() { }
 
-    protected TransactionEntity(Guid payerId, Guid payeeId, string paymentIntentId, long amount, TransactionStatus status)
+    protected TransactionEntity(
+        Guid payerId,
+        Guid payeeId,
+        string paymentIntentId,
+        long amount,
+        TransactionStatus status,
+        PaymentOperationReference reference)
     {
+        reference = reference.EnsureValid();
+
         PayerId = payerId;
         PayeeId = payeeId;
         PaymentIntentId = paymentIntentId;
         Amount = amount;
         Status = status;
+        OperationType = reference.OperationType;
+        ClientReference = reference.ClientReference;
     }
 
     public int Id { get; private set; }
@@ -22,6 +32,8 @@ internal abstract class TransactionEntity : IIdEntity, IAuditable
     public string PaymentIntentId { get; private set; } = null!;
     public long Amount { get; private set; }
     public TransactionStatus Status { get; private set; }
+    public string OperationType { get; private set; } = null!;
+    public string ClientReference { get; private set; } = null!;
     public DateTime? CompletedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = null!;

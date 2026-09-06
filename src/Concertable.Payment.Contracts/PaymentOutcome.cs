@@ -1,8 +1,7 @@
 namespace Concertable.Payment.Contracts;
 
-public record PaymentOutcome
+public sealed record PaymentOutcome
 {
     public bool RequiresAction { get; init; }
     public string? ClientSecret { get; init; }
-    public required string TransactionId { get; init; }
 }

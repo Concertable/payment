@@ -6,14 +6,15 @@ public sealed record PaymentSessionOperationRequest(
     Guid OperationId,
     PaymentSessionKind Kind,
     PaymentSession Session,
-    string OperationType,
-    string ConsumerCorrelation,
+    PaymentOperationReference Reference,
     Guid PayerOwnerId,
     Guid? PayeeOwnerId,
     long? AmountMinor,
     Currency? Currency,
-    PaymentSessionFundsRouting FundsRouting,
-    string? PaymentMethodId);
+    PaymentSessionFundsRouting FundsRouting)
+{
+    public string? MandateTermsVersion { get; init; }
+}
 
 public sealed record PaymentSessionRetryRequest(
     Guid OperationId,

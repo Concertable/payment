@@ -13,16 +13,20 @@ internal sealed class VerifyTransactionHandler : ITransactionHandler
         this.timeProvider = timeProvider;
     }
 
-    public async Task HandleAsync(PaymentSucceededEvent @event, CancellationToken ct)
+    public async Task HandleAsync(
+        PaymentSucceededEvent @event,
+        string providerObjectId,
+        CancellationToken ct)
     {
         var meta = @event.Metadata;
 
         await transactionService.LogAsync(new VerifyTransactionDto
         {
-            ApplicationId = int.Parse(meta[PaymentMetadataKeys.ApplicationId]),
-            PayerId = Guid.Parse(meta[PaymentMetadataKeys.VenueManagerId]),
+            OperationType = meta[PaymentMetadataKeys.OperationType],
+            ClientReference = meta[PaymentMetadataKeys.ClientReference],
+            PayerId = Guid.Parse(meta[PaymentMetadataKeys.PayerOwnerId]),
             PayeeId = Guid.Empty,
-            PaymentIntentId = @event.TransactionId,
+            PaymentIntentId = providerObjectId,
             Amount = 100,
             Status = TransactionStatus.Complete,
             CreatedAt = timeProvider.GetUtcNow()

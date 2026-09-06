@@ -30,8 +30,6 @@ internal sealed class CommissionClient : ICommissionPricingClient
         string payerReference,
         Currency currency,
         Guid reviewedCommissionConfigurationId,
-        string? stripePaymentIntentId = null,
-        string? stripeSetupIntentId = null,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () =>
@@ -40,9 +38,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     externalReference,
                     payerReference,
                     currency,
-                    reviewedCommissionConfigurationId,
-                    stripePaymentIntentId,
-                    stripeSetupIntentId);
+                    reviewedCommissionConfigurationId);
                 return (await client.CreateOrBindCommissionAsync(request, cancellationToken: ct)).ToCommissionBinding();
             },
             error => error.ToCommissionError(),
@@ -70,8 +66,6 @@ internal sealed class CommissionClient : ICommissionPricingClient
         string externalReference,
         string payerReference,
         Money gross,
-        string? stripePaymentIntentId = null,
-        string? stripeSetupIntentId = null,
         CancellationToken ct = default) =>
         PaymentClientResults.ExecuteAsync(
             async () => (await client.CalculateBoundCommissionAsync(
@@ -79,9 +73,7 @@ internal sealed class CommissionClient : ICommissionPricingClient
                     bindingId,
                     externalReference,
                     payerReference,
-                    gross,
-                    stripePaymentIntentId,
-                    stripeSetupIntentId),
+                    gross),
                 cancellationToken: ct)).ToCommissionCalculation(),
             error => error.ToCommissionError(),
             ct);

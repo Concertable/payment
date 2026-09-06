@@ -4,9 +4,6 @@ using PayoutAccountStatus = Concertable.Payment.Application.Enums.PayoutAccountS
 
 namespace Concertable.Payment.Infrastructure.Services;
 
-/// <summary>Owner-keyed payout-account logic shared by the HTTP <c>StripeAccountController</c> (Customer) and the
-/// <c>PayoutAccount</c> gRPC service (B2B's proxy). The owner id is supplied by the caller — Payment stays
-/// tenancy-agnostic and never reads it from a claim itself.</summary>
 internal sealed class PayoutAccountService : IPayoutAccountService
 {
     private readonly IPayoutAccountRepository repository;

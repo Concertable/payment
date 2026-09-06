@@ -7,66 +7,87 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentMappers
 {
-    public static Proto.Money ToProtoMoney(this Money money) => new()
+    extension(Money money)
     {
-        AmountMinor = money.ToMinorUnits(),
-        Currency = money.Currency.ToProtoCurrency()
-    };
-
-    public static Money ToMoney(this Proto.Money money) =>
-        Money.FromMinorUnits(money.AmountMinor, money.Currency.ToCurrency());
-
-    public static Proto.Currency ToProtoCurrency(this Currency currency) => currency switch
-    {
-        Currency.Gbp => Proto.Currency.Gbp,
-        _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
-    };
-
-    private static Currency ToCurrency(this Proto.Currency currency) => currency switch
-    {
-        Proto.Currency.Gbp => Currency.Gbp,
-        _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
-    };
-
-    public static PaymentOutcome ToPaymentOutcome(this Proto.PaymentResponse r) =>
-        new()
+        public Proto.Money ToProtoMoney() => new()
         {
-            RequiresAction = r.RequiresAction,
-            ClientSecret = r.HasClientSecret ? r.ClientSecret : null,
-            TransactionId = r.TransactionId
+            AmountMinor = money.ToMinorUnits(),
+            Currency = money.Currency.ToProtoCurrency()
         };
+    }
 
-    public static CheckoutSession ToCheckoutSession(this Proto.CheckoutSessionResponse r) =>
-        new(r.ClientSecret, r.CustomerSession, r.CustomerId);
-
-    public static Proto.PaymentSessionType ToProtoSession(this PaymentSession session) => session switch
+    extension(Proto.Money money)
     {
-        PaymentSession.OnSession => Proto.PaymentSessionType.OnSession,
-        PaymentSession.OffSession => Proto.PaymentSessionType.OffSession,
-        _ => throw new ArgumentOutOfRangeException(nameof(session), session, null)
-    };
+        public Money ToMoney() => Money.FromMinorUnits(money.AmountMinor, money.Currency.ToCurrency());
+    }
 
-    public static PayoutAccountStatus ToStatus(this Proto.PayoutAccountStatusType status) => status switch
+    extension(Currency currency)
     {
-        Proto.PayoutAccountStatusType.PayoutNotVerified => PayoutAccountStatus.NotVerified,
-        Proto.PayoutAccountStatusType.PayoutPending => PayoutAccountStatus.Pending,
-        Proto.PayoutAccountStatusType.PayoutVerified => PayoutAccountStatus.Verified,
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
-    };
+        public Proto.Currency ToProtoCurrency() => currency switch
+        {
+            Currency.Gbp => Proto.Currency.Gbp,
+            _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
+        };
+    }
 
-    public static MonthlyPaymentPoint ToMonthlyPaymentPoint(this Proto.MonthlyPaymentPointResponse point) =>
-        new(
+    extension(Proto.Currency currency)
+    {
+        private Currency ToCurrency() => currency switch
+        {
+            Proto.Currency.Gbp => Currency.Gbp,
+            _ => throw new ArgumentOutOfRangeException(nameof(currency), currency, null)
+        };
+    }
+
+    extension(Proto.PaymentResponse response)
+    {
+        public PaymentOutcome ToPaymentOutcome() => new()
+        {
+            RequiresAction = response.RequiresAction,
+            ClientSecret = response.HasClientSecret ? response.ClientSecret : null
+        };
+    }
+
+    extension(PaymentSession session)
+    {
+        public Proto.PaymentSessionType ToProtoSession() => session switch
+        {
+            PaymentSession.OnSession => Proto.PaymentSessionType.OnSession,
+            PaymentSession.OffSession => Proto.PaymentSessionType.OffSession,
+            _ => throw new ArgumentOutOfRangeException(nameof(session), session, null)
+        };
+    }
+
+    extension(Proto.PayoutAccountStatusType status)
+    {
+        public PayoutAccountStatus ToStatus() => status switch
+        {
+            Proto.PayoutAccountStatusType.PayoutNotVerified => PayoutAccountStatus.NotVerified,
+            Proto.PayoutAccountStatusType.PayoutPending => PayoutAccountStatus.Pending,
+            Proto.PayoutAccountStatusType.PayoutVerified => PayoutAccountStatus.Verified,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
+    }
+
+    extension(Proto.MonthlyPaymentPointResponse point)
+    {
+        public MonthlyPaymentPoint ToMonthlyPaymentPoint() => new(
             DateOnly.FromDateTime(point.Month.ToDateTime()),
             point.Gross.ToMoney(),
             point.Net.ToMoney(),
             point.Count);
+    }
 
-    public static ManagerSettlement ToManagerSettlement(this Proto.SettlementReportItemResponse settlement) =>
-        new(
+    extension(Proto.SettlementReportItemResponse settlement)
+    {
+        public PaymentSettlement ToPaymentSettlement() => new(
             settlement.Id,
-            settlement.BookingId,
+            new(
+                settlement.Reference.OperationType,
+                settlement.Reference.ClientReference),
             Guid.Parse(settlement.PayerId),
             Guid.Parse(settlement.PayeeId),
             settlement.Amount.ToMoney(),
             settlement.At.ToDateTime());
+    }
 }

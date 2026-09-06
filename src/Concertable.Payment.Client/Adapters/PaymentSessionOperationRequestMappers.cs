@@ -5,22 +5,66 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentSessionOperationRequestMappers
 {
+    extension(PaymentMethodSetupRequest request)
+    {
+        public Proto.PaymentMethodSetupRequest ToProto()
+        {
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+            ArgumentException.ThrowIfNullOrWhiteSpace(request.MandateTermsVersion);
+
+            return new()
+            {
+                Reference = request.Reference.ToProto(),
+                Kind = request.Kind.ToProto(),
+                PayerOwnerId = request.PayerOwnerId.ToString("D"),
+                MandateTermsVersion = request.MandateTermsVersion
+            };
+        }
+    }
+
+    extension(PaymentMethodValidationRequest request)
+    {
+        public Proto.PaymentMethodValidationRequest ToProto()
+        {
+            Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
+
+            return new()
+            {
+                Reference = request.Reference.ToProto(),
+                PayerOwnerId = request.PayerOwnerId.ToString("D")
+            };
+        }
+    }
+
+    extension(PaymentOperationReference reference)
+    {
+        private Proto.PaymentOperationReference ToProto()
+        {
+            reference = reference.EnsureValid();
+
+            return new()
+            {
+                OperationType = reference.OperationType,
+                ClientReference = reference.ClientReference
+            };
+        }
+    }
+
     extension(PaymentSessionOperationRequest request)
     {
         public Proto.PaymentSessionOperationRequest ToProto()
         {
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.OperationId, nameof(request.OperationId));
             Proto.PaymentRequestValidation.ThrowIfEmpty(request.PayerOwnerId, nameof(request.PayerOwnerId));
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.OperationType);
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.ConsumerCorrelation);
+            var reference = request.Reference.EnsureValid();
 
             var message = new Proto.PaymentSessionOperationRequest
             {
                 OperationId = request.OperationId.ToString("D"),
                 Kind = request.Kind.ToProto(),
                 Session = request.Session.ToProto(),
-                OperationType = request.OperationType,
-                ConsumerCorrelation = request.ConsumerCorrelation,
+                OperationType = reference.OperationType,
+                ClientReference = reference.ClientReference,
                 PayerOwnerId = request.PayerOwnerId.ToString("D"),
                 FundsRouting = request.FundsRouting.ToProto()
             };
@@ -30,8 +74,8 @@ internal static class PaymentSessionOperationRequestMappers
                 message.AmountMinor = amountMinor;
             if (request.Currency is { } currency)
                 message.Currency = currency.ToProtoCurrency();
-            if (request.PaymentMethodId is { } paymentMethodId)
-                message.PaymentMethodId = paymentMethodId;
+            if (request.MandateTermsVersion is { } mandateTermsVersion)
+                message.MandateTermsVersion = mandateTermsVersion;
 
             return message;
         }

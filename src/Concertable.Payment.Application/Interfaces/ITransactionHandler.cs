@@ -2,5 +2,5 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface ITransactionHandler
 {
-    Task HandleAsync(PaymentSucceededEvent @event, CancellationToken ct);
+    Task HandleAsync(PaymentSucceededEvent @event, string providerObjectId, CancellationToken ct);
 }

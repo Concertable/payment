@@ -66,18 +66,37 @@ public sealed class PaymentOperationContractTests
             ("capture_before", 6, FieldType.Message),
             ("failure", 7, FieldType.Message));
         AssertFields(
+            Proto.PaymentOperationReference.Descriptor,
+            ("operation_type", 1, FieldType.String),
+            ("client_reference", 2, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodSetupRequest.Descriptor,
+            ("reference", 1, FieldType.Message),
+            ("kind", 2, FieldType.Enum),
+            ("payer_owner_id", 3, FieldType.String),
+            ("mandate_terms_version", 4, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodValidationRequest.Descriptor,
+            ("reference", 1, FieldType.Message),
+            ("payer_owner_id", 2, FieldType.String));
+        AssertFields(
+            Proto.PaymentMethodSetupResponse.Descriptor,
+            ("client_secret", 1, FieldType.String),
+            ("customer_session_secret", 2, FieldType.String),
+            ("customer_token", 3, FieldType.String));
+        AssertFields(
             Proto.PaymentSessionOperationRequest.Descriptor,
             ("operation_id", 1, FieldType.String),
             ("kind", 2, FieldType.Enum),
             ("operation_type", 3, FieldType.String),
-            ("consumer_correlation", 4, FieldType.String),
+            ("client_reference", 4, FieldType.String),
             ("payer_owner_id", 5, FieldType.String),
             ("payee_owner_id", 6, FieldType.String),
             ("amount_minor", 7, FieldType.Int64),
             ("currency", 8, FieldType.Enum),
             ("funds_routing", 9, FieldType.Enum),
             ("session", 10, FieldType.Enum),
-            ("payment_method_id", 11, FieldType.String));
+            ("mandate_terms_version", 12, FieldType.String));
         AssertFields(
             Proto.PaymentSessionRetryRequest.Descriptor,
             ("operation_id", 1, FieldType.String),
@@ -98,7 +117,9 @@ public sealed class PaymentOperationContractTests
         Assert.Equal(
             new[]
             {
-                ("CreateOrReplay", "payment.PaymentSessionOperationRequest", "payment.PaymentSessionDescriptor"),
+                ("SetupPaymentMethod", "payment.PaymentMethodSetupRequest", "payment.PaymentMethodSetupResponse"),
+                ("ValidatePaymentMethod", "payment.PaymentMethodValidationRequest", "google.protobuf.Empty"),
+                ("Create", "payment.PaymentSessionOperationRequest", "payment.PaymentSessionDescriptor"),
                 ("Retry", "payment.PaymentSessionRetryRequest", "payment.PaymentSessionDescriptor"),
                 ("GetStatus", "payment.PaymentSessionStatusRequest", "payment.PaymentOperationSnapshot")
             },
