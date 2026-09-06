@@ -9,6 +9,7 @@ public static class PaymentConstants
     public const string WorkersResource = "payment-workers";
     public const string StripeCliResource = "stripe-cli";
     public const string ServiceName = PaymentServiceIdentity.Name;
+    public const string AllowInsecureHttpClientEnvironmentVariable = "PaymentClient__AllowInsecureHttp";
     public const int HttpPort = 8080;
     public const int GrpcPort = 8081;
 }
