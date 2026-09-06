@@ -138,8 +138,8 @@
       "providerProduct": "PaymentIntent",
       "mode": "Automatic capture; client confirmation for a new method or server confirmation for a saved method.",
       "connectModel": "Venue is the target settlement merchant/payee; only the platform fee belongs to Concertable.",
-      "identity": "Current flow correlates by Stripe intent ID; the later Customer attempt persists OperationId before calling Payment.",
-      "compatibility": "No durable Customer attempt or query endpoint is introduced in Phase 1."
+      "identity": "Customer mints a whole PaymentOperationReference before calling Payment; no provider identifier crosses the boundary.",
+      "compatibility": "Delivered on Payment v1: the durable Customer attempt is addressed by its operation reference."
     },
     {
       "id": "b2b-flat-fee-authorization",
@@ -212,16 +212,6 @@
       "compatibility": "Finite PR #581 bridge allowlist; replace with explicit identity and consumer query recovery later."
     },
     {
-      "id": "frontend-ticket-web-correlation",
-      "owner": "Customer web",
-      "flow": "Correlate current ticket checkout completion with SignalR.",
-      "providerProduct": "PaymentIntent",
-      "mode": "On-session automatic capture.",
-      "connectModel": "Opaque to the frontend.",
-      "identity": "Current compatibility parses the intent ID from the client secret.",
-      "compatibility": "Finite PR #581 bridge allowlist; no new client-secret parser is permitted."
-    },
-    {
       "id": "frontend-shared-confirmation",
       "owner": "B2B web and Customer web shared checkout",
       "flow": "Confirm the current PaymentIntent or SetupIntent in the shared Stripe form.",
@@ -290,6 +280,14 @@
       "kind": "consumer-call",
       "member": "ApplyAsync",
       "operation": "paymentSessions.ValidatePaymentMethodAsync",
+      "occurrence": 1,
+      "decisionId": "b2b-save-or-verify-method"
+    },
+    {
+      "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/Payment/VerifyPaymentFailedProcessor.cs",
+      "kind": "consumer-call",
+      "member": "HandleAsync",
+      "operation": "paymentSessions.GetStatusAsync",
       "occurrence": 1,
       "decisionId": "b2b-save-or-verify-method"
     },
@@ -436,22 +434,6 @@
       "operation": "payoutAccountClient.GetPaymentMethodAsync",
       "occurrence": 1,
       "decisionId": "b2b-payout-account"
-    },
-    {
-      "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs",
-      "kind": "consumer-call",
-      "member": "CreateCheckoutAsync",
-      "operation": "customerPaymentClient.CreatePaymentSessionAsync",
-      "occurrence": 1,
-      "decisionId": "customer-ticket-payment"
-    },
-    {
-      "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs",
-      "kind": "consumer-call",
-      "member": "PayForTicketsAsync",
-      "operation": "customerPaymentClient.PayAsync",
-      "occurrence": 1,
-      "decisionId": "customer-ticket-payment"
     },
     {
       "path": "api/Concertable.Payment/src/Concertable.Payment.Infrastructure/Services/StripeAccountClient.cs",
@@ -615,14 +597,6 @@
     },
     {
       "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx",
-      "kind": "client-secret-parser",
-      "member": null,
-      "operation": "client-secret-id-split",
-      "occurrence": 1,
-      "decisionId": "frontend-ticket-mobile"
-    },
-    {
-      "path": "app/mobile/customer/src/features/concerts/screens/TicketCheckoutScreen.tsx",
       "kind": "frontend-confirmation",
       "member": null,
       "operation": "initPaymentSheet",
@@ -636,14 +610,6 @@
       "operation": "presentPaymentSheet",
       "occurrence": 1,
       "decisionId": "frontend-ticket-mobile"
-    },
-    {
-      "path": "app/web/customer/src/features/concerts/hooks/useTicketPaymentFlow.ts",
-      "kind": "client-secret-parser",
-      "member": null,
-      "operation": "client-secret-id-split",
-      "occurrence": 1,
-      "decisionId": "frontend-ticket-web-correlation"
     },
     {
       "path": "app/web/shared/src/features/concerts/components/checkout/StripePaymentForm.tsx",
@@ -676,6 +642,14 @@
       "operation": "handleNextAction",
       "occurrence": 1,
       "decisionId": "frontend-next-action"
+    },
+    {
+      "path": "api/Concertable.Customer/src/Modules/Ticket/Concertable.Customer.Ticket.Infrastructure/Services/TicketService.cs",
+      "kind": "consumer-call",
+      "member": "CreatePaymentSessionAsync",
+      "operation": "paymentSessions.CreateAsync",
+      "occurrence": 1,
+      "decisionId": "customer-ticket-payment"
     }
   ]
 }
