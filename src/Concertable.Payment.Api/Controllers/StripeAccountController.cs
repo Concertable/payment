@@ -1,16 +1,13 @@
+using Concertable.Payment.Api.Identity;
 using Concertable.Payment.Application.DTOs;
-using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Enums;
+using Concertable.Payment.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Concertable.Payment.Api.Identity;
 
 namespace Concertable.Payment.Api.Controllers;
 
-/* Serves Customer card-management directly (owner = the buyer's own id, read from the `owner` claim).
-   B2B managers no longer reach these endpoints — B2B fronts the same operations over the PayoutAccount
-   gRPC service, passing the tenant id as owner (see Concertable.B2B.Tenant.Api.StripeAccountController). */
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]

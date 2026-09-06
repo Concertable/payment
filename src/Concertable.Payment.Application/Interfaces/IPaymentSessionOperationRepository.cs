@@ -8,13 +8,17 @@ internal interface IPaymentSessionOperationRepository
         Guid operationId,
         CancellationToken ct = default);
 
+    Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default);
+
     Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default);
 
     Task<PaymentSessionReservation> ReserveInitialAsync(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         DateTimeOffset createdAt,
         CancellationToken ct = default);
 

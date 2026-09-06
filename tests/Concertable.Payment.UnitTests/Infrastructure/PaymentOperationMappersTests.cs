@@ -194,14 +194,12 @@ public sealed class PaymentOperationMappersTests
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
-            "escrow",
-            "booking:42",
+            new("escrow", "order:42"),
             payerOwnerId,
             payeeOwnerId,
             5000,
             Currency.Gbp,
-            PaymentSessionFundsRouting.Destination,
-            "pm_test");
+            PaymentSessionFundsRouting.Destination);
 
         var message = request.ToProto();
 
@@ -215,8 +213,6 @@ public sealed class PaymentOperationMappersTests
         Assert.Equal(Proto.Currency.Gbp, message.Currency);
         Assert.True(message.HasCurrency);
         Assert.Equal(Proto.PaymentSessionFundsRouting.Destination, message.FundsRouting);
-        Assert.Equal("pm_test", message.PaymentMethodId);
-        Assert.True(message.HasPaymentMethodId);
     }
 
     [Fact]
@@ -226,14 +222,12 @@ public sealed class PaymentOperationMappersTests
             Guid.CreateVersion7(),
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OnSession,
-            "setup",
-            "account:42",
+            new("setup", "account:42"),
             Guid.CreateVersion7(),
             null,
             null,
             null,
-            PaymentSessionFundsRouting.None,
-            null);
+            PaymentSessionFundsRouting.None);
 
         var message = request.ToProto();
 
@@ -242,7 +236,6 @@ public sealed class PaymentOperationMappersTests
         Assert.False(message.HasCurrency);
         Assert.Equal(Proto.PaymentSessionFundsRouting.None, message.FundsRouting);
         Assert.Equal(Proto.PaymentSessionType.OnSession, message.Session);
-        Assert.False(message.HasPaymentMethodId);
     }
 
     [Fact]

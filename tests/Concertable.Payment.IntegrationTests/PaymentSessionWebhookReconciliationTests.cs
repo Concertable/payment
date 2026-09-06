@@ -94,10 +94,11 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     }
 
     [Fact]
-    public async Task Webhook_UntrackedProviderObject_IsNoOpAndPreservesLegacyPublish()
+    public async Task Webhook_UntrackedProviderObjectWithoutReference_IsNoOp()
     {
         await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
         var providerObjectId = $"pi_untracked_{Guid.NewGuid():N}";
+        var before = await harness.PaymentSucceededCountAsync();
 
         await harness.ProcessWebhookAsync(PaymentIntentEvent(
             "evt_untracked",
@@ -105,7 +106,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             "succeeded",
             EventTypes.PaymentIntentSucceeded));
 
-        Assert.Equal(1, await harness.LegacyPaymentSucceededCountAsync(providerObjectId));
+        Assert.Equal(before, await harness.PaymentSucceededCountAsync());
     }
 
     [Fact]
@@ -127,11 +128,63 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
     }
 
+    [Fact]
+    public async Task Webhook_SetupIntentSucceeded_ForAVerification_PublishesPaymentSucceededOnce()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = VerificationSpecification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        harness.SessionClient.SetStatus(providerObjectId, "succeeded");
+
+        await harness.ProcessWebhookAsync(SetupIntentEvent(
+            "evt_verified",
+            providerObjectId,
+            "succeeded",
+            EventTypes.SetupIntentSucceeded,
+            harness.SessionClient.MetadataOf(providerObjectId)));
+
+        Assert.Equal(
+            specification.OperationId.ToString("D"),
+            harness.SessionClient.MetadataOf(providerObjectId)[PaymentMetadataKeys.OperationId]);
+        Assert.Equal(1, await harness.PaymentSucceededCountAsync(specification.ClientReference));
+        Assert.Equal(
+            PaymentOperationState.Succeeded,
+            (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
+    }
+
+    [Fact]
+    public async Task Webhook_SetupIntentSucceeded_ForAMethodSetup_PublishesNothing()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = SetupSpecification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        harness.SessionClient.SetStatus(providerObjectId, "succeeded");
+
+        await harness.ProcessWebhookAsync(SetupIntentEvent(
+            "evt_setup_done",
+            providerObjectId,
+            "succeeded",
+            EventTypes.SetupIntentSucceeded,
+            harness.SessionClient.MetadataOf(providerObjectId)));
+
+        Assert.Equal(0, await harness.PaymentSucceededCountAsync(specification.ClientReference));
+    }
+
     private static Event SetupIntentEvent(string eventId, string providerObjectId, string status) =>
+        SetupIntentEvent(eventId, providerObjectId, status, "setup_intent.created", new Dictionary<string, string>());
+
+    private static Event SetupIntentEvent(
+        string eventId,
+        string providerObjectId,
+        string status,
+        string type,
+        IReadOnlyDictionary<string, string> metadata) =>
         new()
         {
             Id = eventId,
-            Type = "setup_intent.created",
+            Type = type,
             Created = EventCreated,
             Data = new EventData
             {
@@ -139,13 +192,30 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
                 {
                     Id = providerObjectId,
                     Status = status,
-                    Metadata = new Dictionary<string, string>(),
+                    Metadata = metadata.ToDictionary(pair => pair.Key, pair => pair.Value),
                 },
             },
         };
 
-    private static PaymentSessionSpecification SetupSpecification(Guid operationId) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition VerificationSpecification(Guid operationId) =>
+        PaymentSessionDefinition.Create(
+            operationId,
+            PaymentSessionKind.PaymentMethodVerification,
+            PaymentSession.OnSession,
+            TransactionTypes.Verify,
+            $"app:{operationId:N}",
+            $"payer:{operationId:N}",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            $"cus_{operationId:N}",
+            null,
+            "door-split-mandate-v1");
+
+    private static PaymentSessionDefinition SetupSpecification(Guid operationId) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OffSession,
@@ -158,7 +228,8 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.None,
             null,
             $"cus_{operationId:N}",
-            null);
+            null,
+            "venue-hire-mandate-v1");
 
     private static Event PaymentIntentEvent(
         string eventId,
@@ -181,13 +252,13 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             },
         };
 
-    private static PaymentSessionSpecification Specification(Guid operationId, long amountMinor = 5000) =>
-        PaymentSessionSpecification.Create(
+    private static PaymentSessionDefinition Specification(Guid operationId, long amountMinor = 5000) =>
+        PaymentSessionDefinition.Create(
             operationId,
             PaymentSessionKind.Authorization,
             PaymentSession.OffSession,
             "escrow",
-            $"booking:{operationId:N}",
+            $"order:{operationId:N}",
             $"payer:{operationId:N}",
             $"payee:{operationId:N}",
             amountMinor,
@@ -195,5 +266,6 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
             PaymentSessionFundsRouting.Destination,
             $"pm_{operationId:N}",
             $"cus_{operationId:N}",
-            $"acct_{operationId:N}");
+            $"acct_{operationId:N}",
+            null);
 }

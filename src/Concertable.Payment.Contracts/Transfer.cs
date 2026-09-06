@@ -1,3 +1,3 @@
 namespace Concertable.Payment.Contracts;
 
-public sealed record Transfer(string TransferId);
+public sealed record Transfer(Guid OperationId);

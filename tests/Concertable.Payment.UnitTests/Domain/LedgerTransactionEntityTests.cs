@@ -7,6 +7,7 @@ public sealed class LedgerTransactionEntityTests
 {
     private static readonly Guid Payer = Guid.NewGuid();
     private static readonly Guid Payee = Guid.NewGuid();
+    private static readonly PaymentOperationReference Reference = new("settlement", "order:7");
 
     private static LedgerAccountEntity Account(LedgerAccountType type, Guid? ownerId = null) =>
         LedgerAccountEntity.Create(type, ownerId, Currency.Gbp);
@@ -15,7 +16,7 @@ public sealed class LedgerTransactionEntityTests
         LedgerTransactionEntity.Post(
             postingType: LedgerPostingType.DirectSettlement,
             externalId: "pi_test",
-            bookingId: 7,
+            reference: Reference,
             paymentIntentId: "pi_test",
             occurredAt: DateTime.UtcNow,
             legs:
@@ -46,7 +47,8 @@ public sealed class LedgerTransactionEntityTests
     {
         var transaction = PostSettlement(Money.Gbp(50), Money.Gbp(10));
 
-        Assert.Equal(7, transaction.BookingId);
+        Assert.Equal(Reference.OperationType, transaction.OperationType);
+        Assert.Equal(Reference.ClientReference, transaction.ClientReference);
         Assert.Equal("pi_test", transaction.PaymentIntentId);
         Assert.Equal(LedgerPostingType.DirectSettlement, transaction.PostingType);
         Assert.Equal("pi_test", transaction.ExternalId);
@@ -58,7 +60,7 @@ public sealed class LedgerTransactionEntityTests
         var ex = Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
             postingType: LedgerPostingType.DirectSettlement,
             externalId: "pi_test",
-            bookingId: 7,
+            reference: Reference,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,
             legs:
@@ -75,7 +77,7 @@ public sealed class LedgerTransactionEntityTests
         Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
             postingType: LedgerPostingType.DirectSettlement,
             externalId: "pi_test",
-            bookingId: 7,
+            reference: Reference,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,
             legs: [new LedgerLeg(Account(LedgerAccountType.PlatformRevenue), LedgerDirection.Credit, Money.Gbp(10))]));
@@ -85,7 +87,7 @@ public sealed class LedgerTransactionEntityTests
         Assert.Throws<DomainException>(() => LedgerTransactionEntity.Post(
             postingType: LedgerPostingType.DirectSettlement,
             externalId: "pi_test",
-            bookingId: 7,
+            reference: Reference,
             paymentIntentId: null,
             occurredAt: DateTime.UtcNow,
             legs:

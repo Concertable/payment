@@ -1,3 +1,4 @@
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Reunion;
 using Concertable.Payment.Contracts.Errors;
@@ -6,7 +7,7 @@ namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IPaymentManager
 {
-    Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    Task<Result<ProviderPaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -15,7 +16,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    Task<Result<ProviderPaymentOutcome, ChargeError>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -26,7 +27,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    Task<Result<ProviderPaymentOutcome, ChargeError>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -36,7 +37,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
+    Task<Result<ProviderPaymentOutcome, ChargeError>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -47,7 +48,7 @@ internal interface IPaymentManager
         Guid commissionBindingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+    Task<Result<ProviderPaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -56,7 +57,7 @@ internal interface IPaymentManager
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+    Task<Result<ProviderPaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -66,7 +67,7 @@ internal interface IPaymentManager
         Guid operationId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> HoldBoundCommissionAsync(
+    Task<Result<ProviderPaymentOutcome, PaymentError>> HoldBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -76,12 +77,12 @@ internal interface IPaymentManager
         Guid commissionBindingId,
         CancellationToken ct = default);
 
-    Task<Result<PaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
+    Task<Result<ProviderPaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
         string paymentIntentId,
         PaymentSession session,
         CancellationToken ct = default);
 
-    Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);
-    Task<Result<Refund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default);
+    Task<Result<ProviderTransfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default);
+    Task<Result<ProviderRefund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default);
     Task<UnitResult<PaymentError>> CaptureAsync(CaptureRequest request, CancellationToken ct = default);
 }

@@ -10,7 +10,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     private EscrowEntity() { }
 
     private EscrowEntity(
-        int bookingId,
+        PaymentOperationReference reference,
         Guid fromOwnerId,
         Guid toOwnerId,
         Currency currency,
@@ -22,6 +22,7 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
         string chargeId,
         Guid? commissionBindingId)
     {
+        reference = reference.EnsureValid();
         if (payeeGrossMinor < 0)
             throw new DomainException("Payee gross cannot be negative.");
         if (commissionGrossMinor < 0)
@@ -30,7 +31,8 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
             checked(commissionNetMinor + commissionVatMinor) != commissionGrossMinor)
             throw new DomainException("Commission net and VAT must reconcile to commission gross.");
 
-        BookingId = bookingId;
+        OperationType = reference.OperationType;
+        ClientReference = reference.ClientReference;
         FromOwnerId = fromOwnerId;
         ToOwnerId = toOwnerId;
         Currency = currency;
@@ -46,7 +48,8 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     }
 
     public int Id { get; private set; }
-    public int BookingId { get; private set; }
+    public string OperationType { get; private set; } = null!;
+    public string ClientReference { get; private set; } = null!;
     public Guid FromOwnerId { get; private set; }
     public Guid ToOwnerId { get; private set; }
     public Guid? CommissionBindingId { get; private set; }
@@ -80,14 +83,14 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
     public string? LastModifiedBy { get; set; }
 
     public static EscrowEntity Create(
-        int bookingId,
+        PaymentOperationReference reference,
         Guid fromOwnerId,
         Guid toOwnerId,
         Money gross,
         Money platformFee,
         string chargeId) =>
         new(
-            bookingId,
+            reference,
             fromOwnerId,
             toOwnerId,
             gross.Currency,
@@ -100,14 +103,14 @@ internal sealed class EscrowEntity : IIdEntity, IAuditable
             null);
 
     internal static EscrowEntity CreateBound(
-        int bookingId,
+        PaymentOperationReference reference,
         Guid fromOwnerId,
         Guid toOwnerId,
         Guid commissionBindingId,
         CommissionCalculation calculation,
         string chargeId) =>
         new(
-            bookingId,
+            reference,
             fromOwnerId,
             toOwnerId,
             calculation.Currency,

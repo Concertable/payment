@@ -32,6 +32,9 @@ internal static partial class Log
     [LoggerMessage(Level = LogLevel.Information, Message = "Skipping Stripe event {EventId}: type {EventType} not handled")]
     internal static partial void SkippingStripeEventNotHandled(this ILogger logger, string eventId, string eventType);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipping Stripe event {EventId} of type {EventType}: operation reference is missing")]
+    internal static partial void SkippingStripeEventWithoutOperationReference(this ILogger logger, string eventId, string eventType);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Error processing Stripe webhook for event {EventId}")]
     internal static partial void StripeWebhookProcessingError(this ILogger logger, string eventId, Exception ex);
 
@@ -180,20 +183,40 @@ internal static partial class Log
 
     #region EscrowService
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for booking {BookingId}; nothing to release")]
-    internal static partial void NoEscrowFoundForBooking(this ILogger logger, int bookingId);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for operation {OperationType}/{ClientReference}; nothing to release")]
+    internal static partial void NoEscrowFoundForReference(
+        this ILogger logger,
+        string operationType,
+        string clientReference);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for booking {BookingId} is {Status}, not Held; skipping release")]
-    internal static partial void EscrowNotHeldSkippingRelease(this ILogger logger, int escrowId, int bookingId, EscrowStatus status);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for operation {OperationType}/{ClientReference} is {Status}, not Held; skipping release")]
+    internal static partial void EscrowNotHeldSkippingRelease(
+        this ILogger logger,
+        int escrowId,
+        string operationType,
+        string clientReference,
+        EscrowStatus status);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for booking {BookingId}; nothing to refund")]
-    internal static partial void NoEscrowToRefundForBooking(this ILogger logger, int bookingId);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "No escrow found for operation {OperationType}/{ClientReference}; nothing to refund")]
+    internal static partial void NoEscrowToRefundForReference(
+        this ILogger logger,
+        string operationType,
+        string clientReference);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Escrow {EscrowId} for booking {BookingId} already Refunded; skipping refund")]
-    internal static partial void EscrowAlreadyRefunded(this ILogger logger, int escrowId, int bookingId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Escrow {EscrowId} for operation {OperationType}/{ClientReference} already Refunded; skipping refund")]
+    internal static partial void EscrowAlreadyRefunded(
+        this ILogger logger,
+        int escrowId,
+        string operationType,
+        string clientReference);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for booking {BookingId} is {Status}, not refundable; skipping refund")]
-    internal static partial void EscrowNotRefundableSkippingRefund(this ILogger logger, int escrowId, int bookingId, EscrowStatus status);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Escrow {EscrowId} for operation {OperationType}/{ClientReference} is {Status}, not refundable; skipping refund")]
+    internal static partial void EscrowNotRefundableSkippingRefund(
+        this ILogger logger,
+        int escrowId,
+        string operationType,
+        string clientReference,
+        EscrowStatus status);
 
     #endregion
 

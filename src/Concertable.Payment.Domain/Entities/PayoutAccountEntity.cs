@@ -14,11 +14,6 @@ internal sealed class PayoutAccountEntity : IIdEntity
     }
 
     public int Id { get; private set; }
-
-    /// <summary>
-    /// The opaque owner of this account's Stripe identities. Payment is tenancy-agnostic — the consumer
-    /// assigns the meaning: B2B passes the owning <c>Tenant</c> id, Customer passes the buyer's user id.
-    /// </summary>
     public Guid OwnerId { get; private set; }
     public string Email { get; private set; } = null!;
     public string? StripeAccountId { get; private set; }

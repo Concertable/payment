@@ -21,35 +21,62 @@ public sealed class PaymentTestClient
     }
 
     public Task<string?> GetLatestSettlementPaymentIntentIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         CancellationToken cancellationToken = default) =>
-        GetOptionalStringAsync($"/_e2e/bookings/{bookingId}/settlement-payment-intent-id", cancellationToken);
+        GetOptionalStringAsync(Path("settlement-payment-intent-id", operationType, clientReference), cancellationToken);
 
-    public Task<Guid?> GetEscrowPayeeIdAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        GetOptionalAsync<Guid>($"/_e2e/bookings/{bookingId}/escrow-payee-id", cancellationToken);
+    public Task<Guid?> GetEscrowPayeeIdAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        GetOptionalAsync<Guid>(Path("escrow-payee-id", operationType, clientReference), cancellationToken);
 
     public async Task<string> GetEscrowPaymentIntentIdAsync(
-        int bookingId,
+        string operationType,
+        string clientReference,
         CancellationToken cancellationToken = default) =>
         await client.GetFromJsonAsync<string>(
-            $"/_e2e/bookings/{bookingId}/escrow-payment-intent-id",
+            Path("escrow-payment-intent-id", operationType, clientReference),
             cancellationToken)
-            ?? throw new InvalidOperationException($"Booking {bookingId} has no escrow payment intent.");
+            ?? throw new InvalidOperationException($"Operation {operationType}/{clientReference} has no escrow payment intent.");
 
-    public Task<int?> GetEscrowStatusAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        GetOptionalAsync<int>($"/_e2e/bookings/{bookingId}/escrow-status", cancellationToken);
+    public Task<int?> GetEscrowStatusAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        GetOptionalAsync<int>(Path("escrow-status", operationType, clientReference), cancellationToken);
 
-    public Task<string?> GetEscrowRefundIdAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        GetOptionalStringAsync($"/_e2e/bookings/{bookingId}/escrow-refund-id", cancellationToken);
+    public Task<string?> GetEscrowRefundIdAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        GetOptionalStringAsync(Path("escrow-refund-id", operationType, clientReference), cancellationToken);
 
-    public Task<int> GetLedgerTransactionCountAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        client.GetFromJsonAsync<int>($"/_e2e/bookings/{bookingId}/ledger-transaction-count", cancellationToken);
+    public Task<int> GetLedgerTransactionCountAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        client.GetFromJsonAsync<int>(Path("ledger-transaction-count", operationType, clientReference), cancellationToken);
 
-    public Task<long> GetLedgerSignedSumAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        client.GetFromJsonAsync<long>($"/_e2e/bookings/{bookingId}/ledger-signed-sum", cancellationToken);
+    public Task<long> GetLedgerSignedSumAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        client.GetFromJsonAsync<long>(Path("ledger-signed-sum", operationType, clientReference), cancellationToken);
 
-    public Task<long> GetLedgerPlatformRevenueAsync(int bookingId, CancellationToken cancellationToken = default) =>
-        client.GetFromJsonAsync<long>($"/_e2e/bookings/{bookingId}/ledger-platform-revenue", cancellationToken);
+    public Task<long> GetLedgerPlatformRevenueAsync(
+        string operationType,
+        string clientReference,
+        CancellationToken cancellationToken = default) =>
+        client.GetFromJsonAsync<long>(Path("ledger-platform-revenue", operationType, clientReference), cancellationToken);
+
+    private static string Path(string resource, string operationType, string clientReference)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientReference);
+        return $"/_e2e/operations/{resource}?operationType={Uri.EscapeDataString(operationType)}&clientReference={Uri.EscapeDataString(clientReference)}";
+    }
 
     private async Task<T?> GetOptionalAsync<T>(string path, CancellationToken cancellationToken)
         where T : struct

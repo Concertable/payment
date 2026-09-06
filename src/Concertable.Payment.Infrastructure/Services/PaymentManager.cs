@@ -1,9 +1,8 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.Errors;
 using Concertable.Payment.Application.Requests;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using Transfer = Concertable.Payment.Contracts.Transfer;
-using Refund = Concertable.Payment.Contracts.Refund;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -29,7 +28,7 @@ internal sealed class PaymentManager : IPaymentManager
         this.logger = logger;
     }
 
-    public Task<Result<PaymentOutcome, PaymentError>> ChargeAsync(
+    public async Task<Result<ProviderPaymentOutcome, PaymentError>> ChargeAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -37,9 +36,10 @@ internal sealed class PaymentManager : IPaymentManager
         PaymentSession session,
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken ct = default) =>
-        ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct);
+        (await ChargeInternalAsync(payerId, payeeId, amount, null, paymentMethodId, session, metadata, null, null, ct))
+            .MapError(rejection => rejection.ToPaymentError());
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    public Task<Result<ProviderPaymentOutcome, ChargeError>> SettleAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -50,7 +50,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleAsync(
+    public Task<Result<ProviderPaymentOutcome, ChargeError>> SettleAsync(
         Guid operationId,
         Guid payerId,
         Guid payeeId,
@@ -62,7 +62,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, operationId, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> SettleBoundCommissionAsync(
+    public Task<Result<ProviderPaymentOutcome, ChargeError>> SettleBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -74,7 +74,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         ChargeInternalAsync(payerId, payeeId, chargeAmount, payeeAmount, paymentMethodId, session, metadata, null, commissionBindingId, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+    public Task<Result<ProviderPaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -84,7 +84,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         HoldInternalAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, null, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> HoldAsync(
+    public Task<Result<ProviderPaymentOutcome, PaymentError>> HoldAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -95,7 +95,7 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         HoldInternalAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, operationId, null, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> HoldBoundCommissionAsync(
+    public Task<Result<ProviderPaymentOutcome, PaymentError>> HoldBoundCommissionAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -106,13 +106,13 @@ internal sealed class PaymentManager : IPaymentManager
         CancellationToken ct = default) =>
         HoldInternalAsync(payerId, payeeId, amount, paymentMethodId, session, metadata, null, commissionBindingId, ct);
 
-    public Task<Result<PaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
+    public Task<Result<ProviderPaymentOutcome, PaymentError>> GetPaymentOutcomeAsync(
         string paymentIntentId,
         PaymentSession session,
         CancellationToken ct = default) =>
         intentClientFactory.Create(session).GetAsync(paymentIntentId, ct);
 
-    private async Task<Result<PaymentOutcome, PaymentError>> HoldInternalAsync(
+    private async Task<Result<ProviderPaymentOutcome, PaymentError>> HoldInternalAsync(
         Guid payerId,
         Guid payeeId,
         Money amount,
@@ -127,7 +127,7 @@ internal sealed class PaymentManager : IPaymentManager
         if (!accounts.TryGetValue(out var resolved))
         {
             accounts.TryGetError(out var error);
-            return Result<PaymentOutcome, PaymentError>.Failure(error!);
+            return Result<ProviderPaymentOutcome, PaymentError>.Failure(error!);
         }
 
         var merged = BuildMetadata(payerId, payeeId, resolved.email, amount, metadata);
@@ -146,18 +146,18 @@ internal sealed class PaymentManager : IPaymentManager
         }, ct);
     }
 
-    public async Task<Result<Transfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default)
+    public async Task<Result<ProviderTransfer, PaymentError>> ReleaseAsync(ReleaseRequest request, CancellationToken ct = default)
     {
         var payeeAccount = await payoutAccountRepository.GetByOwnerIdAsync(request.PayeeId, ct);
         if (payeeAccount is null)
-            return Result<Transfer, PaymentError>.Failure(new PaymentError.PayeeNotFound());
+            return Result<ProviderTransfer, PaymentError>.Failure(new PaymentError.PayeeNotFound());
         if (payeeAccount.StripeAccountId is null)
-            return Result<Transfer, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
+            return Result<ProviderTransfer, PaymentError>.Failure(new PaymentError.RecipientUnavailable());
 
         var metadata = new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.ToUserId] = request.PayeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.PayeeOwnerId] = request.PayeeId.ToString(),
+            [PaymentMetadataKeys.AmountMinor] = request.Amount.ToMinorUnits().ToString()
         }.Merge(request.Metadata);
 
         logger.ReleasingPayment(request.Amount.Amount, request.PayeeId, payeeAccount.StripeAccountId, request.ChargeId);
@@ -173,11 +173,11 @@ internal sealed class PaymentManager : IPaymentManager
         }, ct);
     }
 
-    public async Task<Result<Refund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default)
+    public async Task<Result<ProviderRefund, PaymentError>> RefundAsync(RefundRequest request, CancellationToken ct = default)
     {
         var metadata = new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.Amount] = request.Amount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.AmountMinor] = request.Amount.ToMinorUnits().ToString()
         }.Merge(request.Metadata);
 
         logger.RefundingPayment(
@@ -194,7 +194,7 @@ internal sealed class PaymentManager : IPaymentManager
             Reason = request.Reason,
             OperationId = request.OperationId,
             CommissionBindingId = request.CommissionBindingId,
-            CumulativeGrossRefundMinor = request.CumulativeGrossRefundMinor,
+            RefundId = request.RefundId,
             Metadata = metadata
         }, ct);
     }
@@ -215,13 +215,13 @@ internal sealed class PaymentManager : IPaymentManager
         catch (StripeException ex)
         {
             logger.StripeCaptureFailedForPaymentIntent(request.PaymentIntentId, ex.StripeError?.Code, ex);
-            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var error))
-                return UnitResult.Failure(error);
+            if (StripeFailureClassifier.Classify(ex).TryGetValue(out var rejection))
+                return UnitResult.Failure(rejection.ToPaymentError());
             throw;
         }
     }
 
-    private async Task<Result<PaymentOutcome, PaymentError>> ChargeInternalAsync(
+    private async Task<Result<ProviderPaymentOutcome, ChargeError>> ChargeInternalAsync(
         Guid payerId,
         Guid payeeId,
         Money chargeAmount,
@@ -237,7 +237,7 @@ internal sealed class PaymentManager : IPaymentManager
         if (!accounts.TryGetValue(out var resolved))
         {
             accounts.TryGetError(out var error);
-            return Result<PaymentOutcome, PaymentError>.Failure(error!);
+            return Result<ProviderPaymentOutcome, ChargeError>.Failure(new ChargeError.PaymentFailure(error!));
         }
 
         var payeeAmount = transferAmount ?? chargeAmount;
@@ -287,9 +287,9 @@ internal sealed class PaymentManager : IPaymentManager
         IReadOnlyDictionary<string, string> metadata) =>
         new Dictionary<string, string>
         {
-            [PaymentMetadataKeys.FromUserId] = payerId.ToString(),
-            [PaymentMetadataKeys.FromUserEmail] = payerEmail,
-            [PaymentMetadataKeys.ToUserId] = payeeId.ToString(),
-            [PaymentMetadataKeys.Amount] = settledAmount.ToMinorUnits().ToString()
+            [PaymentMetadataKeys.PayerOwnerId] = payerId.ToString(),
+            [PaymentMetadataKeys.PayerEmail] = payerEmail,
+            [PaymentMetadataKeys.PayeeOwnerId] = payeeId.ToString(),
+            [PaymentMetadataKeys.AmountMinor] = settledAmount.ToMinorUnits().ToString()
         }.Merge(metadata);
 }

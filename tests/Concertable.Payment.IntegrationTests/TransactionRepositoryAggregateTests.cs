@@ -19,7 +19,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
     }
 
     [Fact]
-    public async Task GetCompletedTicketRevenueAsync_FiltersByPayeeStatusAndPeriod()
+    public async Task GetCompletedPaymentRevenueAsync_FiltersByPayeeStatusAndPeriod()
     {
         await using var context = await CreateMigratedContextAsync();
         var payeeId = Guid.NewGuid();
@@ -28,16 +28,16 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         var period = new DateRange(monthStart, monthStart.AddMonths(1));
 
         context.AddRange(
-            Ticket(payeeId, 1200, TransactionStatus.Complete, monthStart),
-            Ticket(payeeId, 800, TransactionStatus.Complete, monthStart.AddDays(12)),
-            Ticket(payeeId, 900, TransactionStatus.Complete, monthStart.AddTicks(-1)),
-            Ticket(payeeId, 500, TransactionStatus.Complete, period.End),
-            Ticket(payeeId, 700, TransactionStatus.Pending, monthStart.AddDays(1)),
-            Ticket(otherPayeeId, 600, TransactionStatus.Complete, monthStart.AddDays(1)));
+            Payment(payeeId, 1200, TransactionStatus.Complete, monthStart),
+            Payment(payeeId, 800, TransactionStatus.Complete, monthStart.AddDays(12)),
+            Payment(payeeId, 900, TransactionStatus.Complete, monthStart.AddTicks(-1)),
+            Payment(payeeId, 500, TransactionStatus.Complete, period.End),
+            Payment(payeeId, 700, TransactionStatus.Pending, monthStart.AddDays(1)),
+            Payment(otherPayeeId, 600, TransactionStatus.Complete, monthStart.AddDays(1)));
         await context.SaveChangesAsync();
 
         var amount = await new TransactionRepository(context)
-            .GetCompletedTicketRevenueAsync(payeeId, period);
+            .GetCompletedPaymentRevenueAsync(payeeId, period);
 
         Assert.Equal(2000, amount);
     }
@@ -73,7 +73,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
     }
 
     [Fact]
-    public async Task GetCompletedTicketRevenueByMonthAsync_GroupsAndOrdersCompletedPayeeTransactions()
+    public async Task GetCompletedPaymentRevenueByMonthAsync_GroupsAndOrdersCompletedPayeeTransactions()
     {
         await using var context = await CreateMigratedContextAsync();
         var payeeId = Guid.NewGuid();
@@ -82,15 +82,15 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
             new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
 
         context.AddRange(
-            Ticket(payeeId, 700, TransactionStatus.Complete, new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc)),
-            Ticket(payeeId, 1200, TransactionStatus.Complete, new DateTime(2026, 6, 5, 0, 0, 0, DateTimeKind.Utc)),
-            Ticket(payeeId, 800, TransactionStatus.Complete, new DateTime(2026, 6, 20, 0, 0, 0, DateTimeKind.Utc)),
-            Ticket(payeeId, 500, TransactionStatus.Pending, new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc)),
-            Ticket(Guid.NewGuid(), 900, TransactionStatus.Complete, new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc)));
+            Payment(payeeId, 700, TransactionStatus.Complete, new DateTime(2026, 8, 12, 0, 0, 0, DateTimeKind.Utc)),
+            Payment(payeeId, 1200, TransactionStatus.Complete, new DateTime(2026, 6, 5, 0, 0, 0, DateTimeKind.Utc)),
+            Payment(payeeId, 800, TransactionStatus.Complete, new DateTime(2026, 6, 20, 0, 0, 0, DateTimeKind.Utc)),
+            Payment(payeeId, 500, TransactionStatus.Pending, new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc)),
+            Payment(Guid.NewGuid(), 900, TransactionStatus.Complete, new DateTime(2026, 7, 2, 0, 0, 0, DateTimeKind.Utc)));
         await context.SaveChangesAsync();
 
         var points = await new TransactionRepository(context)
-            .GetCompletedTicketRevenueByMonthAsync(payeeId, period);
+            .GetCompletedPaymentRevenueByMonthAsync(payeeId, period);
 
         Assert.Collection(
             points,
@@ -161,7 +161,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         var settlements = await new TransactionRepository(context)
             .GetRecentCompletedSettlementsAsync(ownerId, 2);
 
-        Assert.Equal([102, 103], settlements.Select(s => s.BookingId));
+        Assert.Equal(["order:102", "order:103"], settlements.Select(s => s.Reference.ClientReference));
         Assert.Equal([1800L, 2700L], settlements.Select(s => s.AmountMinor));
         Assert.Equal(
             [
@@ -171,19 +171,19 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
             settlements.Select(s => s.At));
     }
 
-    private static TicketTransactionEntity Ticket(
+    private static PaymentTransactionEntity Payment(
         Guid payeeId,
         long amount,
         TransactionStatus status,
         DateTime createdAt)
     {
-        var transaction = TicketTransactionEntity.Create(
+        var transaction = PaymentTransactionEntity.Create(
             Guid.NewGuid(),
             payeeId,
             $"pi_{Guid.NewGuid():N}",
             amount,
             status,
-            Random.Shared.Next());
+            new("purchase", $"order:{Guid.NewGuid():N}"));
         transaction.CreatedAt = createdAt;
         transaction.CreatedBy = "test";
         return transaction;
@@ -196,7 +196,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
         TransactionStatus status,
         DateTime createdAt,
         Guid? payerId = null,
-        int? bookingId = null,
+        int? referenceId = null,
         DateTime? completedAt = null)
     {
         var transaction = SettlementTransactionEntity.Create(
@@ -206,7 +206,7 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
             amount,
             fee,
             TransactionStatus.Pending,
-            bookingId ?? Random.Shared.Next());
+            new("settlement", $"order:{referenceId ?? Random.Shared.Next()}"));
         if (status == TransactionStatus.Complete)
             transaction.Complete(completedAt ?? createdAt);
         else if (status == TransactionStatus.Failed)

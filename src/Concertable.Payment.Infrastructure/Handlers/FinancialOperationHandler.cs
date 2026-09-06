@@ -16,6 +16,7 @@ internal sealed class FinancialOperationHandler :
     private readonly IUnitOfWork unitOfWork;
     private readonly IBus bus;
     private readonly IOutboxUnitOfWorkBehavior outboxBehavior;
+    private readonly IPaymentOperationResolver paymentOperationResolver;
     private readonly TimeProvider timeProvider;
 
     public FinancialOperationHandler(
@@ -24,6 +25,7 @@ internal sealed class FinancialOperationHandler :
         IUnitOfWork unitOfWork,
         IBus bus,
         IOutboxUnitOfWorkBehavior outboxBehavior,
+        IPaymentOperationResolver paymentOperationResolver,
         TimeProvider timeProvider)
     {
         this.escrowService = escrowService;
@@ -31,49 +33,8 @@ internal sealed class FinancialOperationHandler :
         this.unitOfWork = unitOfWork;
         this.bus = bus;
         this.outboxBehavior = outboxBehavior;
+        this.paymentOperationResolver = paymentOperationResolver;
         this.timeProvider = timeProvider;
-    }
-
-    public async Task HandleAsync(
-        CaptureEscrowCommand command,
-        MessageEnvelope envelope,
-        CancellationToken ct = default)
-    {
-        var operation = await PrepareAsync(
-            command.OperationId,
-            command.BookingId,
-            Fingerprint(
-                nameof(CaptureEscrowCommand),
-                command.BookingId,
-                command.PayerId,
-                command.PayeeId,
-                command.AmountMinor,
-                command.Currency,
-                command.PaymentIntentId),
-            ct);
-        if (await ReplayTerminalAsync(
-                operation,
-                reference => new CaptureEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
-                (code, message) => new CaptureEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
-                ct))
-            return;
-
-        var result = await escrowService.CaptureAsync(
-            command.PayerId,
-            command.PayeeId,
-            Money.FromMinorUnits(command.AmountMinor, command.Currency),
-            command.PaymentIntentId,
-            command.BookingId,
-            command.OperationId,
-            ct);
-
-        await CompleteAsync(
-            operation,
-            result,
-            deposit => deposit.ChargeId,
-            reference => new CaptureEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
-            (code, message) => new CaptureEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
-            ct);
     }
 
     public async Task HandleAsync(
@@ -83,40 +44,118 @@ internal sealed class FinancialOperationHandler :
     {
         var operation = await PrepareAsync(
             command.OperationId,
-            command.BookingId,
+            command.Reference,
             Fingerprint(
                 nameof(DepositEscrowCommand),
-                command.BookingId,
+                command.Reference.OperationType,
+                command.Reference.ClientReference,
                 command.PayerId,
                 command.PayeeId,
                 command.AmountMinor,
                 command.Currency,
-                command.PaymentMethodId,
+                command.PaymentMethod.OperationType,
+                command.PaymentMethod.ClientReference,
                 command.Session),
             ct);
         if (await ReplayTerminalAsync(
                 operation,
-                reference => new DepositEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
-                (code, message) => new DepositEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
+                () => new DepositEscrowSucceededEvent(operation.Id, command.Reference),
+                (code, message) => new DepositEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct))
             return;
+
+        var paymentMethod = await paymentOperationResolver.ResolvePaymentMethodAsync(
+            command.PaymentMethod,
+            command.PayerId,
+            ct);
+        if (!paymentMethod.TryGetValue(out var paymentMethodId))
+        {
+            paymentMethod.TryGetError(out var error);
+            await HandleResolutionFailureAsync(
+                operation,
+                error!,
+                (code, message) => new DepositEscrowRejectedEvent(operation.Id, command.Reference, code, message),
+                ct);
+            return;
+        }
 
         var result = await escrowService.DepositAsync(
             command.PayerId,
             command.PayeeId,
             Money.FromMinorUnits(command.AmountMinor, command.Currency),
-            command.PaymentMethodId,
+            paymentMethodId,
             command.Session,
-            command.BookingId,
+            command.Reference,
             command.OperationId,
             ct);
 
         await CompleteAsync(
             operation,
             result,
-            deposit => deposit.ChargeId,
-            reference => new DepositEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
-            (code, message) => new DepositEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
+            deposit => deposit.EscrowId.ToString(CultureInfo.InvariantCulture),
+            () => new DepositEscrowSucceededEvent(operation.Id, command.Reference),
+            (code, message) => new DepositEscrowRejectedEvent(operation.Id, command.Reference, code, message),
+            ct);
+    }
+
+    public async Task HandleAsync(
+        CaptureEscrowCommand command,
+        MessageEnvelope envelope,
+        CancellationToken ct = default)
+    {
+        var operation = await PrepareAsync(
+            command.OperationId,
+            command.Reference,
+            Fingerprint(
+                nameof(CaptureEscrowCommand),
+                command.Reference.OperationType,
+                command.Reference.ClientReference,
+                command.PayerId,
+                command.PayeeId,
+                command.AmountMinor,
+                command.Currency,
+                command.Authorization.OperationType,
+                command.Authorization.ClientReference),
+            ct);
+        if (await ReplayTerminalAsync(
+                operation,
+                () => new CaptureEscrowSucceededEvent(operation.Id, command.Reference),
+                (code, message) => new CaptureEscrowRejectedEvent(operation.Id, command.Reference, code, message),
+                ct))
+        {
+            return;
+        }
+
+        var authorization = await paymentOperationResolver.ResolveAuthorizationAsync(
+            command.Authorization,
+            command.PayerId,
+            ct);
+        if (!authorization.TryGetValue(out var paymentIntentId))
+        {
+            authorization.TryGetError(out var error);
+            await HandleResolutionFailureAsync(
+                operation,
+                error!,
+                (code, message) => new CaptureEscrowRejectedEvent(operation.Id, command.Reference, code, message),
+                ct);
+            return;
+        }
+
+        var result = await escrowService.CaptureAsync(
+            command.PayerId,
+            command.PayeeId,
+            Money.FromMinorUnits(command.AmountMinor, command.Currency),
+            paymentIntentId,
+            command.Reference,
+            command.OperationId,
+            ct);
+
+        await CompleteAsync(
+            operation,
+            result,
+            deposit => deposit.EscrowId.ToString(CultureInfo.InvariantCulture),
+            () => new CaptureEscrowSucceededEvent(operation.Id, command.Reference),
+            (code, message) => new CaptureEscrowRejectedEvent(operation.Id, command.Reference, code, message),
             ct);
     }
 
@@ -127,18 +166,22 @@ internal sealed class FinancialOperationHandler :
     {
         var operation = await PrepareAsync(
             command.OperationId,
-            command.BookingId,
-            Fingerprint(nameof(RefundEscrowCommand), command.BookingId, command.Reason),
+            command.Reference,
+            Fingerprint(
+                nameof(RefundEscrowCommand),
+                command.Reference.OperationType,
+                command.Reference.ClientReference,
+                command.Reason),
             ct);
         if (await ReplayTerminalAsync(
                 operation,
-                reference => new RefundEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
-                (code, message) => new RefundEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
+                () => new RefundEscrowSucceededEvent(operation.Id, command.Reference),
+                (code, message) => new RefundEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct))
             return;
 
-        var result = await escrowService.RefundByBookingIdAsync(
-            command.BookingId,
+        var result = await escrowService.RefundByReferenceAsync(
+            command.Reference,
             amount: null,
             reason: command.Reason,
             operationId: command.OperationId,
@@ -149,7 +192,7 @@ internal sealed class FinancialOperationHandler :
             await RejectAsync(
                 operation,
                 error,
-                (code, message) => new RefundEscrowRejectedEvent(operation.Id, operation.BookingId, code, message),
+                (code, message) => new RefundEscrowRejectedEvent(operation.Id, command.Reference, code, message),
                 ct);
             return;
         }
@@ -159,32 +202,32 @@ internal sealed class FinancialOperationHandler :
         {
             await SucceedAsync(
                 operation,
-                value.RefundId,
-                reference => new RefundEscrowSucceededEvent(operation.Id, operation.BookingId, reference),
+                value.Id.ToString("D"),
+                () => new RefundEscrowSucceededEvent(operation.Id, command.Reference),
                 ct);
             return;
         }
 
         operation.RecordAttempt(timeProvider.GetUtcNow());
         await outboxBehavior.ExecuteAsync(
-            () => bus.PublishAsync(new RefundEscrowDeferredEvent(operation.Id, operation.BookingId), ct),
+            () => bus.PublishAsync(new RefundEscrowDeferredEvent(operation.Id, command.Reference), ct),
             ct);
     }
 
     private async Task<FinancialOperationEntity> PrepareAsync(
         Guid id,
-        int bookingId,
+        PaymentOperationReference reference,
         string fingerprint,
         CancellationToken ct)
     {
         var operation = await operationRepository.GetAsync(id, ct);
         if (operation is not null)
         {
-            operation.EnsureMatches(bookingId, fingerprint);
+            operation.EnsureMatches(reference, fingerprint);
             return operation;
         }
 
-        operation = FinancialOperationEntity.Create(id, bookingId, fingerprint, timeProvider.GetUtcNow());
+        operation = FinancialOperationEntity.Create(id, reference, fingerprint, timeProvider.GetUtcNow());
         await operationRepository.AddAsync(operation, ct);
         await unitOfWork.SaveChangesAsync(ct);
         return operation;
@@ -192,7 +235,7 @@ internal sealed class FinancialOperationHandler :
 
     private async Task<bool> ReplayTerminalAsync<TSucceeded, TRejected>(
         FinancialOperationEntity operation,
-        Func<string, TSucceeded> success,
+        Func<TSucceeded> success,
         Func<string, string, TRejected> rejection,
         CancellationToken ct)
         where TSucceeded : IIntegrationEvent
@@ -204,8 +247,7 @@ internal sealed class FinancialOperationHandler :
                 return false;
             case FinancialOperationStatus.Succeeded:
                 await outboxBehavior.ExecuteAsync(
-                    () => bus.PublishAsync(success(operation.ReferenceId
-                        ?? throw new InvalidOperationException("Succeeded operation has no reference.")), ct),
+                    () => bus.PublishAsync(success(), ct),
                     ct);
                 return true;
             case FinancialOperationStatus.Rejected:
@@ -226,7 +268,7 @@ internal sealed class FinancialOperationHandler :
         FinancialOperationEntity operation,
         Result<TValue, TError> result,
         Func<TValue, string> reference,
-        Func<string, TSucceeded> success,
+        Func<TSucceeded> success,
         Func<string, string, TRejected> rejection,
         CancellationToken ct)
         where TValue : notnull
@@ -247,13 +289,13 @@ internal sealed class FinancialOperationHandler :
     private Task SucceedAsync<TEvent>(
         FinancialOperationEntity operation,
         string referenceId,
-        Func<string, TEvent> outcome,
+        Func<TEvent> outcome,
         CancellationToken ct)
         where TEvent : IIntegrationEvent =>
         outboxBehavior.ExecuteAsync(async () =>
         {
             operation.Succeed(referenceId, timeProvider.GetUtcNow());
-            await bus.PublishAsync(outcome(referenceId), ct);
+            await bus.PublishAsync(outcome(), ct);
         }, ct);
 
     private Task RejectAsync<TError, TEvent>(
@@ -268,6 +310,19 @@ internal sealed class FinancialOperationHandler :
             operation.Reject(error.Definition.Code, error.Definition.Message, timeProvider.GetUtcNow());
             await bus.PublishAsync(outcome(error.Definition.Code, error.Definition.Message), ct);
         }, ct);
+
+    private Task HandleResolutionFailureAsync<TEvent>(
+        FinancialOperationEntity operation,
+        PaymentOperationError error,
+        Func<string, string, TEvent> outcome,
+        CancellationToken ct)
+        where TEvent : IIntegrationEvent =>
+        error switch
+        {
+            PaymentOperationError.ProviderUnavailable =>
+                throw new PaymentProviderUnavailableException(),
+            _ => RejectAsync(operation, error, outcome, ct)
+        };
 
     private static string Fingerprint(params object?[] values)
     {

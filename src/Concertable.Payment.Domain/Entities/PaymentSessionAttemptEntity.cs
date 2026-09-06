@@ -61,6 +61,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     public DateTimeOffset? TerminalAt { get; private set; }
     public DateTimeOffset? ExpiresAt { get; private set; }
     public DateTimeOffset? CaptureBefore { get; private set; }
+    public string? PaymentMethodId { get; private set; }
     public string? LastProviderEventId { get; private set; }
     public DateTimeOffset? LastProviderEventCreatedAt { get; private set; }
     public byte[] RowVersion { get; private set; } = null!;
@@ -105,6 +106,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     internal void ApplyTransition(
         PaymentSessionKind sessionKind,
         PaymentOperationTransition transition,
+        string? paymentMethodId = null,
         string? providerRequestId = null,
         string? providerDiagnosticCode = null,
         string? providerDiagnosticMessage = null,
@@ -114,24 +116,64 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
         if (ProviderObjectId is null)
             throw new DomainException("A payment session attempt must be provider-bound before observation.");
 
+        var normalizedProviderStatus = RequiredDiagnostic(
+            transition.ProviderStatus,
+            "provider status",
+            100);
+        var normalizedProviderRequestId = OptionalDiagnostic(
+            providerRequestId,
+            "provider request id",
+            100);
+        var normalizedProviderDiagnosticCode = OptionalDiagnostic(
+            providerDiagnosticCode,
+            "provider diagnostic code",
+            100);
+        var normalizedProviderDiagnosticMessage = OptionalDiagnostic(
+            providerDiagnosticMessage,
+            "provider diagnostic message",
+            1000);
+        var normalizedProviderEventId = OptionalDiagnostic(
+            providerEventId,
+            "provider event id",
+            100);
+        string? normalizedPaymentMethodId = null;
+        if (transition.State == PaymentOperationState.Succeeded
+            && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
+        {
+            normalizedPaymentMethodId = RequiredDiagnostic(
+                paymentMethodId,
+                "payment method id",
+                100);
+            if (PaymentMethodId is not null
+                && !string.Equals(
+                    PaymentMethodId,
+                    normalizedPaymentMethodId,
+                    StringComparison.Ordinal))
+            {
+                throw new DomainException("A completed payment-method attempt cannot change its payment method.");
+            }
+        }
+
         var observableChange = State != transition.State
             || FailureCode != transition.Failure?.Code
             || CaptureBefore != transition.CaptureBefore;
 
         LastAttemptedAt = transition.ObservedAt;
         State = transition.State;
-        LastProviderStatus = RequiredDiagnostic(transition.ProviderStatus, "provider status", 100);
+        LastProviderStatus = normalizedProviderStatus;
         LastObservedAt = transition.ObservedAt;
         NextReconcileAt = null;
         CaptureBefore = transition.CaptureBefore;
+        if (transition.State == PaymentOperationState.Succeeded
+            && sessionKind is PaymentSessionKind.PaymentMethodSetup or PaymentSessionKind.PaymentMethodVerification)
+        {
+            PaymentMethodId = normalizedPaymentMethodId;
+        }
         FailureCode = transition.Failure?.Code;
-        ProviderRequestId = OptionalDiagnostic(providerRequestId, "provider request id", 100);
-        ProviderDiagnosticCode = OptionalDiagnostic(providerDiagnosticCode, "provider diagnostic code", 100);
-        ProviderDiagnosticMessage = OptionalDiagnostic(
-            providerDiagnosticMessage,
-            "provider diagnostic message",
-            1000);
-        LastProviderEventId = OptionalDiagnostic(providerEventId, "provider event id", 100);
+        ProviderRequestId = normalizedProviderRequestId;
+        ProviderDiagnosticCode = normalizedProviderDiagnosticCode;
+        ProviderDiagnosticMessage = normalizedProviderDiagnosticMessage;
+        LastProviderEventId = normalizedProviderEventId;
         LastProviderEventCreatedAt = providerEventCreatedAt;
         TerminalAt = transition.TerminalDisposition == PaymentOperationTerminalDisposition.NonTerminal
             ? null
@@ -151,6 +193,10 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
                 transition.ObservedAt));
         }
     }
+
+    internal bool HasUsablePaymentMethod =>
+        State == PaymentOperationState.Succeeded
+        && !string.IsNullOrWhiteSpace(PaymentMethodId);
 
     internal void RecordReconciliationRequired(
         DateTimeOffset attemptedAt,
@@ -197,7 +243,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
             FailureCode is { } failureCode ? PaymentOperationFailure.FromCode(failureCode) : null);
     }
 
-    private static string RequiredDiagnostic(string value, string name, int maxLength) =>
+    private static string RequiredDiagnostic(string? value, string name, int maxLength) =>
         OptionalDiagnostic(value, name, maxLength)
         ?? throw new DomainException($"Payment session {name} is required.");
 
