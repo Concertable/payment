@@ -144,9 +144,9 @@
     {
       "id": "b2b-flat-fee-authorization",
       "owner": "B2B",
-      "flow": "Authorize and later capture the Flat Fee amount.",
+      "flow": "Authorize the Flat Fee amount plus the platform fee, and later capture it into escrow.",
       "providerProduct": "PaymentIntent",
-      "mode": "On-session manual authorization followed by server capture before expiry.",
+      "mode": "On-session manual authorization, sized by Payment, followed by server capture before expiry.",
       "connectModel": "Artist connected account is payee and settlement merchant.",
       "identity": "Booking/application compatibility IDs remain; the durable successor adds operation and attempt identity.",
       "compatibility": "Existing hold lookup and capture calls remain until the durable session migration."
@@ -247,7 +247,7 @@
       "path": "api/Concertable.B2B/src/Modules/Application/Concertable.B2B.Application.Infrastructure/Services/ApplicationCheckoutService.cs",
       "kind": "consumer-call",
       "member": "CreateAcceptCheckoutAsync",
-      "operation": "paymentSessions.CreateAsync",
+      "operation": "escrowOperationsClient.AuthorizeAsync",
       "occurrence": 1,
       "decisionId": "b2b-flat-fee-authorization"
     },

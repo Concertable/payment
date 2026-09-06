@@ -7,6 +7,14 @@ namespace Concertable.Payment.Client;
 
 public interface IEscrowOperationsClient
 {
+    Task<Result<PaymentSessionDescriptor, PaymentOperationError>> AuthorizeAsync(
+        Guid operationId,
+        PaymentOperationReference reference,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        CancellationToken ct = default);
+
     Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid operationId,
         PaymentOperationReference reference,

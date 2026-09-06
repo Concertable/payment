@@ -15,6 +15,25 @@ internal sealed class EscrowClient : IEscrowOperationsClient
         this.client = client;
     }
 
+    public Task<Result<PaymentSessionDescriptor, PaymentOperationError>> AuthorizeAsync(
+        Guid operationId,
+        PaymentOperationReference reference,
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        CancellationToken ct = default) =>
+        PaymentClientResults.ExecuteAsync(
+            async () => (await client.AuthorizeAsync(
+                Proto.AuthorizeEscrowRequest.Create(
+                    operationId,
+                    reference,
+                    payerId,
+                    payeeId,
+                    amount),
+                cancellationToken: ct)).ToPaymentSessionDescriptor(),
+            error => error.ToPaymentOperationError(),
+            ct);
+
     public Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid operationId,
         PaymentOperationReference reference,
