@@ -88,3 +88,23 @@ Resolved by `plans/PAYMENT_SEED_REFLECTION_REFACTOR.md`. Rather than re-homing t
 - `Concertable.Payment.Seed.Contracts` (the ticket-purchase catalog + `PaymentSeedSpec` incl. the 3 dead `Settlement`/`Escrow`/`Verify` factories) and `Concertable.Payment.Seed.Simulator` are gone, along with their AppHost wiring (`AddPaymentSeedingSimulator`, the resource-name constant, csproj/slnx entries).
 - The only seed state those payments produced is **inherently-unreproducible historical state** (past-dated ticket sales). Each consumer now reflection-seeds its own copy: B2B sets `ConcertEntity.TicketsSold` via `ConcertFactory` from a `ticketsSold` field on `ConcertSeedSpec`; Customer direct-inserts `SeedState.Tickets` via `TicketDevSeeder`. Documented as a sanctioned exception in the `seeding` skill.
 - `Payment.Contracts.PaymentSucceededEvent` stays — the only Payment-owned piece. Payment now owns **zero** ticket/concert knowledge.
+
+---
+
+## MEDIUM
+
+### Stripe.net's API key is a global written from constructors, not an injected client
+
+`StripeApiClient` and `StripeAccountClient` each assign `StripeConfiguration.ApiKey` in their own
+constructor, and the E2E adapter's account client does it a third time. Every `Stripe.*Service` is
+registered bare (`AddSingleton<Stripe.SetupIntentService>()`), so it resolves the key from that global when
+a call is made rather than from a client it owns.
+
+`AddPaymentInfrastructure` now assigns the key once at composition, which removes the ordering hazard that
+made the first payment session of a process fail with `No API key provided`. The underlying shape is still
+wrong: process-wide mutable state, three writers, and services that cannot be constructed with a different
+key — so a test cannot exercise two keys, and the failure mode when someone adds a fourth writer is silent.
+
+**Resolves when:** an `IStripeClient` is registered from `StripeSettings` and every `Stripe.*Service` is
+constructed with it, no code assigns `StripeConfiguration.ApiKey`, and the E2E adapter overrides that one
+registration instead of racing a global.
