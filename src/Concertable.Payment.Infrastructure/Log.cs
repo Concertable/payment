@@ -233,6 +233,13 @@ internal static partial class Log
 
     #endregion
 
+    #region StripeSessionClient
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Stripe rejected {Operation} for session customer {ProviderCustomerId}")]
+    internal static partial void StripeSessionCallFailed(this ILogger logger, string operation, string? providerCustomerId, Exception ex);
+
+    #endregion
+
     #region PaymentSessionResourceReconciler
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Reconciling session resource {ProviderObjectId} ({ProviderObjectKind}) from {Source}")]
