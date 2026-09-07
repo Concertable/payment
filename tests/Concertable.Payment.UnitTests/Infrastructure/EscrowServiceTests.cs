@@ -1,4 +1,4 @@
-using Reunion;
+﻿using Reunion;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.Requests;
@@ -16,6 +16,7 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 public sealed class EscrowServiceTests
 {
     private readonly Mock<IPaymentManager> paymentManager;
+    private readonly Mock<IPaymentSessionService> paymentSessions = new();
     private readonly Mock<IEscrowRepository> escrowRepository;
     private readonly Mock<IPayoutAccountRepository> payoutAccountRepository;
     private readonly Mock<ILedgerService> ledger;
@@ -59,6 +60,7 @@ public sealed class EscrowServiceTests
     private EscrowService SutWithFee(decimal fee) =>
         new(
             paymentManager.Object,
+            paymentSessions.Object,
             escrowRepository.Object,
             payoutAccountRepository.Object,
             ledger.Object,

@@ -20,6 +20,22 @@ internal sealed class EscrowGrpcService : Escrow.EscrowBase
         this.paymentOperationResolver = paymentOperationResolver;
     }
 
+    public override async Task<PaymentSessionDescriptor> Authorize(
+        AuthorizeEscrowRequest request,
+        ServerCallContext context)
+    {
+        var command = request.ToCommand();
+        var result = await escrowService.AuthorizeAsync(
+            command.PayerId,
+            command.PayeeId,
+            command.Amount,
+            command.Reference,
+            command.OperationId,
+            context.CancellationToken);
+
+        return result.ValueOrRpcException().ToProto();
+    }
+
     public override async Task<EscrowResponse> Deposit(DepositRequest request, ServerCallContext context)
     {
         var command = request.ToCommand();
