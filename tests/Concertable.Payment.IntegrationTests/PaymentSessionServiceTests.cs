@@ -88,6 +88,29 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
+    public async Task SetupPaymentMethodAsync_NewCommitment_CommitsTheMethodForOffSessionReuse()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var payerOwnerId = Guid.CreateVersion7();
+        var reference = new PaymentOperationReference("purchase", $"order:{Guid.CreateVersion7():N}");
+        await using (var context = CreateContext())
+        {
+            await SeedPayerAsync(context, payerOwnerId);
+            var setup = await Service(context, provider).SetupPaymentMethodAsync(
+                new(reference, PaymentSessionKind.PaymentMethodSetup, payerOwnerId, "venue-hire-mandate-v1"));
+            Assert.True(setup.TryGetValue(out _));
+        }
+
+        await using var assertContext = CreateContext();
+        var operation = await assertContext.PaymentSessionOperations
+            .SingleAsync(value => value.OperationType == reference.OperationType
+                && value.ClientReference == reference.ClientReference);
+
+        Assert.Equal(PaymentSession.OffSession, operation.Session);
+    }
+
+    [Fact]
     public async Task SetupPaymentMethodAsync_ChangedMandateTerms_ReturnsOperationConflict()
     {
         await MigrateAsync();
