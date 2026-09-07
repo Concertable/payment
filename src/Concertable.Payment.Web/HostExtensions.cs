@@ -85,6 +85,7 @@ public static class HostExtensions
                     reg.Publishes<RefundEscrowSucceededEvent>();
                     reg.Publishes<RefundEscrowRejectedEvent>();
                     reg.Publishes<RefundEscrowDeferredEvent>();
+                    reg.Publishes<PaymentOperationStateChanged>();
                     reg.HandleCommand<ProcessStripeWebhookCommand>();
                     reg.HandleCommand<CaptureEscrowCommand>();
                     reg.HandleCommand<DepositEscrowCommand>();

@@ -4,6 +4,40 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
+## HIGH
+
+### A payment that fails before its provider object exists cannot be dispatched as a failure
+
+`PaymentFailureDispatcher.HandleAsync` resolves the provider object id through
+`PaymentOperationResolver.ResolveProviderObjectIdAsync` before routing a `PaymentFailedEvent` to its keyed
+handler. When the provider call fails at *creation* there is no provider transaction to resolve, so the
+resolver throws `InvalidOperationException: Payment operation <type>/<reference> has no provider transaction`
+and the event is never dispatched. The consumer is therefore never told the payment failed: the originating
+booking stays pending forever and the UI polls a resource that will never appear rather than surfacing a
+payment error.
+
+Observed with a venue-hire deposit refused as `authentication_required` — the hold was never created, so
+`escrow/booking:48` had no provider transaction and the failure dispatch threw three times before giving up.
+
+**Resolves when:** a `PaymentFailedEvent` for an operation with no provider transaction still reaches its
+keyed `IPaymentFailureHandler`, and a test covers the create-time failure path specifically.
+
+### A 3DS card authenticated during setup is still refused off-session
+
+`VenueHireConfirmStep` sends the deposit as `PaymentSession.OffSession`. Stripe refuses a card that requires
+authentication with `authentication_required` unless the setup that saved it authenticated it for off-session
+use, so the venue-hire deposit fails for any artist who paid with a 3DS card even though they completed the
+challenge. The browser scenario `Artist completes 3DS challenge on venue hire` asserts the opposite and is
+red because of it.
+
+Whether the fix is the SetupIntent's `usage`, an on-session first charge, or an explicit re-authentication
+step is a payments-flow decision, not a mechanical one.
+
+**Resolves when:** a card that completed a 3DS challenge during method setup is chargeable off-session for
+the venue-hire deposit, and `Artist completes 3DS challenge on venue hire` passes.
+
+---
+
 ## MEDIUM
 
 ### Operation-less settlement overloads remain until consumers carry durable operation identities
