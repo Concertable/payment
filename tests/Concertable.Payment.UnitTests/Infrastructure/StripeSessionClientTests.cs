@@ -1,10 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Stripe;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -70,7 +71,8 @@ public sealed class StripeSessionClientTests
             new PaymentIntentService(stripeClient),
             new SetupIntentService(stripeClient),
             new CustomerSessionService(stripeClient),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<StripeSessionClient>.Instance);
     }
 
     private static PaymentSessionProviderRequest Request(PaymentSession session) =>

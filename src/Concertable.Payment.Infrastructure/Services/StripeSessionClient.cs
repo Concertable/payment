@@ -1,7 +1,8 @@
-using Concertable.Payment.Application.PaymentSessions;
+﻿using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Mappers;
+using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -12,17 +13,20 @@ internal sealed class StripeSessionClient : IStripeSessionClient
     private readonly SetupIntentService setupIntentService;
     private readonly CustomerSessionService customerSessionService;
     private readonly TimeProvider timeProvider;
+    private readonly ILogger<StripeSessionClient> logger;
 
     public StripeSessionClient(
         PaymentIntentService paymentIntentService,
         SetupIntentService setupIntentService,
         CustomerSessionService customerSessionService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<StripeSessionClient> logger)
     {
         this.paymentIntentService = paymentIntentService;
         this.setupIntentService = setupIntentService;
         this.customerSessionService = customerSessionService;
         this.timeProvider = timeProvider;
+        this.logger = logger;
     }
 
     public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
@@ -56,8 +60,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         {
             return ToResult(intent);
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CreateAsync), request.ProviderCustomerId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
@@ -81,8 +86,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(RetrieveAsync), providerObjectId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
@@ -103,8 +109,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CancelAsync), providerObjectId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
@@ -137,8 +144,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 cancellationToken: ct);
             return session.ClientSecret;
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CreateCustomerSessionAsync), providerCustomerId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }

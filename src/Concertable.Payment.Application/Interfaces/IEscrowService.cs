@@ -1,10 +1,19 @@
 using Reunion;
+using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Contracts.Errors;
 
 namespace Concertable.Payment.Application.Interfaces;
 
 internal interface IEscrowService
 {
+    Task<Result<PaymentSessionExecution, PaymentOperationError>> AuthorizeAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        PaymentOperationReference reference,
+        Guid operationId,
+        CancellationToken ct = default);
+
     Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid payerId,
         Guid payeeId,

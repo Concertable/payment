@@ -89,6 +89,11 @@ public static class ServiceCollectionExtensions
             var useRealStripe = configuration.GetSection("ExternalServices").GetValue<bool>("UseRealStripe");
             if (useRealStripe)
             {
+                // Stripe.net reads its key from a global that the account and api clients set in their
+                // constructors, so whichever service is resolved first decides whether the key is set at
+                // all. Session services hold no client of their own; set it once here instead.
+                Stripe.StripeConfiguration.ApiKey =
+                    configuration.GetSection(StripeSettings.SectionName)["SecretKey"];
                 services.AddSingleton<Stripe.AccountService>();
                 services.AddSingleton<Stripe.AccountLinkService>();
                 services.AddSingleton<Stripe.CustomerService>();

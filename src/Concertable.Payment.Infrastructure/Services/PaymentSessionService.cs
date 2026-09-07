@@ -51,7 +51,7 @@ internal sealed class PaymentSessionService : IPaymentSessionService
         var specification = PaymentSessionDefinition.Create(
             existing?.OperationId ?? Guid.CreateVersion7(timeProvider.GetUtcNow()),
             request.Kind,
-            PaymentSession.OnSession,
+            PaymentSession.OffSession,
             reference.OperationType,
             reference.ClientReference,
             request.PayerOwnerId.ToString("D"),

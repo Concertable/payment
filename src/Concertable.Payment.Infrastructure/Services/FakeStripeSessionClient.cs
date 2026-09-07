@@ -20,6 +20,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
         StripeIdempotencyKey,
         ProviderSession> byIdempotencyKey = [];
     private readonly ConcurrentDictionary<string, ProviderSession> byProviderObjectId = [];
+    private readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, string>> metadataByProviderObjectId = [];
     private readonly ConcurrentDictionary<FakeStripeSessionFaultPoint, byte> oneShotFaults = [];
     private readonly TimeProvider timeProvider;
 
@@ -29,6 +30,9 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
     }
 
     internal int ProviderObjectCount => byProviderObjectId.Count;
+
+    internal IReadOnlyDictionary<string, string> MetadataOf(string providerObjectId) =>
+        metadataByProviderObjectId[providerObjectId];
 
     internal void FailOnce(FakeStripeSessionFaultPoint faultPoint) =>
         oneShotFaults[faultPoint] = 0;
@@ -48,6 +52,7 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
 
         var result = byIdempotencyKey.GetOrAdd(idempotencyKey, _ => Create(request, idempotencyKey));
         byProviderObjectId.TryAdd(result.ProviderObjectId, result);
+        metadataByProviderObjectId.TryAdd(result.ProviderObjectId, request.Metadata);
 
         if (TakeFault(FakeStripeSessionFaultPoint.AfterProviderAcceptance))
         {
