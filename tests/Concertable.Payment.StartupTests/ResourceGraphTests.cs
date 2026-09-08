@@ -2,72 +2,16 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Concertable.Auth.Hosting;
 using Concertable.Payment.Hosting;
-using Concertable.Payment.Web;
-using Concertable.Payment.Workers;
 using Concertable.Testing.Architecture;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace Concertable.Payment.ArchitectureTests;
+namespace Concertable.Payment.StartupTests;
 
-public sealed class PaymentArchitectureTests
+public sealed class ResourceGraphTests
 {
     [Fact]
-    public void Web_ProductionGraphAndStrictValidation_AreValid()
-    {
-        var builder = WebApplication.CreateBuilder(CompositionTestArguments.Create());
-        builder.AddWebHost();
-        using var app = builder.Build();
-        builder.Services.ValidateComposition(app.Services, new CompositionValidationOptions
-        {
-            RootAssemblies = [typeof(Concertable.Payment.Web.HostExtensions).Assembly]
-        });
-        var jwtOptions = app.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
-            .Get(JwtBearerDefaults.AuthenticationScheme);
-        Assert.False(jwtOptions.RequireHttpsMetadata);
-        var invalidBuilder = WebApplication.CreateBuilder(CompositionTestArguments.Create());
-        invalidBuilder.AddWebHost();
-        invalidBuilder.Services.AddInvalidLifetimeGraph();
-        Assert.ThrowsAny<Exception>(() => invalidBuilder.Build());
-    }
-
-    [Fact]
-    public void Web_ProductionEnvironment_RequiresHttpsMetadata()
-    {
-        var arguments = CompositionTestArguments.Create();
-        arguments[0] = "--environment=Production";
-        var builder = WebApplication.CreateBuilder(arguments);
-        builder.AddWebHost();
-        using var app = builder.Build();
-        var jwtOptions = app.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
-            .Get(JwtBearerDefaults.AuthenticationScheme);
-
-        Assert.True(jwtOptions.RequireHttpsMetadata);
-    }
-
-    [Fact]
-    public void Workers_ProductionGraphAndStrictValidation_AreValid()
-    {
-        var builder = Host.CreateApplicationBuilder(CompositionTestArguments.Create());
-        builder.AddWorkerHost();
-        using var app = builder.Build();
-        builder.Services.ValidateComposition(app.Services, new CompositionValidationOptions
-        {
-            RootAssemblies = [typeof(Concertable.Payment.Workers.HostExtensions).Assembly]
-        });
-        var invalidBuilder = Host.CreateApplicationBuilder(CompositionTestArguments.Create());
-        invalidBuilder.AddWorkerHost();
-        invalidBuilder.Services.AddInvalidLifetimeGraph();
-        Assert.ThrowsAny<Exception>(() => invalidBuilder.Build());
-    }
-
-    [Fact]
-    public async Task AppHost_ProductionGraphAndStrictValidation_AreValid()
+    public async Task ProductionGraphAndStrictValidation_AreValid()
     {
         var validBuilder = AppHost.CreateBuilder([]);
         AssertImageEndpoint(validBuilder, AuthConstants.Resource, "https", scheme: "https");
@@ -81,7 +25,7 @@ public sealed class PaymentArchitectureTests
     }
 
     [Fact]
-    public async Task AddPaymentWeb_ProjectOverload_AdvertisesNoDedicatedGrpcTransport()
+    public async Task ProjectHostedPaymentWeb_AdvertisesNoDedicatedGrpcTransport()
     {
         var builder = DistributedApplication.CreateBuilder();
         var sql = builder.AddSqlServer("sql");
@@ -169,7 +113,7 @@ public sealed class PaymentArchitectureTests
         IDistributedApplicationBuilder builder,
         string resourceName,
         string endpointName,
-        string scheme = "http")
+        string scheme)
     {
         var resource = Assert.IsType<ServiceContainerResource>(
             builder.Resources.Single(resource => resource.Name == resourceName));
