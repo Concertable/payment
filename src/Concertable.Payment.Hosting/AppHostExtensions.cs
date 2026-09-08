@@ -19,7 +19,12 @@ public static class AppHostExtensions
         IResourceBuilder<SqlServerDatabaseResource> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
     {
+        var httpPorts = $"{PaymentConstants.HttpPort};{PaymentConstants.GrpcPort}";
+
         return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
+                      .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "https")
+                      .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "http")
+                      .WithHttpEndpoint(targetPort: PaymentConstants.GrpcPort, name: "grpc")
                       .WithReference(paymentDb)
                       .WaitFor(paymentDb)
                       .WithReference(auth)
@@ -27,6 +32,8 @@ public static class AppHostExtensions
                       .WithReference(asb)
                       .WaitFor(asb)
                       .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment("PaymentTransport__GrpcPort", PaymentConstants.GrpcPort.ToString())
+                      .WithEnvironment("ASPNETCORE_HTTP_PORTS", httpPorts)
                       .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
                       .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
     }
