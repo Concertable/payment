@@ -40,6 +40,15 @@ when discovery resolves an `http` address unless the owning composition explicit
 The B2B and Customer AppHosts set it only in local run mode, never in their published manifests. Other
 deployments must make the same explicit trust decision or use TLS.
 
+The split listener belongs to the container topology alone. A project-hosted Payment — the umbrella and
+standalone AppHosts, and the substituted E2E host — publishes no `grpc` endpoint and sets no
+`PaymentTransport:GrpcPort`, so every endpoint stays `Http1AndHttp2` and gRPC rides the same listener as
+REST; naming a port that no endpoint binds would make an unrelated endpoint HTTP/2-only. Because a consumer's
+`WithReference` advertises one discovery key per *container* endpoint, an E2E stack that substitutes a project
+for that container must repoint **every** `services:payment-web:*` key at the host it actually runs
+(`PinPaymentDiscovery`) — a key left aimed at the non-started container resolves to a proxy that accepts the
+connection and never answers, which surfaces as a 30-second gRPC timeout rather than a refusal.
+
 ---
 
 ## Double-entry ledger

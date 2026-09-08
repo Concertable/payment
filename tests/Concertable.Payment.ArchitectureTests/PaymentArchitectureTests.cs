@@ -1,6 +1,7 @@
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Concertable.Auth.Hosting;
+using Concertable.Payment.Hosting;
 using Concertable.Payment.Web;
 using Concertable.Payment.Workers;
 using Concertable.Testing.Architecture;
@@ -77,6 +78,40 @@ public sealed class PaymentArchitectureTests
         var builder = AppHost.CreateBuilder([]);
         builder.Services.AddInvalidLifetimeGraph();
         Assert.ThrowsAny<Exception>(() => builder.Build());
+    }
+
+    [Fact]
+    public async Task AddPaymentWeb_ProjectOverload_AdvertisesNoDedicatedGrpcTransport()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var sql = builder.AddSqlServer("sql");
+        var paymentDb = sql.AddDatabase(PaymentConstants.Database);
+        var asb = builder.AddAzureServiceBus("asb");
+        var auth = builder.AddContainerImage(AuthConstants.Resource, "test-image", $"sha256:{new string('a', 64)}")
+            .WithHttpsEndpoint(targetPort: 8080, name: "https");
+
+        var paymentWeb = builder.AddPaymentWeb<Projects.Concertable_Payment_Web>(auth, paymentDb, asb).Resource;
+        var environment = await GetRawEnvironmentAsync(paymentWeb, CancellationToken.None);
+
+        // A project-hosted Payment has no cleartext gRPC port to publish, so it serves gRPC over the same
+        // Aspire-allocated endpoint as REST. Naming a port here would turn that endpoint HTTP/2-only and
+        // break every REST caller; only the container topology owns the split listener.
+        Assert.DoesNotContain("PaymentTransport__GrpcPort", environment.Keys);
+        Assert.DoesNotContain(
+            paymentWeb.Annotations.OfType<EndpointAnnotation>(),
+            endpoint => endpoint.Name == "grpc");
+    }
+
+    private static async Task<Dictionary<string, object>> GetRawEnvironmentAsync(
+        IResource resource, CancellationToken cancellationToken)
+    {
+        var environment = new Dictionary<string, object>();
+        var context = new EnvironmentCallbackContext(
+            new DistributedApplicationExecutionContext(DistributedApplicationOperation.Run),
+            resource, environment, cancellationToken);
+        foreach (var annotation in resource.Annotations.OfType<EnvironmentCallbackAnnotation>().ToArray())
+            await annotation.Callback(context);
+        return environment;
     }
 
     private static async Task AssertNoSpaClientsAsync(IDistributedApplicationBuilder builder)
