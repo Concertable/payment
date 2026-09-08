@@ -71,6 +71,9 @@ public sealed class PaymentTestClient
         CancellationToken cancellationToken = default) =>
         client.GetFromJsonAsync<long>(Path("ledger-platform-revenue", operationType, clientReference), cancellationToken);
 
+    public Task<int> GetActiveOutboxCountAsync(CancellationToken cancellationToken = default) =>
+        client.GetFromJsonAsync<int>("/_e2e/operations/active-outbox-count", cancellationToken);
+
     private static string Path(string resource, string operationType, string clientReference)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationType);
