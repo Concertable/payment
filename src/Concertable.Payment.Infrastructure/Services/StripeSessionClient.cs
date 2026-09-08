@@ -202,8 +202,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             intent.Id,
             intent.Status,
             timeProvider.GetUtcNow(),
-            intent.LatestCharge?.PaymentMethodDetails?.Card?.CaptureBefore
-                ?? intent.LatestCharge?.PaymentMethodDetails?.CardPresent?.CaptureBefore,
+            CaptureBefore(intent),
             Classify(intent.LastPaymentError),
             false,
             intent.Status is not ("succeeded" or "canceled"),
@@ -212,6 +211,15 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             null,
             intent.LastPaymentError?.Code,
             intent.LastPaymentError?.Message);
+
+    private static DateTimeOffset? CaptureBefore(PaymentIntent intent)
+    {
+        DateTime? captureBefore = intent.LatestCharge?.PaymentMethodDetails?.Card?.CaptureBefore
+            ?? intent.LatestCharge?.PaymentMethodDetails?.CardPresent?.CaptureBefore;
+        return captureBefore is null || captureBefore.Value == DateTime.UnixEpoch
+            ? null
+            : new DateTimeOffset(captureBefore.Value);
+    }
 
     private ProviderSession ToResult(SetupIntent intent) =>
         new(
