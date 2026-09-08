@@ -31,6 +31,24 @@ It knows **nothing** of tickets, concerts, deals, bookings, applications, buyers
 
 **Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
 
+The Payment Web container keeps HTTP/1.1 REST, webhook, and mobile traffic on cleartext port `8080`. Its
+separate cleartext port `8081` is HTTP/2-only for gRPC; `Payment.Hosting` publishes that listener as the `grpc`
+service-discovery endpoint while retaining the HTTP-schemed `https` compatibility alias on `8080` for callers
+that still select that endpoint name. `Payment.Client` prefers `services:payment-web:grpc:0` and fails closed
+when discovery resolves an `http` address unless the owning composition explicitly sets
+`PaymentClient:AllowInsecureHttp=true`; only that opt-in enables service-token call credentials over h2c.
+The B2B and Customer AppHosts set it only in local run mode, never in their published manifests. Other
+deployments must make the same explicit trust decision or use TLS.
+
+The split listener belongs to the container topology alone. A project-hosted Payment — the umbrella and
+standalone AppHosts, and the substituted E2E host — publishes no `grpc` endpoint and sets no
+`PaymentTransport:GrpcPort`, so every endpoint stays `Http1AndHttp2` and gRPC rides the same listener as
+REST; naming a port that no endpoint binds would make an unrelated endpoint HTTP/2-only. Because a consumer's
+`WithReference` advertises one discovery key per *container* endpoint, an E2E stack that substitutes a project
+for that container must repoint **every** `services:payment-web:*` key at the host it actually runs
+(`PinPaymentDiscovery`) — a key left aimed at the non-started container resolves to a proxy that accepts the
+connection and never answers, which surfaces as a 30-second gRPC timeout rather than a refusal.
+
 ---
 
 ## Double-entry ledger
