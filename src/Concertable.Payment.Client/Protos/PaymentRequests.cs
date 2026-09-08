@@ -171,6 +171,30 @@ public sealed partial class CalculateBoundCommissionRequest
     }
 }
 
+public sealed partial class AuthorizeEscrowRequest
+{
+    internal static AuthorizeEscrowRequest Create(
+        Guid operationId,
+        ContractPaymentMethodReference reference,
+        Guid payerId,
+        Guid payeeId,
+        DomainMoney amount)
+    {
+        PaymentRequestValidation.ThrowIfEmpty(operationId, nameof(operationId));
+        PaymentRequestValidation.ThrowIfEmpty(payerId, nameof(payerId));
+        PaymentRequestValidation.ThrowIfEmpty(payeeId, nameof(payeeId));
+
+        return new()
+        {
+            OperationId = operationId.ToString("D"),
+            Reference = PaymentRequestValidation.ToProto(reference),
+            PayerId = payerId.ToString("D"),
+            PayeeId = payeeId.ToString("D"),
+            Amount = amount.ToProtoMoney()
+        };
+    }
+}
+
 public sealed partial class DepositRequest
 {
     internal static DepositRequest Create(

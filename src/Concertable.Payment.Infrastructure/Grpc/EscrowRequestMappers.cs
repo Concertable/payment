@@ -6,6 +6,13 @@ using ContractReference = Concertable.Payment.Contracts.PaymentOperationReferenc
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
+internal sealed record AuthorizeEscrowCommand(
+    Guid OperationId,
+    ContractReference Reference,
+    Guid PayerId,
+    Guid PayeeId,
+    Money Amount);
+
 internal sealed record DepositCommand(
     Guid OperationId,
     ContractReference Reference,
@@ -44,6 +51,16 @@ internal sealed record BoundCommissionCaptureCommand(
 
 internal static class EscrowRequestMappers
 {
+    extension(AuthorizeEscrowRequest request)
+    {
+        public AuthorizeEscrowCommand ToCommand() => new(
+            request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
+            request.Reference.ToContractReference(),
+            request.PayerId.ParseOrThrow<Guid>(nameof(request.PayerId)),
+            request.PayeeId.ParseOrThrow<Guid>(nameof(request.PayeeId)),
+            request.Amount.ToMoney());
+    }
+
     extension(DepositRequest request)
     {
         public DepositCommand ToCommand() => new(

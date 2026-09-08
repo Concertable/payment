@@ -77,17 +77,18 @@ public sealed class PaymentSessionStateMachineTests
     }
 
     [Fact]
-    public void Evaluate_AuthorizedWithoutCaptureDeadline_IsRejected()
+    public void Evaluate_AuthorizedWithoutCaptureDeadline_IsApplied()
     {
         var result = machine.Evaluate(
-            PaymentOperationState.Creating,
+            PaymentOperationState.RequiresAction,
             Observation(
                 PaymentOperationState.Authorized,
                 captureBefore: null,
                 context: new PaymentProviderOperationContext.Authorization()));
 
-        Assert.True(result.TryGetError(out var rejection));
-        Assert.Equal(PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, rejection.Reason);
+        Assert.True(result.TryGetValue(out var transition));
+        Assert.Equal(PaymentOperationState.Authorized, transition.State);
+        Assert.Null(transition.CaptureBefore);
     }
 
     [Fact]

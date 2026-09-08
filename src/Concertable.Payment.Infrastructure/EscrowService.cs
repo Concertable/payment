@@ -1,4 +1,5 @@
 using Concertable.Payment.Application.DTOs;
+using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Requests;
 using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
@@ -13,6 +14,7 @@ namespace Concertable.Payment.Infrastructure;
 internal sealed class EscrowService : IEscrowService
 {
     private readonly IPaymentManager paymentManager;
+    private readonly IPaymentSessionService paymentSessions;
     private readonly IEscrowRepository escrowRepository;
     private readonly IPayoutAccountRepository payoutAccountRepository;
     private readonly ILedgerService ledger;
@@ -25,6 +27,7 @@ internal sealed class EscrowService : IEscrowService
 
     public EscrowService(
         IPaymentManager paymentManager,
+        IPaymentSessionService paymentSessions,
         IEscrowRepository escrowRepository,
         IPayoutAccountRepository payoutAccountRepository,
         ILedgerService ledger,
@@ -36,6 +39,7 @@ internal sealed class EscrowService : IEscrowService
         ILogger<EscrowService> logger)
     {
         this.paymentManager = paymentManager;
+        this.paymentSessions = paymentSessions;
         this.escrowRepository = escrowRepository;
         this.payoutAccountRepository = payoutAccountRepository;
         this.ledger = ledger;
@@ -46,6 +50,28 @@ internal sealed class EscrowService : IEscrowService
         this.timeProvider = timeProvider;
         this.logger = logger;
     }
+
+    // Hold the payer total, not the payee's gross — the escrow this becomes takes the platform fee on top,
+    // and a refund of that total cannot exceed the charge.
+    public Task<Result<PaymentSessionExecution, PaymentOperationError>> AuthorizeAsync(
+        Guid payerId,
+        Guid payeeId,
+        Money amount,
+        PaymentOperationReference reference,
+        Guid operationId,
+        CancellationToken ct = default) =>
+        paymentSessions.CreateAsync(
+            new PaymentSessionOperationRequest(
+                operationId,
+                PaymentSessionKind.Authorization,
+                PaymentSession.OnSession,
+                reference,
+                payerId,
+                payeeId,
+                (amount + platformFee).ToMinorUnits(),
+                amount.Currency,
+                PaymentSessionFundsRouting.Destination),
+            ct);
 
     public Task<Result<EscrowDeposit, EscrowDepositError>> DepositAsync(
         Guid payerId,

@@ -1,4 +1,4 @@
-using Reunion;
+﻿using Reunion;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
 using Concertable.Payment.Application.Interfaces;
@@ -71,6 +71,7 @@ public sealed class RefundConcurrencyTests : IClassFixture<SqlFixture>
             await using var context = CreateContext();
             var service = new EscrowService(
                 stripe.Object,
+                Mock.Of<IPaymentSessionService>(),
                 new EscrowRepository(context),
                 Mock.Of<IPayoutAccountRepository>(),
                 Mock.Of<ILedgerService>(),

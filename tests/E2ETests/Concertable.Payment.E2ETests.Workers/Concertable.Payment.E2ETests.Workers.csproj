@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)..\..\..\..\..\artifacts\e2e\payment-workers\</BaseOutputPath>
     <CompositionValidationExclusion>E2E adapter executable covered by the production Payment Workers composition root.</CompositionValidationExclusion>
   </PropertyGroup>
 

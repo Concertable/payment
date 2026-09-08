@@ -1,10 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Stripe;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -46,6 +47,20 @@ public sealed class StripeSessionClientTests
     }
 
     [Fact]
+    public async Task RetrieveAsync_ManualAuthorizationWithoutCaptureDeadline_ReturnsProviderObservation()
+    {
+        var httpClient = new StubStripeHttpClient();
+        httpClient.Enqueue(HttpStatusCode.OK, AuthorizedPaymentIntentWithoutCaptureDeadlineResponse());
+        var sut = CreateClient(httpClient);
+
+        var result = await sut.RetrieveAsync(PaymentSessionProviderObjectKind.PaymentIntent, "pi_test");
+
+        Assert.True(result.TryGetValue(out var observation));
+        Assert.Equal("requires_capture", observation.Status);
+        Assert.Null(observation.CaptureBefore);
+    }
+
+    [Fact]
     public async Task CreateCustomerSessionAsync_OffersOnlyMethodsTheCustomerConsentedToRedisplay()
     {
         var httpClient = new StubStripeHttpClient();
@@ -70,7 +85,8 @@ public sealed class StripeSessionClientTests
             new PaymentIntentService(stripeClient),
             new SetupIntentService(stripeClient),
             new CustomerSessionService(stripeClient),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<StripeSessionClient>.Instance);
     }
 
     private static PaymentSessionProviderRequest Request(PaymentSession session) =>
@@ -132,6 +148,25 @@ public sealed class StripeSessionClientTests
           "amount": 1000,
           "currency": "gbp",
           "status": "requires_payment_method"
+        }
+        """;
+
+    private static string AuthorizedPaymentIntentWithoutCaptureDeadlineResponse() =>
+        """
+        {
+          "id": "pi_test",
+          "object": "payment_intent",
+          "amount": 1000,
+          "currency": "gbp",
+          "status": "requires_capture",
+          "latest_charge": {
+            "id": "ch_test",
+            "object": "charge",
+            "payment_method_details": {
+              "type": "card",
+              "card": {}
+            }
+          }
         }
         """;
 
