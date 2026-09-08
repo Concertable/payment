@@ -52,6 +52,20 @@ operation identities.
 
 ## LOW
 
+### `AddStripeCli` makes a host graph unresolvable without a live Stripe CLI
+
+`AppHostExtensions.AddStripeCli` hangs a `WithEnvironment` callback on `payment-web` that awaits a webhook
+secret scraped from the Stripe CLI's log, with a 60-second `WaitAsync`. Resolving that resource's environment
+therefore depends on a running CLI. Any host-graph test that reads `payment-web`'s environment — B2B's
+`AppHost_ProductionGraphAndStrictValidation_AreValid`, for one — consequently passes only where
+`Stripe:SecretKey` is absent and `AddStripeCli` returns early. It is absent in CI and present in a developer's
+user secrets, so the same commit is green on CI and red locally with a bare `TimeoutException`. The
+composition-validation tier's rule that registration stays side-effect-free (`composition-testing`) is the
+same rule this breaks one layer up.
+
+**Resolves when:** the webhook secret reaches `payment-web` through a value provider resolved at launch rather
+than a callback that blocks while the graph is being read, so a host graph resolves without the CLI.
+
 ### Result extraction relies on null-forgiving assertions
 
 Payment's RPC and application adapters use `TryGetError` after proving a result is not successful,
