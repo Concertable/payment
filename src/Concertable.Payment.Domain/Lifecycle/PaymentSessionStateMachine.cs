@@ -78,8 +78,6 @@ internal sealed class PaymentSessionStateMachine : StateMachine<PaymentOperation
         {
             if (observation.Context is PaymentProviderOperationContext.Payment)
                 return Reject(currentState, PaymentOperationTransitionRejectionReason.InvalidProviderObjectForSessionKind, observation.State);
-            if (observation.CaptureBefore is null)
-                return Reject(currentState, PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, observation.State);
         }
 
         return observation.ToTransition();

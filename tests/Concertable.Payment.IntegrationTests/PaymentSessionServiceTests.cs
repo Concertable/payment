@@ -225,7 +225,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     }
 
     [Fact]
-    public async Task ResolveAuthorizationAsync_AuthorizedOperation_ReturnsProviderObjectInsidePayment()
+    public async Task ResolveAuthorizationAsync_AuthorizedOperationWithoutCaptureDeadline_ReturnsProviderObjectInsidePayment()
     {
         await MigrateAsync();
         var provider = new FakeStripeSessionClient(TimeProvider.System);
@@ -254,7 +254,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             providerObjectId = (await createContext.PaymentSessionAttempts
                 .SingleAsync(attempt => attempt.OperationId == operationId)).ProviderObjectId!;
         }
-        provider.SetStatus(providerObjectId, "requires_capture", DateTimeOffset.UtcNow.AddDays(1));
+        provider.SetStatus(providerObjectId, "requires_capture", null);
 
         await using var resolveContext = CreateContext();
         var attemptRepository = new PaymentSessionAttemptRepository(resolveContext);

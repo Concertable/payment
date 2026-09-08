@@ -16,6 +16,8 @@ namespace Concertable.Payment.E2ETests.Server;
 public static class E2EAdminExtensions
 {
     private const int PlatformRevenueAccountType = 0;
+    private const int PendingOutboxStatus = 0;
+    private const int DispatchingOutboxStatus = 3;
 
     extension(IServiceCollection services)
     {
@@ -52,6 +54,7 @@ public static class E2EAdminExtensions
             group.MapGet("/operations/ledger-transaction-count", GetLedgerTransactionCountAsync);
             group.MapGet("/operations/ledger-signed-sum", GetLedgerSignedSumAsync);
             group.MapGet("/operations/ledger-platform-revenue", GetLedgerPlatformRevenueAsync);
+            group.MapGet("/operations/active-outbox-count", GetActiveOutboxCountAsync);
             return app;
         }
     }
@@ -209,6 +212,16 @@ public static class E2EAdminExtensions
               AND a.Type = @platformRevenue
             """,
             new { operationType, clientReference, platformRevenue = PlatformRevenueAccountType }));
+    }
+
+    private static async Task<IResult> GetActiveOutboxCountAsync(
+        E2EAdminOptions options,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenConnectionAsync(options, cancellationToken);
+        return Results.Ok(await connection.QuerySingleAsync<int>(
+            "SELECT COUNT(*) FROM messaging.Outbox WHERE Status IN (@pending, @dispatching)",
+            new { pending = PendingOutboxStatus, dispatching = DispatchingOutboxStatus }));
     }
 
     private static IResult Optional(object? value) => value is null ? Results.NoContent() : Results.Ok(value);
