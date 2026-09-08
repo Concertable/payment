@@ -20,6 +20,8 @@ namespace Concertable.Payment.IntegrationTests;
 
 public sealed class PaymentTransportTests
 {
+    private const int ContainerGrpcPort = 8081;
+
     [Fact]
     public async Task PaymentClient_UsesDedicatedHttp2Endpoint_WithBearerCredentials()
     {
@@ -72,6 +74,35 @@ public sealed class PaymentTransportTests
 
             Assert.Equal(ClientGrpc.PayoutAccountStatusType.PayoutVerified, account.Status);
             Assert.Equal("Bearer payment-test-token", authorization.Value);
+        }
+        finally
+        {
+            await app.StopAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ConfigurePaymentTransport_NoConfiguredGrpcPort_LeavesTheContainerGrpcPortHttp1Capable()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls($"http://127.0.0.1:{ContainerGrpcPort}");
+        builder.ConfigurePaymentTransport();
+
+        await using var app = builder.Build();
+        app.MapGet("/transport-probe", () => Results.Ok());
+        await app.StartAsync();
+
+        try
+        {
+            using var httpClient = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{ContainerGrpcPort}") };
+            using var response = await httpClient.GetAsync("/transport-probe");
+
+            // A host that names no gRPC port must leave every endpoint HTTP/1.1-capable, including one that
+            // happens to sit on the container topology's gRPC port. Defaulting the unset value to that port
+            // made the endpoint HTTP/2-only and broke REST wherever Payment runs as a project.
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal(HttpVersion.Version11, response.Version);
         }
         finally
         {

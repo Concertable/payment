@@ -121,13 +121,13 @@ public static class HostExtensions
 
         public WebApplicationBuilder ConfigurePaymentTransport()
         {
-            var grpcPort = builder.Configuration.GetValue<int?>("PaymentTransport:GrpcPort") ?? 8081;
+            var grpcPort = builder.Configuration.GetValue<int?>("PaymentTransport:GrpcPort");
 
             builder.WebHost.ConfigureKestrel(options =>
             {
                 options.ConfigureEndpointDefaults(endpoint =>
                 {
-                    endpoint.Protocols = endpoint.IPEndPoint?.Port == grpcPort
+                    endpoint.Protocols = grpcPort is { } port && endpoint.IPEndPoint?.Port == port
                         ? HttpProtocols.Http2
                         : HttpProtocols.Http1AndHttp2;
                 });
