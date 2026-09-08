@@ -4,6 +4,38 @@ When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
 ---
 
+## HIGH
+
+### An escrow deposit's provider object cannot be resolved, on either the succeeded or the failed path
+
+`PaymentTransactionHandler` and `PaymentFailureDispatcher` both resolve the provider object id through
+`PaymentOperationResolver.ResolveProviderObjectIdAsync` before routing a `PaymentSucceededEvent` or
+`PaymentFailedEvent` to its keyed handler. That resolver reads `PaymentSessionOperations`, but an escrow
+deposit is taken through `EscrowService.DepositAsync` -> `PaymentManager.HoldAsync` ->
+`StripePaymentIntentClient.HoldAsync`, which creates the Stripe PaymentIntent directly and writes no session
+operation row. `AuthorizeAsync` is on the durable operation model; `DepositAsync` is not.
+
+The resolver therefore throws `InvalidOperationException: Payment operation <type>/<reference> has no
+provider transaction` for every venue-hire deposit, and the message dead-letters after three attempts:
+
+- On the succeeded path `EscrowConfirmedHandler` never runs, so the escrow stays `Pending` and its ledger
+  posting is never staged.
+- On the failed path the consumer is never told, so the originating booking stays pending forever and the UI
+  polls a resource that will never appear rather than surfacing a payment error.
+
+Observed for `escrow/booking:48` on both paths. No suite catches it: the browser scenarios assert the draft
+concert and the Stripe-side capture, neither of which depends on Payment's own bookkeeping, so the venue-hire
+scenarios pass green while every deposit's escrow row and ledger posting are silently lost.
+
+`8fb94d140` introduced the resolver into both handlers on 2026-09-05, one day after the last merge-queue run
+in which the browser tier actually executed.
+
+**Resolves when:** an escrow deposit records a durable payment session operation like an authorization does,
+so both handlers resolve its provider object; with tests covering the succeeded path, and the create-time
+failure path where no provider object exists at all.
+
+---
+
 ## MEDIUM
 
 ### Operation-less settlement overloads remain until consumers carry durable operation identities
@@ -88,3 +120,23 @@ Resolved by `plans/PAYMENT_SEED_REFLECTION_REFACTOR.md`. Rather than re-homing t
 - `Concertable.Payment.Seed.Contracts` (the ticket-purchase catalog + `PaymentSeedSpec` incl. the 3 dead `Settlement`/`Escrow`/`Verify` factories) and `Concertable.Payment.Seed.Simulator` are gone, along with their AppHost wiring (`AddPaymentSeedingSimulator`, the resource-name constant, csproj/slnx entries).
 - The only seed state those payments produced is **inherently-unreproducible historical state** (past-dated ticket sales). Each consumer now reflection-seeds its own copy: B2B sets `ConcertEntity.TicketsSold` via `ConcertFactory` from a `ticketsSold` field on `ConcertSeedSpec`; Customer direct-inserts `SeedState.Tickets` via `TicketDevSeeder`. Documented as a sanctioned exception in the `seeding` skill.
 - `Payment.Contracts.PaymentSucceededEvent` stays — the only Payment-owned piece. Payment now owns **zero** ticket/concert knowledge.
+
+---
+
+## MEDIUM
+
+### Stripe.net's API key is a global written from constructors, not an injected client
+
+`StripeApiClient` and `StripeAccountClient` each assign `StripeConfiguration.ApiKey` in their own
+constructor, and the E2E adapter's account client does it a third time. Every `Stripe.*Service` is
+registered bare (`AddSingleton<Stripe.SetupIntentService>()`), so it resolves the key from that global when
+a call is made rather than from a client it owns.
+
+`AddPaymentInfrastructure` now assigns the key once at composition, which removes the ordering hazard that
+made the first payment session of a process fail with `No API key provided`. The underlying shape is still
+wrong: process-wide mutable state, three writers, and services that cannot be constructed with a different
+key — so a test cannot exercise two keys, and the failure mode when someone adds a fourth writer is silent.
+
+**Resolves when:** an `IStripeClient` is registered from `StripeSettings` and every `Stripe.*Service` is
+constructed with it, no code assigns `StripeConfiguration.ApiKey`, and the E2E adapter overrides that one
+registration instead of racing a global.

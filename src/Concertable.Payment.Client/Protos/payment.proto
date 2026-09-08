@@ -344,6 +344,7 @@ message SettlementReportResponse {
 }
 
 service Escrow {
+  rpc Authorize(AuthorizeEscrowRequest) returns (PaymentSessionDescriptor);
   rpc Deposit(DepositRequest) returns (EscrowResponse);
   rpc DepositBoundCommission(BoundCommissionDepositRequest) returns (EscrowResponse);
   rpc Capture(CaptureRequest) returns (EscrowResponse);
@@ -388,6 +389,14 @@ message PaymentMethodResponse {
 
 message SetupIntentResponse {
   string client_secret = 1;
+}
+
+message AuthorizeEscrowRequest {
+  string operation_id = 1;
+  PaymentOperationReference reference = 2;
+  string payer_id = 3;
+  string payee_id = 4;
+  Money amount = 5;
 }
 
 message DepositRequest {

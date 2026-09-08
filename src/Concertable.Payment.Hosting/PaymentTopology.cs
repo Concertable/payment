@@ -17,6 +17,7 @@ public static class PaymentTopology
                 .Publish<RefundEscrowSucceededEvent>()
                 .Publish<RefundEscrowRejectedEvent>()
                 .Publish<RefundEscrowDeferredEvent>()
+                .Publish<PaymentOperationStateChanged>()
                 .Subscribe<PaymentMethodOwnerRegisteredEvent>()
                 .Subscribe<PayoutOwnerRegisteredEvent>()
                 .Subscribe<PaymentSucceededEvent>()

@@ -78,7 +78,7 @@ selected.
 | Venue Hire deposit | PaymentIntent | Off-session, server-confirmed automatic capture | Charge on behalf of the venue account; retain escrow ownership separately, then transfer on release. |
 | Door Split or Versus settlement | PaymentIntent | Off-session, server-confirmed automatic capture | Charge and transfer direction follow the typed calculation; only platform fee belongs to Concertable. |
 | Payout card setup | SetupIntent | Save only | Platform customer; never represent setup as a charge. |
-| Capture | PaymentIntent capture | Server action before `capture_before` | Capture the known current attempt. |
+| Capture | PaymentIntent capture | Server action while the provider reports `requires_capture`; honor `capture_before` when supplied | Capture the known current attempt. |
 | Refund | Refund | Server action with independent lifecycle | Reverse destination transfer or create a transfer reversal according to the original charge. |
 
 Checkout may be reconsidered only for a new flow whose lifecycle is intentionally owned by Checkout.
@@ -145,7 +145,7 @@ The closed state vocabulary is `Creating`, `RequiresPaymentMethod`, `RequiresCon
 | PaymentIntent | `requires_confirmation` | `RequiresConfirmation` | Confirmation is still required. |
 | PaymentIntent | `requires_action` | `RequiresAction` | Consumer action is required. |
 | PaymentIntent | `processing` | `Processing` | Reconciliation remains authoritative. |
-| PaymentIntent | `requires_capture` | `Authorized` | Legal only for `Authorization`; persist provider `capture_before`. |
+| PaymentIntent | `requires_capture` | `Authorized` | Legal only for `Authorization`; persist provider `capture_before` when supplied. |
 | PaymentIntent | `succeeded` | `Succeeded` | Terminal attempt. |
 | PaymentIntent | `canceled` | `Canceled` | Terminal attempt; reason determines operation retryability. |
 | SetupIntent | `requires_payment_method` | `RequiresPaymentMethod` | Recoverable setup failure; an internal classified decline attaches the closed `Declined` failure without carrying provider detail. |
@@ -198,6 +198,8 @@ edge not listed here is rejected and schedules current-object reconciliation.
 Additional constraints narrow that table:
 
 - `Authorized` is legal only for an authorization PaymentIntent.
+- Missing `capture_before` does not invalidate Stripe's authoritative `requires_capture` state or
+  block an immediate capture; expiry scheduling remains unavailable until Stripe supplies a deadline.
 - SetupIntent transitions never enter `Authorized`.
 - Refund transitions use `Creating` to `Processing` or `RequiresAction`, then terminal state; they do
   not enter payment-method, confirmation, or authorization states.
@@ -218,7 +220,7 @@ Additional constraints narrow that table:
   expired may create a new revision. The retry uses the same fingerprint, a new `AttemptId`, and new
   action idempotency keys.
 - Transport retry, timeout recovery, webhook redelivery, and reconciliation never create revisions.
-- Authorization expiry uses Stripe's provider-reported `capture_before`. At or after that deadline,
+- Authorization expiry uses Stripe's provider-reported `capture_before` when supplied. At or after that deadline,
   Payment reconciles the provider object; if it is still uncaptured, cancellation produces
   `Canceled` with safe reason `Expired`. A local timer alone does not claim provider truth.
 

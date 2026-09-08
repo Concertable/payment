@@ -45,6 +45,7 @@ public static class HostExtensions
                             : throw new InvalidOperationException("Configuration 'ServiceBus:ServiceName' is required."));
                 },
                 reg => reg
+                    .Publishes<PaymentOperationStateChanged>()
                     .SubscribeTo<PaymentMethodOwnerRegisteredEvent>()
                     .SubscribeTo<PayoutOwnerRegisteredEvent>()
                     .SubscribeTo<PaymentSucceededEvent>()
