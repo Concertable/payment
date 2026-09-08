@@ -34,7 +34,6 @@ internal enum PaymentOperationTransitionRejectionReason
     SessionKindMismatch,
     InvalidProviderObjectForSessionKind,
     InvalidCurrentStateForProviderObject,
-    CaptureDeadlineRequired,
     StaleObservation,
     AmbiguousObservationOrder,
     TerminalStateProtected,
