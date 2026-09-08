@@ -66,9 +66,9 @@
       "owner": "Payment",
       "flow": "Create, recover, or capture a manual authorization.",
       "providerProduct": "PaymentIntent",
-      "mode": "On-session manual capture; requires_capture normalizes to Authorized and expires at capture_before.",
+      "mode": "On-session manual capture; requires_capture normalizes to Authorized and capture_before governs expiry when supplied.",
       "connectModel": "Artist connected account is the settlement merchant and payee under the target contract.",
-      "identity": "OperationId, AttemptId, revision, opaque operation reference, and capture deadline bind the authorization.",
+      "identity": "OperationId, AttemptId, revision, and opaque operation reference bind the authorization; the optional provider capture deadline governs expiry.",
       "compatibility": "The v1 capture contract resolves the authorization by opaque operation reference and never searches provider lists."
     },
     {
