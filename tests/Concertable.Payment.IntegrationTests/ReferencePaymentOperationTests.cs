@@ -113,6 +113,50 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
     }
 
     [Fact]
+    public async Task CaptureAsync_AuthorizationCapturableAfterConsumerAction_UsesResolvedProviderObject()
+    {
+        var payerId = Guid.CreateVersion7();
+        var payeeId = Guid.CreateVersion7();
+        var operationId = Guid.CreateVersion7();
+        var reference = Reference();
+        await SeedAccountsAsync(payerId, payeeId);
+        var providerObjectId = await CreateAuthorizationAsync(
+            operationId,
+            reference,
+            payerId,
+            payeeId);
+        fixture.SetProviderStatus(providerObjectId, "requires_action");
+        await ReconcileAsync(providerObjectId);
+        fixture.SetProviderStatus(
+            providerObjectId,
+            "requires_capture",
+            DateTimeOffset.UtcNow.AddDays(7));
+        var command = new CaptureEscrowCommand(
+            Guid.CreateVersion7(),
+            reference,
+            payerId,
+            payeeId,
+            5000,
+            Currency.Gbp,
+            reference);
+
+        await DispatchAsync(command);
+
+        var persisted = await fixture.RunAsync(async (PaymentDbContext context) =>
+        {
+            var operation = await context.FinancialOperations.SingleAsync(
+                value => value.Id == command.OperationId);
+            var escrow = await context.Escrows.SingleAsync(
+                value => value.OperationType == reference.OperationType
+                    && value.ClientReference == reference.ClientReference);
+            return (OperationStatus: operation.Status, EscrowStatus: escrow.Status, escrow.ChargeId);
+        });
+        Assert.Equal(FinancialOperationStatus.Succeeded, persisted.OperationStatus);
+        Assert.Equal(EscrowStatus.Held, persisted.EscrowStatus);
+        Assert.Equal(providerObjectId, persisted.ChargeId);
+    }
+
+    [Fact]
     public async Task PayAsync_PaymentMethodReference_UsesResolvedPaymentMethodAndPersistsSettlement()
     {
         var payerId = Guid.CreateVersion7();
@@ -155,6 +199,14 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
             handler.HandleAsync(
                 command,
                 MessageEnvelope.Create<CaptureEscrowCommand>(DateTimeOffset.UtcNow)));
+
+    private Task ReconcileAsync(string providerObjectId) =>
+        fixture.RunAsync((IPaymentSessionResourceReconciler reconciler) =>
+            reconciler.ReconcileByProviderObjectAsync(
+                PaymentSessionProviderObjectKind.PaymentIntent,
+                providerObjectId,
+                PaymentSessionReconciliationSource.Webhook,
+                null));
 
     private Task<FinancialOperationStatus> FinancialOperationStatusAsync(Guid operationId) =>
         fixture.RunAsync((PaymentDbContext context) =>

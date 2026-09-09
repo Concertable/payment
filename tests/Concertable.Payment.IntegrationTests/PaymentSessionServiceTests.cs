@@ -1,4 +1,4 @@
-using Concertable.Kernel.ValueObjects;
+﻿using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
@@ -16,6 +16,7 @@ using Concertable.Payment.Infrastructure.Services;
 using Concertable.Payment.IntegrationTests.Fixtures;
 using Concertable.Testing.Integration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Reunion;
 
 namespace Concertable.Payment.IntegrationTests;
@@ -263,7 +264,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             attemptRepository,
             new UnitOfWork(resolveContext),
             new PaymentSessionStateMachine(),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<PaymentSessionReconciliationService>.Instance);
         var resolved = await new PaymentOperationResolver(
             operationRepository,
             reconciliationService,
@@ -702,7 +704,12 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
                 new UnitOfWork(context),
                 savesMayProceed,
                 () => Interlocked.Increment(ref saveCount));
-            var service = new PaymentSessionReconciliationService(repository, unitOfWork, new PaymentSessionStateMachine(), TimeProvider.System);
+            var service = new PaymentSessionReconciliationService(
+                repository,
+                unitOfWork,
+                new PaymentSessionStateMachine(),
+                TimeProvider.System,
+                NullLogger<PaymentSessionReconciliationService>.Instance);
             return await service.ReconcileAsync(
                 new(
                     operation,
@@ -725,6 +732,82 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
         Assert.Equal(PaymentOperationState.Processing, persisted.State);
         Assert.Equal(observation.ObservedAt, persisted.LastObservedAt);
+    }
+
+    [Fact]
+    public async Task ResolveAuthorizationAsync_ConcurrentCapturableObservation_ReturnsProviderObject()
+    {
+        await MigrateAsync();
+        var provider = new FakeStripeSessionClient(TimeProvider.System);
+        var operationId = Guid.CreateVersion7();
+        var payerOwnerId = Guid.CreateVersion7();
+        var specification = PaymentSessionDefinition.Create(
+            operationId,
+            PaymentSessionKind.Authorization,
+            PaymentSession.OffSession,
+            "escrow",
+            $"order:{operationId:N}",
+            payerOwnerId.ToString("D"),
+            Guid.CreateVersion7().ToString("D"),
+            5000,
+            Currency.Gbp,
+            PaymentSessionFundsRouting.Destination,
+            $"pm_{operationId:N}",
+            $"cus_{operationId:N}",
+            $"acct_{operationId:N}",
+            null);
+        string providerObjectId;
+        await using (var createContext = CreateContext())
+        {
+            var created = await Service(createContext, provider).CreateAsync(specification);
+            Assert.True(created.TryGetValue(out _));
+            providerObjectId = (await createContext.PaymentSessionAttempts
+                .SingleAsync(attempt => attempt.OperationId == operationId)).ProviderObjectId!;
+        }
+        provider.SetStatus(providerObjectId, "requires_capture", DateTimeOffset.UtcNow.AddDays(7));
+        var retrieved = await provider.RetrieveAsync(
+            PaymentSessionProviderObjectKind.PaymentIntent,
+            providerObjectId);
+        Assert.True(retrieved.TryGetValue(out var currentProvider));
+        var reference = new PaymentOperationReference(
+            specification.OperationType,
+            specification.ClientReference);
+
+        await using (var webhookContext = CreateContext())
+        {
+            var webhookAttempts = new PaymentSessionAttemptRepository(webhookContext);
+            var webhookOperations = new PaymentSessionOperationRepository(webhookContext);
+            var operation = await webhookOperations.GetByOperationIdAsync(operationId);
+            Assert.NotNull(operation);
+            var webhookReconciliation = new PaymentSessionReconciliationService(
+                webhookAttempts,
+                new UnitOfWork(webhookContext),
+                new PaymentSessionStateMachine(),
+                TimeProvider.System,
+                NullLogger<PaymentSessionReconciliationService>.Instance);
+            await webhookReconciliation.ReconcileAsync(
+                new(
+                    operation,
+                    operation.CurrentAttempt,
+                    PaymentSessionReconciliationSource.Webhook,
+                    currentProvider with { ObservedAt = currentProvider.ObservedAt.AddSeconds(1) }));
+        }
+
+        await using var resolveContext = CreateContext();
+        var reconciliationService = new PaymentSessionReconciliationService(
+            new PaymentSessionAttemptRepository(resolveContext),
+            new UnitOfWork(resolveContext),
+            new PaymentSessionStateMachine(),
+            TimeProvider.System,
+            NullLogger<PaymentSessionReconciliationService>.Instance);
+        var resolved = await new PaymentOperationResolver(
+            new PaymentSessionOperationRepository(resolveContext),
+            reconciliationService,
+            new FixedObservationStripeSessionClient(provider, currentProvider))
+            .ResolveAuthorizationAsync(reference, payerOwnerId);
+
+        Assert.True(resolved.TryGetValue(out var resolvedProviderObjectId));
+        Assert.Equal(providerObjectId, resolvedProviderObjectId);
     }
 
     [Fact]
@@ -772,7 +855,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             attemptRepository,
             new UnitOfWork(context),
             new PaymentSessionStateMachine(),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<PaymentSessionReconciliationService>.Instance);
         return new(
             operationRepository,
             new PayoutAccountRepository(context),
@@ -884,6 +968,43 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
             await retrievalsCompleted.Task.WaitAsync(ct);
             return result;
         }
+
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default) =>
+            stripeSessionClient.CancelAsync(providerObjectKind, providerObjectId, ct);
+
+        public Task<Result<string, PaymentOperationError.ProviderUnavailable>> CreateCustomerSessionAsync(
+            string providerCustomerId,
+            CancellationToken ct = default) =>
+            stripeSessionClient.CreateCustomerSessionAsync(providerCustomerId, ct);
+    }
+
+    private sealed class FixedObservationStripeSessionClient : IStripeSessionClient
+    {
+        private readonly FakeStripeSessionClient stripeSessionClient;
+        private readonly ProviderSession observation;
+
+        public FixedObservationStripeSessionClient(
+            FakeStripeSessionClient stripeSessionClient,
+            ProviderSession observation)
+        {
+            this.stripeSessionClient = stripeSessionClient;
+            this.observation = observation;
+        }
+
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+            PaymentSessionProviderRequest request,
+            StripeIdempotencyKey idempotencyKey,
+            CancellationToken ct = default) =>
+            stripeSessionClient.CreateAsync(request, idempotencyKey, ct);
+
+        public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+            PaymentSessionProviderObjectKind providerObjectKind,
+            string providerObjectId,
+            CancellationToken ct = default) =>
+            Task.FromResult<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>>(observation);
 
         public Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
             PaymentSessionProviderObjectKind providerObjectKind,

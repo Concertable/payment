@@ -1,4 +1,6 @@
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Contracts;
+using Concertable.Payment.Domain.ProviderContract;
 using Microsoft.Extensions.Logging;
 using GrpcStatusCode = global::Grpc.Core.StatusCode;
 
@@ -250,6 +252,13 @@ internal static partial class Log
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Session resource {ProviderObjectId} ({ProviderObjectKind}) from {Source} could not reconcile: provider unavailable; reconciliation deferred")]
     internal static partial void SessionResourceReconciliationDeferred(this ILogger logger, string providerObjectId, PaymentSessionProviderObjectKind providerObjectKind, PaymentSessionReconciliationSource source);
+
+    #endregion
+
+    #region PaymentSessionReconciliationService
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rejected {Source} transition for {ProviderObjectId} (provider status {ProviderStatus}): {Reason} from {CurrentState} to {ObservedState}")]
+    internal static partial void RejectedSessionTransition(this ILogger logger, PaymentSessionReconciliationSource source, string providerObjectId, string providerStatus, PaymentOperationTransitionRejectionReason reason, PaymentOperationState currentState, PaymentOperationState? observedState);
 
     #endregion
 }
