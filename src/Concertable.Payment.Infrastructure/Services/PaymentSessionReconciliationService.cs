@@ -1,7 +1,8 @@
-using Concertable.Payment.Application.PaymentSessions;
+﻿using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Concertable.Payment.Infrastructure.Services;
 
@@ -11,17 +12,20 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
     private readonly IUnitOfWork unitOfWork;
     private readonly PaymentSessionStateMachine stateMachine;
     private readonly TimeProvider timeProvider;
+    private readonly ILogger<PaymentSessionReconciliationService> logger;
 
     public PaymentSessionReconciliationService(
         IPaymentSessionAttemptRepository attemptRepository,
         IUnitOfWork unitOfWork,
         PaymentSessionStateMachine stateMachine,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<PaymentSessionReconciliationService> logger)
     {
         this.attemptRepository = attemptRepository;
         this.unitOfWork = unitOfWork;
         this.stateMachine = stateMachine;
         this.timeProvider = timeProvider;
+        this.logger = logger;
     }
 
     public async Task<Result<PaymentSessionReconciliation, PaymentOperationError.ProviderUnavailable>> ReconcileAsync(
@@ -74,6 +78,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         }
         else
         {
+            LogRejectedTransition(request, provider, transition);
             attempt.RecordReconciliationRequired(
                 provider.ObservedAt,
                 provider.ProviderRequestId,
@@ -86,7 +91,11 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
             return new PaymentOperationError.ProviderUnavailable();
 
         if (!saved.Committed)
+        {
             transition = EvaluateTransition(request.Operation, saved.Attempt, provider);
+            if (transition.TryGetError(out _))
+                LogRejectedTransition(request, provider, transition);
+        }
 
         return new PaymentSessionReconciliation(saved.Attempt, transition);
     }
@@ -167,6 +176,21 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         PaymentOperationTransitionRejectionReason reason,
         PaymentOperationState observedState) =>
         new(reason, attempt.State, observedState);
+
+    private void LogRejectedTransition(
+        PaymentSessionReconciliationRequest request,
+        ProviderSession provider,
+        Result<PaymentOperationTransition, PaymentOperationTransitionRejection> transition)
+    {
+        transition.TryGetError(out var rejection);
+        logger.RejectedSessionTransition(
+            request.Source,
+            provider.ProviderObjectId,
+            provider.Status,
+            rejection!.Reason,
+            rejection.CurrentState,
+            rejection.ObservedState);
+    }
 
     private sealed record PaymentSessionSave(
         PaymentSessionAttemptEntity Attempt,

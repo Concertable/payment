@@ -152,6 +152,15 @@ internal sealed class FakeStripeSessionClient : IStripeSessionClient
             byIdempotencyKey[entry.Key] = updated;
     }
 
+    internal void RewindObservation(string providerObjectId, TimeSpan offset)
+    {
+        var current = byProviderObjectId[providerObjectId];
+        var updated = current with { ObservedAt = current.ObservedAt - offset };
+        byProviderObjectId[providerObjectId] = updated;
+        foreach (var entry in byIdempotencyKey.Where(entry => entry.Value.ProviderObjectId == providerObjectId))
+            byIdempotencyKey[entry.Key] = updated;
+    }
+
     internal void SetDeclined(string providerObjectId)
     {
         var current = byProviderObjectId[providerObjectId];

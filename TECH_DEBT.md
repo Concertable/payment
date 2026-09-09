@@ -1,4 +1,4 @@
-# Concertable.Payment — Technical Debt
+﻿# Concertable.Payment — Technical Debt
 
 When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
@@ -33,6 +33,33 @@ in which the browser tier actually executed.
 **Resolves when:** an escrow deposit records a durable payment session operation like an authorization does,
 so both handlers resolve its provider object; with tests covering the succeeded path, and the create-time
 failure path where no provider object exists at all.
+
+---
+
+### A financial operation whose command dead-letters is never re-driven, and no reconciliation sweep exists
+
+`FinancialOperationHandler` throws `PaymentProviderUnavailableException` for a transient
+`PaymentOperationError.ProviderUnavailable`. `AzureServiceBusReceiver.AbandonWithBackoffAsync` abandons with
+capped exponential backoff (`2^(DeliveryCount-1)`, max 30s) and Azure Service Bus dead-letters once
+`MaxDeliveryCount` is reached - three deliveries under the emulator, ten by default in Azure. The operation
+row stays `FinancialOperationStatus.Pending` forever.
+
+Nothing recovers it. `PaymentSessionAttemptEntity.NextReconcileAt` is written by
+`RecordReconciliationRequired` and carries its own index, but **no code ever reads it**, and
+`PaymentSessionReconciliationSource.Sweep` is a declared enum case with no implementation - Payment has one
+hosted service, `CommissionConfigurationHostedService`, and it is unrelated. A `Pending` financial operation
+also has no stored command payload, so it cannot re-dispatch itself even if something looked for it.
+
+The consequence is an authorized-but-uncaptured escrow: the payer's card is held, no capture follows, no
+rejection reaches the consumer, and the originating booking never completes. The transient window only has to
+outlast the backoff budget. This is the shared reason the sibling HIGH item above is permanent rather than
+self-healing. `PaymentOperationResolver` no longer manufactures the condition from a rejected transition
+evaluation, but a genuine provider outage still reaches it.
+
+**Resolves when:** a transient provider failure is recoverable without operator action - a sweep that honours
+`NextReconcileAt` and reconciles under `PaymentSessionReconciliationSource.Sweep`, and a durable path that
+re-drives or fails a `Pending` financial operation whose command is gone - with tests covering a provider
+outage that outlasts the delivery budget on both the deposit and capture paths.
 
 ---
 
@@ -154,3 +181,25 @@ key — so a test cannot exercise two keys, and the failure mode when someone ad
 **Resolves when:** an `IStripeClient` is registered from `StripeSettings` and every `Stripe.*Service` is
 constructed with it, no code assigns `StripeConfiguration.ApiKey`, and the E2E adapter overrides that one
 registration instead of racing a global.
+
+---
+
+### Stripe provider status strings are literals, and the one constants class is half-built
+
+`StripePaymentIntentStatuses` declares three of Stripe's seven PaymentIntent statuses (`succeeded`,
+`requires_action`, `requires_confirmation`) and lives in `Concertable.Payment.Infrastructure`. The file
+that owns the whole `status -> PaymentOperationState` vocabulary, `StripeProviderContractBaseline`, is in
+`Concertable.Payment.Domain` and so cannot reference it — it hardcodes all seven of its own, for
+PaymentIntent, SetupIntent and Refund. `StripeSessionClient`, `FakeStripeSessionClient` and
+`PaymentSessionService` compare against their own literals again.
+
+88 raw status literals across 15 files, with the canonical mapping table and the constants class in
+different projects and unaware of each other. A status that is added, renamed or mistyped is caught by
+nothing: `requires_capture` appears only as a literal, and it is the status the 3DS escrow-capture path
+turns on.
+
+**Resolves when:** one constants type in `Concertable.Payment.Domain.ProviderContract` covers every status
+Stripe reports for all three provider object kinds, `StripeProviderContractBaseline` and every comparison
+in Infrastructure and the tests reference it, and no `"requires_*"`/`"succeeded"`/`"canceled"`/`"processing"`
+status literal remains in `api/Concertable.Payment`. Stripe event-type names stay on Stripe.NET's own
+`EventTypes` constants rather than a parallel local set.
