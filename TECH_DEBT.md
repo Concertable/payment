@@ -1,4 +1,4 @@
-# Concertable.Payment — Technical Debt
+﻿# Concertable.Payment — Technical Debt
 
 When an item is fixed, update both this file and `ARCHITECTURE.md`.
 
@@ -33,6 +33,33 @@ in which the browser tier actually executed.
 **Resolves when:** an escrow deposit records a durable payment session operation like an authorization does,
 so both handlers resolve its provider object; with tests covering the succeeded path, and the create-time
 failure path where no provider object exists at all.
+
+---
+
+### A financial operation whose command dead-letters is never re-driven, and no reconciliation sweep exists
+
+`FinancialOperationHandler` throws `PaymentProviderUnavailableException` for a transient
+`PaymentOperationError.ProviderUnavailable`. `AzureServiceBusReceiver.AbandonWithBackoffAsync` abandons with
+capped exponential backoff (`2^(DeliveryCount-1)`, max 30s) and Azure Service Bus dead-letters once
+`MaxDeliveryCount` is reached - three deliveries under the emulator, ten by default in Azure. The operation
+row stays `FinancialOperationStatus.Pending` forever.
+
+Nothing recovers it. `PaymentSessionAttemptEntity.NextReconcileAt` is written by
+`RecordReconciliationRequired` and carries its own index, but **no code ever reads it**, and
+`PaymentSessionReconciliationSource.Sweep` is a declared enum case with no implementation - Payment has one
+hosted service, `CommissionConfigurationHostedService`, and it is unrelated. A `Pending` financial operation
+also has no stored command payload, so it cannot re-dispatch itself even if something looked for it.
+
+The consequence is an authorized-but-uncaptured escrow: the payer's card is held, no capture follows, no
+rejection reaches the consumer, and the originating booking never completes. The transient window only has to
+outlast the backoff budget. This is the shared reason the sibling HIGH item above is permanent rather than
+self-healing. `PaymentOperationResolver` no longer manufactures the condition from a rejected transition
+evaluation, but a genuine provider outage still reaches it.
+
+**Resolves when:** a transient provider failure is recoverable without operator action - a sweep that honours
+`NextReconcileAt` and reconciles under `PaymentSessionReconciliationSource.Sweep`, and a durable path that
+re-drives or fails a `Pending` financial operation whose command is gone - with tests covering a provider
+outage that outlasts the delivery budget on both the deposit and capture paths.
 
 ---
 
