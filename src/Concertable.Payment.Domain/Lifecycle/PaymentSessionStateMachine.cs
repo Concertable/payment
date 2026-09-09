@@ -53,6 +53,7 @@ internal sealed class PaymentSessionStateMachine : StateMachine<PaymentOperation
 
             (PaymentOperationState.Processing, RequirePaymentMethod, PaymentOperationState.RequiresPaymentMethod),
             (PaymentOperationState.Processing, RequireAction, PaymentOperationState.RequiresAction),
+            (PaymentOperationState.Processing, Authorize, PaymentOperationState.Authorized),
             (PaymentOperationState.Processing, Succeed, PaymentOperationState.Succeeded),
             (PaymentOperationState.Processing, Cancel, PaymentOperationState.Canceled),
             (PaymentOperationState.Processing, Fail, PaymentOperationState.Failed),
