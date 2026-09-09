@@ -1,4 +1,4 @@
-using Concertable.Kernel;
+﻿using Concertable.Kernel;
 using Concertable.Kernel.DependencyInjection;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Infrastructure.Services;
@@ -79,4 +79,8 @@ public sealed class ApiFixture : IAsyncLifetime
         DateTimeOffset? captureBefore = null) =>
         Services.GetRequiredService<ControllableStripeSessionClient>()
             .SetStatus(providerObjectId, status, captureBefore);
+
+    public void RewindProviderObservation(string providerObjectId, TimeSpan offset) =>
+        Services.GetRequiredService<ControllableStripeSessionClient>()
+            .RewindObservation(providerObjectId, offset);
 }

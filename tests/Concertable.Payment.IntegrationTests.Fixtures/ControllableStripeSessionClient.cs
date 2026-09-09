@@ -1,4 +1,4 @@
-using Concertable.Payment.Application.Interfaces;
+﻿using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Contracts.Errors;
@@ -55,4 +55,7 @@ internal sealed class ControllableStripeSessionClient : IStripeSessionClient
         string status,
         DateTimeOffset? captureBefore) =>
         inner.SetStatus(providerObjectId, status, captureBefore);
+
+    internal void RewindObservation(string providerObjectId, TimeSpan offset) =>
+        inner.RewindObservation(providerObjectId, offset);
 }
