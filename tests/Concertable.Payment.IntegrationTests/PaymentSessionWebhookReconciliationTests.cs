@@ -110,6 +110,35 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     }
 
     [Fact]
+    public async Task Webhook_AuthorizationCapturableAfterConsumerAction_ReachesAuthorized()
+    {
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        var specification = Specification(Guid.CreateVersion7());
+        await harness.CreateSessionAsync(specification);
+        var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
+        harness.SessionClient.SetStatus(providerObjectId, "requires_action");
+        await harness.ProcessWebhookAsync(PaymentIntentEvent(
+            "evt_requires_action",
+            providerObjectId,
+            "requires_action",
+            EventTypes.PaymentIntentRequiresAction));
+
+        harness.SessionClient.SetStatus(
+            providerObjectId,
+            "requires_capture",
+            DateTimeOffset.UtcNow.AddDays(7));
+        await harness.ProcessWebhookAsync(PaymentIntentEvent(
+            "evt_amount_capturable_updated",
+            providerObjectId,
+            "requires_capture",
+            EventTypes.PaymentIntentAmountCapturableUpdated));
+
+        Assert.Equal(
+            PaymentOperationState.Authorized,
+            (await harness.GetCurrentAttemptAsync(specification.OperationId)).State);
+    }
+
+    [Fact]
     public async Task Webhook_SetupIntent_PublishesStateChangeOnce()
     {
         await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
