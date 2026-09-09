@@ -1,4 +1,4 @@
-using Concertable.Payment.Application.Interfaces;
+﻿using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Contracts.Errors;
@@ -146,11 +146,8 @@ internal sealed class PaymentOperationResolver : IPaymentOperationResolver
                 PaymentSessionReconciliationSource.Eager,
                 provider),
             ct);
-        if (!reconciled.TryGetValue(out var outcome)
-            || !outcome.Evaluation.TryGetValue(out _))
-        {
+        if (!reconciled.TryGetValue(out var outcome))
             return new PaymentOperationError.ProviderUnavailable();
-        }
 
         return new ResolvedOperation(operation, outcome.Attempt);
     }
