@@ -154,3 +154,25 @@ key — so a test cannot exercise two keys, and the failure mode when someone ad
 **Resolves when:** an `IStripeClient` is registered from `StripeSettings` and every `Stripe.*Service` is
 constructed with it, no code assigns `StripeConfiguration.ApiKey`, and the E2E adapter overrides that one
 registration instead of racing a global.
+
+---
+
+### Stripe provider status strings are literals, and the one constants class is half-built
+
+`StripePaymentIntentStatuses` declares three of Stripe's seven PaymentIntent statuses (`succeeded`,
+`requires_action`, `requires_confirmation`) and lives in `Concertable.Payment.Infrastructure`. The file
+that owns the whole `status -> PaymentOperationState` vocabulary, `StripeProviderContractBaseline`, is in
+`Concertable.Payment.Domain` and so cannot reference it — it hardcodes all seven of its own, for
+PaymentIntent, SetupIntent and Refund. `StripeSessionClient`, `FakeStripeSessionClient` and
+`PaymentSessionService` compare against their own literals again.
+
+88 raw status literals across 15 files, with the canonical mapping table and the constants class in
+different projects and unaware of each other. A status that is added, renamed or mistyped is caught by
+nothing: `requires_capture` appears only as a literal, and it is the status the 3DS escrow-capture path
+turns on.
+
+**Resolves when:** one constants type in `Concertable.Payment.Domain.ProviderContract` covers every status
+Stripe reports for all three provider object kinds, `StripeProviderContractBaseline` and every comparison
+in Infrastructure and the tests reference it, and no `"requires_*"`/`"succeeded"`/`"canceled"`/`"processing"`
+status literal remains in `api/Concertable.Payment`. Stripe event-type names stay on Stripe.NET's own
+`EventTypes` constants rather than a parallel local set.
