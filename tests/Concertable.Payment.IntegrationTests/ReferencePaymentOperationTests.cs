@@ -157,6 +157,36 @@ public sealed class ReferencePaymentOperationTests : IClassFixture<ApiFixture>, 
     }
 
     [Fact]
+    public async Task CaptureAsync_AuthorizationStillAwaitingConsumerAction_DoesNotStrandTheOperation()
+    {
+        var payerId = Guid.CreateVersion7();
+        var payeeId = Guid.CreateVersion7();
+        var operationId = Guid.CreateVersion7();
+        var reference = Reference();
+        await SeedAccountsAsync(payerId, payeeId);
+        var providerObjectId = await CreateAuthorizationAsync(
+            operationId,
+            reference,
+            payerId,
+            payeeId);
+        fixture.SetProviderStatus(providerObjectId, "requires_action");
+        var command = new CaptureEscrowCommand(
+            Guid.CreateVersion7(),
+            reference,
+            payerId,
+            payeeId,
+            5000,
+            Currency.Gbp,
+            reference);
+
+        await DispatchAsync(command);
+
+        Assert.Equal(
+            FinancialOperationStatus.Rejected,
+            await FinancialOperationStatusAsync(command.OperationId));
+    }
+
+    [Fact]
     public async Task PayAsync_PaymentMethodReference_UsesResolvedPaymentMethodAndPersistsSettlement()
     {
         var payerId = Guid.CreateVersion7();
