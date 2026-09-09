@@ -1,4 +1,4 @@
-using Concertable.Payment.Application.PaymentSessions;
+﻿using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Domain.Lifecycle;
 using Concertable.Payment.Domain.ProviderContract;
 using Microsoft.EntityFrameworkCore;
@@ -78,7 +78,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         }
         else
         {
-            Reject(request, provider, transition);
+            LogRejectedTransition(request, provider, transition);
             attempt.RecordReconciliationRequired(
                 provider.ObservedAt,
                 provider.ProviderRequestId,
@@ -94,7 +94,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         {
             transition = EvaluateTransition(request.Operation, saved.Attempt, provider);
             if (transition.TryGetError(out _))
-                Reject(request, provider, transition);
+                LogRejectedTransition(request, provider, transition);
         }
 
         return new PaymentSessionReconciliation(saved.Attempt, transition);
@@ -177,7 +177,7 @@ internal sealed class PaymentSessionReconciliationService : IPaymentSessionRecon
         PaymentOperationState observedState) =>
         new(reason, attempt.State, observedState);
 
-    private void Reject(
+    private void LogRejectedTransition(
         PaymentSessionReconciliationRequest request,
         ProviderSession provider,
         Result<PaymentOperationTransition, PaymentOperationTransitionRejection> transition)
