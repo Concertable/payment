@@ -23,7 +23,6 @@ public static class AppHostExtensions
 
         return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
                       .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "https")
-                      .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "http")
                       .WithHttpEndpoint(targetPort: PaymentConstants.GrpcPort, name: "grpc")
                       .WithReference(paymentDb)
                       .WaitFor(paymentDb)
@@ -105,7 +104,7 @@ public static class AppHostExtensions
             : builder.AddContainer(PaymentConstants.StripeCliResource, "stripe/stripe-cli")
                 .WithVolume("stripe-cli-config", "/root/.config/stripe")
                 .WithArgs("listen", "--api-key", secretKey, "--forward-to",
-                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("http")}/api/webhook"))
+                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
                 .Resource;
 
         var webhookSecret = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
