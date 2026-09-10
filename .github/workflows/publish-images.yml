@@ -1,0 +1,70 @@
+name: Publish images
+
+# Payment builds its deployables with the .NET SDK's container support, so there is no Dockerfile and
+# the org's container-publish.yml (which builds one) cannot serve this repository yet.
+#
+# Dispatch-only: the canonical Payment image is published at 10C, after the system composition is
+# green, and consumers pin the digest this run reports.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  discover:
+    name: Derive the image matrix
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.find.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: |
+          projects=$(grep -rl '<ContainerRepository>' src --include='*.csproj' | sort)
+          test -n "$projects" || { echo "No <ContainerRepository> projects found — refusing to pass"; exit 1; }
+          echo "Deployables to image:"
+          echo "$projects"
+          echo "projects=$(echo "$projects" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    needs: discover
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.discover.outputs.projects) }}
+    env:
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the image
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          dotnet publish "$PROJECT" \
+            --configuration Release \
+            /t:PublishContainer \
+            -p:ContainerImageTag=${{ github.sha }}
+      - name: Report the published digest
+        continue-on-error: true
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          repository=$(dotnet msbuild "$PROJECT" -getProperty:ContainerRepository | tr -d '[:space:]')
+          image="ghcr.io/$repository:${{ github.sha }}"
+          digest=$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')
+          echo "$image -> $digest"
+          echo "### $repository" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`ghcr.io/$repository@$digest\`" >> "$GITHUB_STEP_SUMMARY"
