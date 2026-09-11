@@ -29,9 +29,10 @@ permissions:
 
 jobs:
   packages:
-    uses: Concertable/.github/.github/workflows/nuget-publish.yml@a8911e82385833d09fb44f99def2088ba74d1535
+    uses: Concertable/.github/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
     with:
       project: Concertable.Payment.slnx
       publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     secrets:
       PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN || secrets.CONCERTABLE_PACKAGES_READ }}
+      PACKAGES_READ_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
