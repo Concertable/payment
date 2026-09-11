@@ -34,4 +34,4 @@ jobs:
       project: Concertable.Payment.slnx
       publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     secrets:
-      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN }}
+      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN || secrets.CONCERTABLE_PACKAGES_READ }}
