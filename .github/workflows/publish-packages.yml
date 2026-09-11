@@ -1,0 +1,38 @@
+name: Publish packages
+
+# Pack and clean-consumer verification run on every change; the push to the feed is the canonical
+# Payment release (10C) and therefore only ever an explicit dispatch from a protected ref.
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push the packed Payment packages to the org feed
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  packages:
+    uses: Concertable/.github/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
+    with:
+      project: Concertable.Payment.slnx
+      publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+    secrets:
+      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN || secrets.CONCERTABLE_PACKAGES_READ }}
+      PACKAGES_READ_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}

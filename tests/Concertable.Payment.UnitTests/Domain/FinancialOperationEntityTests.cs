@@ -5,17 +5,19 @@ namespace Concertable.Payment.UnitTests.Domain;
 
 public sealed class FinancialOperationEntityTests
 {
+    private static readonly PaymentOperationReference Reference = new("escrow", "order:17");
+
     [Fact]
     public void EnsureMatches_ReusedIdWithDifferentRequest_ThrowsInvalidOperationException()
     {
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
-            17,
+            Reference,
             "fingerprint-a",
             DateTimeOffset.UtcNow);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            operation.EnsureMatches(17, "fingerprint-b"));
+            operation.EnsureMatches(Reference, "fingerprint-b"));
 
         Assert.Contains(operation.Id.ToString(), exception.Message, StringComparison.Ordinal);
     }
@@ -26,7 +28,7 @@ public sealed class FinancialOperationEntityTests
         var completedAt = DateTimeOffset.UtcNow;
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
-            17,
+            Reference,
             "fingerprint",
             completedAt.AddMinutes(-1));
 
@@ -42,7 +44,7 @@ public sealed class FinancialOperationEntityTests
     {
         var operation = FinancialOperationEntity.Create(
             Guid.NewGuid(),
-            17,
+            Reference,
             "fingerprint",
             DateTimeOffset.UtcNow);
         operation.Succeed("re_test", DateTimeOffset.UtcNow);

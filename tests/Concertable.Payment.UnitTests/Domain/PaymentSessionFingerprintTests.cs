@@ -13,9 +13,9 @@ public sealed class PaymentSessionFingerprintTests
 
         var fingerprint = PaymentSessionFingerprint.Create(specification);
 
-        Assert.Equal(1, fingerprint.Version);
+        Assert.Equal(2, fingerprint.Version);
         Assert.Equal(
-            "0713BD4621CAFA28101B75D381417C803995731C4729E42E9611C2807882F2C6",
+            "83DDA7499170450C37BEC169220DC7062EE179A5C43330DE44EBA4270C4336D6",
             fingerprint.Value);
     }
 
@@ -32,7 +32,7 @@ public sealed class PaymentSessionFingerprintTests
     public void Create_UnknownVersion_ThrowsDomainException()
     {
         Assert.Throws<DomainException>(() =>
-            PaymentSessionFingerprint.Create(Authorization(5000), 2));
+            PaymentSessionFingerprint.Create(Authorization(5000), 3));
     }
 
     [Fact]
@@ -57,16 +57,42 @@ public sealed class PaymentSessionFingerprintTests
         Assert.NotEqual(first, second);
     }
 
-    private static PaymentSessionSpecification Authorization(
+    [Fact]
+    public void Create_ChangedMandateTerms_ReturnsDifferentHash()
+    {
+        var first = PaymentSessionFingerprint.Create(Setup("venue-hire-mandate-v1"));
+        var second = PaymentSessionFingerprint.Create(Setup("venue-hire-mandate-v2"));
+
+        Assert.NotEqual(first, second);
+    }
+
+    private static PaymentSessionDefinition Setup(string mandateTermsVersion) =>
+        PaymentSessionDefinition.Create(
+            Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
+            PaymentSessionKind.PaymentMethodSetup,
+            PaymentSession.OnSession,
+            "purchase",
+            "order:42",
+            "payer:7",
+            null,
+            null,
+            null,
+            PaymentSessionFundsRouting.None,
+            null,
+            "cus_test",
+            null,
+            mandateTermsVersion);
+
+    private static PaymentSessionDefinition Authorization(
         long amountMinor,
         PaymentSession session = PaymentSession.OnSession,
         string? paymentMethodId = null) =>
-        PaymentSessionSpecification.Create(
+        PaymentSessionDefinition.Create(
             Guid.Parse("018f3d73-b5db-7a21-96f2-62a5f0a1d4c2"),
             PaymentSessionKind.Authorization,
             session,
             "escrow",
-            "booking:42",
+            "order:42",
             "payer:7",
             "payee:9",
             amountMinor,
@@ -74,5 +100,6 @@ public sealed class PaymentSessionFingerprintTests
             PaymentSessionFundsRouting.Destination,
             paymentMethodId,
             "cus_test",
-            "acct_test");
+            "acct_test",
+            null);
 }

@@ -1,0 +1,8 @@
+<Project>
+
+  <PropertyGroup>
+    <PaymentBaselineName>v1</PaymentBaselineName>
+    <PaymentPublishedBaselineVersion>0.1.0-alpha.0.1254</PaymentPublishedBaselineVersion>
+  </PropertyGroup>
+
+</Project>

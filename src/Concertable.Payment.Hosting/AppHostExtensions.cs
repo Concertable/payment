@@ -11,9 +11,35 @@ namespace Concertable.Payment.Hosting;
 
 public static class AppHostExtensions
 {
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWeb(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+    {
+        var httpPorts = $"{PaymentConstants.HttpPort};{PaymentConstants.GrpcPort}";
+
+        return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
+                      .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "https")
+                      .WithHttpEndpoint(targetPort: PaymentConstants.GrpcPort, name: "grpc")
+                      .WithReference(paymentDb)
+                      .WaitFor(paymentDb)
+                      .WithReference(auth)
+                      .WaitFor(auth)
+                      .WithReference(asb)
+                      .WaitFor(asb)
+                      .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                      .WithEnvironment("PaymentTransport__GrpcPort", PaymentConstants.GrpcPort.ToString())
+                      .WithEnvironment("ASPNETCORE_HTTP_PORTS", httpPorts)
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                      .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
+    }
+
     public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
         this IDistributedApplicationBuilder builder,
-        IResourceBuilder<ProjectResource> auth,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
         IResourceBuilder<SqlServerDatabaseResource> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
@@ -45,7 +71,26 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
     }
 
-    public static void AddStripeCli(this IDistributedApplicationBuilder builder, IResourceBuilder<ProjectResource> paymentWeb)
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+    {
+        return builder.AddContainerImage(PaymentConstants.WorkersResource, image, digest)
+                      .WithReference(paymentDb)
+                      .WaitFor(paymentDb)
+                      .WithReference(asb)
+                      .WaitFor(asb)
+                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                      .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
+    }
+
+    public static void AddStripeCli<TPaymentWeb>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<TPaymentWeb> paymentWeb)
+        where TPaymentWeb : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
     {
         var secretKey = builder.Configuration["Stripe:SecretKey"];
         if (string.IsNullOrEmpty(secretKey))
@@ -59,7 +104,7 @@ public static class AppHostExtensions
             : builder.AddContainer(PaymentConstants.StripeCliResource, "stripe/stripe-cli")
                 .WithVolume("stripe-cli-config", "/root/.config/stripe")
                 .WithArgs("listen", "--api-key", secretKey, "--forward-to",
-                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("http")}/api/webhook"))
+                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
                 .Resource;
 
         var webhookSecret = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);

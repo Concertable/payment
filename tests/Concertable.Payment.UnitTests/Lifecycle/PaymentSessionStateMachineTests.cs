@@ -39,6 +39,20 @@ public sealed class PaymentSessionStateMachineTests
     }
 
     [Fact]
+    public void Evaluate_AuthorizedAfterProcessing_IsApplied()
+    {
+        var result = machine.Evaluate(
+            PaymentOperationState.Processing,
+            Observation(
+                PaymentOperationState.Authorized,
+                captureBefore: ObservedAt.AddDays(7),
+                context: new PaymentProviderOperationContext.Authorization()));
+
+        Assert.True(result.TryGetValue(out var transition));
+        Assert.Equal(PaymentOperationState.Authorized, transition.State);
+    }
+
+    [Fact]
     public void Evaluate_AuthorizedForAutomaticPayment_IsRejected()
     {
         var result = machine.Evaluate(
@@ -77,17 +91,18 @@ public sealed class PaymentSessionStateMachineTests
     }
 
     [Fact]
-    public void Evaluate_AuthorizedWithoutCaptureDeadline_IsRejected()
+    public void Evaluate_AuthorizedWithoutCaptureDeadline_IsApplied()
     {
         var result = machine.Evaluate(
-            PaymentOperationState.Creating,
+            PaymentOperationState.RequiresAction,
             Observation(
                 PaymentOperationState.Authorized,
                 captureBefore: null,
                 context: new PaymentProviderOperationContext.Authorization()));
 
-        Assert.True(result.TryGetError(out var rejection));
-        Assert.Equal(PaymentOperationTransitionRejectionReason.CaptureDeadlineRequired, rejection.Reason);
+        Assert.True(result.TryGetValue(out var transition));
+        Assert.Equal(PaymentOperationState.Authorized, transition.State);
+        Assert.Null(transition.CaptureBefore);
     }
 
     [Fact]
@@ -177,7 +192,8 @@ public sealed class PaymentSessionStateMachineTests
             PaymentOperationState.Canceled, PaymentOperationState.Failed),
         .. Edges(PaymentOperationState.Processing,
             PaymentOperationState.RequiresPaymentMethod, PaymentOperationState.RequiresAction,
-            PaymentOperationState.Succeeded, PaymentOperationState.Canceled, PaymentOperationState.Failed),
+            PaymentOperationState.Authorized, PaymentOperationState.Succeeded,
+            PaymentOperationState.Canceled, PaymentOperationState.Failed),
         .. Edges(PaymentOperationState.Authorized,
             PaymentOperationState.Processing, PaymentOperationState.Succeeded, PaymentOperationState.Canceled)
     ];

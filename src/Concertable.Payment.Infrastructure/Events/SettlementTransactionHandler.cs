@@ -9,6 +9,9 @@ internal sealed class SettlementTransactionHandler : ITransactionHandler
         this.transactionService = transactionService;
     }
 
-    public Task HandleAsync(PaymentSucceededEvent @event, CancellationToken ct) =>
-        transactionService.CompleteAsync(@event.TransactionId, ct);
+    public Task HandleAsync(
+        PaymentSucceededEvent @event,
+        string providerObjectId,
+        CancellationToken ct) =>
+        transactionService.CompleteAsync(providerObjectId, ct);
 }

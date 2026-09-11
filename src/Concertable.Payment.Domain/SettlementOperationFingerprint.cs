@@ -12,7 +12,7 @@ internal readonly record struct SettlementOperationFingerprint
         Value = value;
     }
 
-    internal const int CurrentVersion = 1;
+    internal const int CurrentVersion = 2;
 
     public int Version { get; }
     public string Value { get; }
@@ -25,7 +25,7 @@ internal readonly record struct SettlementOperationFingerprint
         Money platformFee,
         string paymentMethodId,
         PaymentSession session,
-        int bookingId)
+        PaymentOperationReference reference)
     {
         ValidateOperationId(operationId);
         DomainException.ThrowIfNullOrWhiteSpace(paymentMethodId, "Settlement payment method");
@@ -44,7 +44,8 @@ internal readonly record struct SettlementOperationFingerprint
             writer.WriteNumber("platformFeeMinor", platformFee.ToMinorUnits());
             writer.WriteString("paymentMethodId", paymentMethodId.Trim());
             writer.WriteString("session", session.ToString());
-            writer.WriteNumber("bookingId", bookingId);
+            writer.WriteString("operationType", reference.OperationType);
+            writer.WriteString("clientReference", reference.ClientReference);
             writer.WriteEndObject();
         }
 
@@ -64,7 +65,8 @@ internal readonly record struct SettlementOperationFingerprint
             writer.WriteNumber("version", CurrentVersion);
             writer.WriteString("operation", "release");
             writer.WriteString("operationId", operationId.ToString("N"));
-            writer.WriteNumber("bookingId", escrow.BookingId);
+            writer.WriteString("operationType", escrow.OperationType);
+            writer.WriteString("clientReference", escrow.ClientReference);
             writer.WriteNumber("escrowId", escrow.Id);
             writer.WriteString("payeeId", escrow.ToOwnerId.ToString("N"));
             writer.WriteNumber("amountMinor", escrow.PayeeGrossMinor);

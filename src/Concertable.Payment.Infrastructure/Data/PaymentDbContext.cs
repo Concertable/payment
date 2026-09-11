@@ -8,7 +8,7 @@ internal sealed class PaymentDbContext(
     : DbContextBase(options)
 {
     public DbSet<TransactionEntity> Transactions => Set<TransactionEntity>();
-    public DbSet<TicketTransactionEntity> TicketTransactions => Set<TicketTransactionEntity>();
+    public DbSet<PaymentTransactionEntity> PaymentTransactions => Set<PaymentTransactionEntity>();
     public DbSet<SettlementTransactionEntity> SettlementTransactions => Set<SettlementTransactionEntity>();
     public DbSet<StripeEventEntity> StripeEvents => Set<StripeEventEntity>();
     public DbSet<PayoutAccountEntity> PayoutAccounts => Set<PayoutAccountEntity>();

@@ -1,9 +1,11 @@
-using System.Net;
+﻿using System.Net;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Stripe;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -19,7 +21,7 @@ public sealed class StripeSessionClientTests
 
         var result = await sut.CreateAsync(
             Request(PaymentSession.OffSession),
-            new PaymentSessionIdempotencyKey(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
+            StripeIdempotencyKey.ForSessionAttempt(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
 
         Assert.True(result.TryGetValue(out var observation));
         Assert.Equal(PaymentSessionProviderObjectKind.PaymentIntent, observation.ProviderObjectKind);
@@ -37,11 +39,43 @@ public sealed class StripeSessionClientTests
 
         var result = await sut.CreateAsync(
             Request(PaymentSession.OnSession),
-            new PaymentSessionIdempotencyKey(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
+            StripeIdempotencyKey.ForSessionAttempt(Guid.CreateVersion7(), Guid.CreateVersion7(), 1));
 
         Assert.True(result.TryGetValue(out _));
         var content = await httpClient.Requests.Single().Content!.ReadAsStringAsync();
         Assert.Contains("setup_future_usage=off_session", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RetrieveAsync_ManualAuthorizationWithoutCaptureDeadline_ReturnsProviderObservation()
+    {
+        var httpClient = new StubStripeHttpClient();
+        httpClient.Enqueue(HttpStatusCode.OK, AuthorizedPaymentIntentWithoutCaptureDeadlineResponse());
+        var sut = CreateClient(httpClient);
+
+        var result = await sut.RetrieveAsync(PaymentSessionProviderObjectKind.PaymentIntent, "pi_test");
+
+        Assert.True(result.TryGetValue(out var observation));
+        Assert.Equal("requires_capture", observation.Status);
+        Assert.Null(observation.CaptureBefore);
+    }
+
+    [Fact]
+    public async Task CreateCustomerSessionAsync_OffersOnlyMethodsTheCustomerConsentedToRedisplay()
+    {
+        var httpClient = new StubStripeHttpClient();
+        httpClient.Enqueue(HttpStatusCode.OK, CustomerSessionResponse());
+        var sut = CreateClient(httpClient);
+
+        var result = await sut.CreateCustomerSessionAsync("cus_test");
+
+        Assert.True(result.TryGetValue(out _));
+        var content = await httpClient.Requests.Single().Content!.ReadAsStringAsync();
+        Assert.Contains(
+            "components[payment_element][features][payment_method_allow_redisplay_filters][0]=always",
+            content,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("payment_method_allow_redisplay_filters][1]", content, StringComparison.Ordinal);
     }
 
     private static StripeSessionClient CreateClient(StubStripeHttpClient httpClient)
@@ -51,7 +85,8 @@ public sealed class StripeSessionClientTests
             new PaymentIntentService(stripeClient),
             new SetupIntentService(stripeClient),
             new CustomerSessionService(stripeClient),
-            TimeProvider.System);
+            TimeProvider.System,
+            NullLogger<StripeSessionClient>.Instance);
     }
 
     private static PaymentSessionProviderRequest Request(PaymentSession session) =>
@@ -96,6 +131,15 @@ public sealed class StripeSessionClientTests
         }
         """;
 
+    private static string CustomerSessionResponse() =>
+        """
+        {
+          "object": "customer_session",
+          "client_secret": "cuss_test",
+          "customer": "cus_test"
+        }
+        """;
+
     private static string PaymentIntentResponse() =>
         """
         {
@@ -104,6 +148,25 @@ public sealed class StripeSessionClientTests
           "amount": 1000,
           "currency": "gbp",
           "status": "requires_payment_method"
+        }
+        """;
+
+    private static string AuthorizedPaymentIntentWithoutCaptureDeadlineResponse() =>
+        """
+        {
+          "id": "pi_test",
+          "object": "payment_intent",
+          "amount": 1000,
+          "currency": "gbp",
+          "status": "requires_capture",
+          "latest_charge": {
+            "id": "ch_test",
+            "object": "charge",
+            "payment_method_details": {
+              "type": "card",
+              "card": {}
+            }
+          }
         }
         """;
 

@@ -44,5 +44,5 @@ public sealed class SettlementOperationFingerprintTests
             Money.Gbp(12),
             "pm_test",
             PaymentSession.OffSession,
-            42);
+            new("settlement", "order:42"));
 }

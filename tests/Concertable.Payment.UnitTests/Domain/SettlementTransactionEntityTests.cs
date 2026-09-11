@@ -11,7 +11,7 @@ public sealed class SettlementTransactionEntityTests
             amount: 6000,
             platformFee: 1000,
             status: TransactionStatus.Pending,
-            bookingId: 42);
+            reference: new("settlement", "order:42"));
         settlement.Complete(DateTime.UtcNow);
         return settlement;
     }
@@ -26,7 +26,7 @@ public sealed class SettlementTransactionEntityTests
             amount: 6000,
             platformFee: 1000,
             status: TransactionStatus.Pending,
-            bookingId: 42);
+            reference: new("settlement", "order:42"));
         var completedAt = new DateTime(2026, 8, 14, 10, 30, 0, DateTimeKind.Utc);
 
         var first = settlement.Complete(completedAt);

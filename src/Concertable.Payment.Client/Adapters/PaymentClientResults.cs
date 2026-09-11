@@ -6,6 +6,27 @@ namespace Concertable.Payment.Client.Adapters;
 
 internal static class PaymentClientResults
 {
+    public static async Task<UnitResult<TError>> ExecuteAsync<TError>(
+        Func<Task> operation,
+        Func<RpcException, TError> toError,
+        CancellationToken ct)
+        where TError : notnull
+    {
+        try
+        {
+            await operation();
+            return new Success();
+        }
+        catch (RpcException ex) when (ex.IsClientCancellation(ct))
+        {
+            throw new OperationCanceledException("The payment operation was cancelled.", ex, ct);
+        }
+        catch (RpcException ex) when (ex.HasOperationErrorDetail())
+        {
+            return UnitResult<TError>.Failure(toError(ex));
+        }
+    }
+
     public static async Task<Result<TValue, TError>> ExecuteAsync<TValue, TError>(
         Func<Task<TValue>> operation,
         Func<RpcException, TError> toError,

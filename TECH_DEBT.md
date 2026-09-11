@@ -1,6 +1,65 @@
-# Concertable.Payment — Technical Debt
+﻿# Concertable.Payment — Technical Debt
 
 When an item is fixed, update both this file and `ARCHITECTURE.md`.
+
+---
+
+## HIGH
+
+### An escrow deposit's provider object cannot be resolved, on either the succeeded or the failed path
+
+`PaymentTransactionHandler` and `PaymentFailureDispatcher` both resolve the provider object id through
+`PaymentOperationResolver.ResolveProviderObjectIdAsync` before routing a `PaymentSucceededEvent` or
+`PaymentFailedEvent` to its keyed handler. That resolver reads `PaymentSessionOperations`, but an escrow
+deposit is taken through `EscrowService.DepositAsync` -> `PaymentManager.HoldAsync` ->
+`StripePaymentIntentClient.HoldAsync`, which creates the Stripe PaymentIntent directly and writes no session
+operation row. `AuthorizeAsync` is on the durable operation model; `DepositAsync` is not.
+
+The resolver therefore throws `InvalidOperationException: Payment operation <type>/<reference> has no
+provider transaction` for every venue-hire deposit, and the message dead-letters after three attempts:
+
+- On the succeeded path `EscrowConfirmedHandler` never runs, so the escrow stays `Pending` and its ledger
+  posting is never staged.
+- On the failed path the consumer is never told, so the originating booking stays pending forever and the UI
+  polls a resource that will never appear rather than surfacing a payment error.
+
+Observed for `escrow/booking:48` on both paths. No suite catches it: the browser scenarios assert the draft
+concert and the Stripe-side capture, neither of which depends on Payment's own bookkeeping, so the venue-hire
+scenarios pass green while every deposit's escrow row and ledger posting are silently lost.
+
+`8fb94d140` introduced the resolver into both handlers on 2026-09-05, one day after the last merge-queue run
+in which the browser tier actually executed.
+
+**Resolves when:** an escrow deposit records a durable payment session operation like an authorization does,
+so both handlers resolve its provider object; with tests covering the succeeded path, and the create-time
+failure path where no provider object exists at all.
+
+---
+
+### A financial operation whose command dead-letters is never re-driven, and no reconciliation sweep exists
+
+`FinancialOperationHandler` throws `PaymentProviderUnavailableException` for a transient
+`PaymentOperationError.ProviderUnavailable`. `AzureServiceBusReceiver.AbandonWithBackoffAsync` abandons with
+capped exponential backoff (`2^(DeliveryCount-1)`, max 30s) and Azure Service Bus dead-letters once
+`MaxDeliveryCount` is reached - three deliveries under the emulator, ten by default in Azure. The operation
+row stays `FinancialOperationStatus.Pending` forever.
+
+Nothing recovers it. `PaymentSessionAttemptEntity.NextReconcileAt` is written by
+`RecordReconciliationRequired` and carries its own index, but **no code ever reads it**, and
+`PaymentSessionReconciliationSource.Sweep` is a declared enum case with no implementation - Payment has one
+hosted service, `CommissionConfigurationHostedService`, and it is unrelated. A `Pending` financial operation
+also has no stored command payload, so it cannot re-dispatch itself even if something looked for it.
+
+The consequence is an authorized-but-uncaptured escrow: the payer's card is held, no capture follows, no
+rejection reaches the consumer, and the originating booking never completes. The transient window only has to
+outlast the backoff budget. This is the shared reason the sibling HIGH item above is permanent rather than
+self-healing. `PaymentOperationResolver` no longer manufactures the condition from a rejected transition
+evaluation, but a genuine provider outage still reaches it.
+
+**Resolves when:** a transient provider failure is recoverable without operator action - a sweep that honours
+`NextReconcileAt` and reconciles under `PaymentSessionReconciliationSource.Sweep`, and a durable path that
+re-drives or fails a `Pending` financial operation whose command is gone - with tests covering a provider
+outage that outlasts the delivery budget on both the deposit and capture paths.
 
 ---
 
@@ -20,6 +79,30 @@ operation identities.
 
 ## LOW
 
+### `AddStripeCli` makes a host graph unresolvable without a live Stripe CLI
+
+`AppHostExtensions.AddStripeCli` hangs a `WithEnvironment` callback on `payment-web` that awaits a webhook
+secret scraped from the Stripe CLI's log, with a 60-second `WaitAsync`. Resolving that resource's environment
+therefore depends on a running CLI. Any host-graph test that reads `payment-web`'s environment — B2B's
+`AppHost_ProductionGraphAndStrictValidation_AreValid`, for one — consequently passes only where
+`Stripe:SecretKey` is absent and `AddStripeCli` returns early. It is absent in CI and present in a developer's
+user secrets, so the same commit is green on CI and red locally with a bare `TimeoutException`. The
+composition-validation tier's rule that registration stays side-effect-free (`composition-testing`) is the
+same rule this breaks one layer up.
+
+**Resolves when:** the webhook secret reaches `payment-web` through a value provider resolved at launch rather
+than a callback that blocks while the graph is being read, so a host graph resolves without the CLI.
+
+### Result extraction relies on null-forgiving assertions
+
+Payment's RPC and application adapters use `TryGetError` after proving a result is not successful,
+but Reunion exposes the extracted error as nullable. Call sites therefore use `error!` to recover an
+invariant that the result type knows at runtime but its extraction API does not express to C#'s nullable
+analysis.
+
+**Resolves when:** Reunion provides an exhaustive match or failure accessor whose return type is non-null
+on the failure branch, and Payment migrates its result projections without null-forgiving assertions.
+
 ### Internal Payment DTOs still expose monetary values as primitives
 
 `Application/DTOs/PaymentDtos.cs`, `Application/Interfaces/ITransaction.cs`, and the published
@@ -33,9 +116,39 @@ conversion to minor units confined to persistence, provider, and protobuf mapper
 
 ### A crashed two-phase refund can strand a `Pending` `PaymentRefundEntity` with no reconcile
 
-Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund, and the Stripe idempotency key (`commission:{authId}:refund:{cumulativeGross}`) would collapse a same-amount retry onto the same Stripe refund anyway. But the reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.
+Refunds now reserve → charge Stripe → complete: `EscrowService.ExecuteRefundAsync` and `ManagerPaymentService.RefundCommissionAuthorizedByBookingIdAsync` first commit a `Pending` `PaymentRefundEntity` (which bumps the aggregate `ConcurrencyToken`), then call Stripe, then transition the row `Pending → Completed` (on success) or `Pending → Failed` (on Stripe failure). If the process crashes *after* the reservation commits but *before* the completion/release save, the row is left `Pending` forever. This is **fail-closed**: a `Pending` row still `CountsTowardCumulative`, so it blocks (never double-charges) subsequent refunds up to its reserved gross — a naive retry of the same amount trips the cumulative-gross limit rather than issuing a second Stripe refund. The reservation gate is the only guard: the Stripe idempotency key is now keyed on the reservation's own id (`<scope>:<identity>:<reservationId>:1:refund`), so a fresh reservation is deliberately a fresh Stripe request rather than a replay of the stranded one. The reserved capacity stays locked until something clears the dangling row. There is no reconcile job that inspects Stripe for a `Pending` reservation and drives it to its true terminal state.
+
+### Legacy Stripe writes key their idempotency on a single-attempt identity
+
+Every Stripe write now builds its idempotency key through one `StripeIdempotencyKey` shape
+(`<scope>:<identity>:<attempt>:<revision>:<action>`), and no key contains a payload field. Only the
+payment-session subsystem supplies a genuine multi-attempt identity, because only it persists
+`PaymentSessionAttemptEntity` rows; refunds supply their `PaymentRefundEntity` reservation id. The
+remaining legacy charge, deposit, capture, release and hold-session writes are single-attempt by
+construction — their durable row (`FinancialOperationEntity`, `SettlementTransactionEntity`,
+`EscrowEntity`) short-circuits before a second provider write — so they pass their operation or
+commission-binding id as their own attempt at revision 1. That is honest today but means a deliberate
+second provider attempt against one of those identities cannot be expressed.
+
+**Resolves when:** the legacy raw-identifier surface is culled
+(`plans/launch/PAYMENT_BOUNDARY_DECISION.md` §7 step 5) and those flows move onto the payment-session
+subsystem, which already carries attempt and revision.
 
 **Resolves when:** a reconcile path exists — e.g. a background sweep (or webhook handler) that, for a `Pending` `PaymentRefundEntity` older than some threshold, queries Stripe for a refund under the reservation's idempotency key and either `Complete`s it (Stripe refund exists) or `Fail`s it (none), freeing the reserved gross.
+
+### `PayoutAccountEntity.MarkVerified()` is production-dead
+
+`Payment/src/Concertable.Payment.Domain/Entities/PayoutAccountEntity.cs` — `MarkVerified()` sets
+`Status = PayoutAccountStatus.Verified`, but nothing in production ever calls it; the only caller is
+`PaymentTestSeeder`. The live "is this account verified" read path (`PayoutAccountService.cs`,
+`StripeAccountClient.cs`) queries Stripe directly instead of consulting this persisted column, so
+`Status` only ever advances `NotVerified -> Pending` (via `LinkAccount`) in production, never reaching
+`Verified`. Either the persisted status is meant to track Stripe's verification outcome (missing a
+production caller — likely a webhook/reconciliation handler that never got wired) or the column/method
+are vestigial from before verification checks moved to a live Stripe query.
+
+**Resolves when:** either a production path calls `MarkVerified()` in response to the real verification
+signal, or the method, the `Verified` status value, and any now-dead column plumbing are removed.
 
 ---
 
@@ -48,3 +161,45 @@ Resolved by `plans/PAYMENT_SEED_REFLECTION_REFACTOR.md`. Rather than re-homing t
 - `Concertable.Payment.Seed.Contracts` (the ticket-purchase catalog + `PaymentSeedSpec` incl. the 3 dead `Settlement`/`Escrow`/`Verify` factories) and `Concertable.Payment.Seed.Simulator` are gone, along with their AppHost wiring (`AddPaymentSeedingSimulator`, the resource-name constant, csproj/slnx entries).
 - The only seed state those payments produced is **inherently-unreproducible historical state** (past-dated ticket sales). Each consumer now reflection-seeds its own copy: B2B sets `ConcertEntity.TicketsSold` via `ConcertFactory` from a `ticketsSold` field on `ConcertSeedSpec`; Customer direct-inserts `SeedState.Tickets` via `TicketDevSeeder`. Documented as a sanctioned exception in the `seeding` skill.
 - `Payment.Contracts.PaymentSucceededEvent` stays — the only Payment-owned piece. Payment now owns **zero** ticket/concert knowledge.
+
+---
+
+## MEDIUM
+
+### Stripe.net's API key is a global written from constructors, not an injected client
+
+`StripeApiClient` and `StripeAccountClient` each assign `StripeConfiguration.ApiKey` in their own
+constructor, and the E2E adapter's account client does it a third time. Every `Stripe.*Service` is
+registered bare (`AddSingleton<Stripe.SetupIntentService>()`), so it resolves the key from that global when
+a call is made rather than from a client it owns.
+
+`AddPaymentInfrastructure` now assigns the key once at composition, which removes the ordering hazard that
+made the first payment session of a process fail with `No API key provided`. The underlying shape is still
+wrong: process-wide mutable state, three writers, and services that cannot be constructed with a different
+key — so a test cannot exercise two keys, and the failure mode when someone adds a fourth writer is silent.
+
+**Resolves when:** an `IStripeClient` is registered from `StripeSettings` and every `Stripe.*Service` is
+constructed with it, no code assigns `StripeConfiguration.ApiKey`, and the E2E adapter overrides that one
+registration instead of racing a global.
+
+---
+
+### Stripe provider status strings are literals, and the one constants class is half-built
+
+`StripePaymentIntentStatuses` declares three of Stripe's seven PaymentIntent statuses (`succeeded`,
+`requires_action`, `requires_confirmation`) and lives in `Concertable.Payment.Infrastructure`. The file
+that owns the whole `status -> PaymentOperationState` vocabulary, `StripeProviderContractBaseline`, is in
+`Concertable.Payment.Domain` and so cannot reference it — it hardcodes all seven of its own, for
+PaymentIntent, SetupIntent and Refund. `StripeSessionClient`, `FakeStripeSessionClient` and
+`PaymentSessionService` compare against their own literals again.
+
+88 raw status literals across 15 files, with the canonical mapping table and the constants class in
+different projects and unaware of each other. A status that is added, renamed or mistyped is caught by
+nothing: `requires_capture` appears only as a literal, and it is the status the 3DS escrow-capture path
+turns on.
+
+**Resolves when:** one constants type in `Concertable.Payment.Domain.ProviderContract` covers every status
+Stripe reports for all three provider object kinds, `StripeProviderContractBaseline` and every comparison
+in Infrastructure and the tests reference it, and no `"requires_*"`/`"succeeded"`/`"canceled"`/`"processing"`
+status literal remains in `api/Concertable.Payment`. Stripe event-type names stay on Stripe.NET's own
+`EventTypes` constants rather than a parallel local set.

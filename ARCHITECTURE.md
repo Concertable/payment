@@ -11,7 +11,7 @@
 
 Payment is the **agnostic payment adapter**: it owns the Stripe integration, a double-entry money ledger, the escrow lifecycle, the commission/VAT engine, and Stripe-Connect payout accounts. It is a shared runtime dependency of B2B and Customer (both `WaitFor` it), and it may be called synchronously over gRPC.
 
-It knows **nothing** of tickets, concerts, deals, or reviews as domain concepts. A payment's purpose reaches Payment only as an opaque Stripe-metadata `type` string (`"ticket"`, `"settlement"`, `"escrow"`, `"verify"`), and the resource owner only as an opaque `owner` id. Payment owns zero consumer-domain knowledge (the former seed catalog + simulator were deleted; see `TECH_DEBT.md`), and it does not seed — payout accounts are event-provisioned (see [`AGENTS.md`](./AGENTS.md)).
+It knows **nothing** of tickets, concerts, deals, bookings, applications, buyers, managers, venues, or artists as domain concepts. A caller identifies a logical purpose through an opaque `PaymentOperationReference` (`OperationType`, `ClientReference`) and identities through opaque owner ids. Payment owns zero consumer-domain knowledge and does not seed; payout accounts are event-provisioned (see [`AGENTS.md`](./AGENTS.md)).
 
 ---
 
@@ -20,7 +20,7 @@ It knows **nothing** of tickets, concerts, deals, or reviews as domain concepts.
 | Project | Kind | Purpose |
 |---|---|---|
 | `Concertable.Payment.Web` | ASP.NET Core HTTP host | Controllers + gRPC server + outbox **dispatcher** + queue hosted service. **Publishes** `PaymentSucceeded/Failed`; handles the `ProcessStripeWebhookCommand`. |
-| `Concertable.Payment.Workers` | .NET Worker host | ASB **subscribers** (`CredentialRegisteredEvent`, `PayoutOwnerRegisteredEvent`, `PaymentSucceeded/Failed`) + inbox. |
+| `Concertable.Payment.Workers` | .NET Worker host | ASB **subscribers** (`PaymentMethodOwnerRegisteredEvent`, `PayoutOwnerRegisteredEvent`, `PaymentSucceeded/Failed`) + inbox. |
 | `Concertable.Payment.Api` | Controllers csproj | HTTP controllers, `owner`-claim identity, gRPC **server** stubs. |
 | `Concertable.Payment.Application` | Shared csproj | Interfaces, DTOs, requests, mappers, transaction-handler contracts. |
 | `Concertable.Payment.Domain` | Shared csproj | Entities, enums, the pure `CommissionCalculator`. |
@@ -30,6 +30,24 @@ It knows **nothing** of tickets, concerts, deals, or reviews as domain concepts.
 | `Concertable.Payment.AppHost` | Aspire AppHost | Local-dev orchestrator only. |
 
 **Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
+
+The Payment Web container keeps HTTP/1.1 REST, webhook, and mobile traffic on cleartext port `8080`. Its
+separate cleartext port `8081` is HTTP/2-only for gRPC; `Payment.Hosting` publishes that listener as the `grpc`
+service-discovery endpoint while retaining the HTTP-schemed `https` compatibility alias on `8080` for callers
+that still select that endpoint name. `Payment.Client` prefers `services:payment-web:grpc:0` and fails closed
+when discovery resolves an `http` address unless the owning composition explicitly sets
+`PaymentClient:AllowInsecureHttp=true`; only that opt-in enables service-token call credentials over h2c.
+The B2B and Customer AppHosts set it only in local run mode, never in their published manifests. Other
+deployments must make the same explicit trust decision or use TLS.
+
+The split listener belongs to the container topology alone. A project-hosted Payment — the umbrella and
+standalone AppHosts, and the substituted E2E host — publishes no `grpc` endpoint and sets no
+`PaymentTransport:GrpcPort`, so every endpoint stays `Http1AndHttp2` and gRPC rides the same listener as
+REST; naming a port that no endpoint binds would make an unrelated endpoint HTTP/2-only. Because a consumer's
+`WithReference` advertises one discovery key per *container* endpoint, an E2E stack that substitutes a project
+for that container must repoint **every** `services:payment-web:*` key at the host it actually runs
+(`PinPaymentDiscovery`) — a key left aimed at the non-started container resolves to a proxy that accepts the
+connection and never answers, which surfaces as a 30-second gRPC timeout rather than a refusal.
 
 ---
 
@@ -41,7 +59,7 @@ Every money movement posts a balanced transaction — the invariant is enforced 
 - `LedgerEntryEntity` stores a leg as a signed `long` minor-unit amount (debit `+`, credit `−`); `LedgerAccountEntity` is keyed `(LedgerAccountType, Guid? OwnerId, Currency)` over accounts `PlatformRevenue / StripeClearing / Payable / Receivable / VatLiability`.
 - **Posting recipes** — which accounts move per financial event — live in one place, `Infrastructure/LedgerPostings.cs` (`DirectSettlement`, `EscrowHold`, `EscrowRelease`, `EscrowRefundBeforeRelease`, `EscrowRefundAfterRelease`, `DirectSettlementRefund`), staged through `LedgerService.StageAsync` (resolves/creates accounts, builds the balanced transaction). The service stages entities then flushes `PaymentDbContext` **once** — the single-context unit-of-work (`persistence` skill).
 
-**Transactions** are a TPH hierarchy: abstract `TransactionEntity` → `TicketTransactionEntity` / `SettlementTransactionEntity` / `VerifyTransactionEntity`, status `Pending/Complete/Failed`.
+**Transactions** are a TPH hierarchy: abstract `TransactionEntity` → `PaymentTransactionEntity` / `SettlementTransactionEntity` / `VerifyTransactionEntity`, status `Pending/Complete/Failed`.
 
 ---
 
@@ -49,8 +67,8 @@ Every money movement posts a balanced transaction — the invariant is enforced 
 
 `EscrowEntity` (status `Pending → Held → Released` / `Refunded` / `Disputed` / `Failed`), driven by `EscrowService`:
 
-- **Hold → release.** `DepositAsync` places a Stripe manual-capture hold, creates the escrow `Pending`, then `Confirm()` + stages `EscrowHold` when no further action is required. `CaptureAsync` captures a held intent; `ReleaseAsync`/`ReleaseByBookingIdAsync` transfers to the payee, `Release()`, stages `EscrowRelease`.
-- **Reserve-first refund.** `ExecuteRefundAsync` atomically reserves against `EscrowEntity.RefundedGrossMinor` (`TryReserveRefundGrossAsync`), creates a **`Pending`** `PaymentRefundEntity`, saves, then calls Stripe — completing (`CompleteRefund` + posting) or rolling back (`ReleaseRefund` + release the reservation) on the result. The running `RefundedGrossMinor` total is the concurrency guard; the Stripe idempotency key collapses same-amount retries. The settlement path mirrors this via `ManagerPaymentService` + `TryReserveSettlementRefundGrossAsync`; a `PaymentRefundEntity` belongs to exactly one of escrow or settlement.
+- **Hold → release.** `DepositAsync` places a Stripe manual-capture hold, creates the escrow `Pending`, then `Confirm()` + stages `EscrowHold` when no further action is required. `CaptureAsync` captures an authorization resolved from its opaque operation reference; `ReleaseAsync`/`ReleaseByReferenceAsync` transfers to the payee, `Release()`, and stages `EscrowRelease`.
+- **Reserve-first refund.** `ExecuteRefundAsync` atomically reserves against `EscrowEntity.RefundedGrossMinor` (`TryReserveRefundGrossAsync`), creates a **`Pending`** `PaymentRefundEntity`, saves, then calls Stripe — completing (`CompleteRefund` + posting) or rolling back (`ReleaseRefund` + release the reservation) on the result. The running `RefundedGrossMinor` total is the concurrency guard; the Stripe idempotency key is keyed on the reservation's own id, so each reservation is a distinct Stripe request. The settlement path mirrors this via `SettlementService` + `TryReserveSettlementRefundGrossAsync`; a `PaymentRefundEntity` belongs to exactly one of escrow or settlement.
 
 A crash between reservation and completion can strand a `Pending` refund (fail-closed but capacity-locked) — `TECH_DEBT.md` item.
 
@@ -72,7 +90,7 @@ A succeeded payment routes by its opaque metadata `type` (`Contracts/PaymentMeta
 
 | `type` | Handler |
 |---|---|
-| `ticket` | `TicketTransactionHandler` |
+| `payment` | `PaymentTransactionRecorder` |
 | `settlement` | `SettlementTransactionHandler` |
 | `escrow` | `EscrowConfirmedHandler` |
 | `verify` | `VerifyTransactionHandler` |
@@ -86,7 +104,7 @@ A succeeded payment routes by its opaque metadata `type` (`Contracts/PaymentMeta
 Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeAccountClient`, `IStripeHoldClient`, `IStripePaymentIntentClient`, `IStripeTransferClient`, `Webhook/IStripeApiClient`, `IWebhookService`). Selection is by environment, never by touching real Stripe in dev/E2E:
 
 - **`ExternalServices:UseRealStripe`** (bool) in `AddPaymentInfrastructure` — `false` (dev default) registers the `Fake*` clients; `true` registers the Stripe-SDK-backed real clients.
-- **`UseStripeAdapter()`** (`tests/E2ETests/Concertable.Payment.E2ETests.Stripe`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for the E2E `StripeAccountClient` and the webhook processor for `StripeWebhookProcessor`. It is applied only by the Payment E2E host projects (`Concertable.Payment.E2ETests.Web` / `.Workers`); the E2E stack launches those in place of the production hosts (via the harness's `LaunchAs` swap), so production `Payment.Web`/`Workers` carry no E2E branch. Each fixture creates its own **real test-mode** customers so concurrent runs cannot detach or reuse one another's cards; pre-provisioned Connect accounts remain shared because tests do not mutate them. The webhook processor accepts only intents owned by the fixture's customers.
+- **`UseStripeAdapter()`** (`tests/E2ETests/Concertable.Payment.E2ETests.Stripe`) layers on top of `UseRealStripe=true`, swapping `IStripeAccountClient` for the E2E `StripeAccountClient` and the webhook processor for `StripeWebhookProcessor`. It is applied only by the Payment E2E host projects (`Concertable.Payment.E2ETests.Web` / `.Workers`); the E2E stack substitutes those for the production hosts, so production `Payment.Web`/`Workers` carry no E2E branch. Each fixture creates its own **real test-mode** customers so concurrent runs cannot detach or reuse one another's cards; pre-provisioned Connect accounts remain shared because tests do not mutate them. The webhook processor accepts only intents owned by the fixture's customers.
 
 ---
 
@@ -97,7 +115,7 @@ Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeA
 1. **Stripe-event dedup** — `WebhookProcessor` skips if `StripeEventEntity` (keyed on Stripe event id, `[payment].[StripeEvents]`) already exists, else inserts it inside the same outbox transaction as the side-effects.
 2. **Messaging inbox** — subscribers dedup on `(MessageId, ConsumerName)`.
 
-Outbound Stripe calls carry idempotency keys (`Services/StripeIdempotency.cs`).
+Outbound Stripe calls carry idempotency keys built through one shape — `StripeIdempotencyKey` (`Application/Provider/`) renders `<scope>:<identity>:<attempt>:<revision>:<action>`, and `Services/StripeRequestOptions.cs` binds the legacy financial-operation and commission-binding writes to it. No key contains a payload field: the payment-session subsystem supplies a real attempt and revision, refunds supply their `PaymentRefundEntity` reservation id, and the remaining single-attempt writes pass their own identity as the attempt.
 
 ---
 
@@ -106,13 +124,13 @@ Outbound Stripe calls carry idempotency keys (`Services/StripeIdempotency.cs`).
 `PayoutAccountEntity` (opaque `OwnerId`, `StripeAccountId`, `StripeCustomerId`, status `NotVerified/Pending/Verified`) is **never seeded** — it is provisioned by handlers (`Infrastructure/Handlers/`):
 
 - `PayoutOwnerRegisteredHandler` ← `PayoutOwnerRegisteredEvent` (Payment-owned; published by B2B's Tenant module, keyed on the opaque owner id — no B2B compile dependency) → provisions a Stripe **Express** Connect account (`Type = "express"`, `Country = "GB"`, card-payments + transfers).
-- `CustomerRegisteredHandler` ← `CredentialRegisteredEvent` → provisions the Stripe customer for buyer client ids only.
+- `PaymentMethodOwnerRegisteredHandler` ← `PaymentMethodOwnerRegisteredEvent` → provisions a Stripe customer for an opaque owner id.
 
 ---
 
 ## gRPC surface & the `owner` boundary
 
-The proto (`Client/Protos/payment.proto`) generates client stubs in `Payment.Client` and server stubs in `Payment.Api`; services are mapped with `RequireAuthorization("ServiceToken")` (`Infrastructure/Extensions/RoutingExtensions.cs`). Services: **`CommissionPricing`**, **`ManagerPayment`**, **`CustomerPayment`**, **`Escrow`**, **`PayoutAccount`**; typed adapters in `Client/Adapters/` (`ICommissionPricingClient`, `ICustomerPaymentOperationsClient`, `IManagerPaymentOperationsClient`, `IEscrowOperationsClient`, `IPayoutAccountOperationsClient`).
+The proto (`Client/Protos/payment.proto`) generates client stubs in `Payment.Client` and server stubs in `Payment.Api`; services are mapped with `RequireAuthorization("ServiceToken")` (`Infrastructure/Extensions/RoutingExtensions.cs`). The clean public surface is v1: **`PaymentSessionOperations`**, **`CommissionPricing`**, **`SettlementOperations`**, **`PaymentReporting`**, **`Escrow`**, and **`PayoutAccount`**. Typed adapters expose `IPaymentSessionOperationsClient`, `ICommissionPricingClient`, `ISettlementOperationsClient`, `IPaymentReportingClient`, `IEscrowOperationsClient`, and `IPayoutAccountOperationsClient`.
 
 The opaque `owner` is resolved two different ways by design:
 
@@ -125,9 +143,9 @@ The opaque `owner` is resolved two different ways by design:
 
 | Direction | Event | Notes |
 |---|---|---|
-| Published | `PaymentSucceededEvent` `(TransactionId, Metadata)` | emitted by `PaymentIntentWebhookHandler`; the only carrier of "what this payment was for" (opaque metadata) |
-| Published | `PaymentFailedEvent` `(TransactionId, FailureCode, FailureMessage, Metadata)` | |
-| Consumed | `CredentialRegisteredEvent` (Auth) | provisions Stripe customer |
+| Published | `PaymentSucceededEvent` `(Reference, Metadata)` | emitted by `PaymentIntentWebhookHandler`; the opaque operation reference identifies the consumer-owned purpose while provider identifiers remain private to Payment |
+| Published | `PaymentFailedEvent` `(Reference, FailureCode, FailureMessage, Metadata)` | |
+| Consumed | `PaymentMethodOwnerRegisteredEvent` (Payment-owned) | provisions Stripe customer |
 | Consumed | `PayoutOwnerRegisteredEvent` (Payment-owned) | provisions Express account |
 | Consumed | `PaymentSucceededEvent` / `PaymentFailedEvent` (self) | Workers-side transaction/failure dispatch |
 
@@ -135,7 +153,7 @@ The opaque `owner` is resolved two different ways by design:
 
 ## Authentication
 
-JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api` / `concertable.customer.api`. gRPC + write endpoints require policy `ServiceToken` (`scope=payment:write`). Callers obtain service tokens via `client_credentials`.
+JWT Bearer; the sole accepted audience is `concertable.payment.api`. gRPC + write endpoints require policy `ServiceToken` (`scope=payment:write`). Callers obtain service tokens via `client_credentials`.
 
 ---
 
@@ -149,8 +167,8 @@ JWT Bearer; accepted audiences `concertable.payment.api` / `concertable.b2b.api`
 
 | Concern | Lives in |
 |---|---|
-| What a payment is *for* (ticket, booking, deal) | the caller — Payment sees only opaque metadata `type` |
-| Who an `owner` *is* (tenant, buyer) | `Concertable.B2B` / `Concertable.Customer` |
+| What a payment is *for* | the caller — Payment sees only an opaque operation type and client reference |
+| Who an `owner` *is* | the caller |
 | Concert workflow, settlement obligations | `Concertable.B2B` |
 | Ticket entities, customer profile | `Concertable.Customer` |
 | Identity authority (`sub`, tokens, the `owner`/`role` claim split) | `Concertable.Auth` |

@@ -1,5 +1,6 @@
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain.Entities;
+using Concertable.Kernel;
 using Concertable.Payment.Domain.Enums;
 using Concertable.Payment.Domain.Events;
 using Concertable.Payment.Domain.ProviderContract;
@@ -62,6 +63,50 @@ public sealed class PaymentSessionAttemptEntityTests
         Assert.Equal(PaymentOperationFailureCode.Declined, stateChanged.Failure?.Code);
     }
 
+    [Fact]
+    public void ApplyTransition_CompletedPaymentMethodSetup_StoresPaymentMethod()
+    {
+        var attempt = BoundSetupAttempt();
+
+        attempt.ApplyTransition(
+            PaymentSessionKind.PaymentMethodSetup,
+            Transition(PaymentOperationState.Succeeded, CreatedAt.AddSeconds(1)),
+            "pm_test");
+
+        Assert.Equal("pm_test", attempt.PaymentMethodId);
+        Assert.True(attempt.HasUsablePaymentMethod);
+    }
+
+    [Fact]
+    public void ApplyTransition_CompletedPaymentMethodSetupWithoutPaymentMethod_LeavesAttemptUnchanged()
+    {
+        var attempt = BoundSetupAttempt();
+
+        Assert.Throws<DomainException>(() => attempt.ApplyTransition(
+            PaymentSessionKind.PaymentMethodSetup,
+            Transition(PaymentOperationState.Succeeded, CreatedAt.AddSeconds(1))));
+        Assert.Equal(PaymentOperationState.Creating, attempt.State);
+        Assert.Null(attempt.PaymentMethodId);
+        Assert.Null(attempt.LastObservedAt);
+    }
+
+    [Fact]
+    public void ApplyTransition_InvalidProviderDiagnostic_LeavesAttemptUnchanged()
+    {
+        var attempt = BoundAttempt();
+
+        Assert.Throws<DomainException>(() => attempt.ApplyTransition(
+            PaymentSessionKind.Payment,
+            Transition(PaymentOperationState.Processing, CreatedAt.AddSeconds(1)),
+            providerDiagnosticMessage: new string('x', 1001)));
+        Assert.Equal(PaymentOperationState.Creating, attempt.State);
+        Assert.Equal(CreatedAt, attempt.LastAttemptedAt);
+        Assert.Null(attempt.LastProviderStatus);
+        Assert.Null(attempt.LastObservedAt);
+        Assert.Null(attempt.ProviderDiagnosticMessage);
+        Assert.Empty(attempt.DomainEvents);
+    }
+
     private static PaymentSessionAttemptEntity BoundAttempt()
     {
         var attempt = PaymentSessionAttemptEntity.Create(
@@ -72,6 +117,19 @@ public sealed class PaymentSessionAttemptEntityTests
             PaymentSessionProviderObjectKind.PaymentIntent,
             CreatedAt);
         attempt.BindProviderObject("pi_test_attempt");
+        return attempt;
+    }
+
+    private static PaymentSessionAttemptEntity BoundSetupAttempt()
+    {
+        var attempt = PaymentSessionAttemptEntity.Create(
+            Guid.CreateVersion7(CreatedAt),
+            Guid.CreateVersion7(CreatedAt),
+            1,
+            null,
+            PaymentSessionProviderObjectKind.SetupIntent,
+            CreatedAt);
+        attempt.BindProviderObject("seti_test_attempt");
         return attempt;
     }
 
