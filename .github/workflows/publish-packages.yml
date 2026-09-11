@@ -34,5 +34,9 @@ jobs:
       project: Concertable.Payment.slnx
       publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     secrets:
-      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_TOKEN || secrets.CONCERTABLE_PACKAGES_READ }}
+      # No `|| READ` fallback: PACKAGES_TOKEN is the push credential, and CONCERTABLE_PACKAGES_TOKEN does
+      # not exist — the organisation distributes READ and WRITE. The fallback therefore resolved to the
+      # read token, which has no write:packages, turning a missing secret into a 403 at the push step
+      # instead of a named failure here.
+      PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_WRITE }}
       PACKAGES_READ_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
