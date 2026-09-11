@@ -18,7 +18,7 @@ public sealed class PaymentSessionOperationsClientTests
         var ownerId = Guid.CreateVersion7();
         var invoker = new StubCallInvoker(method => method switch
         {
-            "CreateOrReplay" => Descriptor(operationId, attemptId, 1),
+            "Create" => Descriptor(operationId, attemptId, 1),
             "Retry" => Descriptor(operationId, Guid.CreateVersion7(), 2),
             "GetStatus" => new Proto.PaymentOperationSnapshot
             {
@@ -32,18 +32,16 @@ public sealed class PaymentSessionOperationsClientTests
         var client = new PaymentSessionOperationsClient(
             new Proto.PaymentSessionOperations.PaymentSessionOperationsClient(invoker));
 
-        var created = await client.CreateOrReplayAsync(new(
+        var created = await client.CreateAsync(new(
             operationId,
             PaymentSessionKind.PaymentMethodSetup,
             PaymentSession.OnSession,
-            "setup",
-            "account:42",
+            new("setup", "account:42"),
             ownerId,
             null,
             null,
             null,
-            PaymentSessionFundsRouting.None,
-            null));
+            PaymentSessionFundsRouting.None));
         var retried = await client.RetryAsync(new(operationId, attemptId, 1, ownerId));
         var status = await client.GetStatusAsync(new(operationId, ownerId));
 
@@ -54,7 +52,7 @@ public sealed class PaymentSessionOperationsClientTests
         Assert.True(status.TryGetValue(out var snapshot));
         Assert.Equal(PaymentOperationState.RequiresConfirmation, snapshot.State);
         Assert.Equal(
-            new[] { "CreateOrReplay", "Retry", "GetStatus" },
+            new[] { "Create", "Retry", "GetStatus" },
             invoker.Calls.Select(call => call.Method));
         Assert.IsType<Proto.PaymentSessionOperationRequest>(invoker.Calls[0].Request);
         Assert.IsType<Proto.PaymentSessionRetryRequest>(invoker.Calls[1].Request);

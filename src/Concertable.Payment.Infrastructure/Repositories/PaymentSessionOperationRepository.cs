@@ -21,6 +21,16 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
             .Include(operation => operation.Attempts)
             .SingleOrDefaultAsync(operation => operation.OperationId == operationId, ct);
 
+    public Task<PaymentSessionOperationEntity?> GetByReferenceAsync(
+        PaymentOperationReference reference,
+        CancellationToken ct = default) =>
+        context.PaymentSessionOperations
+            .Include(operation => operation.Attempts)
+            .SingleOrDefaultAsync(
+                operation => operation.OperationType == reference.OperationType
+                    && operation.ClientReference == reference.ClientReference,
+                ct);
+
     public Task<PaymentSessionOperationEntity?> GetByProviderObjectAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
@@ -34,7 +44,7 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
                 ct);
 
     public async Task<PaymentSessionReservation> ReserveInitialAsync(
-        PaymentSessionSpecification specification,
+        PaymentSessionDefinition specification,
         DateTimeOffset createdAt,
         CancellationToken ct = default)
     {
@@ -57,11 +67,16 @@ internal sealed class PaymentSessionOperationRepository : IPaymentSessionOperati
         catch (DbUpdateException ex) when (ex.IsDuplicateKey())
         {
             Detach(candidate.OperationId);
-            existing = await GetByOperationIdAsync(specification.OperationId, ct);
+            existing = await GetByOperationIdAsync(specification.OperationId, ct)
+                ?? await GetByReferenceAsync(
+                    new(specification.OperationType, specification.ClientReference),
+                    ct);
             if (existing is null)
                 throw;
 
-            return existing.EvaluateInitialReservation(fingerprint);
+            return existing.EvaluateInitialReservation(
+                PaymentSessionFingerprint.Create(
+                    specification.WithOperationId(existing.OperationId)));
         }
     }
 

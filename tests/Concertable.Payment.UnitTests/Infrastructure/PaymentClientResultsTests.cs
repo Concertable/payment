@@ -56,19 +56,19 @@ public sealed class PaymentClientResultsTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CommissionFailure_PreservesCompositeCaseAcrossWire()
+    public async Task ExecuteAsync_CommissionFailure_PreservesPaymentMethodChargeCaseAcrossWire()
     {
-        var serverError = new ManagerPaymentError.CommissionFailure(new CommissionError.PricingChanged());
+        var serverError = new PaymentMethodChargeError.CommissionFailure(new CommissionError.PricingChanged());
         var exception = serverError.ToRpcException();
 
         var result = await PaymentClientResults.ExecuteAsync(
             () => Task.FromException<string>(exception),
-            PaymentErrorMappers.ToManagerPaymentError,
+            PaymentErrorMappers.ToPaymentMethodChargeError,
             CancellationToken.None);
 
         Assert.True(result.TryGetError(out var error));
         Assert.Equal(serverError, error);
-        Assert.IsType<ManagerPaymentError.CommissionFailure>(error);
+        Assert.IsType<PaymentMethodChargeError.CommissionFailure>(error);
     }
 
     [Fact]

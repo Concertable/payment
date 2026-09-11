@@ -1,6 +1,8 @@
-using Concertable.Payment.Application.PaymentSessions;
+﻿using Concertable.Payment.Application.PaymentSessions;
+using Concertable.Payment.Application.Provider;
 using Concertable.Payment.Domain.ProviderContract;
 using Concertable.Payment.Infrastructure.Mappers;
+using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Concertable.Payment.Infrastructure.Services;
@@ -11,22 +13,25 @@ internal sealed class StripeSessionClient : IStripeSessionClient
     private readonly SetupIntentService setupIntentService;
     private readonly CustomerSessionService customerSessionService;
     private readonly TimeProvider timeProvider;
+    private readonly ILogger<StripeSessionClient> logger;
 
     public StripeSessionClient(
         PaymentIntentService paymentIntentService,
         SetupIntentService setupIntentService,
         CustomerSessionService customerSessionService,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        ILogger<StripeSessionClient> logger)
     {
         this.paymentIntentService = paymentIntentService;
         this.setupIntentService = setupIntentService;
         this.customerSessionService = customerSessionService;
         this.timeProvider = timeProvider;
+        this.logger = logger;
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CreateAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CreateAsync(
         PaymentSessionProviderRequest request,
-        PaymentSessionIdempotencyKey idempotencyKey,
+        StripeIdempotencyKey idempotencyKey,
         CancellationToken ct = default)
     {
         try
@@ -55,13 +60,14 @@ internal sealed class StripeSessionClient : IStripeSessionClient
         {
             return ToResult(intent);
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CreateAsync), request.ProviderCustomerId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> RetrieveAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -80,13 +86,14 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(RetrieveAsync), providerObjectId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
 
-    public async Task<Result<PaymentSessionProviderResult, PaymentOperationError.ProviderUnavailable>> CancelAsync(
+    public async Task<Result<ProviderSession, PaymentOperationError.ProviderUnavailable>> CancelAsync(
         PaymentSessionProviderObjectKind providerObjectKind,
         string providerObjectId,
         CancellationToken ct = default)
@@ -102,8 +109,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 _ => throw new ArgumentOutOfRangeException(nameof(providerObjectKind), providerObjectKind, null)
             };
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CancelAsync), providerObjectId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
@@ -128,7 +136,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                                 PaymentMethodSave = "enabled",
                                 PaymentMethodRemove = "enabled",
                                 PaymentMethodRedisplay = "enabled",
-                                PaymentMethodAllowRedisplayFilters = ["always", "limited", "unspecified"]
+                                PaymentMethodAllowRedisplayFilters = ["always"]
                             }
                         }
                     }
@@ -136,8 +144,9 @@ internal sealed class StripeSessionClient : IStripeSessionClient
                 cancellationToken: ct);
             return session.ClientSecret;
         }
-        catch (StripeException)
+        catch (StripeException ex)
         {
+            logger.StripeSessionCallFailed(nameof(CreateCustomerSessionAsync), providerCustomerId, ex);
             return new PaymentOperationError.ProviderUnavailable();
         }
     }
@@ -187,23 +196,32 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             Metadata = request.Metadata.ToDictionary()
         };
 
-    private PaymentSessionProviderResult ToResult(PaymentIntent intent) =>
+    private ProviderSession ToResult(PaymentIntent intent) =>
         new(
             PaymentSessionProviderObjectKind.PaymentIntent,
             intent.Id,
             intent.Status,
             timeProvider.GetUtcNow(),
-            intent.LatestCharge?.PaymentMethodDetails?.Card?.CaptureBefore
-                ?? intent.LatestCharge?.PaymentMethodDetails?.CardPresent?.CaptureBefore,
+            CaptureBefore(intent),
             Classify(intent.LastPaymentError),
             false,
             intent.Status is not ("succeeded" or "canceled"),
             intent.ClientSecret,
+            intent.PaymentMethodId,
             null,
             intent.LastPaymentError?.Code,
             intent.LastPaymentError?.Message);
 
-    private PaymentSessionProviderResult ToResult(SetupIntent intent) =>
+    private static DateTimeOffset? CaptureBefore(PaymentIntent intent)
+    {
+        DateTime? captureBefore = intent.LatestCharge?.PaymentMethodDetails?.Card?.CaptureBefore
+            ?? intent.LatestCharge?.PaymentMethodDetails?.CardPresent?.CaptureBefore;
+        return captureBefore is null || captureBefore.Value == DateTime.UnixEpoch
+            ? null
+            : new DateTimeOffset(captureBefore.Value);
+    }
+
+    private ProviderSession ToResult(SetupIntent intent) =>
         new(
             PaymentSessionProviderObjectKind.SetupIntent,
             intent.Id,
@@ -214,6 +232,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             false,
             intent.Status is not ("succeeded" or "canceled"),
             intent.ClientSecret,
+            intent.PaymentMethodId,
             null,
             intent.LastSetupError?.Code,
             intent.LastSetupError?.Message);

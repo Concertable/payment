@@ -119,8 +119,8 @@ public sealed partial class ProviderContractInventoryTests
     public static TheoryData<string, string> ConsumerClientCases => new()
     {
         {
-            "paymentSessionOperationsClient.CreateOrReplayAsync(request)",
-            "paymentSessionOperationsClient.CreateOrReplayAsync"
+            "paymentSessionOperationsClient.CreateAsync(request)",
+            "paymentSessionOperationsClient.CreateAsync"
         },
         {
             "paymentSessionOperationsClient.RetryAsync(request)",
@@ -479,7 +479,7 @@ public sealed partial class ProviderContractInventoryTests
         throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient|paymentSessionOperationsClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
+    [GeneratedRegex(@"\b(?<receiver>customerPaymentClient|managerPaymentClient|escrowClient|payoutAccountClient|paymentSessionOperationsClient|paymentSessions|settlementOperationsClient|escrowOperationsClient|paymentReportingClient)\.(?<operation>[A-Za-z_]\w*Async)\s*\(")]
     private static partial Regex ConsumerCallPattern();
 
     [GeneratedRegex(@"\bbus\.SendAsync\s*\(\s*new\s+(?<command>CaptureEscrowCommand|DepositEscrowCommand|RefundEscrowCommand)\s*\(")]

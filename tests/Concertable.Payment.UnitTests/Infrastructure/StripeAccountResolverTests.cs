@@ -1,6 +1,5 @@
 using Concertable.Kernel.Functional;
 using Concertable.Payment.E2ETests.Stripe;
-using Concertable.Seed.Identity;
 using Microsoft.Extensions.Configuration;
 
 namespace Concertable.Payment.UnitTests.Infrastructure;
@@ -8,16 +7,16 @@ namespace Concertable.Payment.UnitTests.Infrastructure;
 public sealed class StripeAccountResolverTests
 {
     private const string OwnedCustomerId = "cus_owned";
-    private static readonly Guid VenueManagerId = SeedUsers.VenueManagerId(1);
+    private static readonly Guid OwnerId = StripeAccountResolver.AccountIds.Keys.First();
     private readonly StripeAccountResolver resolver;
 
     public StripeAccountResolverTests()
     {
-        var values = SeedUsers.Managers.ToDictionary(
-            manager => $"E2EStripe:Customers:{manager.Id:N}",
-            manager => (string?)$"cus_{manager.Id:N}");
-        values[$"E2EStripe:Customers:{VenueManagerId:N}"] = OwnedCustomerId;
-        values[$"E2EStripe:Customers:{SeedCustomers.CustomerId(1):N}"] = "cus_customer_1";
+        var values = new Dictionary<string, string?>
+        {
+            [$"E2EStripe:Customers:{OwnerId:N}"] = OwnedCustomerId,
+            [$"E2EStripe:Customers:{Guid.CreateVersion7():N}"] = "cus_other"
+        };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(values)
             .Build();
@@ -30,7 +29,7 @@ public sealed class StripeAccountResolverTests
     [Fact]
     public void ResolveCustomer_UsesRunConfiguration()
     {
-        var customerId = this.resolver.ResolveCustomer(TenantSeedIds.For(VenueManagerId));
+        var customerId = this.resolver.ResolveCustomer(OwnerId);
 
         Assert.Equal(Option.Some(OwnedCustomerId), customerId);
     }
@@ -50,9 +49,9 @@ public sealed class StripeAccountResolverTests
     [Fact]
     public void ResolveAccount_UsesConfiguredAccountMapping()
     {
-        var accountId = this.resolver.ResolveAccount(TenantSeedIds.For(VenueManagerId));
+        var accountId = this.resolver.ResolveAccount(OwnerId);
 
-        Assert.Equal(Option.Some(StripeAccountResolver.AccountIds[VenueManagerId]), accountId);
+        Assert.Equal(Option.Some(StripeAccountResolver.AccountIds[OwnerId]), accountId);
     }
 
     #endregion

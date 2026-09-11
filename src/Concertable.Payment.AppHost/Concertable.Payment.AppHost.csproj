@@ -9,15 +9,12 @@
     <Nullable>enable</Nullable>
     <IsAspireHost>true</IsAspireHost>
     <UserSecretsId>payment-apphost-dev-secrets</UserSecretsId>
-    <CompositionValidationExclusion>Cross-repository Auth, B2B, and AppHost.Shared source references prevent standalone restore; the monorepo composition suite remains the substitute until published Hosting packages and pinned images replace them.</CompositionValidationExclusion>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Concertable.AppHost.Shared\Concertable.AppHost.Shared.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\..\..\Concertable.B2B\src\Concertable.B2B.Hosting\Concertable.B2B.Hosting.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\..\..\Concertable.Auth\src\Concertable.Auth.Hosting\Concertable.Auth.Hosting.csproj" IsAspireProjectResource="false" />
+    <PackageReference Include="Concertable.AppHost.Shared" />
+    <PackageReference Include="Concertable.Auth.Hosting" />
     <ProjectReference Include="..\Concertable.Payment.Hosting\Concertable.Payment.Hosting.csproj" IsAspireProjectResource="false" />
-    <ProjectReference Include="..\..\..\Concertable.Auth\src\Concertable.Auth\Concertable.Auth.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
     <ProjectReference Include="..\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
   </ItemGroup>

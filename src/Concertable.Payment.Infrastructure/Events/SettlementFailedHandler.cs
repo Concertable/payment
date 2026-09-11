@@ -16,12 +16,15 @@ internal sealed class SettlementFailedHandler : IPaymentFailureHandler
         this.logger = logger;
     }
 
-    public async Task HandleAsync(PaymentFailedEvent @event, CancellationToken ct)
+    public async Task HandleAsync(
+        PaymentFailedEvent @event,
+        string providerObjectId,
+        CancellationToken ct)
     {
-        var transaction = await transactionRepository.GetByPaymentIntentIdAsync(@event.TransactionId);
+        var transaction = await transactionRepository.GetByPaymentIntentIdAsync(providerObjectId);
         if (transaction is null)
         {
-            logger.NoSettlementTransactionFound(@event.TransactionId);
+            logger.NoSettlementTransactionFound(providerObjectId);
             return;
         }
 

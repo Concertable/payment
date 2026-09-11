@@ -6,12 +6,38 @@ using Grpc.Core;
 using ContractOperationRequest = Concertable.Payment.Contracts.PaymentSessionOperationRequest;
 using ContractRetryRequest = Concertable.Payment.Contracts.PaymentSessionRetryRequest;
 using ContractStatusRequest = Concertable.Payment.Contracts.PaymentSessionStatusRequest;
+using ContractPaymentMethodSetupRequest = Concertable.Payment.Contracts.PaymentMethodSetupRequest;
+using ContractPaymentMethodValidationRequest = Concertable.Payment.Contracts.PaymentMethodValidationRequest;
 using Proto = Concertable.Payment.Grpc;
 
 namespace Concertable.Payment.Infrastructure.Grpc;
 
 internal static class PaymentSessionOperationGrpcMappers
 {
+    extension(Proto.PaymentMethodSetupRequest request)
+    {
+        public ContractPaymentMethodSetupRequest ToContract() =>
+            new(
+                request.Reference.ToContract(),
+                request.Kind.ToContract(),
+                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
+                request.MandateTermsVersion);
+    }
+
+    extension(Proto.PaymentMethodValidationRequest request)
+    {
+        public ContractPaymentMethodValidationRequest ToContract() =>
+            new(
+                request.Reference.ToContract(),
+                request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)));
+    }
+
+    extension(Proto.PaymentOperationReference reference)
+    {
+        private PaymentOperationReference ToContract() =>
+            ToContractReference(reference.OperationType, reference.ClientReference);
+    }
+
     extension(Proto.PaymentSessionOperationRequest request)
     {
         public ContractOperationRequest ToContract() =>
@@ -19,16 +45,17 @@ internal static class PaymentSessionOperationGrpcMappers
                 request.OperationId.ParseOrThrow<Guid>(nameof(request.OperationId)),
                 request.Kind.ToContract(),
                 request.Session.ToContract(),
-                request.OperationType,
-                request.ConsumerCorrelation,
+                ToContractReference(request.OperationType, request.ClientReference),
                 request.PayerOwnerId.ParseOrThrow<Guid>(nameof(request.PayerOwnerId)),
                 request.HasPayeeOwnerId
                     ? request.PayeeOwnerId.ParseOrThrow<Guid>(nameof(request.PayeeOwnerId))
                     : null,
                 request.HasAmountMinor ? request.AmountMinor : null,
                 request.HasCurrency ? request.Currency.ToContract() : null,
-                request.FundsRouting.ToContract(),
-                request.HasPaymentMethodId ? request.PaymentMethodId : null);
+                request.FundsRouting.ToContract())
+            {
+                MandateTermsVersion = request.HasMandateTermsVersion ? request.MandateTermsVersion : null
+            };
     }
 
     extension(Proto.PaymentSessionRetryRequest request)
@@ -55,6 +82,16 @@ internal static class PaymentSessionOperationGrpcMappers
         {
             Identity = execution.Identity.ToProto(),
             Kind = execution.Kind.ToProto(),
+            ClientSecret = execution.ClientSecret ?? string.Empty,
+            CustomerSessionSecret = execution.CustomerSessionSecret ?? string.Empty,
+            CustomerToken = execution.CustomerToken ?? string.Empty
+        };
+    }
+
+    extension(PaymentSessionExecution execution)
+    {
+        public Proto.PaymentMethodSetupResponse ToPaymentMethodSetupProto() => new()
+        {
             ClientSecret = execution.ClientSecret ?? string.Empty,
             CustomerSessionSecret = execution.CustomerSessionSecret ?? string.Empty,
             CustomerToken = execution.CustomerToken ?? string.Empty
@@ -216,4 +253,18 @@ internal static class PaymentSessionOperationGrpcMappers
 
     private static T Invalid<T>(string fieldName, object value) =>
         throw new RpcException(new Status(StatusCode.InvalidArgument, $"{fieldName} '{value}' is invalid."));
+
+    private static PaymentOperationReference ToContractReference(
+        string operationType,
+        string clientReference)
+    {
+        try
+        {
+            return new(operationType, clientReference);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, exception.Message));
+        }
+    }
 }

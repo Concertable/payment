@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ConcertablePlatformVersion>0.1.0-alpha.0.1254</ConcertablePlatformVersion>
+    <ConcertableDotNetPlatformVersion>0.1.0-alpha.0.1370</ConcertableDotNetPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Concertable.Testing" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Testing.Architecture" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Testing.Integration" Version="$(ConcertablePlatformVersion)" />
+    <PackageVersion Include="Concertable.Testing" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Payment.Hosting" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Payment.TestKit" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Testing.Architecture" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Testing.Integration" Version="$(ConcertableDotNetPlatformVersion)" />
     <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.3.2" />
     <PackageVersion Include="Aspire.Hosting.Testing" Version="13.3.2" />
     <PackageVersion Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.1.2" />
@@ -20,7 +22,9 @@
     <PackageVersion Include="Grpc.Net.ClientFactory" Version="2.67.0" />
     <PackageVersion Include="Grpc.Tools" Version="2.67.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.3" />
@@ -32,6 +36,7 @@
     <PackageVersion Include="Respawn" Version="7.0.0" />
     <PackageVersion Include="Reunion" Version="0.1.0-alpha.3" />
     <PackageVersion Include="Reunion.Errors" Version="0.1.0-alpha.3" />
+    <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Stripe.net" Version="47.3.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -39,25 +44,23 @@
   </ItemGroup>
 
   <!-- Shared platform + cross-service contracts from the org feed, pinned lockstep via
-       ConcertablePlatformVersion above. Bump only to a version already published to the feed,
+       ConcertableDotNetPlatformVersion above. Bump only to a version already published to the feed,
        else restore fails NU1101. -->
   <ItemGroup>
-    <PackageVersion Include="Concertable.AppHost.Shared" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.B2B.Concert.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.B2B.Tenant.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Grpc" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Kernel" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.DataAccess.Application" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.DataAccess.Infrastructure" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Messaging.Contracts" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Messaging.Infrastructure" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Messaging.AzureServiceBus" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.ServiceDefaults" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Shared.Api" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Seed.Shared" Version="$(ConcertablePlatformVersion)" />
-    <PackageVersion Include="Concertable.Seed.Identity" Version="$(ConcertablePlatformVersion)" />
+    <PackageVersion Include="Concertable.AppHost.Shared" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Auth.Hosting" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Contracts" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Grpc" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Kernel" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.DataAccess.Application" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.DataAccess.Infrastructure" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Messaging.Contracts" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Messaging.Infrastructure" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Messaging.AzureServiceBus" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.ServiceDefaults" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Shared.Api" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Seed.Shared" Version="$(ConcertableDotNetPlatformVersion)" />
   </ItemGroup>
 
   <ItemGroup>

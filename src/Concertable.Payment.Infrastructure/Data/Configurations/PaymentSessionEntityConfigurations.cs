@@ -1,3 +1,4 @@
+using Concertable.Payment.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -23,13 +24,17 @@ internal sealed class PaymentSessionOperationEntityConfiguration
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_RequestFingerprint",
                     "LEN([RequestFingerprint]) = 64");
+                table.HasCheckConstraint(
+                    "CK_PaymentSessionOperations_MandateEvidence",
+                    "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) "
+                        + "OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
             });
         builder.HasKey(operation => operation.OperationId);
         builder.Property(operation => operation.OperationId).ValueGeneratedNever();
         builder.Property(operation => operation.SessionKind).HasConversion<string>().HasMaxLength(40);
         builder.Property(operation => operation.Session).HasConversion<string>().HasMaxLength(20);
-        builder.Property(operation => operation.OperationType).HasMaxLength(100);
-        builder.Property(operation => operation.ConsumerCorrelation).HasMaxLength(200);
+        builder.Property(operation => operation.OperationType).HasMaxLength(PaymentOperationReference.MaxOperationTypeLength);
+        builder.Property(operation => operation.ClientReference).HasMaxLength(PaymentOperationReference.MaxClientReferenceLength);
         builder.Property(operation => operation.PayerOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.PayeeOwnerKey).HasMaxLength(200);
         builder.Property(operation => operation.Currency).HasConversion<string>().HasMaxLength(3);
@@ -37,6 +42,7 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.Property(operation => operation.PaymentMethodId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderCustomerId).HasMaxLength(100);
         builder.Property(operation => operation.ProviderConnectedAccountId).HasMaxLength(100);
+        builder.Property(operation => operation.MandateTermsVersion).HasMaxLength(100);
         builder.Property(operation => operation.RequestFingerprint).HasMaxLength(64).IsFixedLength();
         builder.Property(operation => operation.RowVersion).IsRowVersion();
         builder.HasMany(operation => operation.Attempts)
@@ -46,7 +52,8 @@ internal sealed class PaymentSessionOperationEntityConfiguration
         builder.Metadata.FindNavigation(nameof(PaymentSessionOperationEntity.Attempts))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.Ignore(operation => operation.CurrentAttempt);
-        builder.HasIndex(operation => new { operation.OperationType, operation.ConsumerCorrelation });
+        builder.HasIndex(operation => new { operation.OperationType, operation.ClientReference })
+            .IsUnique();
         builder.HasIndex(operation => operation.PayerOwnerKey);
         builder.HasIndex(operation => operation.PayeeOwnerKey);
     }
@@ -82,6 +89,7 @@ internal sealed class PaymentSessionAttemptEntityConfiguration
         builder.Property(attempt => attempt.ProviderObjectId).HasMaxLength(100);
         builder.Property(attempt => attempt.State).HasConversion<string>().HasMaxLength(30);
         builder.Property(attempt => attempt.LastProviderStatus).HasMaxLength(100);
+        builder.Property(attempt => attempt.PaymentMethodId).HasMaxLength(100);
         builder.Property(attempt => attempt.FailureCode).HasConversion<string>().HasMaxLength(40);
         builder.Property(attempt => attempt.ProviderRequestId).HasMaxLength(100);
         builder.Property(attempt => attempt.ProviderDiagnosticCode).HasMaxLength(100);

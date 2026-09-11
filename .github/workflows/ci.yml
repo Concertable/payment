@@ -20,7 +20,7 @@ permissions:
   packages: read
 
 env:
-  GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ || secrets.GITHUB_TOKEN }}
   DOTNET_NOLOGO: true
 
 jobs:
@@ -41,13 +41,18 @@ jobs:
         run: dotnet build Concertable.Payment.slnx --configuration Release --no-restore
       - name: Run unit tests
         run: dotnet test tests/Concertable.Payment.UnitTests/Concertable.Payment.UnitTests.csproj --configuration Release --no-restore
-      - name: Run architecture and composition tests
+      - name: Run architecture tests
         run: dotnet test tests/Concertable.Payment.ArchitectureTests/Concertable.Payment.ArchitectureTests.csproj --configuration Release --no-restore
+      - name: Run startup and composition tests
+        run: dotnet test tests/Concertable.Payment.StartupTests/Concertable.Payment.StartupTests.csproj --configuration Release --no-restore
+      - name: Run E2E admin surface tests
+        run: dotnet test tests/Concertable.Payment.E2EAdmin.IntegrationTests/Concertable.Payment.E2EAdmin.IntegrationTests.csproj --configuration Release --no-restore
       - name: Pack Payment-owned packages
         run: |
           dotnet pack src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj --configuration Release --output artifacts/packages
           dotnet pack src/Concertable.Payment.Client/Concertable.Payment.Client.csproj --configuration Release --output artifacts/packages
           dotnet pack src/Concertable.Payment.Hosting/Concertable.Payment.Hosting.csproj --configuration Release --output artifacts/packages
+          dotnet pack src/Concertable.Payment.TestKit/Concertable.Payment.TestKit.csproj --configuration Release --output artifacts/packages
 
   integration-tests:
     name: Integration tests

@@ -66,6 +66,7 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         services.AddScoped<IPayoutAccountRepository, PayoutAccountRepository>();
         services.AddScoped<IPaymentSessionOperationRepository, PaymentSessionOperationRepository>();
         services.AddScoped<IPaymentSessionAttemptRepository, PaymentSessionAttemptRepository>();
+        services.AddScoped<IPaymentOperationResolver, PaymentOperationResolver>();
         services.AddSingleton<PaymentSessionStateMachine>();
         services.AddScoped<IPaymentSessionReconciliationService, PaymentSessionReconciliationService>();
         services.AddScoped<IPaymentSessionResourceReconciler, PaymentSessionResourceReconciler>();
@@ -85,11 +86,11 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         return new WebhookReconciliationHarness(provider, sessionClient);
     }
 
-    public async Task<PaymentSessionExecution> CreateSessionAsync(PaymentSessionSpecification specification)
+    public async Task<PaymentSessionExecution> CreateSessionAsync(PaymentSessionDefinition specification)
     {
         using var scope = provider.CreateScope();
         var result = await scope.ServiceProvider.GetRequiredService<PaymentSessionService>()
-            .CreateOrReplayAsync(specification);
+            .CreateAsync(specification);
         Assert.True(result.TryGetValue(out var execution));
         return execution;
     }
@@ -121,7 +122,16 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
                 && message.Payload.Contains(operationKey));
     }
 
-    public async Task<int> LegacyPaymentSucceededCountAsync(string providerObjectId)
+    public async Task<int> PaymentSucceededCountAsync()
+    {
+        var succeededMessageType = MessageTypeAttribute.Resolve(typeof(PaymentSucceededEvent));
+        using var scope = provider.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<OutboxDbContext>()
+            .Set<OutboxMessageEntity>()
+            .CountAsync(message => message.MessageType == succeededMessageType);
+    }
+
+    public async Task<int> PaymentSucceededCountAsync(string clientReference)
     {
         var succeededMessageType = MessageTypeAttribute.Resolve(typeof(PaymentSucceededEvent));
         using var scope = provider.CreateScope();
@@ -129,7 +139,7 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
             .Set<OutboxMessageEntity>()
             .CountAsync(message =>
                 message.MessageType == succeededMessageType
-                && message.Payload.Contains(providerObjectId));
+                && message.Payload.Contains(clientReference));
     }
 
     public ValueTask DisposeAsync() => provider.DisposeAsync();
