@@ -100,13 +100,13 @@ public static class HostExtensions
                     {
                         ClockSkew = TimeSpan.Zero,
                         ValidateIssuer = !builder.Environment.IsDevelopment(),
-                        ValidAudiences = [AuthResource.Payment.Audience()]
+                        ValidAudiences = [AuthResource.Payment.Audience]
                     };
                 });
 
             services.AddAuthorization(opts =>
             {
-                opts.AddPolicy("ServiceToken", p => p.RequireClaim("scope", AuthScope.PaymentWrite.Id()));
+                opts.AddPolicy("ServiceToken", p => p.RequireClaim("scope", AuthScope.PaymentWrite.Id));
             });
 
             services.AddExceptionHandler<GlobalExceptionHandler>();

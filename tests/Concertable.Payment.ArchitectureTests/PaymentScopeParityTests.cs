@@ -8,9 +8,9 @@ public sealed class PaymentScopeParityTests
 {
     [Fact]
     public void PaymentWriteScope_MatchesTheScopeAuthIssues() =>
-        Assert.Equal(AuthScope.PaymentWrite.Id(), PaymentScopes.Write);
+        Assert.Equal(AuthScope.PaymentWrite.Id, PaymentScopes.Write);
 
     [Fact]
-    public void PaymentAudience_MatchesTheResourceAuthRegisters() =>
-        Assert.Contains(AuthScope.PaymentWrite, AuthResource.Payment.AcceptedScopes());
+    public void PaymentWriteScope_IsAcceptedByThePaymentResource() =>
+        Assert.Contains(PaymentScopes.Write, AuthResource.Payment.AcceptedScopes.Select(scope => scope.Id));
 }
