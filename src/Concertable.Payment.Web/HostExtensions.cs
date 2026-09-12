@@ -1,3 +1,4 @@
+using Concertable.Auth.Contracts;
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Kernel;
 using Concertable.Payment.Contracts.Events;
@@ -99,13 +100,13 @@ public static class HostExtensions
                     {
                         ClockSkew = TimeSpan.Zero,
                         ValidateIssuer = !builder.Environment.IsDevelopment(),
-                        ValidAudiences = ["concertable.payment.api"]
+                        ValidAudiences = [AuthResource.Payment.Audience()]
                     };
                 });
 
             services.AddAuthorization(opts =>
             {
-                opts.AddPolicy("ServiceToken", p => p.RequireClaim("scope", "payment:write"));
+                opts.AddPolicy("ServiceToken", p => p.RequireClaim("scope", AuthScope.PaymentWrite.Id()));
             });
 
             services.AddExceptionHandler<GlobalExceptionHandler>();

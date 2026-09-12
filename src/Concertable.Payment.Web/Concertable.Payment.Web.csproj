@@ -36,6 +36,7 @@
   <!-- Never a ProjectReference: would break Payment's standalone carve. -->
   <ItemGroup>
     <PackageReference Include="Concertable.ServiceDefaults" />
+    <PackageReference Include="Concertable.Auth.Contracts" />
     <PackageReference Include="Concertable.DataAccess.Infrastructure" />
     <PackageReference Include="Concertable.Kernel" />
     <PackageReference Include="Concertable.Messaging.AzureServiceBus" />
