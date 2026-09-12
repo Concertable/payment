@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
+    <PackageReference Include="Concertable.Auth.Contracts" />
     <PackageReference Include="Concertable.Testing.Architecture" />
     <PackageReference Include="Concertable.Testing" />
   </ItemGroup>

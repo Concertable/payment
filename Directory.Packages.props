@@ -2,13 +2,15 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <ConcertableDotNetPlatformVersion>0.1.0-alpha.0.1370</ConcertableDotNetPlatformVersion>
+    <ConcertableDotNetPlatformVersion>0.2.0-alpha.0.5</ConcertableDotNetPlatformVersion>
+    <ConcertableAuthVersion>0.1.0-alpha.0.1383</ConcertableAuthVersion>
+    <ConcertablePaymentVersion>0.1.0-alpha.0.1381</ConcertablePaymentVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageVersion Include="Concertable.Testing" Version="$(ConcertableDotNetPlatformVersion)" />
-    <PackageVersion Include="Concertable.Payment.Hosting" Version="$(ConcertableDotNetPlatformVersion)" />
-    <PackageVersion Include="Concertable.Payment.TestKit" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Payment.Hosting" Version="$(ConcertablePaymentVersion)" />
+    <PackageVersion Include="Concertable.Payment.TestKit" Version="$(ConcertablePaymentVersion)" />
     <PackageVersion Include="Concertable.Testing.Architecture" Version="$(ConcertableDotNetPlatformVersion)" />
     <PackageVersion Include="Concertable.Testing.Integration" Version="$(ConcertableDotNetPlatformVersion)" />
     <PackageVersion Include="Aspire.Hosting.Azure.ServiceBus" Version="13.3.2" />
@@ -48,8 +50,8 @@
        else restore fails NU1101. -->
   <ItemGroup>
     <PackageVersion Include="Concertable.AppHost.Shared" Version="$(ConcertableDotNetPlatformVersion)" />
-    <PackageVersion Include="Concertable.Auth.Hosting" Version="$(ConcertableDotNetPlatformVersion)" />
-    <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertableDotNetPlatformVersion)" />
+    <PackageVersion Include="Concertable.Auth.Hosting" Version="$(ConcertableAuthVersion)" />
+    <PackageVersion Include="Concertable.Auth.Contracts" Version="$(ConcertableAuthVersion)" />
     <PackageVersion Include="Concertable.Contracts" Version="$(ConcertableDotNetPlatformVersion)" />
     <PackageVersion Include="Concertable.Grpc" Version="$(ConcertableDotNetPlatformVersion)" />
     <PackageVersion Include="Concertable.Kernel" Version="$(ConcertableDotNetPlatformVersion)" />
