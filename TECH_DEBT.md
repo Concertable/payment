@@ -257,3 +257,26 @@ library cannot use the typed model at all without the hidden-dependency problem 
 `Concertable.Auth.Contracts` for vocabulary alone, and `PaymentScopes` is deleted. This is a platform
 package release consumed across five repositories, so it is sequenced against the repository-per-service
 migration rather than taken mid-feature.
+
+---
+
+### `MessagePack` 2.5.192 reaches the published packages with a high-severity advisory
+
+`Concertable.Payment.Hosting` is packable and references `Aspire.Hosting.Azure.ServiceBus` 13.3.2, which
+pulls `Aspire.Hosting.Azure` → `Aspire.Hosting` → `StreamJsonRpc` 2.22.23 → `MessagePack` 2.5.192. NuGet
+audit reports it as `NU1903` (high) and `NU1902` (moderate) during the clean-consumer restore, so every
+consumer of the published `Concertable.Payment.Hosting` inherits it.
+
+Not a Payment decision and not fleet-specific: the same chain is in monorepo `main`, the Aspire pin is
+identical on both sides, and the other services reach it through `Concertable.AppHost.Shared`. Nothing in
+this repository chose the transitive version.
+
+It does not appear in the image scans. `payment-web` and `payment-workers` scan clean at `HIGH` and
+`CRITICAL` because the Aspire hosting packages are build/orchestration-time and are not in either runtime
+image. This is a package-graph finding, which is why `VulnerabilityGate.ps1` tolerates nothing — the image
+gate never sees it and must not be loosened on its account.
+
+**Resolves when:** Aspire ships a `StreamJsonRpc` that takes a fixed `MessagePack`, and the platform's
+`Aspire.Hosting.*` pin moves past it. Both are upstream of this repository; a direct `MessagePack` pin here
+would diverge Payment from every other service's graph to patch one leaf, and the fix belongs with the
+platform pin instead.
