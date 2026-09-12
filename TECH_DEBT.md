@@ -203,3 +203,57 @@ Stripe reports for all three provider object kinds, `StripeProviderContractBasel
 in Infrastructure and the tests reference it, and no `"requires_*"`/`"succeeded"`/`"canceled"`/`"processing"`
 status literal remains in `api/Concertable.Payment`. Stripe event-type names stay on Stripe.NET's own
 `EventTypes` constants rather than a parallel local set.
+
+---
+
+### `payment:write` is declared twice, and only one direction of the drift is caught
+
+`PaymentScopes.Write` in `Concertable.Payment.Contracts` holds the literal `payment:write`, and
+`AuthScopes` in `Concertable.Auth.Contracts` maps `AuthScope.PaymentWrite` to the same string — whose own
+doc comment calls itself "the one place the scope literals live", which is no longer true.
+
+The duplication is deliberate. `Concertable.Payment.Client` is a published package, so a reference from it
+to `Concertable.Auth.Contracts` would reach every consumer of Payment: `PrivateAssets="all"` suppresses the
+nuspec dependency but leaves the assembly reference in the compiled output, which is an undeclared hard
+dependency and faults at runtime in a consumer that does not independently carry Auth.Contracts. Taking the
+scope from Payment's own contracts is what breaks that edge.
+
+`PaymentScopeParityTests` holds the two values equal, and it genuinely fails when the Payment side alone
+changes. It does **not** fail when the Auth side alone changes. `test.yml`'s `SERVICE_DIRS` regex
+(`^api/Concertable\.(Auth|B2B|Customer|Payment|Search)([./]|$)`) matches `api/Concertable.Auth.Contracts/`
+because the character class admits the `.`, so a PR touching only that directory scopes CI to `Auth` and
+Payment's architecture suite never runs. Renaming the wire string on the Auth side therefore merges green,
+and the first symptom is Payment's gRPC surface rejecting live tokens.
+
+Before this, the literal was inline in `Concertable.Payment.Client` with no guard at all, so both directions
+were unguarded; this is strictly better, not good.
+
+**Resolves when:** either the shared scope/audience vocabulary moves to the platform (see the entry below,
+which removes the duplication outright), or `SERVICE_DIRS` stops classifying `api/Concertable.*.Contracts`
+as its service's private directory so a shared contract change runs every consumer's suites — at which
+point the parity test covers both directions and this entry is deleted.
+
+---
+
+### The scope and audience registry sits in a service's contracts, so four services depend on Auth's
+
+`AuthScope`/`AuthScopes` and `AuthResource`/`AuthResources` in `Concertable.Auth.Contracts` enumerate every
+service's scopes and JWT audiences — `concertable.b2b.api`, `concertable.customer.api`,
+`concertable.search.api`, `concertable.payment.api`. Every resource server needs that vocabulary to validate
+its own tokens, so `Concertable.B2B.Web`, `Concertable.Customer.Web`, `Concertable.Search.Web` and
+`Concertable.Payment.Web` all reference another service's contract package to get it.
+
+Four consumers needing the same types from one service's contracts is the signal that the types are
+platform vocabulary rather than that service's contract. `ITokenService` — the abstraction that consumes a
+scope id — already lives in the platform at `Concertable.Kernel.Auth`, which every service references and
+which both of Payment's boundary suites already permit.
+
+The cost today is that a shared contract's release train is coupled to one service's, and that a published
+library cannot use the typed model at all without the hidden-dependency problem in the entry above.
+
+**Resolves when:** `AuthScope`, `AuthScopes`, `AuthResource` and `AuthResources` live in
+`Concertable.Kernel.Auth`, `Concertable.Auth.Contracts` keeps only what Auth itself issues
+(`ClientIds`, `InteractiveClients`, `ServiceClients`, `AuthParty`), no `*.Web` host references
+`Concertable.Auth.Contracts` for vocabulary alone, and `PaymentScopes` is deleted. This is a platform
+package release consumed across five repositories, so it is sequenced against the repository-per-service
+migration rather than taken mid-feature.
