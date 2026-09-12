@@ -70,6 +70,10 @@ jobs:
         with:
           # MinVer needs the history to compute the height the publish will use.
           fetch-depth: 0
+      # Before the expensive part: a gate that throws on a clean report also "blocks", and in a log that
+      # is indistinguishable from one that caught something.
+      - name: Test the Trivy result gate
+        run: pwsh -NoProfile -File ./scripts/test-trivy-gate.ps1
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
