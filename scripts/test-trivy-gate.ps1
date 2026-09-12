@@ -2,8 +2,7 @@
    the release path runs in. No Docker, no scan: a malformed report is cheap to construct and expensive
    to meet for the first time during a release.
 
-   The functions are lifted out of the shipped script through the PowerShell AST rather than copied, so
-   this cannot drift from what actually runs.
+   The shipped gate is dot-sourced rather than copied, so this cannot drift from what actually runs.
 
    Every case asserts WHY it blocked, not merely that it did. A gate that throws a member-access error on
    a clean report also "blocks", and in a log it is indistinguishable from one that caught a credential. #>
@@ -38,9 +37,13 @@ $failures = [System.Collections.Generic.List[string]]::new()
 function Test-Case {
     param(
         [Parameter(Mandatory)][string] $Name,
-        [Parameter(Mandatory)][string] $Json,
+        # AllowEmptyString: an empty report is a case under test, and Mandatory rejects it at binding.
+        [Parameter(Mandatory)][AllowEmptyString()][string] $Json,
         [Parameter(Mandatory)][ValidateSet('Vulnerabilities', 'Secrets')][string] $Gate,
-        [Parameter(Mandatory)][int] $ExpectedCount
+        [int] $ExpectedCount = 0,
+        # An unreadable report must THROW, not return zero. Returning zero reports a scan that never
+        # completed as a clean one, which is the only fail-open direction this gate has.
+        [string] $ExpectedThrowLike
     )
 
     $path = Join-Path $temporaryDirectory "$([Guid]::NewGuid().ToString('N')).json"
@@ -58,8 +61,18 @@ function Test-Case {
             })
     }
     catch {
+        if ($ExpectedThrowLike -and $_.Exception.Message -like $ExpectedThrowLike) {
+            Write-Host ("  {0,-46} ok   threw for its own reason" -f $Name)
+            return
+        }
         $script:failures.Add("$Name : THREW $($_.Exception.Message)")
         Write-Host ("  {0,-46} THREW  {1}" -f $Name, $_.Exception.Message)
+        return
+    }
+
+    if ($ExpectedThrowLike) {
+        $script:failures.Add("$Name : expected a throw like '$ExpectedThrowLike', got $($findings.Count) finding(s)")
+        Write-Host ("  {0,-46} FAIL did not throw; returned $($findings.Count)" -f $Name)
         return
     }
 
@@ -97,6 +110,13 @@ Test-Case -Gate Vulnerabilities -ExpectedCount 1 -Name 'one vulnerability'      
 Test-Case -Gate Vulnerabilities -ExpectedCount 1 -Name '[null, real] result blocks'        -Json "{`"Results`":[null,{`"Target`":`"t`",`"Vulnerabilities`":[$vulnerability]}]}"
 Test-Case -Gate Vulnerabilities -ExpectedCount 1 -Name 'unfixed (no FixedVersion)'         -Json '{"Results":[{"Target":"t","Vulnerabilities":[{"VulnerabilityID":"CVE-0000-0002","PkgName":"demo","Severity":"HIGH"}]}]}'
 Test-Case -Gate Vulnerabilities -ExpectedCount 2 -Name 'null finding beside a real one'    -Json "{`"Results`":[{`"Target`":`"t`",`"Vulnerabilities`":[null,$vulnerability]}]}"
+
+Write-Host 'Unreadable reports must fail, not read as clean'
+Test-Case -Gate Vulnerabilities -Name 'empty file'         -Json ''        -ExpectedThrowLike '*is empty*'
+Test-Case -Gate Secrets         -Name 'empty file'         -Json ''        -ExpectedThrowLike '*is empty*'
+Test-Case -Gate Vulnerabilities -Name 'truncated JSON'     -Json '{"Results":[{"Target":"t","Secr' -ExpectedThrowLike '*not valid JSON*'
+Test-Case -Gate Vulnerabilities -Name 'literal null report' -Json 'null'   -ExpectedThrowLike '*parsed to nothing*'
+Test-Case -Gate Secrets         -Name 'whitespace only'    -Json '   '     -ExpectedThrowLike '*parsed to nothing*'
 
 Write-Host 'Secret gate'
 Test-Case -Gate Secrets -ExpectedCount 0 -Name 'Results absent (clean)'                    -Json '{"ArtifactName":"x"}'

@@ -74,8 +74,11 @@ function Invoke-TrivyScan {
     & docker @Arguments
     $trivyExit = $LASTEXITCODE
 
-    if (-not (Test-Path -LiteralPath $OutputFile -PathType Leaf)) {
-        throw "$Description produced no report (Trivy exited $trivyExit). That is an infrastructure failure, not a clean scan and not a finding — check the Trivy output above for a FATAL line, and raise -TrivyTimeout if it mentions a deadline."
+    # Presence is not validity. A scanner killed for disk after --output has created the file but before
+    # it writes leaves it present and zero-byte, which would otherwise pass this check and then parse to
+    # nothing downstream — an interrupted scan reading as a clean one.
+    if (-not (Test-Path -LiteralPath $OutputFile -PathType Leaf) -or (Get-Item -LiteralPath $OutputFile).Length -eq 0) {
+        throw "$Description produced no usable report (Trivy exited $trivyExit). That is an infrastructure failure, not a clean scan and not a finding — check the Trivy output above for a FATAL line, and raise -TrivyTimeout if it mentions a deadline."
     }
 
     if ($trivyExit -ne 0) {
