@@ -32,7 +32,7 @@ jobs:
     uses: Concertable/.github/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
     with:
       project: Concertable.Payment.slnx
-      publish: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
+      publish: false
     secrets:
       # No `|| READ` fallback on the push credential. This repository has no secret of its own, so the
       # name the fallback tried first resolved to empty and it silently took the read token, which has no
@@ -40,3 +40,26 @@ jobs:
       # failure here.
       PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_WRITE }}
       PACKAGES_READ_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
+
+  publish:
+    name: Attest and publish
+    needs: packages
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: nuget-packages
+          path: ${{ runner.temp }}/packages
+      - uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a
+        with:
+          subject-path: ${{ runner.temp }}/packages/*.nupkg
+      - name: Publish transferred packages
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_WRITE }}
+        run: dotnet nuget push "$RUNNER_TEMP/packages/*.nupkg" --api-key "$NUGET_AUTH_TOKEN" --source https://nuget.pkg.github.com/Concertable/index.json --skip-duplicate
