@@ -3,70 +3,106 @@ name: Publish images
 # Payment builds its deployables with the .NET SDK's container support, so there is no Dockerfile and
 # the org's container-publish.yml (which builds one) cannot serve this repository yet.
 #
+# One job, deliberately. The verify step writes image archives and scans those archives; the push step
+# loads and pushes the same files. An earlier shape rebuilt the image in the publish job, which meant
+# what Trivy scanned and what shipped were different builds of the same source.
+#
 # Dispatch-only: the canonical Payment image is published at 10C, after the system composition is
 # green, and consumers pin the digest this run reports.
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "publish" to push the scanned Payment images.
+        required: true
+        default: ''
+
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  discover:
-    name: Derive the image matrix
-    runs-on: ubuntu-latest
-    outputs:
-      projects: ${{ steps.find.outputs.projects }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: find
-        run: |
-          projects=$(grep -rl '<ContainerRepository>' src --include='*.csproj' | sort)
-          test -n "$projects" || { echo "No <ContainerRepository> projects found — refusing to pass"; exit 1; }
-          echo "Deployables to image:"
-          echo "$projects"
-          echo "projects=$(echo "$projects" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
-
   publish:
-    name: Publish ${{ matrix.project }}
+    name: Scan and publish the Payment images
     runs-on: ubuntu-latest
-    needs: discover
-    strategy:
-      fail-fast: false
-      matrix:
-        project: ${{ fromJson(needs.discover.outputs.projects) }}
+    timeout-minutes: 60
     env:
+      # Fallback on the READ credential only, matching ci.yml: this repository holds no secrets of its
+      # own, so an org secret that does not resolve here would fail the restore rather than the run.
+      # The WRITE credential below deliberately has none — a fallback there resolves to a token without
+      # write:packages and turns a misnamed secret into a 403 after a full build.
       GITHUB_PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ || secrets.GITHUB_TOKEN }}
     steps:
+      - name: Require an explicit confirmation
+        if: github.event.inputs.confirm != 'publish'
+        run: |
+          echo '::error::Publication requires the confirm input to be exactly "publish".'
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      - uses: docker/login-action@v3
+
+      - name: Restore the Trivy cache
+        uses: actions/cache@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push the image
+          path: artifacts/trivy-cache
+          key: trivy-cache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: trivy-cache-${{ runner.os }}-
+
+      - name: Build and scan the release-candidate images
+        run: pwsh -NoProfile -File ./scripts/verify-payment-images.ps1
+
+      - name: Log in to the container registry
         env:
-          PROJECT: ${{ matrix.project }}
+          REGISTRY_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_WRITE }}
+        run: echo "$REGISTRY_TOKEN" | docker login ghcr.io --username '${{ github.actor }}' --password-stdin
+
+      - name: Push the scanned archives
+        shell: pwsh
         run: |
-          dotnet publish "$PROJECT" \
-            --configuration Release \
-            /t:PublishContainer \
-            -p:ContainerImageTag=${{ github.sha }}
-      - name: Report the published digest
-        continue-on-error: true
-        env:
-          PROJECT: ${{ matrix.project }}
-        run: |
-          repository=$(dotnet msbuild "$PROJECT" -getProperty:ContainerRepository | tr -d '[:space:]')
-          image="ghcr.io/$repository:${{ github.sha }}"
-          digest=$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')
-          echo "$image -> $digest"
-          echo "### $repository" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`ghcr.io/$repository@$digest\`" >> "$GITHUB_STEP_SUMMARY"
+          $ErrorActionPreference = 'Stop'
+          $manifest = Get-Content -Raw -LiteralPath 'artifacts/images/payment-images.json' | ConvertFrom-Json
+          foreach ($image in $manifest.images) {
+            if (-not $image.scanned) { throw "Refusing to push '$($image.name)': the manifest says it was not scanned." }
+
+            $archive = Join-Path 'artifacts/images' $image.archive
+            docker image load --input $archive
+            if ($LASTEXITCODE -ne 0) { throw "Could not load '$archive'." }
+
+            $local = "$($image.repository):$($image.tag)"
+            foreach ($tag in @($image.revision, 'latest')) {
+              $reference = "ghcr.io/$($image.repository):$tag"
+              docker image tag $local $reference
+              if ($LASTEXITCODE -ne 0) { throw "Could not tag '$reference'." }
+              docker image push $reference
+              if ($LASTEXITCODE -ne 0) { throw "Could not push '$reference'." }
+            }
+
+            $digest = docker buildx imagetools inspect "ghcr.io/$($image.repository):$($image.revision)" --format '{{.Manifest.Digest}}'
+            "### $($image.repository)" >> $env:GITHUB_STEP_SUMMARY
+            "``ghcr.io/$($image.repository)@$digest``" >> $env:GITHUB_STEP_SUMMARY
+          }
+
+      - name: Retain the scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-image-release-evidence
+          path: |
+            artifacts/evidence
+            artifacts/images/payment-images.json
+          if-no-files-found: error
+
+      - name: Log out of the container registry
+        if: always()
+        run: docker logout ghcr.io
