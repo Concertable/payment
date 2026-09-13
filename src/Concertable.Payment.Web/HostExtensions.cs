@@ -100,7 +100,8 @@ public static class HostExtensions
                     opts.TokenValidationParameters = new TokenValidationParameters
                     {
                         ClockSkew = TimeSpan.Zero,
-                        ValidateIssuer = !builder.Environment.IsDevelopment(),
+                        ValidateIssuer = !builder.Environment.IsDevelopment()
+                            && !builder.Environment.IsEnvironment("E2E"),
                         ValidAudiences = [AuthResource.Payment.Audience]
                     };
                 });
