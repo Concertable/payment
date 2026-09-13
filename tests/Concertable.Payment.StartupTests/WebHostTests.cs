@@ -41,6 +41,7 @@ public sealed class WebHostTests
             .Get(JwtBearerDefaults.AuthenticationScheme);
 
         Assert.True(jwtOptions.RequireHttpsMetadata);
+        Assert.True(jwtOptions.TokenValidationParameters.ValidateIssuer);
     }
 
     [Fact]
@@ -55,5 +56,6 @@ public sealed class WebHostTests
             .Get(JwtBearerDefaults.AuthenticationScheme);
 
         Assert.False(jwtOptions.RequireHttpsMetadata);
+        Assert.False(jwtOptions.TokenValidationParameters.ValidateIssuer);
     }
 }
