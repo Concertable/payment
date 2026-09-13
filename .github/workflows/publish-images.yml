@@ -80,7 +80,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Could not load '$archive'." }
 
             $local = "$($image.repository):$($image.tag)"
-            foreach ($tag in @($image.revision, 'latest')) {
+            foreach ($tag in @($image.revision, $image.latest)) {
               $reference = "ghcr.io/$($image.repository):$tag"
               docker image tag $local $reference
               if ($LASTEXITCODE -ne 0) { throw "Could not tag '$reference'." }

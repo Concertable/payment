@@ -39,8 +39,10 @@ if ([string]::IsNullOrWhiteSpace($BuildVersion)) {
 }
 
 $targets = @(
-    [ordered]@{ Name = 'payment-web'; Project = 'src/Concertable.Payment.Web/Concertable.Payment.Web.csproj' }
-    [ordered]@{ Name = 'payment-workers'; Project = 'src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj' }
+    [ordered]@{ Name = 'payment-web'; Repository = 'payment-web'; Project = 'src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'; Tag = $revision; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-workers'; Repository = 'payment-workers'; Project = 'src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj'; Tag = $revision; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-web-e2e'; Repository = 'payment-web'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
+    [ordered]@{ Name = 'payment-workers-e2e'; Repository = 'payment-workers'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
 )
 
 function Resolve-UnderRoot {
@@ -99,8 +101,8 @@ foreach ($target in $targets) {
     & dotnet publish (Join-Path $repositoryRoot $target.Project) `
         --configuration $Configuration `
         -t:PublishContainer `
-        -p:ContainerRepository="concertable/$($target.Name)" `
-        -p:ContainerImageTag="verification-$revision" `
+        -p:ContainerRepository="concertable/$($target.Repository)" `
+        -p:ContainerImageTag="verification-$($target.Tag)" `
         -p:ContainerArchiveOutputPath=$archivePath `
         -p:MinVerVersionOverride=$BuildVersion
     if ($LASTEXITCODE -ne 0) {
@@ -113,10 +115,11 @@ foreach ($target in $targets) {
 
     $entry = [ordered]@{
         name = $target.Name
-        repository = "concertable/$($target.Name)"
-        tag = "verification-$revision"
+        repository = "concertable/$($target.Repository)"
+        tag = "verification-$($target.Tag)"
         archive = [System.IO.Path]::GetFileName($archivePath)
-        revision = $revision
+        revision = $target.Tag
+        latest = $target.LatestTag
         version = $BuildVersion
         scanned = $false
     }
