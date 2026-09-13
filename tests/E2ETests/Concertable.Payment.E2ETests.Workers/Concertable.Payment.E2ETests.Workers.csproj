@@ -7,6 +7,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
     <BaseOutputPath>$(ConcertableServiceRoot)artifacts\e2e\payment-workers\</BaseOutputPath>
+    <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
+    <ContainerRepository>concertable/payment-workers</ContainerRepository>
     <CompositionValidationExclusion>E2E adapter executable covered by the production Payment Workers composition root.</CompositionValidationExclusion>
   </PropertyGroup>
 

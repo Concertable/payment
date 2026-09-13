@@ -7,6 +7,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>false</IsTestProject>
     <BaseOutputPath>$(ConcertableServiceRoot)artifacts\e2e\payment-web\</BaseOutputPath>
+    <ContainerRepository>concertable/payment-web</ContainerRepository>
     <CompositionValidationExclusion>E2E adapter executable covered by the production Payment Web composition root.</CompositionValidationExclusion>
   </PropertyGroup>
 
@@ -20,6 +21,13 @@
   <ItemGroup>
     <Content Include="..\..\..\src\Concertable.Payment.Web\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\..\src\Concertable.Payment.Web\appsettings.E2E.json" Link="appsettings.E2E.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ContainerPort Include="8080" Type="tcp" />
+    <ContainerPort Include="8081" Type="tcp" />
+    <ContainerEnvironmentVariable Include="ASPNETCORE_HTTP_PORTS" Value="8080;8081" />
+    <ContainerEnvironmentVariable Include="PaymentTransport__GrpcPort" Value="8081" />
   </ItemGroup>
 
 </Project>
