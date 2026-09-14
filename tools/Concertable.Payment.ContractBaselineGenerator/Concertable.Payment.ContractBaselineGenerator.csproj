@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseCandidatePaymentProjects)' == 'true'">
-    <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
+    <ProjectReference Include="..\..\api\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" />
+    <ProjectReference Include="..\..\api\src\Concertable.Payment.Contracts\Concertable.Payment.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
