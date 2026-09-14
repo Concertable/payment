@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Concertable.Payment.ArchitectureTests;
 
-public sealed class PaymentPublishedPackageReferenceTests
+public sealed class PublishedPackageReferenceTests
 {
     private static readonly string[] AllowedConcertableDependencyPrefixes =
     [
