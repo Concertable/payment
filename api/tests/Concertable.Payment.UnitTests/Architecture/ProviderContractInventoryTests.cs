@@ -450,7 +450,7 @@ public sealed partial class ProviderContractInventoryTests
 
         if (string.Equals(root.Path, "api/Concertable.Payment/src", StringComparison.Ordinal))
         {
-            var standalonePath = Path.Combine(RepositoryRoot, "src");
+            var standalonePath = Path.Combine(RepositoryRoot, "api", "src");
             if (Directory.Exists(standalonePath))
                 return new ResolvedScanRoot(root.Path, standalonePath, root.Detector);
         }

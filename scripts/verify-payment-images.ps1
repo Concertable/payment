@@ -39,8 +39,8 @@ if ([string]::IsNullOrWhiteSpace($BuildVersion)) {
 }
 
 $targets = @(
-    [ordered]@{ Name = 'payment-web'; Repository = 'payment-web'; Project = 'src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'; Tag = $revision; LatestTag = 'latest' }
-    [ordered]@{ Name = 'payment-workers'; Repository = 'payment-workers'; Project = 'src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj'; Tag = $revision; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-web'; Repository = 'payment-web'; Project = 'api/src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'; Tag = $revision; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-workers'; Repository = 'payment-workers'; Project = 'api/src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj'; Tag = $revision; LatestTag = 'latest' }
     [ordered]@{ Name = 'payment-web-e2e'; Repository = 'payment-web'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
     [ordered]@{ Name = 'payment-workers-e2e'; Repository = 'payment-workers'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
 )

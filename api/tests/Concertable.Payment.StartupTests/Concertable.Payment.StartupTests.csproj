@@ -16,9 +16,9 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.AppHost\Concertable.Payment.AppHost.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Workers\Concertable.Payment.Workers.csproj" />
+    <ProjectReference Include="..\..\..\local\AppHost\Concertable.Payment.AppHost.csproj" />
     <PackageReference Include="Concertable.Testing.Architecture" />
   </ItemGroup>
 </Project>
