@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
   </ItemGroup>
 
 </Project>
