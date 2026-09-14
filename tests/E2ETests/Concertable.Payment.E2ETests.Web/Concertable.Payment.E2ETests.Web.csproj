@@ -12,15 +12,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
     <ProjectReference Include="..\Concertable.Payment.E2ETests.Server\Concertable.Payment.E2ETests.Server.csproj" />
     <ProjectReference Include="..\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
   </ItemGroup>
 
   <!-- Reuse the production host's E2E configuration; this host adds only the Stripe adapter swap. -->
   <ItemGroup>
-    <Content Include="..\..\..\src\Concertable.Payment.Web\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\..\src\Concertable.Payment.Web\appsettings.E2E.json" Link="appsettings.E2E.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\..\api\src\Concertable.Payment.Web\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\..\api\src\Concertable.Payment.Web\appsettings.E2E.json" Link="appsettings.E2E.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

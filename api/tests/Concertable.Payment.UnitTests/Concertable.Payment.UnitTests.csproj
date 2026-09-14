@@ -21,16 +21,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" Aliases="global,PaymentInfrastructure" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Application\Concertable.Payment.Application.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Client\Concertable.Payment.Client.csproj" Aliases="PaymentClient" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Domain\Concertable.Payment.Domain.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" Aliases="global,PaymentInfrastructure" />
     <ProjectReference Include="..\Compatibility\Concertable.Payment.PublishedContractFixture\Concertable.Payment.PublishedContractFixture.csproj" ReferenceOutputAssembly="false" />
-    <ProjectReference Include="..\E2ETests\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
+    <ProjectReference Include="..\..\..\tests\E2ETests\Concertable.Payment.E2ETests.Stripe\Concertable.Payment.E2ETests.Stripe.csproj" />
     <PackageReference Include="Concertable.Testing" />
   </ItemGroup>
 
-  <Import Project="..\..\PublishedBaseline.props" />
+  <Import Project="..\..\..\PublishedBaseline.props" />
 
   <ItemGroup>
     <None Update="Compatibility\Baselines\**\*" CopyToOutputDirectory="PreserveNewest" />
