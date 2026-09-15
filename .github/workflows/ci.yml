@@ -122,12 +122,6 @@ jobs:
       - integration-tests
     runs-on: ubuntu-latest
     steps:
-      - name: Require successful Payment checks
-        env:
-          BUILD_TEST_PACK_RESULT: ${{ needs.build-test-pack.result }}
-          IMAGES_RESULT: ${{ needs.images.result }}
-          INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
-        run: |
-          test "$BUILD_TEST_PACK_RESULT" = "success"
-          test "$IMAGES_RESULT" = "success"
-          test "$INTEGRATION_TESTS_RESULT" = "success"
+      - uses: Concertable/pipeline/.github/actions/require-jobs-green@3b4313ef1130400b2b35f7b3b3f5f57c22b23d82
+        with:
+          results: ${{ join(needs.*.result, " ") }}
