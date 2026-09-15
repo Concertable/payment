@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   packages:
-    uses: Concertable/.github/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
+    uses: Concertable/pipeline/.github/workflows/nuget-publish.yml@bc16cc0609dfeb923bd8e1a97f88b9890380f6f2
     with:
       project: Concertable.Payment.slnx
       publish: false
