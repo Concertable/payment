@@ -114,7 +114,7 @@ jobs:
         run: dotnet test api/tests/Concertable.Payment.IntegrationTests/Concertable.Payment.IntegrationTests.csproj --configuration Release --no-restore
 
   ci-complete:
-    name: CI complete
+    name: ci-complete
     if: ${{ always() }}
     needs:
       - build-test-pack
@@ -122,12 +122,6 @@ jobs:
       - integration-tests
     runs-on: ubuntu-latest
     steps:
-      - name: Require successful Payment checks
-        env:
-          BUILD_TEST_PACK_RESULT: ${{ needs.build-test-pack.result }}
-          IMAGES_RESULT: ${{ needs.images.result }}
-          INTEGRATION_TESTS_RESULT: ${{ needs.integration-tests.result }}
-        run: |
-          test "$BUILD_TEST_PACK_RESULT" = "success"
-          test "$IMAGES_RESULT" = "success"
-          test "$INTEGRATION_TESTS_RESULT" = "success"
+      - uses: Concertable/pipeline/.github/actions/require-jobs-green@13e26afd6f35855a78d3c554e097522e8476c04e
+        with:
+          results: ${{ join(needs.*.result, ' ') }}
