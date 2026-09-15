@@ -122,6 +122,6 @@ jobs:
       - integration-tests
     runs-on: ubuntu-latest
     steps:
-      - uses: Concertable/pipeline/.github/actions/require-jobs-green@3b4313ef1130400b2b35f7b3b3f5f57c22b23d82
+      - uses: Concertable/pipeline/.github/actions/require-jobs-green@e2e8bf55c682f04109141aff232dee335ed7a4b1
         with:
           results: ${{ join(needs.*.result, ' ') }}
