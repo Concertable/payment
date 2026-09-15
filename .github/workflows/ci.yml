@@ -124,4 +124,4 @@ jobs:
     steps:
       - uses: Concertable/pipeline/.github/actions/require-jobs-green@3b4313ef1130400b2b35f7b3b3f5f57c22b23d82
         with:
-          results: ${{ join(needs.*.result, " ") }}
+          results: ${{ join(needs.*.result, ' ') }}
