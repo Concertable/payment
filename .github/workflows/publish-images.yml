@@ -36,7 +36,7 @@ jobs:
       # own, so an org secret that does not resolve here would fail the restore rather than the run.
       # The WRITE credential below deliberately has none — a fallback there resolves to a token without
       # write:packages and turns a misnamed secret into a 403 after a full build.
-      GITHUB_PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ || secrets.GITHUB_TOKEN }}
+      GITHUB_PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
     steps:
       - name: Require an explicit confirmation
         if: github.event.inputs.confirm != 'publish'
