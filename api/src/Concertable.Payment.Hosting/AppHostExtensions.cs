@@ -17,6 +17,70 @@ public static class AppHostExtensions
         string digest,
         IResourceBuilder<IResourceWithServiceDiscovery> auth,
         IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb) =>
+        WebImage(builder, image, digest, auth, paymentDb, asb);
+
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWeb(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
+        IResourceBuilder<PostgresDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb) =>
+        WebImage(builder, image, digest, auth, paymentDb, asb);
+
+    public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+        where TProject : IProjectMetadata, new() =>
+        WebProject<TProject>(builder, auth, paymentDb, asb);
+
+    public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
+        IResourceBuilder<PostgresDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+        where TProject : IProjectMetadata, new() =>
+        WebProject<TProject>(builder, auth, paymentDb, asb);
+
+    public static IResourceBuilder<ProjectResource> AddPaymentWorkers<TProject>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+        where TProject : IProjectMetadata, new() =>
+        WorkersProject<TProject>(builder, paymentDb, asb);
+
+    public static IResourceBuilder<ProjectResource> AddPaymentWorkers<TProject>(
+        this IDistributedApplicationBuilder builder,
+        IResourceBuilder<PostgresDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb)
+        where TProject : IProjectMetadata, new() =>
+        WorkersProject<TProject>(builder, paymentDb, asb);
+
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb) =>
+        WorkersImage(builder, image, digest, paymentDb, asb);
+
+    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
+        this IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<PostgresDatabaseResource> paymentDb,
+        IResourceBuilder<AzureServiceBusResource> asb) =>
+        WorkersImage(builder, image, digest, paymentDb, asb);
+
+    private static IResourceBuilder<ServiceContainerResource> WebImage(
+        IDistributedApplicationBuilder builder,
+        string image,
+        string digest,
+        IResourceBuilder<IResourceWithServiceDiscovery> auth,
+        IResourceBuilder<IResourceWithConnectionString> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
     {
         var httpPorts = $"{PaymentConstants.HttpPort};{PaymentConstants.GrpcPort}";
@@ -37,10 +101,10 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
     }
 
-    public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
-        this IDistributedApplicationBuilder builder,
+    private static IResourceBuilder<ProjectResource> WebProject<TProject>(
+        IDistributedApplicationBuilder builder,
         IResourceBuilder<IResourceWithServiceDiscovery> auth,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<IResourceWithConnectionString> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
@@ -56,9 +120,9 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
     }
 
-    public static IResourceBuilder<ProjectResource> AddPaymentWorkers<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+    private static IResourceBuilder<ProjectResource> WorkersProject<TProject>(
+        IDistributedApplicationBuilder builder,
+        IResourceBuilder<IResourceWithConnectionString> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
         where TProject : IProjectMetadata, new()
     {
@@ -71,11 +135,11 @@ public static class AppHostExtensions
                       .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
     }
 
-    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
-        this IDistributedApplicationBuilder builder,
+    private static IResourceBuilder<ServiceContainerResource> WorkersImage(
+        IDistributedApplicationBuilder builder,
         string image,
         string digest,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
+        IResourceBuilder<IResourceWithConnectionString> paymentDb,
         IResourceBuilder<AzureServiceBusResource> asb)
     {
         return builder.AddContainerImage(PaymentConstants.WorkersResource, image, digest)
