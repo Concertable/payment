@@ -35,7 +35,9 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($revision)) {
 $revision = $revision.Trim()
 
 if ([string]::IsNullOrWhiteSpace($BuildVersion)) {
-    $BuildVersion = "0.0.0-local.$($revision.Substring(0, 12))"
+    # `g` prefix, git-describe style: a purely numeric SemVer pre-release identifier may not carry a
+    # leading zero, and an all-digit hex prefix beginning with one makes MinVer reject the override.
+    $BuildVersion = "0.0.0-local.g$($revision.Substring(0, 12))"
 }
 
 $targets = @(
