@@ -12,7 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.SqlServer" />
     <PackageReference Include="Concertable.AppHost.Shared" />
     <PackageReference Include="Concertable.Auth.Hosting" />
     <ProjectReference Include="..\..\api\src\Concertable.Payment.Hosting\Concertable.Payment.Hosting.csproj" IsAspireProjectResource="false" />

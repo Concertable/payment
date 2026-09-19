@@ -10,7 +10,7 @@ public static class AppHost
     public static IDistributedApplicationBuilder CreateBuilder(string[] args)
     {
         var builder = StrictDistributedApplication.CreateBuilder(args);
-        var sql = builder.AddSqlServer("sql").WithDataVolume("concertable-payment-sql-data");
+        var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");
         var authDb = sql.AddDatabase(AuthConstants.Database);
         var postgres = builder.AddPostgresContainer("concertable-payment-postgres-data");
         var paymentDb = postgres.AddDatabase(PaymentConstants.Database);
