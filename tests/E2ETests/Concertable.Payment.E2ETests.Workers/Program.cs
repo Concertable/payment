@@ -20,8 +20,6 @@ public static class Program
 
         var app = builder.Build();
 
-        await app.MigrateStoresAsync();
-
         app.Run();
     }
 }

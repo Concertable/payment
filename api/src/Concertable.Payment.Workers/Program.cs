@@ -6,6 +6,4 @@ builder.AddWorkerHost();
 
 var app = builder.Build();
 
-await app.MigrateStoresAsync();
-
 app.Run();

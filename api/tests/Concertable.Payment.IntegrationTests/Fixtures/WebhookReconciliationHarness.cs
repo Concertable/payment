@@ -49,7 +49,11 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
         services.AddSingleton<PaymentConfigurationProvider>();
         services.AddSingleton<IStripeSessionClient>(sessionClient);
 
-        services.AddOutbox(opt => opt.UseSqlServer(connectionString), runDispatcher: false);
+        services.AddOutbox(
+            opt => opt.UseNpgsql(
+                connectionString,
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory_Outbox", Schema.Messaging)),
+            runDispatcher: false);
 
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddScoped<IDomainEventDispatchInterceptor, DomainEventDispatchInterceptor>();
@@ -57,7 +61,9 @@ internal sealed class WebhookReconciliationHarness : IAsyncDisposable
             PaymentOperationStateChangedDomainEventHandler>();
 
         services.AddDbContext<PaymentDbContext>((sp, opts) =>
-            opts.UseSqlServer(connectionString)
+            opts.UseNpgsql(
+                    connectionString,
+                    npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", Schema.Name))
                 .AddInterceptors(sp.GetRequiredService<IDomainEventDispatchInterceptor>()));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

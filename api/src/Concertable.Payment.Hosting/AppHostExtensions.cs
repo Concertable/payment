@@ -11,143 +11,151 @@ namespace Concertable.Payment.Hosting;
 
 public static class AppHostExtensions
 {
-    public static IResourceBuilder<ServiceContainerResource> AddPaymentWeb(
-        this IDistributedApplicationBuilder builder,
-        string image,
-        string digest,
-        IResourceBuilder<IResourceWithServiceDiscovery> auth,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
+    extension(IDistributedApplicationBuilder builder)
     {
-        var httpPorts = $"{PaymentConstants.HttpPort};{PaymentConstants.GrpcPort}";
+        public IResourceBuilder<ServiceContainerResource> AddPaymentMigrations(
+            string image,
+            string digest,
+            IResourceBuilder<PostgresDatabaseResource> paymentDb) =>
+            builder.AddContainerImage(PaymentConstants.MigrationsResource, image, digest)
+                   .WithReference(paymentDb)
+                   .WaitFor(paymentDb);
 
-        return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
-                      .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "https")
-                      .WithHttpEndpoint(targetPort: PaymentConstants.GrpcPort, name: "grpc")
-                      .WithReference(paymentDb)
-                      .WaitFor(paymentDb)
-                      .WithReference(auth)
-                      .WaitFor(auth)
-                      .WithReference(asb)
-                      .WaitFor(asb)
-                      .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
-                      .WithEnvironment("PaymentTransport__GrpcPort", PaymentConstants.GrpcPort.ToString())
-                      .WithEnvironment("ASPNETCORE_HTTP_PORTS", httpPorts)
-                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
-                      .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
-    }
+        public IResourceBuilder<ProjectResource> AddPaymentMigrations<TProject>(
+            IResourceBuilder<PostgresDatabaseResource> paymentDb)
+            where TProject : IProjectMetadata, new() =>
+            builder.AddProject<TProject>(PaymentConstants.MigrationsResource)
+                   .WithReference(paymentDb)
+                   .WaitFor(paymentDb);
 
-    public static IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<IResourceWithServiceDiscovery> auth,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
-        where TProject : IProjectMetadata, new()
-    {
-        return builder.AddProject<TProject>(PaymentConstants.WebResource)
-                      .WithReference(paymentDb)
-                      .WaitFor(paymentDb)
-                      .WithReference(auth)
-                      .WaitFor(auth)
-                      .WithReference(asb)
-                      .WaitFor(asb)
-                      .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
-                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
-                      .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
-    }
-
-    public static IResourceBuilder<ProjectResource> AddPaymentWorkers<TProject>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
-        where TProject : IProjectMetadata, new()
-    {
-        return builder.AddProject<TProject>(PaymentConstants.WorkersResource)
-                      .WithReference(paymentDb)
-                      .WaitFor(paymentDb)
-                      .WithReference(asb)
-                      .WaitFor(asb)
-                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
-                      .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
-    }
-
-    public static IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
-        this IDistributedApplicationBuilder builder,
-        string image,
-        string digest,
-        IResourceBuilder<SqlServerDatabaseResource> paymentDb,
-        IResourceBuilder<AzureServiceBusResource> asb)
-    {
-        return builder.AddContainerImage(PaymentConstants.WorkersResource, image, digest)
-                      .WithReference(paymentDb)
-                      .WaitFor(paymentDb)
-                      .WithReference(asb)
-                      .WaitFor(asb)
-                      .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
-                      .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
-    }
-
-    public static void AddStripeCli<TPaymentWeb>(
-        this IDistributedApplicationBuilder builder,
-        IResourceBuilder<TPaymentWeb> paymentWeb)
-        where TPaymentWeb : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
-    {
-        var secretKey = builder.Configuration["Stripe:SecretKey"];
-        if (string.IsNullOrEmpty(secretKey))
-            return;
-
-        IResource stripeCli = builder.ExecutionContext.IsRunMode
-            ? builder.AddExecutable(PaymentConstants.StripeCliResource, "stripe", ".")
-                .WithArgs("listen", "--api-key", secretKey, "--skip-verify", "--forward-to",
-                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
-                .Resource
-            : builder.AddContainer(PaymentConstants.StripeCliResource, "stripe/stripe-cli")
-                .WithVolume("stripe-cli-config", "/root/.config/stripe")
-                .WithArgs("listen", "--api-key", secretKey, "--forward-to",
-                    ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
-                .Resource;
-
-        var webhookSecret = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        builder.Eventing.Subscribe<BeforeStartEvent>((evt, ct) =>
+        public IResourceBuilder<ServiceContainerResource> AddPaymentWeb(
+            string image,
+            string digest,
+            IResourceBuilder<IResourceWithServiceDiscovery> auth,
+            IResourceBuilder<PostgresDatabaseResource> paymentDb,
+            IResourceBuilder<AzureServiceBusResource> asb)
         {
-            var logs = evt.Services.GetRequiredService<ResourceLoggerService>();
-            _ = Task.Run(async () =>
+            var httpPorts = $"{PaymentConstants.HttpPort};{PaymentConstants.GrpcPort}";
+
+            return builder.AddContainerImage(PaymentConstants.WebResource, image, digest)
+                          .WithHttpEndpoint(targetPort: PaymentConstants.HttpPort, name: "https")
+                          .WithHttpEndpoint(targetPort: PaymentConstants.GrpcPort, name: "grpc")
+                          .WithReference(paymentDb)
+                          .WaitFor(paymentDb)
+                          .WithReference(auth)
+                          .WaitFor(auth)
+                          .WithReference(asb)
+                          .WaitFor(asb)
+                          .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                          .WithEnvironment("PaymentTransport__GrpcPort", PaymentConstants.GrpcPort.ToString())
+                          .WithEnvironment("ASPNETCORE_HTTP_PORTS", httpPorts)
+                          .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                          .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
+        }
+
+        public IResourceBuilder<ProjectResource> AddPaymentWeb<TProject>(
+            IResourceBuilder<IResourceWithServiceDiscovery> auth,
+            IResourceBuilder<PostgresDatabaseResource> paymentDb,
+            IResourceBuilder<AzureServiceBusResource> asb)
+            where TProject : IProjectMetadata, new() =>
+            builder.AddProject<TProject>(PaymentConstants.WebResource)
+                   .WithReference(paymentDb)
+                   .WaitFor(paymentDb)
+                   .WithReference(auth)
+                   .WaitFor(auth)
+                   .WithReference(asb)
+                   .WaitFor(asb)
+                   .WithEnvironment("Auth__Authority", auth.GetEndpoint("https"))
+                   .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                   .AddSecrets(builder, "Stripe:SecretKey", "Stripe:WebhookSecret", "ExternalServices:UseRealStripe");
+
+        public IResourceBuilder<ProjectResource> AddPaymentWorkers<TProject>(
+            IResourceBuilder<PostgresDatabaseResource> paymentDb,
+            IResourceBuilder<AzureServiceBusResource> asb)
+            where TProject : IProjectMetadata, new() =>
+            builder.AddProject<TProject>(PaymentConstants.WorkersResource)
+                   .WithReference(paymentDb)
+                   .WaitFor(paymentDb)
+                   .WithReference(asb)
+                   .WaitFor(asb)
+                   .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                   .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
+
+        public IResourceBuilder<ServiceContainerResource> AddPaymentWorkers(
+            string image,
+            string digest,
+            IResourceBuilder<PostgresDatabaseResource> paymentDb,
+            IResourceBuilder<AzureServiceBusResource> asb) =>
+            builder.AddContainerImage(PaymentConstants.WorkersResource, image, digest)
+                   .WithReference(paymentDb)
+                   .WaitFor(paymentDb)
+                   .WithReference(asb)
+                   .WaitFor(asb)
+                   .WithEnvironment(AzureServiceBusOptions.ServiceNameEnvVar, PaymentConstants.ServiceName)
+                   .AddSecrets(builder, "Stripe:SecretKey", "ExternalServices:UseRealStripe");
+
+        public void AddStripeCli<TPaymentWeb>(IResourceBuilder<TPaymentWeb> paymentWeb)
+            where TPaymentWeb : class, IResourceWithServiceDiscovery, IResourceWithEnvironment
+        {
+            var secretKey = builder.Configuration["Stripe:SecretKey"];
+            if (string.IsNullOrEmpty(secretKey))
+                return;
+
+            IResource stripeCli = builder.ExecutionContext.IsRunMode
+                ? builder.AddExecutable(PaymentConstants.StripeCliResource, "stripe", ".")
+                    .WithArgs("listen", "--api-key", secretKey, "--skip-verify", "--forward-to",
+                        ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
+                    .Resource
+                : builder.AddContainer(PaymentConstants.StripeCliResource, "stripe/stripe-cli")
+                    .WithVolume("stripe-cli-config", "/root/.config/stripe")
+                    .WithArgs("listen", "--api-key", secretKey, "--forward-to",
+                        ReferenceExpression.Create($"{paymentWeb.GetEndpoint("https")}/api/webhook"))
+                    .Resource;
+
+            var webhookSecret = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            builder.Eventing.Subscribe<BeforeStartEvent>((evt, ct) =>
             {
-                try
+                var logs = evt.Services.GetRequiredService<ResourceLoggerService>();
+                _ = Task.Run(async () =>
                 {
-                    await foreach (var line in logs.WatchLinesAsync(stripeCli, ct))
+                    try
                     {
-                        var match = Regex.Match(line.Content, @"whsec_\w+");
-                        if (match.Success)
+                        await foreach (var line in logs.WatchLinesAsync(stripeCli, ct))
                         {
-                            webhookSecret.TrySetResult(match.Value);
-                            return;
+                            var match = Regex.Match(line.Content, @"whsec_\w+");
+                            if (match.Success)
+                            {
+                                webhookSecret.TrySetResult(match.Value);
+                                return;
+                            }
                         }
                     }
-                }
-                catch (OperationCanceledException)
-                {
-                    webhookSecret.TrySetCanceled(ct);
-                }
-            }, ct);
-            return Task.CompletedTask;
-        });
+                    catch (OperationCanceledException)
+                    {
+                        webhookSecret.TrySetCanceled(ct);
+                    }
+                }, ct);
+                return Task.CompletedTask;
+            });
 
-        paymentWeb.WithEnvironment(async ctx =>
-        {
-            ctx.EnvironmentVariables["Stripe__WebhookSecret"] =
-                await webhookSecret.Task.WaitAsync(TimeSpan.FromSeconds(60));
-        });
+            paymentWeb.WithEnvironment(async ctx =>
+            {
+                ctx.EnvironmentVariables["Stripe__WebhookSecret"] =
+                    await webhookSecret.Task.WaitAsync(TimeSpan.FromSeconds(60));
+            });
+        }
     }
 
-    private static async IAsyncEnumerable<LogLine> WatchLinesAsync(
-        this ResourceLoggerService logs,
-        IResource resource,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    extension(ResourceLoggerService logs)
     {
-        await foreach (var batch in logs.WatchAsync(resource).WithCancellation(ct))
-            foreach (var line in batch)
-                yield return line;
+        private async IAsyncEnumerable<LogLine> WatchLinesAsync(
+            IResource resource,
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            await foreach (var batch in logs.WatchAsync(resource).WithCancellation(ct))
+                foreach (var line in batch)
+                    yield return line;
+        }
     }
 }

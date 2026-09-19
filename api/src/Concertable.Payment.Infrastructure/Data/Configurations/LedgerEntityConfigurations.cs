@@ -14,7 +14,7 @@ internal sealed class LedgerAccountEntityConfiguration : IEntityTypeConfiguratio
         builder.ToTable(Schema.Tables.LedgerAccounts, Schema.Name);
         builder.HasIndex(a => new { a.Type, a.OwnerId, a.Currency })
             .IsUnique()
-            .HasFilter(null)
+            .AreNullsDistinct(false)
             .HasDatabaseName(IdentityIndex);
     }
 }

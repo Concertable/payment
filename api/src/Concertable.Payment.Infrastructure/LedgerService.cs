@@ -34,7 +34,7 @@ internal sealed class LedgerService : ILedgerService
             posting.ExternalId,
             posting.Reference,
             posting.PaymentIntentId,
-            timeProvider.GetUtcNow().DateTime,
+            timeProvider.GetUtcNow().UtcDateTime,
             legs);
 
         await transactionRepository.AddAsync(transaction, ct);

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
@@ -7,13 +9,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class FinancialOperationPersistenceTests : IClassFixture<SqlFixture>
+public sealed class FinancialOperationPersistenceTests : IClassFixture<PostgresFixture>
 {
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public FinancialOperationPersistenceTests(SqlFixture sql)
+    public FinancialOperationPersistenceTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
@@ -42,14 +44,14 @@ public sealed class FinancialOperationPersistenceTests : IClassFixture<SqlFixtur
         Assert.Equal(reference.ClientReference, persisted.ClientReference);
         Assert.Equal(FinancialOperationStatus.Succeeded, persisted.Status);
         Assert.Equal("pi_test", persisted.ReferenceId);
-        Assert.Equal(completedAt, persisted.CompletedAt);
+        Assert.Equal(completedAt, persisted.CompletedAt!.Value, TimeSpan.FromMicroseconds(1));
     }
 
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
+            .UseNpgsql(postgres.ConnectionString)
             .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(options, Options.Create(new OutboxOptions()), new PaymentConfigurationProvider());
     }
 }

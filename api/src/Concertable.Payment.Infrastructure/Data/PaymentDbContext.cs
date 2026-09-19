@@ -1,11 +1,14 @@
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure.Data;
 
 internal sealed class PaymentDbContext(
     DbContextOptions<PaymentDbContext> options,
+    IOptions<OutboxOptions> outboxOptions,
     PaymentConfigurationProvider provider)
-    : DbContextBase(options)
+    : DbContextBase(options, outboxOptions)
 {
     public DbSet<TransactionEntity> Transactions => Set<TransactionEntity>();
     public DbSet<PaymentTransactionEntity> PaymentTransactions => Set<PaymentTransactionEntity>();

@@ -1,3 +1,4 @@
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.DataAccess.Infrastructure.Data;
 using Concertable.Kernel.Identity;
 using Concertable.Kernel.ValueObjects;
@@ -21,13 +22,13 @@ using Reunion;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixture>
+public sealed class SettlementOperationPersistenceTests : IClassFixture<PostgresFixture>
 {
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public SettlementOperationPersistenceTests(SqlFixture sql)
+    public SettlementOperationPersistenceTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
@@ -282,9 +283,9 @@ public sealed class SettlementOperationPersistenceTests : IClassFixture<SqlFixtu
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
+            .UseNpgsql(postgres.ConnectionString)
             .AddInterceptors(new AuditInterceptor(Mock.Of<ICurrentUser>(), TimeProvider.System))
             .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(options, Options.Create(new OutboxOptions()), new PaymentConfigurationProvider());
     }
 }
