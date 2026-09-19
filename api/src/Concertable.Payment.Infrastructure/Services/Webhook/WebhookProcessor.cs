@@ -79,7 +79,7 @@ internal sealed class WebhookProcessor : IWebhookProcessor
 
             await outboxBehavior.ExecuteAsync(async () =>
             {
-                stripeEventRepository.AddEvent(StripeEventEntity.Create(stripeEvent.Id, timeProvider.GetUtcNow().DateTime));
+                stripeEventRepository.AddEvent(StripeEventEntity.Create(stripeEvent.Id, timeProvider.GetUtcNow().UtcDateTime));
 
                 switch (dataObject)
                 {

@@ -1,7 +1,7 @@
+using System.Data.Common;
 using Concertable.DataAccess.Infrastructure.Extensions;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Infrastructure.Data;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.Infrastructure.Repositories;
@@ -70,7 +70,7 @@ internal sealed class EscrowRepository
         {
             return (await ReloadByIdAsync(escrowId, ct), true);
         }
-        catch (SqlException ex) when (ex.IsDuplicateKey())
+        catch (DbException ex) when (ex.IsDuplicateKey())
         {
             return (await ReloadByIdAsync(escrowId, ct), true);
         }

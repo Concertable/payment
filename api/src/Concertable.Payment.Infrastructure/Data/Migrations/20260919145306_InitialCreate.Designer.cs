@@ -3,16 +3,16 @@ using System;
 using Concertable.Payment.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace Concertable.Payment.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(PaymentDbContext))]
-    [Migration("20260905095034_InitialCreate")]
+    [Migration("20260919145306_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -21,26 +21,27 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("payment")
-                .HasAnnotation("ProductVersion", "10.0.3")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+                .HasAnnotation("ProductVersion", "10.0.4")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Concertable.Messaging.Domain.InboxMessageEntity", b =>
                 {
                     b.Property<Guid>("MessageId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ConsumerName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("MessageType")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<DateTimeOffset>("ReceivedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("MessageId", "ConsumerName");
 
@@ -53,41 +54,47 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Messaging.Domain.OutboxMessageEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Attempts")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("CorrelationId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<DateTimeOffset?>("DispatchedAtUtc")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Kind")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("LastError")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("MessageType")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<DateTimeOffset?>("NextRetryAtUtc")
-                        .HasColumnType("datetimeoffset");
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("OccurredAtUtc")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Payload")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Status", "OccurredAtUtc");
 
                     b.ToTable("Outbox", "messaging", t =>
                         {
@@ -98,39 +105,39 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionBindingEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("BoundAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CommissionConfigurationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<string>("ExternalReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("PayerReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<long?>("ReviewedGrossMinor")
                         .HasColumnType("bigint");
 
                     b.Property<string>("StripePaymentIntentId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("StripeSetupIntentId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -138,11 +145,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("StripePaymentIntentId")
                         .IsUnique()
-                        .HasFilter("[StripePaymentIntentId] IS NOT NULL");
+                        .HasFilter("\"StripePaymentIntentId\" IS NOT NULL");
 
                     b.HasIndex("StripeSetupIntentId")
                         .IsUnique()
-                        .HasFilter("[StripeSetupIntentId] IS NOT NULL");
+                        .HasFilter("\"StripeSetupIntentId\" IS NOT NULL");
 
                     b.HasIndex("ExternalReference", "PayerReference")
                         .IsUnique();
@@ -153,21 +160,21 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.CommissionConfigurationEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("Rate")
                         .HasPrecision(7, 4)
-                        .HasColumnType("decimal(7,4)")
+                        .HasColumnType("numeric(7,4)")
                         .HasColumnName("RatePercentage");
 
                     b.HasKey("Id");
 
                     b.ToTable("CommissionConfigurations", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_CommissionConfigurations_RatePercentage", "[RatePercentage] > 0 AND [RatePercentage] <= 100");
+                            t.HasCheckConstraint("CK_CommissionConfigurations_RatePercentage", "\"RatePercentage\" > 0 AND \"RatePercentage\" <= 100");
                         });
                 });
 
@@ -175,21 +182,21 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ChargeId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid?>("CommissionBindingId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("CommissionGrossMinor")
                         .HasColumnType("bigint");
@@ -202,34 +209,34 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<decimal>("CommissionVatRate")
                         .HasPrecision(7, 4)
-                        .HasColumnType("decimal(7,4)")
+                        .HasColumnType("numeric(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<Guid>("FromOwnerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("LastModifiedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastModifiedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<long>("PayeeGrossMinor")
                         .HasColumnType("bigint");
@@ -242,26 +249,26 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<string>("ReleaseOperationFingerprint")
                         .HasMaxLength(64)
-                        .HasColumnType("nchar(64)")
+                        .HasColumnType("character(64)")
                         .IsFixedLength();
 
                     b.Property<int?>("ReleaseOperationFingerprintVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("ReleaseOperationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ReleasedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ToOwnerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("TransferId")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -270,11 +277,11 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("CommissionBindingId")
                         .IsUnique()
-                        .HasFilter("[CommissionBindingId] IS NOT NULL");
+                        .HasFilter("\"CommissionBindingId\" IS NOT NULL");
 
                     b.HasIndex("ReleaseOperationId")
                         .IsUnique()
-                        .HasFilter("[ReleaseOperationId] IS NOT NULL");
+                        .HasFilter("\"ReleaseOperationId\" IS NOT NULL");
 
                     b.HasIndex("Status");
 
@@ -287,48 +294,48 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.FinancialOperationEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FailureCode")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("FailureMessage")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTimeOffset>("LastAttemptedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ReferenceId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RequestFingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("character varying(16)");
 
                     b.HasKey("Id");
 
@@ -343,24 +350,26 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Currency")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("OwnerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Type")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Type", "OwnerId", "Currency")
                         .IsUnique()
                         .HasDatabaseName("IX_LedgerAccounts_Type_OwnerId_Currency");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("Type", "OwnerId", "Currency"), false);
 
                     b.ToTable("LedgerAccounts", "payment");
                 });
@@ -369,24 +378,24 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
 
                     b.Property<int>("Currency")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Direction")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("LedgerAccountId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("LedgerTransactionId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -401,33 +410,33 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("PaymentIntentId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<int>("PostingType")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -445,7 +454,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.PaymentRefundEntity", b =>
                 {
                     b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("CommissionRefundedMinor")
                         .HasColumnType("bigint");
@@ -454,32 +463,32 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("EscrowId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<long>("GrossRefundedMinor")
                         .HasColumnType("bigint");
 
                     b.Property<Guid?>("OperationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("PayerTotalRefundedMinor")
                         .HasColumnType("bigint");
 
                     b.Property<int?>("SettlementTransactionId")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("StripeRefundId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -487,105 +496,104 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.HasIndex("OperationId")
                         .IsUnique()
-                        .HasFilter("[OperationId] IS NOT NULL");
+                        .HasFilter("\"OperationId\" IS NOT NULL");
 
                     b.HasIndex("SettlementTransactionId");
 
                     b.HasIndex("StripeRefundId")
-                        .IsUnique()
-                        .HasFilter("[StripeRefundId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("PaymentRefunds", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_PaymentRefunds_Owner", "([EscrowId] IS NULL AND [SettlementTransactionId] IS NOT NULL) OR ([EscrowId] IS NOT NULL AND [SettlementTransactionId] IS NULL)");
+                            t.HasCheckConstraint("CK_PaymentRefunds_Owner", "(\"EscrowId\" IS NULL AND \"SettlementTransactionId\" IS NOT NULL) OR (\"EscrowId\" IS NOT NULL AND \"SettlementTransactionId\" IS NULL)");
                         });
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.PaymentSessionAttemptEntity", b =>
                 {
                     b.Property<Guid>("AttemptId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("CaptureBefore")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("FailureCode")
                         .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasColumnType("character varying(40)");
 
                     b.Property<DateTimeOffset>("LastAttemptedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("LastObservedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("LastProviderEventCreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastProviderEventId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("LastProviderStatus")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset?>("NextReconcileAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OperationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PaymentMethodId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid?>("PredecessorAttemptId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ProviderDiagnosticCode")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ProviderDiagnosticMessage")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("ProviderObjectId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ProviderObjectKind")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("ProviderRequestId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<long>("Revision")
                         .HasColumnType("bigint");
 
-                    b.Property<byte[]>("RowVersion")
+                    b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
-                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTimeOffset?>("TerminalAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("AttemptId");
 
@@ -596,7 +604,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("OperationId", "PredecessorAttemptId")
                         .IsUnique()
                         .HasDatabaseName("UX_PaymentSessionAttempts_OperationId_PredecessorAttemptId")
-                        .HasFilter("[PredecessorAttemptId] IS NOT NULL");
+                        .HasFilter("\"PredecessorAttemptId\" IS NOT NULL");
 
                     b.HasIndex("OperationId", "Revision")
                         .IsUnique()
@@ -605,105 +613,105 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasIndex("ProviderObjectKind", "ProviderObjectId")
                         .IsUnique()
                         .HasDatabaseName("UX_PaymentSessionAttempts_ProviderObjectKind_ProviderObjectId")
-                        .HasFilter("[ProviderObjectId] IS NOT NULL");
+                        .HasFilter("\"ProviderObjectId\" IS NOT NULL");
 
                     b.ToTable("PaymentSessionAttempts", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_PaymentSessionAttempts_ProviderBinding", "[ProviderObjectId] IS NOT NULL OR [State] = 'Creating'");
+                            t.HasCheckConstraint("CK_PaymentSessionAttempts_ProviderBinding", "\"ProviderObjectId\" IS NOT NULL OR \"State\" = 'Creating'");
 
-                            t.HasCheckConstraint("CK_PaymentSessionAttempts_Revision", "[Revision] >= 1");
+                            t.HasCheckConstraint("CK_PaymentSessionAttempts_Revision", "\"Revision\" >= 1");
                         });
                 });
 
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.PaymentSessionOperationEntity", b =>
                 {
                     b.Property<Guid>("OperationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long?>("AmountMinor")
                         .HasColumnType("bigint");
 
                     b.Property<DateTimeOffset?>("CanceledAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Currency")
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<long>("CurrentRevision")
                         .HasColumnType("bigint");
 
                     b.Property<int>("FingerprintVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("FundsRouting")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset?>("MandateAcceptedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("MandateTermsVersion")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("PayeeOwnerKey")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("PayerOwnerKey")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("PaymentMethodId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ProviderConnectedAccountId")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("ProviderCustomerId")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("RequestFingerprint")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nchar(64)")
+                        .HasColumnType("character(64)")
                         .IsFixedLength();
 
-                    b.Property<byte[]>("RowVersion")
+                    b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
-                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
 
                     b.Property<string>("Session")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("SessionKind")
                         .IsRequired()
                         .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
+                        .HasColumnType("character varying(40)");
 
                     b.HasKey("OperationId");
 
@@ -716,13 +724,13 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.ToTable("PaymentSessionOperations", "payment", t =>
                         {
-                            t.HasCheckConstraint("CK_PaymentSessionOperations_CurrentRevision", "[CurrentRevision] >= 1");
+                            t.HasCheckConstraint("CK_PaymentSessionOperations_CurrentRevision", "\"CurrentRevision\" >= 1");
 
-                            t.HasCheckConstraint("CK_PaymentSessionOperations_FingerprintVersion", "[FingerprintVersion] >= 1");
+                            t.HasCheckConstraint("CK_PaymentSessionOperations_FingerprintVersion", "\"FingerprintVersion\" >= 1");
 
-                            t.HasCheckConstraint("CK_PaymentSessionOperations_MandateEvidence", "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
+                            t.HasCheckConstraint("CK_PaymentSessionOperations_MandateEvidence", "(\"MandateTermsVersion\" IS NULL AND \"MandateAcceptedAt\" IS NULL) OR (\"MandateTermsVersion\" IS NOT NULL AND \"MandateAcceptedAt\" IS NOT NULL)");
 
-                            t.HasCheckConstraint("CK_PaymentSessionOperations_RequestFingerprint", "LEN([RequestFingerprint]) = 64");
+                            t.HasCheckConstraint("CK_PaymentSessionOperations_RequestFingerprint", "char_length(\"RequestFingerprint\") = 64");
                         });
                 });
 
@@ -730,25 +738,25 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("OwnerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<string>("StripeAccountId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<string>("StripeCustomerId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
@@ -765,10 +773,10 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
             modelBuilder.Entity("Concertable.Payment.Domain.Entities.StripeEventEntity", b =>
                 {
                     b.Property<string>("EventId")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("EventProcessedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("EventId");
 
@@ -779,9 +787,9 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<long>("Amount")
                         .HasColumnType("bigint");
@@ -789,46 +797,46 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.Property<string>("ClientReference")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Discriminator")
                         .IsRequired()
                         .HasMaxLength(34)
-                        .HasColumnType("nvarchar(34)");
+                        .HasColumnType("character varying(34)");
 
                     b.Property<DateTimeOffset?>("LastModifiedAt")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastModifiedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("text");
 
                     b.Property<string>("OperationType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<Guid>("PayeeId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("PayerId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PaymentIntentId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("text");
 
                     b.Property<int>("Status")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -860,7 +868,7 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                     b.HasBaseType("Concertable.Payment.Domain.Entities.TransactionEntity");
 
                     b.Property<Guid?>("CommissionBindingId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("CommissionGrossMinor")
                         .HasColumnType("bigint");
@@ -873,24 +881,24 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
 
                     b.Property<decimal>("CommissionVatRate")
                         .HasPrecision(7, 4)
-                        .HasColumnType("decimal(7,4)")
+                        .HasColumnType("numeric(7,4)")
                         .HasColumnName("CommissionVatRatePercentage");
 
                     b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("character varying(3)");
 
                     b.Property<string>("OperationFingerprint")
                         .HasMaxLength(64)
-                        .HasColumnType("nchar(64)")
+                        .HasColumnType("character(64)")
                         .IsFixedLength();
 
                     b.Property<int?>("OperationFingerprintVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("OperationId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uuid");
 
                     b.Property<long>("PayeeGrossMinor")
                         .HasColumnType("bigint");
@@ -902,15 +910,15 @@ namespace Concertable.Payment.Infrastructure.Data.Migrations
                         .HasColumnType("bigint");
 
                     b.Property<bool>("RequiresAction")
-                        .HasColumnType("bit");
+                        .HasColumnType("boolean");
 
                     b.HasIndex("CommissionBindingId")
                         .IsUnique()
-                        .HasFilter("[CommissionBindingId] IS NOT NULL");
+                        .HasFilter("\"CommissionBindingId\" IS NOT NULL");
 
                     b.HasIndex("OperationId")
                         .IsUnique()
-                        .HasFilter("[OperationId] IS NOT NULL");
+                        .HasFilter("\"OperationId\" IS NOT NULL");
 
                     b.HasDiscriminator().HasValue("SettlementTransactionEntity");
                 });

@@ -1,5 +1,7 @@
+using Concertable.Messaging.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Options;
 
 namespace Concertable.Payment.Infrastructure.Data;
 
@@ -8,8 +10,13 @@ internal sealed class PaymentDbContextFactory : IDesignTimeDbContextFactory<Paym
     public PaymentDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(DesignTimeConfiguration.ConnectionString())
+            .UseNpgsql(
+                DesignTimeConfiguration.ConnectionString(),
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", Schema.Name))
             .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(
+            options,
+            Options.Create(new OutboxOptions()),
+            new PaymentConfigurationProvider());
     }
 }

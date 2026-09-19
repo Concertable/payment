@@ -32,7 +32,9 @@ public static class ServiceCollectionExtensions
         public IServiceCollection AddPaymentInfrastructure(IConfiguration configuration)
         {
             services.AddDbContext<PaymentDbContext>((sp, opts) =>
-            opts.UseSqlServer(configuration.GetConnectionString("PaymentDb"))
+            opts.UseNpgsql(
+                    configuration.GetConnectionString("PaymentDb"),
+                    npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", Schema.Name))
                 .AddInterceptors(
                     sp.GetRequiredService<AuditInterceptor>(),
                     sp.GetRequiredService<IDomainEventDispatchInterceptor>())
@@ -172,14 +174,4 @@ public static class ServiceCollectionExtensions
         }
     }
 
-    extension(IServiceProvider services)
-    {
-        public async Task MigratePaymentDatabaseAsync()
-        {
-            using var scope = services.CreateScope();
-            var sp = scope.ServiceProvider;
-            await sp.GetRequiredService<OutboxDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
-        }
-    }
 }

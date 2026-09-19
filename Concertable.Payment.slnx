@@ -8,6 +8,7 @@
   <Project Path="api/src/Concertable.Payment.Application/Concertable.Payment.Application.csproj" />
   <Project Path="api/src/Concertable.Payment.Domain/Concertable.Payment.Domain.csproj" />
   <Project Path="api/src/Concertable.Payment.Infrastructure/Concertable.Payment.Infrastructure.csproj" />
+  <Project Path="api/src/Concertable.Payment.Migrations/Concertable.Payment.Migrations.csproj" />
   <Project Path="api/src/Concertable.Payment.Web/Concertable.Payment.Web.csproj" />
   <Project Path="api/src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj" />
   <Folder Name="/Tests/">

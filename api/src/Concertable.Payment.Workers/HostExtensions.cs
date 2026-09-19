@@ -1,8 +1,7 @@
 using Concertable.Messaging.Infrastructure.Extensions;
 using Concertable.Kernel;
-using Concertable.Messaging.Infrastructure.Inbox;
-using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Contracts.Events;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Concertable.ServiceDefaults;
@@ -52,24 +51,15 @@ public static class HostExtensions
                     .SubscribeTo<PaymentFailedEvent>());
 
             services.AddOutbox(
-                opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")),
+                opt => opt.UseNpgsql(
+                    builder.Configuration.GetConnectionString("PaymentDb"),
+                    npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory_Outbox", Schema.Messaging)),
                 runDispatcher: false);
-            services.AddInbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
+            services.AddInbox(opt => opt.UseNpgsql(
+                builder.Configuration.GetConnectionString("PaymentDb"),
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory_Inbox", Schema.Messaging)));
 
             return builder;
-        }
-    }
-
-    extension(IHost app)
-    {
-        public async Task MigrateStoresAsync()
-        {
-            await app.Services.MigratePaymentDatabaseAsync();
-
-            using var scope = app.Services.CreateScope();
-            var sp = scope.ServiceProvider;
-            await sp.GetRequiredService<OutboxDbContext>().Database.MigrateAsync();
-            await sp.GetRequiredService<InboxDbContext>().Database.MigrateAsync();
         }
     }
 }

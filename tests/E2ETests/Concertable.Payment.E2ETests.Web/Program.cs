@@ -23,7 +23,7 @@ public static class Program
         var app = builder.Build();
 
         app.MapPaymentE2EAdmin();
-        await app.UseWebHost();
+        app.UseWebHost();
 
         app.Run();
     }

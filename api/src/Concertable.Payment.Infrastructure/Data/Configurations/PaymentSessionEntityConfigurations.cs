@@ -17,17 +17,17 @@ internal sealed class PaymentSessionOperationEntityConfiguration
             {
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_CurrentRevision",
-                    "[CurrentRevision] >= 1");
+                    "\"CurrentRevision\" >= 1");
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_FingerprintVersion",
-                    "[FingerprintVersion] >= 1");
+                    "\"FingerprintVersion\" >= 1");
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_RequestFingerprint",
-                    "LEN([RequestFingerprint]) = 64");
+                    "char_length(\"RequestFingerprint\") = 64");
                 table.HasCheckConstraint(
                     "CK_PaymentSessionOperations_MandateEvidence",
-                    "([MandateTermsVersion] IS NULL AND [MandateAcceptedAt] IS NULL) "
-                        + "OR ([MandateTermsVersion] IS NOT NULL AND [MandateAcceptedAt] IS NOT NULL)");
+                    "(\"MandateTermsVersion\" IS NULL AND \"MandateAcceptedAt\" IS NULL) "
+                        + "OR (\"MandateTermsVersion\" IS NOT NULL AND \"MandateAcceptedAt\" IS NOT NULL)");
             });
         builder.HasKey(operation => operation.OperationId);
         builder.Property(operation => operation.OperationId).ValueGeneratedNever();
@@ -78,10 +78,10 @@ internal sealed class PaymentSessionAttemptEntityConfiguration
             {
                 table.HasCheckConstraint(
                     "CK_PaymentSessionAttempts_Revision",
-                    "[Revision] >= 1");
+                    "\"Revision\" >= 1");
                 table.HasCheckConstraint(
                     "CK_PaymentSessionAttempts_ProviderBinding",
-                    "[ProviderObjectId] IS NOT NULL OR [State] = 'Creating'");
+                    "\"ProviderObjectId\" IS NOT NULL OR \"State\" = 'Creating'");
             });
         builder.HasKey(attempt => attempt.AttemptId);
         builder.Property(attempt => attempt.AttemptId).ValueGeneratedNever();
@@ -101,11 +101,11 @@ internal sealed class PaymentSessionAttemptEntityConfiguration
             .HasDatabaseName(OperationRevisionIndex);
         builder.HasIndex(attempt => new { attempt.ProviderObjectKind, attempt.ProviderObjectId })
             .IsUnique()
-            .HasFilter("[ProviderObjectId] IS NOT NULL")
+            .HasFilter("\"ProviderObjectId\" IS NOT NULL")
             .HasDatabaseName(ProviderBindingIndex);
         builder.HasIndex(attempt => new { attempt.OperationId, attempt.PredecessorAttemptId })
             .IsUnique()
-            .HasFilter("[PredecessorAttemptId] IS NOT NULL")
+            .HasFilter("\"PredecessorAttemptId\" IS NOT NULL")
             .HasDatabaseName(PredecessorIndex);
         builder.HasIndex(attempt => attempt.State);
         builder.HasIndex(attempt => attempt.NextReconcileAt);

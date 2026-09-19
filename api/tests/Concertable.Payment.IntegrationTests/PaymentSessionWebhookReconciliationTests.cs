@@ -7,21 +7,21 @@ using Stripe;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<SqlFixture>
+public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<PostgresFixture>
 {
     private static readonly DateTime EventCreated = new(2026, 8, 20, 18, 0, 0, DateTimeKind.Utc);
 
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public PaymentSessionWebhookReconciliationTests(SqlFixture sql)
+    public PaymentSessionWebhookReconciliationTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
     public async Task Webhook_AfterProviderTransition_PublishesStateChangeOnce()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = Specification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -40,7 +40,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_DuplicateEventDelivery_PublishesStateChangeOnce()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = Specification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -58,7 +58,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_ReorderedEventAfterTerminal_DoesNotRegressOrRepublish()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = Specification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -79,7 +79,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_StalePayload_UsesRetrievedProviderTruth()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = Specification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -96,7 +96,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_UntrackedProviderObjectWithoutReference_IsNoOp()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var providerObjectId = $"pi_untracked_{Guid.NewGuid():N}";
         var before = await harness.PaymentSucceededCountAsync();
 
@@ -112,7 +112,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_AuthorizationCapturableAfterConsumerAction_ReachesAuthorized()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = Specification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -141,7 +141,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_SetupIntent_PublishesStateChangeOnce()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = SetupSpecification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -160,7 +160,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_SetupIntentSucceeded_ForAVerification_PublishesPaymentSucceededOnce()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = VerificationSpecification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;
@@ -185,7 +185,7 @@ public sealed class PaymentSessionWebhookReconciliationTests : IClassFixture<Sql
     [Fact]
     public async Task Webhook_SetupIntentSucceeded_ForAMethodSetup_PublishesNothing()
     {
-        await using var harness = await WebhookReconciliationHarness.CreateAsync(sql.ConnectionString);
+        await using var harness = await WebhookReconciliationHarness.CreateAsync(postgres.ConnectionString);
         var specification = SetupSpecification(Guid.CreateVersion7());
         await harness.CreateSessionAsync(specification);
         var providerObjectId = (await harness.GetCurrentAttemptAsync(specification.OperationId)).ProviderObjectId!;

@@ -18,6 +18,23 @@ public sealed class ResourceGraphTests
         AssertContainerRuntimeArgs(validBuilder, AuthConstants.Resource, "--user", "root");
         AssertUsesDeveloperCertificate(validBuilder, AuthConstants.Resource);
         await AssertNoSpaClientsAsync(validBuilder);
+        Assert.IsType<ProjectResource>(validBuilder.Resources.Single(resource =>
+            resource.Name == PaymentConstants.MigrationsResource));
+        AssertWaitsFor(
+            validBuilder,
+            PaymentConstants.MigrationsResource,
+            PaymentConstants.Database,
+            WaitType.WaitUntilHealthy);
+        AssertWaitsFor(
+            validBuilder,
+            PaymentConstants.WebResource,
+            PaymentConstants.MigrationsResource,
+            WaitType.WaitForCompletion);
+        AssertWaitsFor(
+            validBuilder,
+            PaymentConstants.WorkersResource,
+            PaymentConstants.MigrationsResource,
+            WaitType.WaitForCompletion);
         using var app = validBuilder.Build();
         var builder = AppHost.CreateBuilder([]);
         builder.Services.AddInvalidLifetimeGraph();
@@ -28,8 +45,8 @@ public sealed class ResourceGraphTests
     public async Task ProjectHostedPaymentWeb_AdvertisesNoDedicatedGrpcTransport()
     {
         var builder = DistributedApplication.CreateBuilder();
-        var sql = builder.AddSqlServer("sql");
-        var paymentDb = sql.AddDatabase(PaymentConstants.Database);
+        var postgres = builder.AddPostgres("postgres");
+        var paymentDb = postgres.AddDatabase(PaymentConstants.Database);
         var asb = builder.AddAzureServiceBus("asb");
         var auth = builder.AddContainerImage(AuthConstants.Resource, "test-image", $"sha256:{new string('a', 64)}")
             .WithHttpsEndpoint(targetPort: 8080, name: "https");
@@ -44,6 +61,22 @@ public sealed class ResourceGraphTests
         Assert.DoesNotContain(
             paymentWeb.Annotations.OfType<EndpointAnnotation>(),
             endpoint => endpoint.Name == "grpc");
+    }
+
+    private static void AssertWaitsFor(
+        IDistributedApplicationBuilder builder,
+        string resourceName,
+        string dependencyName,
+        WaitType waitType)
+    {
+        var resource = builder.Resources.Single(candidate => candidate.Name == resourceName);
+        var wait = Assert.Single(
+            resource.Annotations.OfType<WaitAnnotation>(),
+            annotation => annotation.Resource.Name == dependencyName);
+
+        Assert.Equal(waitType, wait.WaitType);
+        if (waitType == WaitType.WaitForCompletion)
+            Assert.Equal(0, wait.ExitCode);
     }
 
     private static async Task<Dictionary<string, object>> GetRawEnvironmentAsync(

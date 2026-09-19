@@ -5,6 +5,7 @@ using Concertable.Payment.Contracts.Events;
 using Concertable.Payment.Contracts;
 using Concertable.Payment.Api;
 using Concertable.Payment.Api.Extensions;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Extensions;
 using Concertable.Payment.Infrastructure.Grpc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -88,7 +89,9 @@ public static class HostExtensions
                     reg.HandleCommand<DepositEscrowCommand>();
                     reg.HandleCommand<RefundEscrowCommand>();
                 });
-            services.AddOutbox(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
+            services.AddOutbox(opt => opt.UseNpgsql(
+                builder.Configuration.GetConnectionString("PaymentDb"),
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory_Outbox", Schema.Messaging)));
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(opts =>
@@ -142,7 +145,7 @@ public static class HostExtensions
 
     extension(WebApplication app)
     {
-        public async Task UseWebHost()
+        public WebApplication UseWebHost()
         {
             app.UseForwardedHeaders();
             app.UseExceptionHandler();
@@ -155,8 +158,7 @@ public static class HostExtensions
             app.MapControllers();
             app.MapDefaultEndpoints();
 
-            if (!app.Environment.IsProduction())
-                await app.Services.MigratePaymentDatabaseAsync();
+            return app;
         }
     }
 }

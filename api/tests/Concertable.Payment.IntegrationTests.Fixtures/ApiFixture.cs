@@ -1,6 +1,10 @@
-﻿using Concertable.Kernel;
+extern alias PaymentMigrations;
+
+using Concertable.Kernel;
+
 using Concertable.Kernel.DependencyInjection;
 using Concertable.Payment.Application.Interfaces;
+using Concertable.Payment.Infrastructure;
 using Concertable.Payment.Infrastructure.Services;
 using Concertable.Testing.Integration;
 using Microsoft.AspNetCore.Hosting;
@@ -11,27 +15,29 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Xunit;
+using PaymentMigrationJob = PaymentMigrations::Concertable.Payment.Migrations.PaymentMigrationJob;
 
 namespace Concertable.Payment.IntegrationTests.Fixtures;
 
 public sealed class ApiFixture : IAsyncLifetime
 {
-    private SqlFixture sqlFixture = null!;
+    private PostgresFixture postgresFixture = null!;
     private WebApplicationFactory<Program> factory = null!;
 
     public IServiceProvider Services => factory.Services;
 
     public async Task InitializeAsync()
     {
-        sqlFixture = new SqlFixture();
-        await sqlFixture.InitializeAsync();
+        postgresFixture = new PostgresFixture();
+        await postgresFixture.InitializeAsync();
+        await PaymentMigrationJob.RunAsync(postgresFixture.ConnectionString);
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment(Environments.Integration);
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:PaymentDb"] = sqlFixture.ConnectionString,
+                    ["ConnectionStrings:PaymentDb"] = postgresFixture.ConnectionString,
                     ["ExternalServices:UseRealStripe"] = "false",
                     ["PlatformFee:Fee"] = "0"
                 }));
@@ -46,18 +52,18 @@ public sealed class ApiFixture : IAsyncLifetime
         });
 
         _ = factory.Services;
-        await sqlFixture.InitializeRespawnerAsync();
+        await postgresFixture.InitializeRespawnerAsync(Schema.Owned);
     }
 
     public async Task DisposeAsync()
     {
         await factory.DisposeAsync();
-        await sqlFixture.DisposeAsync();
+        await postgresFixture.DisposeAsync();
     }
 
     public async Task ResetAsync()
     {
-        await sqlFixture.ResetAsync();
+        await postgresFixture.ResetAsync();
         Services.GetRequiredService<ControllableStripeSessionClient>().Reset();
     }
 
