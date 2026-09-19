@@ -113,7 +113,7 @@ Every Stripe call sits behind an interface (`Application/Interfaces/`: `IStripeA
 
 `WebhookController` (`POST api/Webhook`) reads the raw body + `Stripe-Signature` → `WebhookService` verifies the signature (`EventUtility.ValidateSignature`, secret from `StripeSettings`) and enqueues a `ProcessStripeWebhookCommand` through the outbox → `WebhookProcessor` applies the runtime resource-scope filter, then routes `PaymentIntent`/`SetupIntent` objects to their handlers. Production accepts the whole Stripe account; E2E accepts only intents for its run-scoped customers. Idempotency is two-layered:
 
-1. **Stripe-event dedup** — `WebhookProcessor` skips if `StripeEventEntity` (keyed on Stripe event id, `[payment].[StripeEvents]`) already exists, else inserts it inside the same outbox transaction as the side-effects.
+1. **Stripe-event dedup** — `WebhookProcessor` skips if `StripeEventEntity` (keyed on Stripe event id, `payment."StripeEvents"`) already exists, else inserts it inside the same outbox transaction as the side-effects.
 2. **Messaging inbox** — subscribers dedup on `(MessageId, ConsumerName)`.
 
 Outbound Stripe calls carry idempotency keys built through one shape — `StripeIdempotencyKey` (`Application/Provider/`) renders `<scope>:<identity>:<attempt>:<revision>:<action>`, and `Services/StripeRequestOptions.cs` binds the legacy financial-operation and commission-binding writes to it. No key contains a payload field: the payment-session subsystem supplies a real attempt and revision, refunds supply their `PaymentRefundEntity` reservation id, and the remaining single-attempt writes pass their own identity as the attempt.
