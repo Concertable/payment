@@ -4,7 +4,7 @@ using Concertable.Kernel;
 using Dapper;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -77,8 +77,15 @@ public static class E2EAdminExtensions
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
-            TablesToIgnore = ["__EFMigrationsHistory", new Table("payment", "PayoutAccounts")],
-            DbAdapter = DbAdapter.SqlServer,
+            SchemasToInclude = ["payment", "messaging"],
+            TablesToIgnore =
+            [
+                new Table("payment", "__EFMigrationsHistory"),
+                new Table("messaging", "__EFMigrationsHistory_Inbox"),
+                new Table("messaging", "__EFMigrationsHistory_Outbox"),
+                new Table("payment", "PayoutAccounts"),
+            ],
+            DbAdapter = DbAdapter.Postgres,
             WithReseed = true,
         });
         await respawner.ResetAsync(connection);
@@ -94,13 +101,14 @@ public static class E2EAdminExtensions
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<string?>(
             """
-            SELECT TOP 1 PaymentIntentId
-            FROM payment.Transactions
-            WHERE Discriminator = 'SettlementTransactionEntity'
-              AND OperationType = @operationType
-              AND ClientReference = @clientReference
-              AND PaymentIntentId LIKE 'pi[_]%'
-            ORDER BY CreatedAt DESC
+            SELECT "PaymentIntentId"
+            FROM payment."Transactions"
+            WHERE "Discriminator" = 'SettlementTransactionEntity'
+              AND "OperationType" = @operationType
+              AND "ClientReference" = @clientReference
+              AND "PaymentIntentId" LIKE 'pi\_%'
+            ORDER BY "CreatedAt" DESC
+            LIMIT 1
             """,
             new { operationType, clientReference });
         return Optional(value);
@@ -114,7 +122,7 @@ public static class E2EAdminExtensions
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<Guid?>(
-            "SELECT ToOwnerId FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            "SELECT \"ToOwnerId\" FROM payment.\"Escrows\" WHERE \"OperationType\" = @operationType AND \"ClientReference\" = @clientReference",
             new { operationType, clientReference });
         return Optional(value);
     }
@@ -127,7 +135,7 @@ public static class E2EAdminExtensions
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<string>(
-            "SELECT ChargeId FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            "SELECT \"ChargeId\" FROM payment.\"Escrows\" WHERE \"OperationType\" = @operationType AND \"ClientReference\" = @clientReference",
             new { operationType, clientReference }));
     }
 
@@ -139,7 +147,7 @@ public static class E2EAdminExtensions
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<int?>(
-            "SELECT Status FROM payment.Escrows WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            "SELECT \"Status\" FROM payment.\"Escrows\" WHERE \"OperationType\" = @operationType AND \"ClientReference\" = @clientReference",
             new { operationType, clientReference });
         return Optional(value);
     }
@@ -153,13 +161,14 @@ public static class E2EAdminExtensions
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         var value = await connection.QuerySingleOrDefaultAsync<string?>(
             """
-            SELECT TOP 1 r.StripeRefundId
-            FROM payment.PaymentRefunds r
-            JOIN payment.Escrows e ON e.Id = r.EscrowId
-            WHERE e.OperationType = @operationType
-              AND e.ClientReference = @clientReference
-              AND r.StripeRefundId IS NOT NULL
-            ORDER BY r.CompletedAt DESC
+            SELECT r."StripeRefundId"
+            FROM payment."PaymentRefunds" r
+            JOIN payment."Escrows" e ON e."Id" = r."EscrowId"
+            WHERE e."OperationType" = @operationType
+              AND e."ClientReference" = @clientReference
+              AND r."StripeRefundId" IS NOT NULL
+            ORDER BY r."CompletedAt" DESC
+            LIMIT 1
             """,
             new { operationType, clientReference });
         return Optional(value);
@@ -173,7 +182,7 @@ public static class E2EAdminExtensions
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<int>(
-            "SELECT COUNT(*) FROM payment.LedgerTransactions WHERE OperationType = @operationType AND ClientReference = @clientReference",
+            "SELECT COUNT(*) FROM payment.\"LedgerTransactions\" WHERE \"OperationType\" = @operationType AND \"ClientReference\" = @clientReference",
             new { operationType, clientReference }));
     }
 
@@ -186,10 +195,10 @@ public static class E2EAdminExtensions
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<long>(
             """
-            SELECT COALESCE(SUM(e.Amount), 0)
-            FROM payment.LedgerEntries e
-            JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
-            WHERE t.OperationType = @operationType AND t.ClientReference = @clientReference
+            SELECT COALESCE(SUM(e."Amount"), 0)
+            FROM payment."LedgerEntries" e
+            JOIN payment."LedgerTransactions" t ON t."Id" = e."LedgerTransactionId"
+            WHERE t."OperationType" = @operationType AND t."ClientReference" = @clientReference
             """,
             new { operationType, clientReference }));
     }
@@ -203,13 +212,13 @@ public static class E2EAdminExtensions
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<long>(
             """
-            SELECT COALESCE(-SUM(e.Amount), 0)
-            FROM payment.LedgerEntries e
-            JOIN payment.LedgerTransactions t ON t.Id = e.LedgerTransactionId
-            JOIN payment.LedgerAccounts a ON a.Id = e.LedgerAccountId
-            WHERE t.OperationType = @operationType
-              AND t.ClientReference = @clientReference
-              AND a.Type = @platformRevenue
+            SELECT COALESCE(-SUM(e."Amount"), 0)
+            FROM payment."LedgerEntries" e
+            JOIN payment."LedgerTransactions" t ON t."Id" = e."LedgerTransactionId"
+            JOIN payment."LedgerAccounts" a ON a."Id" = e."LedgerAccountId"
+            WHERE t."OperationType" = @operationType
+              AND t."ClientReference" = @clientReference
+              AND a."Type" = @platformRevenue
             """,
             new { operationType, clientReference, platformRevenue = PlatformRevenueAccountType }));
     }
@@ -220,17 +229,17 @@ public static class E2EAdminExtensions
     {
         await using var connection = await OpenConnectionAsync(options, cancellationToken);
         return Results.Ok(await connection.QuerySingleAsync<int>(
-            "SELECT COUNT(*) FROM messaging.Outbox WHERE Status IN (@pending, @dispatching)",
+            "SELECT COUNT(*) FROM messaging.\"Outbox\" WHERE \"Status\" IN (@pending, @dispatching)",
             new { pending = PendingOutboxStatus, dispatching = DispatchingOutboxStatus }));
     }
 
     private static IResult Optional(object? value) => value is null ? Results.NoContent() : Results.Ok(value);
 
-    private static async Task<SqlConnection> OpenConnectionAsync(
+    private static async Task<NpgsqlConnection> OpenConnectionAsync(
         E2EAdminOptions options,
         CancellationToken cancellationToken)
     {
-        var connection = new SqlConnection(options.ConnectionString);
+        var connection = new NpgsqlConnection(options.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         return connection;
     }

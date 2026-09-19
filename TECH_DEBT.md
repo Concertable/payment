@@ -79,6 +79,15 @@ operation identities.
 
 ## LOW
 
+### Published NuGet packages omit package readmes
+
+`Concertable.Payment.Contracts`, `Concertable.Payment.Client`, `Concertable.Payment.Hosting`, and
+`Concertable.Payment.TestKit` pack successfully but emit NuGet's missing-readme warning. Their packages
+therefore provide no package-specific entrypoint for feed consumers.
+
+**Resolves when:** every published Payment package declares and contains an accurate `PackageReadmeFile`,
+and the repository's pack and clean-consumer verification complete without the missing-readme warning.
+
 ### `AddStripeCli` makes a host graph unresolvable without a live Stripe CLI
 
 `AppHostExtensions.AddStripeCli` hangs a `WithEnvironment` callback on `payment-web` that awaits a webhook

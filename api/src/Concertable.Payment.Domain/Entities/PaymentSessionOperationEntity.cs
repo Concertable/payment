@@ -62,7 +62,7 @@ internal sealed class PaymentSessionOperationEntity
     public long CurrentRevision { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? CanceledAt { get; private set; }
-    public byte[] RowVersion { get; private set; } = null!;
+    public uint RowVersion { get; private set; }
     public IReadOnlyList<PaymentSessionAttemptEntity> Attempts => attempts.AsReadOnly();
     public PaymentSessionAttemptEntity CurrentAttempt =>
         attempts.Single(attempt => attempt.Revision == CurrentRevision);

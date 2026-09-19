@@ -218,7 +218,7 @@ internal sealed class StripeSessionClient : IStripeSessionClient
             ?? intent.LatestCharge?.PaymentMethodDetails?.CardPresent?.CaptureBefore;
         return captureBefore is null || captureBefore.Value == DateTime.UnixEpoch
             ? null
-            : new DateTimeOffset(captureBefore.Value);
+            : new DateTimeOffset(DateTime.SpecifyKind(captureBefore.Value, DateTimeKind.Utc));
     }
 
     private ProviderSession ToResult(SetupIntent intent) =>

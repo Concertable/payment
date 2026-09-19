@@ -6,7 +6,7 @@ builder.AddWebHost();
 
 var app = builder.Build();
 
-await app.UseWebHost();
+app.UseWebHost();
 
 app.Run();
 

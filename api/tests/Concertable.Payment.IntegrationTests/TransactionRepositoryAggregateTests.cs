@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Payment.Domain;
 using Concertable.Payment.Domain.Entities;
 using Concertable.Payment.Domain.Enums;
@@ -9,13 +11,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixture>
+public sealed class TransactionRepositoryAggregateTests : IClassFixture<PostgresFixture>
 {
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public TransactionRepositoryAggregateTests(SqlFixture sql)
+    public TransactionRepositoryAggregateTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
@@ -226,8 +228,8 @@ public sealed class TransactionRepositoryAggregateTests : IClassFixture<SqlFixtu
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
+            .UseNpgsql(postgres.ConnectionString)
             .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(options, Options.Create(new OutboxOptions()), new PaymentConfigurationProvider());
     }
 }

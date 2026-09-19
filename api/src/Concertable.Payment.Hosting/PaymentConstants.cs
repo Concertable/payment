@@ -5,6 +5,7 @@ namespace Concertable.Payment.Hosting;
 public static class PaymentConstants
 {
     public const string Database = "PaymentDb";
+    public const string MigrationsResource = "payment-migrations";
     public const string WebResource = "payment-web";
     public const string WorkersResource = "payment-workers";
     public const string StripeCliResource = "stripe-cli";

@@ -16,8 +16,8 @@ internal sealed class CommissionBindingEntityConfiguration
         builder.Property(a => a.StripePaymentIntentId).HasMaxLength(100);
         builder.Property(a => a.StripeSetupIntentId).HasMaxLength(100);
         builder.HasIndex(a => new { a.ExternalReference, a.PayerReference }).IsUnique();
-        builder.HasIndex(a => a.StripePaymentIntentId).IsUnique().HasFilter("[StripePaymentIntentId] IS NOT NULL");
-        builder.HasIndex(a => a.StripeSetupIntentId).IsUnique().HasFilter("[StripeSetupIntentId] IS NOT NULL");
+        builder.HasIndex(a => a.StripePaymentIntentId).IsUnique().HasFilter("\"StripePaymentIntentId\" IS NOT NULL");
+        builder.HasIndex(a => a.StripeSetupIntentId).IsUnique().HasFilter("\"StripeSetupIntentId\" IS NOT NULL");
         builder.HasOne(a => a.CommissionConfiguration)
             .WithMany()
             .HasForeignKey(a => a.CommissionConfigurationId)

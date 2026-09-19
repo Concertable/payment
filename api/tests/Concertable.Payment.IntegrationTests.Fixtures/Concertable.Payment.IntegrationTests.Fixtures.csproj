@@ -15,6 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Infrastructure\Concertable.Payment.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Migrations\Concertable.Payment.Migrations.csproj" Aliases="PaymentMigrations" />
     <ProjectReference Include="..\..\..\api\src\Concertable.Payment.Web\Concertable.Payment.Web.csproj" />
   </ItemGroup>
 

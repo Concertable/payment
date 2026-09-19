@@ -1,4 +1,6 @@
-﻿using Concertable.Kernel.ValueObjects;
+using Microsoft.Extensions.Options;
+using Concertable.Messaging.Infrastructure.Outbox;
+using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.Interfaces;
 using Concertable.Payment.Application.PaymentSessions;
 using Concertable.Payment.Application.Provider;
@@ -21,13 +23,13 @@ using Reunion;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
+public sealed class PaymentSessionServiceTests : IClassFixture<PostgresFixture>
 {
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public PaymentSessionServiceTests(SqlFixture sql)
+    public PaymentSessionServiceTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
@@ -422,7 +424,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var persisted = await refreshContext.PaymentSessionAttempts
             .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
         Assert.Equal(initialState, persisted.State);
-        Assert.Equal(initialObservedAt, persisted.LastObservedAt);
+        Assert.Equal(initialObservedAt!.Value, persisted.LastObservedAt!.Value, TimeSpan.FromMicroseconds(1));
         Assert.NotNull(persisted.NextReconcileAt);
         Assert.Equal(persisted.LastAttemptedAt, persisted.NextReconcileAt);
     }
@@ -612,8 +614,8 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var persistedAttempt = Assert.Single(attempts);
         Assert.Equal(PaymentOperationState.Failed, persistedAttempt.State);
         Assert.Equal("failed", persistedAttempt.LastProviderStatus);
-        Assert.Equal(failedAt, persistedAttempt.LastObservedAt);
-        Assert.Equal(failedAt, persistedAttempt.TerminalAt);
+        Assert.Equal(failedAt, persistedAttempt.LastObservedAt!.Value, TimeSpan.FromMicroseconds(1));
+        Assert.Equal(failedAt, persistedAttempt.TerminalAt!.Value, TimeSpan.FromMicroseconds(1));
         Assert.Equal(PaymentOperationFailureCode.Declined, persistedAttempt.FailureCode);
     }
 
@@ -731,7 +733,7 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
         var persisted = await assertContext.PaymentSessionAttempts
             .SingleAsync(attempt => attempt.OperationId == specification.OperationId);
         Assert.Equal(PaymentOperationState.Processing, persisted.State);
-        Assert.Equal(observation.ObservedAt, persisted.LastObservedAt);
+        Assert.Equal(observation.ObservedAt, persisted.LastObservedAt!.Value, TimeSpan.FromMicroseconds(1));
     }
 
     [Fact]
@@ -832,9 +834,9 @@ public sealed class PaymentSessionServiceTests : IClassFixture<SqlFixture>
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
+            .UseNpgsql(postgres.ConnectionString)
             .Options;
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(options, Options.Create(new OutboxOptions()), new PaymentConfigurationProvider());
     }
 
     private static async Task SeedPayerAsync(PaymentDbContext context, Guid payerOwnerId)
