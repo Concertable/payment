@@ -25,11 +25,12 @@ It knows **nothing** of tickets, concerts, deals, bookings, applications, buyers
 | `Concertable.Payment.Application` | Shared csproj | Interfaces, DTOs, requests, mappers, transaction-handler contracts. |
 | `Concertable.Payment.Domain` | Shared csproj | Entities, enums, the pure `CommissionCalculator`. |
 | `Concertable.Payment.Infrastructure` | Shared csproj | EF, services, Stripe clients, gRPC services, event handlers, webhook pipeline. |
+| `Concertable.Payment.Migrations` | Containerized console host | Applies and verifies Payment, outbox, and inbox migrations before runtime hosts start. |
 | `Concertable.Payment.Client` | **Packable** package | Refit-free gRPC **client** stubs + typed adapters (`I*Client`). Consumed by B2B/Customer. |
 | `Concertable.Payment.Contracts` | **Packable** package | Integration events + cross-service DTOs + metadata-key/`type` constants. |
 | `Concertable.Payment.AppHost` | Aspire AppHost | Local-dev orchestrator only. |
 
-**Database:** `PaymentDb` (SQL Server), single `PaymentDbContext`, default schema `payment` (table constants in `Infrastructure/Schema.cs`). Web migrates only when not Production; Workers migrates unconditionally (plus the outbox/inbox contexts).
+**Database:** `PaymentDb` (PostgreSQL), with Payment-owned tables in the `payment` schema and inbox/outbox tables in `messaging` (schema and table constants in `Infrastructure/Schema.cs`). The migration host owns schema application; Web and Workers never migrate at runtime and start only after that job completes.
 
 The Payment Web container keeps HTTP/1.1 REST, webhook, and mobile traffic on cleartext port `8080`. Its
 separate cleartext port `8081` is HTTP/2-only for gRPC; `Payment.Hosting` publishes that listener as the `grpc`
@@ -159,7 +160,7 @@ JWT Bearer; the sole accepted audience is `concertable.payment.api`. gRPC + writ
 
 ## Tech stack
 
-.NET 10 · EF Core + SQL Server (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions (`result-errors` skill).
+.NET 10 · EF Core + Npgsql/PostgreSQL (`PaymentDbContext : DbContextBase`) · Stripe.net · gRPC (`Grpc.AspNetCore`, `Google.Protobuf`) · Azure Service Bus + `Concertable.Messaging` (Outbox/Inbox/Transport) · Aspire (`Concertable.ServiceDefaults`) · `Concertable.Shared.Api` · Dapper. Published client operations return Reunion results with Payment-owned error unions (`result-errors` skill).
 
 ---
 

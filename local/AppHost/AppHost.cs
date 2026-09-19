@@ -10,9 +10,10 @@ public static class AppHost
     public static IDistributedApplicationBuilder CreateBuilder(string[] args)
     {
         var builder = StrictDistributedApplication.CreateBuilder(args);
-        var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");
+        var sql = builder.AddSqlServer("sql").WithDataVolume("concertable-payment-sql-data");
         var authDb = sql.AddDatabase(AuthConstants.Database);
-        var paymentDb = sql.AddDatabase(PaymentConstants.Database);
+        var postgres = builder.AddPostgresContainer("concertable-payment-postgres-data");
+        var paymentDb = postgres.AddDatabase(PaymentConstants.Database);
         var asb = builder.AddServiceBus();
         asb.Topology().AddPaymentTopology().AddAuthTopology().RunAsEmulator();
         var auth = builder.AddAuth(AuthImage, AuthDigest, authDb, asb)
@@ -20,8 +21,11 @@ public static class AppHost
                           .WithHttpsEndpoint(targetPort: AuthConstants.ContainerPort, name: "https");
         auth.WithSpaClients([]);
         auth.WithEnvironment("ServiceAuth__AuthClientId", "concertable-auth");
-        var paymentWeb = builder.AddPaymentWeb<Projects.Concertable_Payment_Web>(auth, paymentDb, asb);
-        builder.AddPaymentWorkers<Projects.Concertable_Payment_Workers>(paymentDb, asb);
+        var migrations = builder.AddPaymentMigrations<Projects.Concertable_Payment_Migrations>(paymentDb);
+        var paymentWeb = builder.AddPaymentWeb<Projects.Concertable_Payment_Web>(auth, paymentDb, asb)
+            .WaitForCompletion(migrations);
+        builder.AddPaymentWorkers<Projects.Concertable_Payment_Workers>(paymentDb, asb)
+            .WaitForCompletion(migrations);
         builder.AddStripeCli(paymentWeb);
         return builder;
     }

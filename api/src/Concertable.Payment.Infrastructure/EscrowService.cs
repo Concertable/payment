@@ -387,7 +387,7 @@ internal sealed class EscrowService : IEscrowService
                 new EscrowReleaseError.PaymentFailure(paymentError!));
         }
 
-        EnsureTransition(escrow.Release(transfer.ProviderTransferId, timeProvider.GetUtcNow().DateTime));
+        EnsureTransition(escrow.Release(transfer.ProviderTransferId, timeProvider.GetUtcNow().UtcDateTime));
         await ledger.StageAsync(
             LedgerPostings.EscrowRelease(
                 escrow.ToOwnerId,

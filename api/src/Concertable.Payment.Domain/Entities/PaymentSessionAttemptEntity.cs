@@ -64,7 +64,7 @@ internal sealed class PaymentSessionAttemptEntity : IEventRaiser
     public string? PaymentMethodId { get; private set; }
     public string? LastProviderEventId { get; private set; }
     public DateTimeOffset? LastProviderEventCreatedAt { get; private set; }
-    public byte[] RowVersion { get; private set; } = null!;
+    public uint RowVersion { get; private set; }
 
     public IReadOnlyList<IDomainEvent> DomainEvents => events.DomainEvents;
 

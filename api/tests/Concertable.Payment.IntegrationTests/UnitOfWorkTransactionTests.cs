@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using Concertable.Messaging.Infrastructure.Outbox;
 using Concertable.Kernel;
 using Concertable.Kernel.ValueObjects;
 using Concertable.Payment.Application.DTOs;
@@ -13,14 +15,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Concertable.Payment.IntegrationTests;
 
-public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
+public sealed class UnitOfWorkTransactionTests : IClassFixture<PostgresFixture>
 {
     private static int referenceId = 10_000;
-    private readonly SqlFixture sql;
+    private readonly PostgresFixture postgres;
 
-    public UnitOfWorkTransactionTests(SqlFixture sql)
+    public UnitOfWorkTransactionTests(PostgresFixture postgres)
     {
-        this.sql = sql;
+        this.postgres = postgres;
     }
 
     [Fact]
@@ -145,10 +147,10 @@ public sealed class UnitOfWorkTransactionTests : IClassFixture<SqlFixture>
     private PaymentDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PaymentDbContext>()
-            .UseSqlServer(sql.ConnectionString)
+            .UseNpgsql(postgres.ConnectionString)
             .Options;
 
-        return new PaymentDbContext(options, new PaymentConfigurationProvider());
+        return new PaymentDbContext(options, Options.Create(new OutboxOptions()), new PaymentConfigurationProvider());
     }
 
     private static LedgerService CreateLedger(PaymentDbContext context) =>

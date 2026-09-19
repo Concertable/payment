@@ -18,6 +18,6 @@ internal sealed class CommissionConfigurationEntityConfiguration
         builder.ToTable(t =>
             t.HasCheckConstraint(
                 "CK_CommissionConfigurations_RatePercentage",
-                "[RatePercentage] > 0 AND [RatePercentage] <= 100"));
+                "\"RatePercentage\" > 0 AND \"RatePercentage\" <= 100"));
     }
 }
