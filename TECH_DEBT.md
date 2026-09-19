@@ -289,3 +289,25 @@ gate never sees it and must not be loosened on its account.
 `Aspire.Hosting.*` pin moves past it. Both are upstream of this repository; a direct `MessagePack` pin here
 would diverge Payment from every other service's graph to patch one leaf, and the fix belongs with the
 platform pin instead.
+
+---
+
+### Published images carry no version tag, so nothing downstream can order them
+
+`publish-images.yml` pushes each image under two tags only: the source revision and `latest`. Every
+other service publishes its train version alongside them — `auth`, `b2b-web`, `customer-web` and
+`search-web` all carry a tag like `0.2.0-alpha.0.302` on the same digest as their commit SHA.
+
+`verify-payment-images.ps1` already computes the value and writes `version` into
+`artifacts/images/payment-images.json`; the push step simply never tags with it. And in CI the value is
+not the real one anyway, because the workflow passes no `-BuildVersion` and the script falls back to
+`0.0.0-local.<sha12>`.
+
+A commit SHA names an artifact but not a position in a sequence, and `latest` is mutable and cannot be
+pinned. So a consumer that pins a Payment image can only be raised by hand: `system`'s
+`compatibility/local.yaml` pins all three and is blocked on this — its own `TECH_DEBT.md` carries the
+other half.
+
+**Resolves when:** the publish workflow resolves the same MinVer version the packages publish under,
+passes it to the script, and pushes it as a third tag; and a published Payment digest carries a semver
+tag.
