@@ -80,7 +80,10 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Could not load '$archive'." }
 
             $local = "$($image.repository):$($image.tag)"
-            foreach ($tag in @($image.revision, $image.latest)) {
+            # The version tag is what a consumer can order. A commit SHA names an artefact without
+            # placing it in a sequence, and `latest` is mutable, so neither can be raised automatically.
+            if (-not $image.version) { throw "Refusing to push '$($image.name)': the manifest carries no version tag." }
+            foreach ($tag in @($image.revision, $image.version, $image.latest)) {
               $reference = "ghcr.io/$($image.repository):$tag"
               docker image tag $local $reference
               if ($LASTEXITCODE -ne 0) { throw "Could not tag '$reference'." }
