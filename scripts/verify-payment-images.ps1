@@ -35,17 +35,28 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($revision)) {
 $revision = $revision.Trim()
 
 if ([string]::IsNullOrWhiteSpace($BuildVersion)) {
-    # `g` prefix, git-describe style: a purely numeric SemVer pre-release identifier may not carry a
-    # leading zero, and an all-digit hex prefix beginning with one makes MinVer reject the override.
-    $BuildVersion = "0.0.0-local.g$($revision.Substring(0, 12))"
+    # Ask MinVer for the same version the packages publish under, rather than inventing one. An
+    # invented version reaches the registry as an image tag, where it outlives the run that made it.
+    $versionProject = Join-Path $repositoryRoot 'api/src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'
+    $resolved = & dotnet msbuild $versionProject -restore -t:MinVer -getProperty:Version -nologo -verbosity:quiet
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not resolve the Payment version from MinVer (exit code $LASTEXITCODE)."
+    }
+    $BuildVersion = ($resolved | Where-Object { $_ } | Select-Object -Last 1).Trim()
+}
+
+# The tag outlives the run, so a version that is not a version must stop the build rather than reach
+# the registry. MINVER1005 on an invalid override was how this surfaced the first time.
+if ($BuildVersion -notmatch '^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$') {
+    throw "Refusing to tag the Payment images with '$BuildVersion': not a semantic version."
 }
 
 $targets = @(
-    [ordered]@{ Name = 'payment-web'; Repository = 'payment-web'; Project = 'api/src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'; Tag = $revision; LatestTag = 'latest' }
-    [ordered]@{ Name = 'payment-workers'; Repository = 'payment-workers'; Project = 'api/src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj'; Tag = $revision; LatestTag = 'latest' }
-    [ordered]@{ Name = 'payment-migrations'; Repository = 'payment-migrations'; Project = 'api/src/Concertable.Payment.Migrations/Concertable.Payment.Migrations.csproj'; Tag = $revision; LatestTag = 'latest' }
-    [ordered]@{ Name = 'payment-web-e2e'; Repository = 'payment-web'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
-    [ordered]@{ Name = 'payment-workers-e2e'; Repository = 'payment-workers'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj'; Tag = "e2e-$revision"; LatestTag = 'e2e-latest' }
+    [ordered]@{ Name = 'payment-web'; Repository = 'payment-web'; Project = 'api/src/Concertable.Payment.Web/Concertable.Payment.Web.csproj'; Tag = $revision; VersionTag = $BuildVersion; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-workers'; Repository = 'payment-workers'; Project = 'api/src/Concertable.Payment.Workers/Concertable.Payment.Workers.csproj'; Tag = $revision; VersionTag = $BuildVersion; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-migrations'; Repository = 'payment-migrations'; Project = 'api/src/Concertable.Payment.Migrations/Concertable.Payment.Migrations.csproj'; Tag = $revision; VersionTag = $BuildVersion; LatestTag = 'latest' }
+    [ordered]@{ Name = 'payment-web-e2e'; Repository = 'payment-web'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Web/Concertable.Payment.E2ETests.Web.csproj'; Tag = "e2e-$revision"; VersionTag = "e2e-$BuildVersion"; LatestTag = 'e2e-latest' }
+    [ordered]@{ Name = 'payment-workers-e2e'; Repository = 'payment-workers'; Project = 'tests/E2ETests/Concertable.Payment.E2ETests.Workers/Concertable.Payment.E2ETests.Workers.csproj'; Tag = "e2e-$revision"; VersionTag = "e2e-$BuildVersion"; LatestTag = 'e2e-latest' }
 )
 
 function Resolve-UnderRoot {
@@ -123,7 +134,7 @@ foreach ($target in $targets) {
         archive = [System.IO.Path]::GetFileName($archivePath)
         revision = $target.Tag
         latest = $target.LatestTag
-        version = $BuildVersion
+        version = $target.VersionTag
         scanned = $false
     }
 
