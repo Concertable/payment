@@ -5,18 +5,20 @@ using Concertable.Payment.Hosting;
 public static class AppHost
 {
     private const string AuthImage = "ghcr.io/concertable/auth";
-    private const string AuthDigest = "sha256:06a295ad6fa01a223000682b0f6efbfba2d5436a8fb2ffaa2d2399526ff3ae69";
+    private const string AuthDigest = "sha256:cbd7c429da9d9dd2cc674177760690c53d1414e8057e368eefc3631dfcb62be6";
+    private const string AuthMigrationsImage = "ghcr.io/concertable/auth-migrations";
+    private const string AuthMigrationsDigest = "sha256:090b1bb80dc7b708508a03883cdfb8e8805b36918589e6d14f2f350cc61c5dcb";
 
     public static IDistributedApplicationBuilder CreateBuilder(string[] args)
     {
         var builder = StrictDistributedApplication.CreateBuilder(args);
-        var sql = builder.AddSqlServerContainer("concertable-payment-sql-data");
-        var authDb = sql.AddDatabase(AuthConstants.Database);
         var postgres = builder.AddPostgresContainer("concertable-payment-postgres-data");
         var paymentDb = postgres.AddDatabase(PaymentConstants.Database);
+        var authDb = postgres.AddDatabase(AuthConstants.Database);
         var asb = builder.AddServiceBus();
         asb.Topology().AddPaymentTopology().AddAuthTopology().RunAsEmulator();
-        var auth = builder.AddAuth(AuthImage, AuthDigest, authDb, asb)
+        var authMigrations = builder.AddAuthMigrations(AuthMigrationsImage, AuthMigrationsDigest, authDb);
+        var auth = builder.AddAuth(AuthImage, AuthDigest, authDb, authMigrations, asb)
                           .WithContainerRuntimeArgs("--user", "root")
                           .WithHttpsEndpoint(targetPort: AuthConstants.ContainerPort, name: "https");
         auth.WithSpaClients([]);
