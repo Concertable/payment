@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - name: Scan source for secrets
@@ -39,7 +39,7 @@ jobs:
           --volume '${{ runner.temp }}/trivy-cache:/root/.cache/trivy'
           aquasec/trivy:0.74.0@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
           filesystem --scanners secret --exit-code 1 --no-progress --timeout 30m /work
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
       - name: Restore repository-local solution
@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           # MinVer needs the history to compute the height the publish will use.
           fetch-depth: 0
@@ -74,13 +74,13 @@ jobs:
       # is indistinguishable from one that caught something.
       - name: Test the Trivy result gate
         run: pwsh -NoProfile -File ./scripts/test-trivy-gate.ps1
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
       # A cold Trivy re-downloads its database and re-analyses every layer; measured locally at 10m30s
       # and a deadline against ~100s warm.
       - name: Restore the Trivy cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: artifacts/trivy-cache
           key: trivy-cache-${{ runner.os }}-${{ github.sha }}
@@ -91,7 +91,7 @@ jobs:
         run: pwsh -NoProfile -File ./scripts/verify-payment-images.ps1
       - name: Retain the image scan evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: payment-image-evidence
           path: |
@@ -104,8 +104,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: 10.0.x
       - name: Restore integration tests
