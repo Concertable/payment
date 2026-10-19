@@ -19,8 +19,10 @@
     "base@tj-agents": true,
     "concertable@agents": true,
     "dotnet@tj-agents": true,
+    "efcore@tj-agents": true,
     "engineering@tj-agents": true,
-    "machine@tj-agents": true
+    "machine@tj-agents": true,
+    "personal@tj-agents": true
   },
   "permissions": {
     "allow": []
