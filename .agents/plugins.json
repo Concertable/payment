@@ -12,7 +12,9 @@
     "base@tj-agents",
     "concertable@agents",
     "dotnet@tj-agents",
+    "efcore@tj-agents",
     "engineering@tj-agents",
-    "machine@tj-agents"
+    "machine@tj-agents",
+    "personal@tj-agents"
   ]
 }
