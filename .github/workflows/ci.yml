@@ -20,7 +20,6 @@ permissions:
   packages: read
 
 env:
-  GITHUB_PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
   DOTNET_NOLOGO: true
 
 jobs:
@@ -43,6 +42,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Restore repository-local solution
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
         run: dotnet restore Concertable.Payment.slnx
       - name: Build repository-local solution
         run: dotnet build Concertable.Payment.slnx --configuration Release --no-restore
@@ -55,6 +56,8 @@ jobs:
       - name: Run E2E admin surface tests
         run: dotnet test api/tests/Concertable.Payment.E2EAdmin.IntegrationTests/Concertable.Payment.E2EAdmin.IntegrationTests.csproj --configuration Release --no-restore
       - name: Pack Payment-owned packages
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
         run: |
           dotnet pack api/src/Concertable.Payment.Contracts/Concertable.Payment.Contracts.csproj --configuration Release --output artifacts/packages
           dotnet pack api/src/Concertable.Payment.Client/Concertable.Payment.Client.csproj --configuration Release --output artifacts/packages
@@ -86,6 +89,8 @@ jobs:
           key: trivy-cache-${{ runner.os }}-${{ github.sha }}
           restore-keys: trivy-cache-${{ runner.os }}-
       - name: Build, scan, and inventory the Payment images
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
         # A separate process, not `&`: this workflow's shell does not leak its strict-mode setting into
         # a script written against the lenient default.
         run: pwsh -NoProfile -File ./scripts/verify-payment-images.ps1
@@ -109,6 +114,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Restore integration tests
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
         run: dotnet restore api/tests/Concertable.Payment.IntegrationTests/Concertable.Payment.IntegrationTests.csproj
       - name: Run Docker-backed integration tests
         run: dotnet test api/tests/Concertable.Payment.IntegrationTests/Concertable.Payment.IntegrationTests.csproj --configuration Release --no-restore
