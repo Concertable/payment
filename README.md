@@ -1,6 +1,6 @@
 # Concertable.Payment
 
-The **Payment** service of [Concertable](https://github.com/Concertable/concertable) — the payments
+The **Payment** service of Concertable — the payments
 *adapter service*: it fronts Stripe for checkout, webhooks, and connected-account payouts. It is an
 agnostic adapter — it owns no seed catalog and emits payment events only for *live* Stripe webhooks,
 never for seed data. As an adapter, data services may call it synchronously and `WaitFor` it at
@@ -8,10 +8,7 @@ startup.
 
 ## Repository status
 
-This private repository is the Payment service's polyrepo preparation target. Repository-owned CI and
-release plumbing are prepared here before the approved canonical cutover. The Concertable monorepo remains
-the production source of truth until that cutover; preparation changes belong in this repository and must
-not publish canonical packages or images, change repository visibility, or deploy production early.
+This repository owns Payment source changes, releases and deployment.
 
 ## Building standalone
 
