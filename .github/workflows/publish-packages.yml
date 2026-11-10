@@ -39,7 +39,7 @@ jobs:
       # write:packages — turning a misnamed secret into a 403 after a full build rather than a named
       # failure here.
       PACKAGES_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_WRITE }}
-      PACKAGES_READ_TOKEN: ${{ secrets.CONCERTABLE_PACKAGES_READ }}
+      PACKAGES_READ_TOKEN: ${{ github.token }}
 
   publish:
     name: Attest and publish
