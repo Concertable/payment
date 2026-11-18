@@ -1,0 +1,79 @@
+{
+  "authorization_resolution": {
+    "standing": "auto",
+    "stopped_by": null
+  },
+  "auto_merge": true,
+  "bound_at": "2026-10-21T22:55:41.893448+00:00",
+  "branch": "Docs/MigratePlanTrackers",
+  "changed_path_count": 2,
+  "completion_condition": "Reviewed provider declarations and plan links merged, remote main read back and supported provider route verified",
+  "head": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+  "merge_authorization": {
+    "instruction": "right shall we do that now then?",
+    "mode": "merge"
+  },
+  "pending_evidence": [
+    {
+      "check_id": "119533383791",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953102"
+    },
+    {
+      "check_id": "119533386000",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953866"
+    },
+    {
+      "check_id": "119533385317",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953640"
+    },
+    {
+      "check_id": "119533348783",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689942684"
+    },
+    {
+      "check_id": "119533385780",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953866"
+    },
+    {
+      "check_id": "119533348524",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689942684"
+    },
+    {
+      "check_id": "119533383792",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953102"
+    },
+    {
+      "check_id": "119533383611",
+      "head_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+      "run_id": "39689953102"
+    }
+  ],
+  "pr": 50,
+  "pr_url": "https://github.com/Concertable/payment/pull/50",
+  "repo": "Concertable/payment",
+  "review": {
+    "reviewed_sha": "499a5da9e5cecefc30555ee3ebc10519c342ecea",
+    "work_order": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\payment\\.git\\agent-workflow\\reviews\\898805faeb70e5442e65d7c62b98c18a980506f178227184ed223f838577ed2b\\work-order.md",
+    "work_order_order": [
+      "full"
+    ]
+  },
+  "schema_version": 1,
+  "scoped_approval": {
+    "branch": "Docs/MigratePlanTrackers",
+    "instruction": "right shall we do that now then?",
+    "mode": "merge",
+    "pr_number": 50,
+    "repository": "Concertable/payment",
+    "source": "User authorization for the unfinished-plan migration and its normal source/config delivery, recorded in tj-agents/docs plans/plan-work-item-migration/PLAN.md on 2026-10-21. Scope is this reviewed provider/backlink source slice only.",
+    "worktree": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\payment\\.worktrees\\Docs-MigratePlanTrackers"
+  },
+  "worktree": "C:\\Users\\TommySeery\\source\\repos\\Concertable\\payment\\.worktrees\\Docs-MigratePlanTrackers"
+}
