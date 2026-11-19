@@ -9,7 +9,7 @@ using ClientSnapshot = PaymentClient::Concertable.Payment.Client.PaymentOperatio
 
 namespace Concertable.Payment.ArchitectureTests;
 
-public sealed class PaymentContractReferenceTests
+public sealed class ContractReferenceTests
 {
     private static readonly string[] AllowedConcertableReferences =
     [
