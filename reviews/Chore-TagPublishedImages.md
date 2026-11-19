@@ -5,13 +5,13 @@
 > irreversible or ambiguous finding: record its durable disposition, take the safe path, and keep going.
 
 **Review status:** `complete`
-**Reviewed up to commit:** `7b0a54183c64e176dccc6a7a028ba453d7281db4`  `(2026-09-19)`
+**Reviewed up to commit:** `8a5babe22c4221ba4bcbbbde69b7409a61b85b83`  `(2026-09-19)`
 **Judgment:** `approved`
 
 ## Review pass — 2026-09-19 — docs
 
-**Candidate base:** `7aaf16693e35cfb0742b81b606c16b0d93ac0491`
-**Candidate head:** `11da50ff7b578f10fd3d5b25e8e983acda8c45b5`
+**Candidate base:** `2e0c78317d42b30d32512caaa930158e69a99898`
+**Candidate head:** `d0ab2dd98516d35976fbddc9253b87472cf73924`
 **Candidate branch:** `Chore/TagPublishedImages`
 **Candidate scope:** `all`
 **Candidate path-set:** `sha256:39cf1866d62b9877b98a45948885c19745a1ce5169276f1283de23f1d27f1f8f` `(1 paths)`
@@ -29,8 +29,8 @@ cross-reference to the other half of the blocked chain resolves.
 
 ## Review pass — 2026-09-19 — incremental
 
-**Candidate base:** `b7494300c95045d0075c1a052f70862cd27af5dd`
-**Candidate head:** `7b0a54183c64e176dccc6a7a028ba453d7281db4`
+**Candidate base:** `154186b8f0806c912c8d4ddcf4ecf0228c05a1aa`
+**Candidate head:** `8a5babe22c4221ba4bcbbbde69b7409a61b85b83`
 **Candidate branch:** `Chore/TagPublishedImages`
 **Candidate scope:** `all`
 **Candidate path-set:** `sha256:21ea073a4b0e266a87c3454b0b7bd4a6545484599bfad07c2d7d38af746dc0d8` `(1 paths)`
